@@ -49,6 +49,7 @@ public class AtlasToolCallback implements ToolCallback {
         return ToolDefinition.builder()
                 .name(baseTool.getToolName())
                 .description(baseTool.getDescription())
+                .inputSchema("{\"type\":\"object\",\"properties\":{},\"required\":[]}")
                 .build();
     }
 

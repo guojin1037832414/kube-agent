@@ -516,4 +516,62 @@
 
 ---
 
+### Review #3 — Tool API 接入 + orgId 多租户隔离修复
+**日期**: 2026-05-14  
+**范围**: KubeManagerHttpClient, AtlasOrchestrator, 33个Tool, intents.yml  
+**开发者**: Hermes
+
+#### 代码修改摘要
+1. **Tool 接入**:
+   - **23个Tool**注入 `KubeManagerHttpClient`（13个查询 + 10个修改类），替代静态返回
+   - **新增10个查询Tool**: ClusterQueryTool, DaemonSetQueryTool, DeploymentQueryTool, DevOpsQueryTool, GpuMetricsTool, NamespaceQueryTool, NodeMetricsTool, PodQueryTool, ServiceQueryTool, UserManagementTool
+   - **33个Tool全部注册**: intents.yml 追加 10 个缺失 intent
+
+2. **orgId 多租户隔离修复**:
+   - `KubeManagerHttpClient` 新增 `resolveOrgId()` 桶式搜索，遍历 KNOWN_ORG_IDS 匹配 username→orgId
+   - `ConcurrentHashMap<String, OrgIdEntry>` 5分钟TTL缓存，超管(sysadmin/sysadmin02)直接穿透
+   - `AtlasOrchestrator.tool.execute()` 透传 `organizationId` + `userId` 参数
+
+3. **启动兼容性修复**:
+   - kube-manager 登录 Content-Type: `application/x-www-form-urlencoded` + URLEncode
+   - Auth 头改为 `X-Token`（kube-manager 专用）
+   - `@Recover` 异常签名改为 `Exception e, String path, Map params`
+
+#### 架构决策
+**桶式搜索方案**: kube-manager JWT payload 不含 orgId，且单组织用户 API 无法跨组织查询。
+用已知组织ID列表 `{100001,100002,...}` 遍历调 `GET /api/{orgId}/user`，匹配 username 即命中。
+缺陷：首次解析新用户最多8次HTTP请求（100-500ms），缓存后一步命中。
+
+#### E2E GET 测试结果 (5/5 PASS)
+
+| # | Query | 意图 | API | 结果 |
+|---|-------|------|-----|------|
+| 1 | 查看所有节点 | `node_query` | GET /api/{orgId}/node | ✅ 8节点(A800/L20/RTX-PRO-5000) |
+| 2 | 查看集群列表 | `cluster_query` | GET /api/{orgId}/hpc-job/cluster | ✅ testslurmcluster4 |
+| 3 | 查看所有Deployment | `deployment_status` | GET /api/{orgId}/deployment | ✅ [] (正常) |
+| 4 | 查看Pod列表 | `pod_status` | GET /api/{orgId}/pod | ✅ 数十个Pod |
+| 5 | 查看用户列表 | `user_query` | GET /api/{orgId}/user | ✅ 3用户(100001) / 1用户(100002) |
+
+#### orgId 隔离验证
+
+| 用户 | orgId | 可见数据 |
+|------|-------|---------|
+| sysadmin | 100001 | 超级管理员(本组织)，节点/集群/Pod 等 |
+| zhaotiandi | 100002 | 赵天地(本组织)，其他组织数据隔离 |
+
+#### 风险点
+1. ⚠️ 节点查询 `GET /api/{orgId}/node` 可能返回**全局节点**（多组织共享节点），需后端确认
+2. ⚠️ `resolveOrgId()` 桶式搜索对新组织需要手动更新 `KNOWN_ORG_IDS` 列表
+3. ⚠️ 10个P0危险操作(StorageDelete/PodDelete/UserDelete等)已连接但未验证，等待整体完成后手动测试
+4. ⚠️ `orgId` 解析依赖 kube-manager 的 `/api/{orgId}/user` API 可用性，该API必须返回用户名列表
+
+#### 经验教训
+1. **多租户系统身份令牌必须携带组织信息**，否则后端需要做昂贵的外部查询（桶式搜索/用户服务调用）
+2. **API Header 设计差异大**: kube-manager 用 `X-Token` 而非 `Authorization: Bearer`，切换后端时需要逐一排查
+3. **Content-Type 降级**: 后端登录 API 要求 `application/x-www-form-urlencoded`，默认 JSON 会导致 400
+4. **Maven localRepository 路径断裂**: Windows Maven settings.xml 配置 `F:\maven` 在 WSL 中解析为畸形路径，需使用标准 `~/.m2/repository`
+
+---
+
 *[后续Review将持续追加...]*
+

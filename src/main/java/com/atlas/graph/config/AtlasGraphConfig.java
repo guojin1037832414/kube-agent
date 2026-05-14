@@ -64,7 +64,6 @@ public class AtlasGraphConfig {
                     """)
                 .tools(toolFactory.buildAllVisible())
                 .outputKey("supervisor_result")
-                .inputType(String.class)
                 .build();
     }
 
@@ -80,7 +79,7 @@ public class AtlasGraphConfig {
                     """)
                 .tools(toolFactory.buildForAgent("query"))
                 .outputKey("query_result")
-                .inputType(String.class)
+                
                 .build();
     }
 
@@ -96,7 +95,7 @@ public class AtlasGraphConfig {
                     """)
                 .tools(toolFactory.buildForAgent("deploy"))
                 .outputKey("deploy_result")
-                .inputType(String.class)
+                
                 .build();
     }
 
@@ -112,7 +111,7 @@ public class AtlasGraphConfig {
                     """)
                 .tools(toolFactory.buildForAgent("diag"))
                 .outputKey("diag_result")
-                .inputType(String.class)
+                
                 .build();
     }
 
@@ -128,7 +127,7 @@ public class AtlasGraphConfig {
                     """)
                 .tools(toolFactory.buildForAgent("rbac"))
                 .outputKey("rbac_result")
-                .inputType(String.class)
+                
                 .build();
     }
 
@@ -143,7 +142,7 @@ public class AtlasGraphConfig {
                     """)
                 .tools(toolFactory.buildForAgent("storage"))
                 .outputKey("storage_result")
-                .inputType(String.class)
+                
                 .build();
     }
 
@@ -158,7 +157,7 @@ public class AtlasGraphConfig {
                     """)
                 .tools(toolFactory.buildForAgent("network"))
                 .outputKey("network_result")
-                .inputType(String.class)
+                
                 .build();
     }
 
