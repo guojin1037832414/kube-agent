@@ -1,0 +1,57 @@
+# ============================================================
+# Atlas v3.1 — 前端表单默认值映射表
+# ============================================================
+# 设计原则：
+#   1. 每个 create / new / init 类操作必须注册默认值
+#   2. 值类型必须与前端表单完全一致
+#   3. 默认值 = 用户打开前端表单时看到的【未修改】状态
+#   4. 新增模块时，只需在此追加对应 intentId 节点
+# ============================================================
+# 更新: 2026-05-14 — 覆盖全部 create 类意图
+# ============================================================
+
+defaults:
+
+  # ── DeployAgent ─────────────────────────────────────────────
+  deploy_create_instance:
+    # 【标准实例创建】前端表单默认参数
+    cpuLimits: 2                 # CPU核数，前端Slider默认值
+    memLimits: 8                 # 内存(GB)，前端Slider默认值
+    gpuPercentLimits: 0          # GPU百分比，默认0（不分配GPU）
+    replicas: 1                  # 副本数，默认1
+    bandwidth: 10                # 带宽(Mbps)，默认10
+    enableWebSsh: true           # 是否启用WebSSH，开关默认开启
+    autoScaleSwitch: false       # 自动扩缩容，默认关闭
+
+  # ── NIM 服务 ────────────────────────────────────────────────
+  nim_create:
+    # NIM服务创建：GPU默认全分配（NIM需要GPU推理）
+    gpuPercentLimits: 100        # NIM默认100% GPU
+    replicas: 1
+    enableWebSsh: true
+
+  # ── 分布式计算 ──────────────────────────────────────────────
+  distributed_create:
+    # 分布式计算任务创建（待前端确认具体默认值）
+    workers: 2                   # Worker数量，默认2
+    strategy: "dataParallel"     # 并行策略，默认数据并行
+    cpuLimits: 4                 # 分布式任务通常需要更多CPU
+    memLimits: 16
+
+  # ── RBAC ────────────────────────────────────────────────────
+  user_create:
+    # 用户创建：角色默认普通用户，非管理员
+    role: "user"                 # 角色: admin / user / viewer，默认user
+    status: "active"             # 状态，默认激活
+
+  # ── StorageAgent ────────────────────────────────────────────
+  storage_create:
+    # 存储卷(PVC)创建
+    storageClass: "default"      # 存储类，默认"default"
+    accessMode: "ReadWriteOnce"  # 访问模式，默认RWO
+
+  # ── 后续扩展占位 ────────────────────────────────────────────
+  # 当新增前端模块的 create 操作时，在此追加：
+  #   intentId:
+  #     paramName: defaultValue
+  # 系统将自动加载，无需修改 Java 代码

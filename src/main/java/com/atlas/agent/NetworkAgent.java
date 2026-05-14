@@ -1,0 +1,27 @@
+package com.atlas.agent;
+
+import com.alibaba.cloud.ai.graph.agent.ReactAgent;
+import com.atlas.tool.core.ToolRegistry;
+import org.springframework.stereotype.Component;
+
+/**
+ * 网络Agent — 负责 网络 相关 Tool 的执行。
+ *
+ * <p>Agent类型: network</p>
+ *
+ * @deprecated P2 后由 {@link ReactAgent} 替代，保留仅作向后兼容。
+ */
+@Deprecated(since = "3.1.0-P2", forRemoval = false)
+@Component
+public class NetworkAgent extends AtlasAgentBase {
+
+    public NetworkAgent(ToolRegistry toolRegistry) {
+        super(toolRegistry);
+    }
+
+    @Override
+    public String getAgentType() { return "network"; }
+
+    @Override
+    public String getAgentName() { return "NetworkAgent (网络)"; }
+}

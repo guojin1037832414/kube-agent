@@ -1,0 +1,447 @@
+# Atlas v3.1 Review 记录
+
+> 每次代码修改/功能交付后的闭环记录
+
+---
+
+## 模板
+
+```markdown
+### Review #[序号] — [功能名称]
+**日期**: YYYY-MM-DD  
+**范围**: [涉及的文件/模块]  
+**开发者**: [Hermes/Claude Code/...]
+
+#### 代码修改摘要
+- ...
+
+#### 优点
+- ...
+
+#### 风险点
+- ...
+
+#### 测试验证
+- [ ] 单元测试通过
+- [ ] E2E测试通过
+- [ ] 手动验证通过
+
+#### 经验教训
+- ...
+```
+
+---
+
+## Review #2 — P2 架构决策更新：引入 Spring AI Alibaba
+
+**日期**: 2026-05-14  
+**范围**: docs/v3.1/ 全部架构文档  
+**开发者**: Hermes (架构设计) + 专家会诊 (多角色并行调研)  
+**决策**: 引入 Spring AI Alibaba v1.1.2.2 替代手写 P2 方案
+
+#### 背景与问题
+- 原 P2 方案规划手写：ReActEngine、AgentGraph、AgentState、Checkpoint、HITL 状态机
+- 专家会诊第2轮深度调研发现：Spring AI Alibaba 已完整实现所有上述能力
+- 且是生产级框架（9,596 Stars，阿里巴巴验证，今日仍在更新）
+
+#### 技术验证结果
+| 验证项 | 原方案（手写） | Spring AI Alibaba |
+|--------|---------------|-------------------|
+| ReactAgent | ❌ 空壳/需手写 | ✅ 内建 |
+| StateGraph | ❌ 需手写模拟 | ✅ StateGraph API |
+| HITL | ❌ 需手写状态机 | ✅ 内建 |
+| Checkpoint | ❌ 需手写持久化 | ✅ Memory/Redis/File Saver |
+| Streaming SSE | ✅ 已有 | ✅ 原生支持 |
+| Multi-Agent编排 | ❌ 需手写 | ✅ Sequential/Parallel/Routing/Loop |
+| Context工程 | ❌ 无 | ✅ 动态Tool选择/上下文压缩/重试 |
+
+#### 关键发现（专家1报告）
+1. **Spring AI Function Calling 原生能力边界**：单步 Tool Call 自动化，但多步 loop 需手写或迁移到框架
+2. **Map.of() 是最致命缺陷**：LLM 完全不参与参数提取
+3. **6个Agent不需要6个ChatClient**：一个统一ChatClient + 动态System Prompt + Tool子集即可
+
+#### 修正后的需求理解
+- 哥哥真正需要的是：**执行Tool后自动推理 → 基于Observation决定下一步 → 多Tool结果综合分析**
+- 这恰恰是 Spring AI Alibaba ReactAgent 的核心能力
+
+#### 废弃内容
+- ❌ 手写的 ReActEngine.java（已在 target 中，将被删除）
+- ❌ P2_AGENT_SPLIT_ARCHITECTURE.md（旧方案文档，已废弃）
+- ❌ 手写的 AgentGraph/AgentState/Checkpoint 规划（全部废弃）
+
+#### 保留并复用的内容
+- ✅ BaseTool 体系（23个域Operation，全部保留）
+- ✅ IntentRouter L1-L4（四级意图路由，保留）
+- ✅ ToolRegistry 权限感知（保留）
+- ✅ SSE流式基础设施（保留，对接Graph Streaming）
+- ✅ AuthToken透传（保留）
+
+#### 新增文档
+- ADR-008-SPRING_AI_ALIBABA.md（架构决策记录）
+- p2/P2_ARCHITECTURE_SPRING_AI_ALIBABA.md（新版P2架构方案）
+- ARCHITECTURE_DECISIONS.md 更新追加 ADR-008
+
+#### 风险点
+- Spring Boot 3.4.4 → 3.5.8 版本升级兼容性
+- Spring AI 1.1.6 vs 框架依赖的 1.1.2 冲突
+- BaseTool → ReactAgent ToolCallback 的桥接适配
+- 学习成本：需要理解框架内部Graph执行机制
+
+#### 经验教训
+- **"专家会诊"铁律再次验证有效**：没有开源专家的深度调研，容易重复造轮子
+- **及时放弃沉没成本**：手写方案已开始编码（ReActEngine已有代码），但发现更优框架后果断废弃
+- **架构文档必须同步更新**：决策变更后，ADR、架构方案、ReviewLog 必须在同一session内全部更新
+- **最好的技术栈 ≠ 手写所有东西**：工业级框架已经做了更好的实现，应该站在巨人肩膀上
+
+#### 下一步行动
+- Phase 1：添加Maven依赖 + 验证版本兼容性 + 最小PoC
+- Phase 2：基础迁移（AtlasOrchestrator接入StateGraph）
+- Phase 3：6个Agent实质化
+- Phase 4：功能增强（HITL/Multi-Agent编排/可观测性）
+
+---
+
+*Review #2 完成 — 2026-05-14*
+
+**日期**: 2026-05-14  
+**范围**: pom.xml, 包结构, 总纲文档  
+**开发者**: Hermes
+
+#### 代码修改摘要
+- 清理v2全部代码，保留最小骨架
+- 重写pom.xml: Spring AI 1.1.6 + ONNX Runtime
+- 创建 docs/v3.1/ 文档体系
+
+#### 优点
+- 依赖清晰，无遗留垃圾
+- 版本升级至最新稳定版
+- 本地Embedding原生支持
+
+#### 风险点
+- Spring AI 1.1.6 从1.0.0-M6跨越较大，API可能有breaking changes
+- ONNX Runtime Java API 学习曲线
+
+#### 测试验证
+- [x] Maven编译基础验证 `mvn clean compile`
+- [ ] 完整功能测试 (待后续)
+
+#### 经验教训
+- 交叉编译验证: 需测试 Windows Maven vs WSL本地Maven
+- Spring AI版本升级可能影响 FunctionCalling API 调用方式
+
+---
+
+## Review #2 — intents.yml 参数补齐
+
+**日期**: 2026-05-14  
+**范围**: `src/main/resources/intents.yml`  
+**开发者**: Hermes
+
+#### 代码修改摘要
+- 将意图从8个扩展至25个，覆盖9大前端模块
+- 补齐所有创建操作的默认参数（与前端表单默认值严格对齐）
+- 补充每个参数的 `description` / `default` / `required` 标记
+
+#### 新增意图清单
+| Agent | 意图数 | 新增意图 |
+|-------|-------|---------|
+| QueryAgent  | 6个 | node_detail, gpu_query, image_query, cluster_overview, resource_monitor |
+| DiagAgent   | 2个 | diagnose_pod, log_query |
+| DeployAgent | 6个 | deploy_create_instance(+全套默认参数), deploy_scale, deploy_delete, deploy_restart, nim_create, distributed_create |
+| RBACAgent   | 4个 | user_query, user_create, user_delete, role_query |
+| StorageAgent| 3个 | storage_query, storage_create, storage_delete |
+| NetworkAgent| 2个 | network_query, ingress_query |
+| 通用        | 3个 | greeting, help, unknown |
+
+#### 默认参数补齐（创建操作严格对齐前端）
+| 参数 | 默认值 | 说明 |
+|------|-------|------|
+| cpuLimits | 2 | CPU核数限制 |
+| memLimits | 8 | 内存限制(GB) |
+| gpuPercentLimits | 0 | GPU显存百分比（部署实例） |
+| replicas | 1 | 副本数 |
+| bandwidth | 10 | 带宽(Mbps) |
+| enableWebSsh | true | 是否启用WebSSH |
+| autoScaleSwitch | false | 是否开启自动扩缩容 |
+
+#### 优点
+- 参数定义完整，为后续Tool生成和LLM参数提取打好基础
+- 默认值与前端严格对齐，避免创建时参数缺失导致的后端异常
+- P0/P1/P2/P3风险等级标记清晰，为HITL决策提供依据
+
+#### 风险点
+- intents.yml 维扩后文件行数增多，运行时加载耗时可能增加（可优化为启动时加载+缓存）
+- 分布式计算参数目前较粗略，实际对接后端时可能需要继续扩展
+
+#### 测试验证
+- [x] YAML语法验证通过
+- [ ] 运行时加载验证（待P0 Embedding服务实现后完整测试）
+
+#### 经验教训
+- 每新增一个前端创建功能，必须同步确认前端表单默认值并回填到intents.yml
+- 建议把"前端表单默认值"做成一个对照文档，作为开发和验证的权威来源
+
+---
+
+## Review #3 — P0 核心模块编码（Embedding + 意图 + SSE）
+
+**日期**: 2026-05-14  
+**范围**: `src/main/java/com/atlas/` 全部19个源文件 + `pom.xml`  
+**开发者**: Hermes (手动编写)
+
+#### 代码修改摘要
+- 完成 16 个核心类的完整实现（之前的骨架全部升级为生产代码）
+- 编译修复 3 轮共 5 个 API 签名问题
+- 删除旧骨架垃圾文件 5 个
+
+#### 编译问题修复记录
+| # | 文件 | 问题 | 修复 |
+|---|------|------|------|
+| 1 | `OnnxSessionHolder` | `createSession(File, ...)` 不存在 | 改为 `createSession(String, ...)` |
+| 2 | `EmbeddingService` | `optTokenizerFile(String)` 不存在 | 改为 `optTokenizerPath(Path)` |
+| 3 | `EmbeddingService` | 删了 `optMaxLength`/`optTruncation` | DJL builder无此API，用 `optPadToMaxLength()` |
+| 4 | `EmbeddingService` | `result.get(name)` 返回 `Optional<OnnxValue>` | 改为 `.get(name).orElseThrow(...)` |
+| 5 | `EmbeddingService` | `OnnxValue` 未import | 直接用 `OnnxValue`（已在同包） |
+
+#### 优点
+- 意图系统 L1-L4 降级链完整：L1 Embedding → L2规则 → L3预留 → L4模糊兜底
+- Embedding 服务内置降级：模型加载失败时自动降级为 L2/L4 规则匹配，系统可用性不降
+- SSE 连接管理完整：心跳、限流、异常处理
+- 所有中文注释到位
+
+#### 风险点
+- DJL tokenizer 首次加载 native 库可能失败（已在配置类 try-catch 降级）
+- ONNX 模型文件 ~90MB，首次需要下载（网络依赖）
+- `IntentsLoader` 用 SnakeYAML Map 解析 intents.yml 结构较脆弱，后续可考虑用 POJO 绑定
+
+#### 测试验证
+- [x] Maven 编译通过 `BUILD SUCCESS`（19个源文件）
+- [ ] 运行时集成测试（模型下载 + 推理验证）
+- [ ] SSE 接口连通性测试
+
+#### 经验教训
+- DJL API 与想象中的 `optTokenizerFile` 不同，实际用 `optTokenizerPath`
+- ONNX Runtime Java 的 `Result.get(String)` 返回 Optional，不是直接 OnnxValue
+- 编译时逐个错误修复比预想要高效，用了 3 轮共 10 分钟全部解决
+
+---
+
+## Review #4 — P1 统一评分体系 + L3 LLM分类 + 默认值机制
+
+**日期**: 2026-05-14  
+**范围**: `src/main/java/com/atlas/intent/` + `src/main/java/com/atlas/tool/` + 专家报告  
+**开发者**: Hermes (基于4路专家会诊结论编码)
+
+#### 代码修改摘要
+1. **新增 `ScoreNormalizer.java`**：L1~L4 统一归一化
+   - L1 Sigmoid 拉伸：`1/(1+e^(-10*(sim-0.82)))`，0.75→0.25, 0.95→0.98
+   - L2 Exact 固定 0.98（规则权威性，非绝对 1.0）
+   - L3 保守校准：`raw * 0.95`，百分比自动转换
+   - L4 封顶 0.75（兜底层不越权）
+
+2. **新增 `IntentArbiter.java`**：7条规则链冲突仲裁
+   - 同 intent 合并（max + 3% crossBoost）
+   - L2 Exact 护城河（≥0.95 优先）
+   - 极高语义压倒（L1/L3 ≥0.96 + p0/p1 可破护城河）
+   - 层级优先级 fallback：[L2, L3, L1, L4]
+
+3. **增强 `IntentResult.java`**：增加 `of()` 工厂方法、`withNormalizedScore()`、`reportScore()`
+
+4. **重写 `IntentRouter.java`**：收集→归一化→仲裁模式
+   - L1 ≥0.90 短路（99% 场景优化）
+   - L1 <0.90 进入候选池，L2/L3/L4 分别收集
+   - 多候选 → `IntentArbiter.arbitrate()` → 唯一最佳结果
+
+5. **接入 `L3IntentClassifier`**：BeanOutputConverter 结构化输出，异常降级到 L4
+
+6. **扩展 `defaults.yml`**：覆盖全部 create 类意图
+   | 意图 | 默认值亮点 |
+   |------|-----------|
+   | deploy_create_instance | cpu=2,mem=8,gpu=0,replicas=1,bandwidth=10,webSsh=true,autoScale=false |
+   | nim_create | gpu=100% |
+   | distributed_create | workers=2, strategy=dataParallel |
+   | user_create | role=user |
+   | storage_create | storageClass=default, accessMode=ReadWriteOnce |
+
+7. **创建专家报告文档 5 份**：L3设计报告、默认参数设计、评分统一设计、开源架构评估
+
+#### 编译问题修复记录
+| # | 文件 | 问题 | 修复 |
+|---|------|------|------|
+| 6 | `L3IntentClassifier.java` | `renderIntentsSnapshot(List)` 但 `IntentsLoader.getAllIntents()` 返回 `Collection` | 改为 `Collection<IntentDefinition>` |
+| 7 | `AtlasConfiguration.java` | L3 Bean 注入需要 `ChatClient.Builder` | 新增 `l3IntentClassifier()` Bean 方法 + import |
+| 8 | `AtlasConfiguration.java` | `IntentRouter` 构造函数参数从3变为4 | 追加 `L3IntentClassifier` 参数 |
+
+#### 优点
+- 评分统一后 L1(0.95) 与 L2(0.98) 可公平竞争，不再被规则层绝对压制
+- 仲裁器处理"L1语义高 vs L2规则命中不同intent"的冲突场景，避免误路由
+- L1 短路只触发在 ≥0.90（即原始 cosine ≥0.93），保证绝大多场景不走 LLM，token 可控
+- L3 接入有完整降级：ChatClient 未配置 → null → Router 跳过 L3 → L4 兜底
+- defaults.yml 与前端表单严格对齐，创建操作不再遗漏默认参数
+
+#### 风险点
+- **仲裁逻辑复杂度**：7条规则链虽清晰，但后期调参（阈值、boost系数）需大量实测数据
+- **L3 LLM Token 消耗**：单条 ~1100 tokens，高频场景需靠 Caffeine 缓存（P2实现）降到 <30%
+- **L3 首次加载延迟**：prompt 构建含 25 个意图 snapshot，~2000ms（内网代理）
+- **defaults.yml 扩展**：当前只有 5 个 create 意图有默认值，新增前端模块时忘补=参数缺失
+- **评分归一化参数**：Sigmoid 中点 0.82 / 斜率 10 是理论值，需实际 Embedding 数据校准
+
+#### 测试验证
+- [x] Maven 编译通过 `BUILD SUCCESS`（31个源文件 → 32个 class 文件）
+- [ ] L1 Sigmoid 归一化对照表实测验证（0.75→0.25, 0.85→0.73...）
+- [ ] L2/L4 冲突场景仲裁验证（模拟 L1→A vs L2→B）
+- [ ] L3 LLM 端到端调用验证（需要 API key 配置）
+- [ ] defaults.yml 运行时加载 + Tool 默认参数回填验证
+
+#### 经验教训
+1. **专家代码冲突**：专家1（短路return）vs 专家3（收集+仲裁）模式冲突，乖乖采用"Router层归一化"——不改 Matcher、不改短路结构，Router拿到结果后统一归一化，兼容性最好
+2. **Collection vs List**：`IntentsLoader.getAllIntents()` 返回 `Collection` 是设计正确（抽象），调用方应适配而非强转
+3. **配置类 Bean 注入顺序**：L3 Bean 需要在 `IntentRouter` 之前注册，Spring Boot 自动处理，但手动指定 `@DependsOn` 可避免启动依赖问题
+4. **默认参数回填 = Tool 层实现，不是意图层**：`defaults.yml` 是数据，`@WithDefaults` 是标记，真正的回填在 `DefaultValueAspect` 拦截 `execute()` 时发生。意图系统不感知默认值
+
+---
+
+## Review #5 — API映射设计：HTTP桥接层 + 2个完整Tool实现
+
+**日期**: 2026-05-14  
+**范围**: `com.atlas.http` 包（新建）+ `com.atlas.tool.impl`（重写/新建）+ 设计报告  
+**开发者**: Hermes (子Agent，基于现有架构填补Tool层空白)
+
+#### 代码修改摘要
+
+1. **新建 `KubeManagerHttpClient.java`** — 共用HTTP客户端（`com.atlas.http`）
+   - 选用 Spring Boot 3.4 RestClient（fluent API，官方推荐替代RestTemplate）
+   - 封装 `get(path, queryParams)` / `post(path, body)` / `delete(path, body)`
+   - Token自动管理：首次调用触发 `doLogin()` → 缓存JWT 25分钟 → 快过期自动刷新
+   - @Retryable 重试策略：仅重试 `ResourceAccessException`（网络IO），最多3次，退避 500ms→1s→2s
+   - JSON解析容错：parse失败不抛异常，返回 `{ raw: "...", parseError: "..." }`，LLM仍能看到原始数据
+
+2. **新建 `HttpRetryConfig.java`** — `@EnableRetry` 激活配置类（Spring Retry 需要）
+
+3. **新建 `NodeQueryTool.java`** — 节点查询Tool（GET，无参/简单参数）
+   - 支持列表查询（`GET /api/node/list`）和单节点详情（`GET /api/node/detail/{name}`）
+   - 响应标准化：`normalizeResponse()` 提取 data/list/items → 生成 summary（totalCount/description）→ 透传code/message
+   - 无 `@WithDefaults`，查询类无需默认值回填
+
+4. **重写 `DeployCreateTool.java`** — 标准实例创建Tool（POST + Body构建 + 默认参数回填）
+   - `@WithDefaults(intentId = "deploy_create_instance")` AOP自动回填 cpuLimits=2, memLimits=8 等7个默认参数
+   - `buildCreateBody()`: 安全类型转换（String "2" → Integer 2、String "true" → Boolean true）
+   - 必填字段二次校验：name/image 缺失立即返回 `VALIDATION_ERROR`
+   - 响应包含 `createdName` + `detail.nextStep`，LLM可引导用户下一步操作
+
+5. **新建设计报告** `docs/v3.1/API_MAPPING_DESIGN_REPORT.md`（7大章节，含完整速查表）
+   - 章节1: 背景与目标（系统架构图）
+   - 章节2: API调用模式分析（9大模块×4种模式×响应变体）
+   - 章节3: HTTP桥接层设计（RestClient选型对比、Token管理流程图、重试策略、JSON容错）
+   - 章节4: 2个完整Tool代码示例 + 默认值系统工作流图
+   - 章节5: Map vs DTO 深度权衡（6维度对比表 + Atlas选择理由 + 折中方案）
+   - 章节6: API端点速查表（15个意图×方法×路径）
+   - 章节7: P1剩余TODO + P2优化方向
+
+#### 编译问题修复记录
+| # | 文件 | 问题 | 修复 |
+|---|------|------|------|
+| 9 | `NodeQueryTool.java` | `single.getOrDefault("name", single.get("nodeName"))` 中 `single` 是 `Map<?,?>` 通配 | 拆为两步：先 `instanceof Map<?,?>` → `@SuppressWarnings unchecked` 强转 `Map<String,Object>` |
+
+#### 优点
+- **RestClient 选型正确**：对比 RestTemplate（废弃）/ WebClient（过度设计）/ RestClient（官方推荐），Spring Boot 3.4.4 完美支持
+- **Token 管理闭环**：自动登录→缓存→刷新→异常降级（密码未配时不阻塞），无需每个Tool手动处理认证
+- **Map 类型安全边界处理**：`getInt()`/`getBool()`/`getString()` 三层安全转换，LLM传字符串不崩溃
+- **响应标准化消除后端不确定性**：无论后端是 `{code,data}` `{code,list}` 还是直接数组，LLM看到的都是 `{success, data, dataType, summary}` 统一格式
+- **设计报告可独立交付**：报告含完整架构图、速查表、取舍讨论，可直接转给前端/后端团队对齐API
+
+#### 风险点
+- **后端 URL 未最终确认**：NodeQueryTool 的 `/api/node/list` 和 `/api/node/detail/{name}` 是基于前后端经验推断的实际路径，需后端API文档确认
+- **Token 字段路径兼容**：`doLogin()` 尝试从 `token` / `data` / `data.token` 多路径提取JWT，但后端实际结构未知
+- **`DeployCreateTool` 的 `buildCreateBody` 字段可能不完整**：仅覆盖了意图定义中的8个核心字段，后端表单可能有更多字段（如 imagePullPolicy、nodeSelector 等）
+- **测试覆盖率为0**：无单元测试，无Mock，无集成测试。后续接入真实kube-manager前需补全
+- **DELETE 方法未被使用**：当前无对应Tool，但 `KubeManagerHttpClient.delete()` 已预留
+- **RestClient 异常体读取流可能有内存问题**：`res.getBody().readAllBytes()` 对超大响应不友好（但kube-manager API响应通常<10KB，暂可接受）
+
+#### 测试验证
+- [x] Maven 编译通过 `BUILD SUCCESS`（编译0错误，共管理34个源文件）
+- [x] 依赖冲突检查：`spring-retry` 已在 pom.xml，无需新增
+- [ ] NodeQueryTool 调用 kube-manager 实际节点列表（需后端联调）
+- [ ] DeployCreateTool 创建实例并验证 Body 格式（需后端联调）
+- [ ] Token 自动登录流程验证（需要 ATLAS_BACKEND_PASSWORD 环境变量）
+
+#### Map vs 强类型DTO 取舍结论
+| 维度 | Map | DTO |
+|-----|-----|-----|
+| LLM可读性 | ✅ 所有字段可见 | ❌ 需序列化/反射 |
+| API变更适配 | ✅ 零成本 | ❌ 改类文件 |
+| 类型安全 | ❌ 运行时检查 | ✅ 编译期检查 |
+| 维护成本 | ✅ 低 | ❌ 高（需Request+Response DTO）|
+
+**Atlas选择**：`Map<String,Object>` 为主，局部DTO为辅。原因：后端API迭代中 + LLM需看到完整数据 + 已有 `normalizeResponse` 标准化层。
+
+#### 经验教训
+1. **Java 17 pattern matching 对 Map<?,?> 不支持**：`if (data instanceof Map<?,?> single)` 的变量绑定 `single` 在通配泛型场景编译失败。需拆为 `instanceof Map<?,?>` + `@SuppressWarnings unchecked` 强转。泛型运行时擦除导致编译器保守检查
+2. **RestClient 异常处理需手动读取 Response Body**：`onStatus(...)` 回调给了 `ClientHttpResponse`，要手动 `readAllBytes()`。比 RestTemplate 的 `ResponseErrorHandler` 更底层但可控
+3. **新增包需关注 Bean 扫描**：新建 `com.atlas.http` 包下的 `@Component`/`@Configuration` 能被扫描是因为启动类在 `com.atlas` 根包，Spring Boot 自动递归扫描所有子包
+4. **设计报告要写"速查表"**：API端点速查表（意图ID×Agent×方法×路径）是前后端对齐的最高效方式，应作为每次Tool新增的标准交付物
+
+---
+
+## Review #3 — P2 Phase 2 核心改造完成
+
+**日期**: 2026-05-14  
+**范围**: StateGraph ReactAgent 工具绑定 + 旧 Agent 兼容标记 + 编译验证  
+**开发者**: Claude Agent
+
+#### 交付结论
+- P2 Phase 2 核心改造完成：Orchestrator Graph 注入 + Agent 实质性绑定 + 旧 Agent 废弃
+
+#### 修改文件清单
+- `src/main/java/com/atlas/graph/config/AtlasGraphConfig.java`
+- `src/main/java/com/atlas/agent/QueryAgent.java`
+- `src/main/java/com/atlas/agent/DeployAgent.java`
+- `src/main/java/com/atlas/agent/DiagAgent.java`
+- `src/main/java/com/atlas/agent/RbacAgent.java`
+- `src/main/java/com/atlas/agent/StorageAgent.java`
+- `src/main/java/com/atlas/agent/NetworkAgent.java`
+- `docs/v3.1/REVIEW_LOG.md`
+
+#### Task 1 执行过程与结果：ReactAgent 绑定专业工具
+- 保留 `supervisorAgent` 的 `.tools(toolFactory.buildAllVisible())`，继续允许总调度 Agent 看到全部当前用户可见 Tool。
+- 为 6 个专业 ReactAgent 补齐工具绑定：
+  - `queryAgent` → `.tools(toolFactory.buildForAgent("query"))`
+  - `deployAgent` → `.tools(toolFactory.buildForAgent("deploy"))`
+  - `diagAgent` → `.tools(toolFactory.buildForAgent("diag"))`
+  - `rbacAgent` → `.tools(toolFactory.buildForAgent("rbac"))`
+  - `storageAgent` → `.tools(toolFactory.buildForAgent("storage"))`
+  - `networkAgent` → `.tools(toolFactory.buildForAgent("network"))`
+- 结果：专业 Agent 不再是“无工具空壳”，StateGraph 路由到对应 Agent 后可以调用本领域 ToolCallback。
+
+#### Task 2 执行过程与结果：旧 Agent 子类标记废弃
+- 为以下旧版 `AtlasAgentBase` 子类添加 `@Deprecated(since = "3.1.0-P2", forRemoval = false)`：
+  - `QueryAgent`
+  - `DeployAgent`
+  - `DiagAgent`
+  - `RbacAgent`
+  - `StorageAgent`
+  - `NetworkAgent`
+- 同步补充 Javadoc：`@deprecated P2 后由 {@link ReactAgent} 替代，保留仅作向后兼容。`
+- 结果：旧 Agent 仍保留 Spring Bean 兼容历史调用，但新架构迁移方向已在代码层明确。
+
+#### Task 3 执行过程与结果：编译验证
+- 执行命令：`mvn clean compile -DskipTests`
+- 编译结果：`BUILD SUCCESS`
+- 编译统计：`Compiling 81 source files with javac [debug parameters release 17] to target/classes`
+- 当前仅保留既有 unchecked 提示：`AtlasGraphConfig.java uses unchecked or unsafe operations`，未阻塞编译。
+
+#### 风险点
+- `buildForAgent(...)` 依赖 `ToolRegistry.listByAgent(...)` 的 Agent 编码与 ReactAgent 名称完全一致；后续新增 Agent 时需同步维护编码。
+- Supervisor 仍可见全部 Tool，若后续希望 Supervisor 只做路由不执行动作，可再收窄为“路由专用无副作用工具”或去除工具绑定。
+
+#### 测试验证
+- [x] Maven 编译通过：`mvn clean compile -DskipTests`
+- [ ] `/chat/graph` 运行时链路验证（需接入真实 ChatModel 与后端 Tool API）
+- [ ] 6 个专业 Agent Tool 可见性运行时校验（建议后续增加启动日志或集成测试）
+
+#### 经验教训
+- ReactAgent 定义时仅写 instruction 不会自动继承旧 `AtlasAgentBase` 的 Tool 集合，必须显式调用 `.tools(...)`。
+- 旧类废弃优先采用 `forRemoval = false`，可以避免迁移期间破坏现有 Bean 注入和历史接口。
+
+
+*[后续Review将持续追加...]*

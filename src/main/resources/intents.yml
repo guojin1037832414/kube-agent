@@ -1,0 +1,515 @@
+# ============================================================
+# Atlas v3.1 意图定义 + 口语化变体 + 完整参数定义
+# ============================================================
+# 更新: 2026-05-14 — 补齐所有参数、默认值、必填/选填标记
+# ============================================================
+
+intents:
+
+  # ═══════════════════════════════════════════════════════════
+  # QueryAgent 意图 — 纯查询类 (P3级，免确认)
+  # ═══════════════════════════════════════════════════════════
+
+  # --- 节点相关 ---
+  node_query:
+    description: "查询所有节点状态"
+    agent: "query"
+    level: "p3"
+    keywords: ["节点", "node", "机器", "服务器"]
+    patterns:
+      - ".*(节点|node|机器).*状态.*"
+      - ".*所有.*节点.*"
+    examples:
+      - "查看所有节点的状态"
+      - "有多少个节点"
+      - "node状态"
+      - "机器都正常吗"
+      - "集群里有多少台服务器"
+    parameters: []
+
+  node_detail:
+    description: "查询单个节点详情"
+    agent: "query"
+    level: "p3"
+    keywords: ["节点详情", "node详情"]
+    examples:
+      - "查看节点node-1的详情"
+      - "node-1上跑了什么"
+    parameters:
+      - name: "nodeName"
+        type: "string"
+        required: true
+        description: "节点名称，如 'node-1'"
+
+  # --- GPU信息 ---
+  gpu_query:
+    description: "查询GPU使用情况"
+    agent: "query"
+    level: "p3"
+    keywords: ["GPU", "显卡", "显存", "gpu"]
+    examples:
+      - "GPU使用情况"
+      - "显卡还有剩余吗"
+      - "显存占用多少"
+    parameters: []
+
+  # --- 镜像资源 ---
+  image_query:
+    description: "查询镜像资源列表"
+    agent: "query"
+    level: "p3"
+    keywords: ["镜像", "image", "docker", "容器镜像"]
+    examples:
+      - "有哪些可用镜像"
+      - "查看镜像列表"
+      - "ubuntu镜像"
+    parameters:
+      - name: "keyword"
+        type: "string"
+        required: false
+        description: "镜像关键词，如 'ubuntu'、'nginx'"
+      - name: "page"
+        type: "number"
+        required: false
+        default: 1
+        description: "页码"
+      - name: "pageSize"
+        type: "number"
+        required: false
+        default: 10
+        description: "每页数量"
+
+  # --- 运营看板 ---
+  cluster_overview:
+    description: "集群概览/运营看板"
+    agent: "query"
+    level: "p3"
+    keywords: ["概览", "dashboard", "看板", "概况"]
+    examples:
+      - "集群概况"
+      - "运营看板"
+      - "Dashboard"
+      - "集群整体状态"
+    parameters: []
+
+  # --- 资源监控 ---
+  resource_monitor:
+    description: "资源监控查询（CPU/内存/存储）"
+    agent: "query"
+    level: "p3"
+    keywords: ["资源", "监控", "CPU", "内存", "使用率"]
+    examples:
+      - "资源使用监控"
+      - "CPU使用率"
+      - "内存占用情况"
+    parameters:
+      - name: "metricType"
+        type: "string"
+        required: false
+        description: "指标类型: cpu / memory / storage / all"
+      - name: "timeRange"
+        type: "string"
+        required: false
+        default: "1h"
+        description: "时间范围: 1h / 24h / 7d"
+
+  # ═══════════════════════════════════════════════════════════
+  # DiagAgent 意图 — 诊断故障 (P3级，查询性质)
+  # ═══════════════════════════════════════════════════════════
+
+  diagnose_pod:
+    description: "诊断Pod/服务故障"
+    agent: "diag"
+    level: "p3"
+    keywords: ["诊断", "排查", "为什么", "无法", "失败", "报错"]
+    examples:
+      - "为什么XXX服务无法访问"
+      - "排查Pod崩溃问题"
+      - "服务启动失败了"
+      - "这个报错是什么意思"
+    parameters:
+      - name: "targetName"
+        type: "string"
+        required: false
+        description: "目标Pod/服务名称"
+
+  log_query:
+    description: "查询日志"
+    agent: "diag"
+    level: "p3"
+    keywords: ["日志", "log", "查看日志"]
+    examples:
+      - "查看Pod的日志"
+      - "最近的错误日志"
+      - "日志报错"
+    parameters:
+      - name: "podName"
+        type: "string"
+        required: false
+        description: "Pod名称"
+      - name: "lines"
+        type: "number"
+        required: false
+        default: 100
+        description: "日志行数"
+
+  # ═══════════════════════════════════════════════════════════
+  # DeployAgent 意图 — 部署操作 (P0/P1级，需确认)
+  # ═══════════════════════════════════════════════════════════
+  # 【创建操作默认参数 — 必须匹配前端表单默认值】
+
+  deploy_create_instance:
+    description: "创建标准实例（Deployment）"
+    agent: "deploy"
+    level: "p1"
+    keywords: ["创建", "部署", "新建", "启动", "实例"]
+    examples:
+      - "创建一个ubuntu实例"
+      - "部署一个nginx服务"
+      - "帮我启动一个容器"
+      - "新建一个服务"
+    parameters:
+      # === 必填参数 ===
+      - name: "name"
+        type: "string"
+        required: true
+        description: "实例名称"
+
+      - name: "image"
+        type: "string"
+        required: true
+        description: "镜像名称，如 'ubuntu:22.04'、'nginx:latest'"
+
+      # === 可选参数（前端默认值已补齐）===
+      - name: "cpuLimits"
+        type: "number"
+        required: false
+        default: 2
+        description: "CPU核数限制，默认2核（匹配前端默认值）"
+
+      - name: "memLimits"
+        type: "number"
+        required: false
+        default: 8
+        description: "内存限制(GB)，默认8GB（匹配前端默认值）"
+
+      - name: "gpuPercentLimits"
+        type: "number"
+        required: false
+        default: 0
+        description: "GPU显存百分比，默认0（匹配前端默认值）"
+
+      - name: "replicas"
+        type: "number"
+        required: false
+        default: 1
+        description: "副本数，默认1（匹配前端默认值）"
+
+      - name: "bandwidth"
+        type: "number"
+        required: false
+        default: 10
+        description: "带宽(Mbps)，默认10（匹配前端默认值）"
+
+      - name: "enableWebSsh"
+        type: "boolean"
+        required: false
+        default: true
+        description: "是否启用WebSSH，默认true（匹配前端默认值）"
+
+      - name: "autoScaleSwitch"
+        type: "boolean"
+        required: false
+        default: false
+        description: "是否开启自动扩缩容，默认false（匹配前端默认值）"
+
+  deploy_scale:
+    description: "扩缩容实例"
+    agent: "deploy"
+    level: "p0"
+    keywords: ["扩容", "缩容", "scale", "副本", "调整"]
+    examples:
+      - "扩容到5个副本"
+      - "缩容到1个"
+      - "增加实例数量"
+      - "减少副本数"
+    parameters:
+      - name: "name"
+        type: "string"
+        required: true
+        description: "实例名称"
+      - name: "targetReplicas"
+        type: "number"
+        required: true
+        description: "目标副本数"
+
+  deploy_delete:
+    description: "删除部署实例"
+    agent: "deploy"
+    level: "p0"
+    keywords: ["删除", "remove", "delete", "销毁"]
+    examples:
+      - "删除这个实例"
+      - "销毁服务"
+      - "移除部署"
+    parameters:
+      - name: "name"
+        type: "string"
+        required: true
+        description: "实例名称"
+
+  deploy_restart:
+    description: "重启实例"
+    agent: "deploy"
+    level: "p2"
+    keywords: ["重启", "restart", "重新启动"]
+    examples:
+      - "重启这个服务"
+      - "重新启动实例"
+    parameters:
+      - name: "name"
+        type: "string"
+        required: true
+        description: "实例名称"
+
+  # --- NIM服务 ---
+  nim_create:
+    description: "创建NIM服务"
+    agent: "deploy"
+    level: "p1"
+    keywords: ["NIM", "创建NIM", "部署NIM"]
+    examples:
+      - "创建一个NIM服务"
+      - "部署NIM"
+    parameters:
+      - name: "name"
+        type: "string"
+        required: true
+        description: "NIM服务名称"
+      - name: "model"
+        type: "string"
+        required: true
+        description: "模型名称"
+      - name: "gpuPercentLimits"
+        type: "number"
+        required: false
+        default: 100
+        description: "GPU显存百分比"
+
+  # --- 分布式计算 ---
+  distributed_create:
+    description: "创建分布式计算任务"
+    agent: "deploy"
+    level: "p1"
+    keywords: ["分布式", "任务", "计算"]
+    examples:
+      - "创建一个分布式计算任务"
+      - "提交计算任务"
+    parameters:
+      - name: "name"
+        type: "string"
+        required: true
+        description: "任务名称"
+      # 分布式计算参数较复杂，后续按需扩展
+
+  # ═══════════════════════════════════════════════════════════
+  # RBACAgent 意图 — 用户/权限管理
+  # ═══════════════════════════════════════════════════════════
+
+  user_query:
+    description: "查询用户列表"
+    agent: "rbac"
+    level: "p3"
+    keywords: ["用户", "user", "账户"]
+    examples:
+      - "查看所有用户"
+      - "用户列表"
+    parameters:
+      - name: "page"
+        type: "number"
+        required: false
+        default: 1
+      - name: "pageSize"
+        type: "number"
+        required: false
+        default: 10
+
+  user_create:
+    description: "创建用户"
+    agent: "rbac"
+    level: "p1"
+    keywords: ["创建用户", "新增用户", "添加账户"]
+    examples:
+      - "创建一个新用户"
+      - "添加账户"
+    parameters:
+      - name: "username"
+        type: "string"
+        required: true
+        description: "用户名"
+      - name: "password"
+        type: "string"
+        required: true
+        description: "密码"
+      - name: "role"
+        type: "string"
+        required: false
+        default: "user"
+        description: "角色: admin / user / viewer（默认user）"
+      - name: "nickName"
+        type: "string"
+        required: false
+        description: "昵称"
+
+  user_delete:
+    description: "删除用户"
+    agent: "rbac"
+    level: "p0"
+    keywords: ["删除用户", "移除账户"]
+    examples:
+      - "删除用户"
+      - "移除这个账户"
+    parameters:
+      - name: "userId"
+        type: "string"
+        required: true
+        description: "用户ID"
+
+  role_query:
+    description: "查询角色列表"
+    agent: "rbac"
+    level: "p3"
+    keywords: ["角色", "role", "权限"]
+    examples:
+      - "查看角色列表"
+      - "有哪些角色"
+    parameters: []
+
+  # ═══════════════════════════════════════════════════════════
+  # StorageAgent 意图 — 存储管理
+  # ═══════════════════════════════════════════════════════════
+
+  storage_query:
+    description: "查询存储卷"
+    agent: "storage"
+    level: "p3"
+    keywords: ["存储", "PVC", "卷", "storage"]
+    examples:
+      - "查看存储卷"
+      - "有哪些PVC"
+    parameters:
+      - name: "namespace"
+        type: "string"
+        required: false
+        description: "命名空间"
+
+  storage_create:
+    description: "创建存储卷(PVC)"
+    agent: "storage"
+    level: "p1"
+    keywords: ["创建存储", "新建PVC", "存储卷"]
+    examples:
+      - "创建一个10G的存储卷"
+      - "新建PVC"
+    parameters:
+      - name: "name"
+        type: "string"
+        required: true
+        description: "PVC名称"
+      - name: "size"
+        type: "number"
+        required: true
+        description: "存储大小(GB)"
+      - name: "storageClass"
+        type: "string"
+        required: false
+        default: "default"
+        description: "存储类"
+
+  storage_delete:
+    description: "删除存储卷"
+    agent: "storage"
+    level: "p0"
+    keywords: ["删除存储", "删除PVC"]
+    examples:
+      - "删除这个PVC"
+    parameters:
+      - name: "name"
+        type: "string"
+        required: true
+        description: "PVC名称"
+
+  # ═══════════════════════════════════════════════════════════
+  # NetworkAgent 意图 — 网络配置
+  # ═══════════════════════════════════════════════════════════
+
+  network_query:
+    description: "查询网络配置"
+    agent: "network"
+    level: "p3"
+    keywords: ["网络", "带宽", "IP", "端口", "域名"]
+    examples:
+      - "查看网络配置"
+      - "带宽使用情况"
+      - "服务端口"
+    parameters:
+      - name: "namespace"
+        type: "string"
+        required: false
+        description: "命名空间"
+
+  ingress_query:
+    description: "查询域名/Ingress"
+    agent: "network"
+    level: "p3"
+    keywords: ["域名", "ingress", "路由"]
+    examples:
+      - "有哪些域名"
+      - "Ingress配置"
+    parameters: []
+
+  # ═══════════════════════════════════════════════════════════
+  # 通用意图 — 免确认
+  # ═══════════════════════════════════════════════════════════
+
+  greeting:
+    description: "问候/寒暄"
+    agent: "query"
+    level: "p3"
+    keywords: ["你好", "hi", "hello", "在吗", "嗨"]
+    examples:
+      - "你好"
+      - "在吗"
+      - "你好，帮我个忙"
+    parameters: []
+
+  help:
+    description: "求助/功能询问"
+    agent: "query"
+    level: "p3"
+    keywords: ["帮助", "help", "能做什么", "功能", "怎么用"]
+    examples:
+      - "你能做什么"
+      - "有什么功能"
+      - "帮助"
+    parameters: []
+
+  unknown:
+    description: "未知意图/兜底"
+    agent: "query"
+    level: "p3"
+    keywords: []
+    examples: []
+    parameters: []
+
+  # ═══════════════════════════════════════════════════════════
+  # 意图总数: 25个意图
+  # QueryAgent:  6个 (node_query, node_detail, gpu_query, image_query, cluster_overview, resource_monitor)
+  # DiagAgent:   2个 (diagnose_pod, log_query)
+  # DeployAgent: 6个 (deploy_create_instance, deploy_scale, deploy_delete, deploy_restart, nim_create, distributed_create)
+  # RBACAgent:   4个 (user_query, user_create, user_delete, role_query)
+  # StorageAgent:3个 (storage_query, storage_create, storage_delete)
+  # NetworkAgent:2个 (network_query, ingress_query)
+  # 通用:         2个 (greeting, help)
+  # 兜底:         1个 (unknown)
+  # ═══════════════════════════════════════════════════════════

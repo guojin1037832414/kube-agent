@@ -1,0 +1,113 @@
+# Atlas v3.1 主配置
+# 注意: api-key 禁止写入此文件！通过环境变量或启动参数注入
+
+server:
+  port: 8500
+
+spring:
+  application:
+    name: kube-agent-atlas-v3
+
+  # ============================================================
+  # Spring AI — OpenAI兼容协议 (公司new-api代理)
+  # ============================================================
+  ai:
+    openai:
+      base-url: "http://124.74.245.75:3000"
+      api-key: "${ATLAS_LLM_API_KEY:}"  # 必须从环境变量注入！
+      chat:
+        options:
+          model: "moonshotai/kimi-k2.6"
+          temperature: 0.3  # Agent任务需要确定性，降低随机性
+          max-tokens: 4096
+
+# ============================================================
+# Atlas v3.1 专用配置
+# ============================================================
+atlas:
+  # --- 本地Embedding服务 ---
+  embedding:
+    enabled: true
+    # 模型本地路径，首次启动自动下载
+    model-path: "${user.home}/.atlas/models/all-MiniLM"
+    # HuggingFace模型ID（用于下载）
+    model-id: "sentence-transformers/all-MiniLM-L6-v2"
+    # 向量维度 (all-MiniLM-L6-v2 = 384)
+    dimension: 384
+    # 语义匹配阈值 [0-1]，超过此值视为命中
+    match-threshold: 0.75
+    # 模型下载超时(秒) — 代理通时自动下载
+    download-timeout-seconds: 60
+
+  # --- 意图分级配置 ---
+  intent:
+    # L1: Embedding匹配阈值 (≥此值则跳过L2直接进入路由)
+    l1-threshold: 0.85
+    # L2: 规则精确匹配 (score == 100直接返回)
+    l2-exact-match-score: 100
+    # L3: LLM分类置信度阈值
+    l3-confidence-threshold: 0.70
+    # L4: 模糊兜底开关
+    l4-fuzzy-fallback-enabled: true
+    # 意图定义文件
+    intents-config: "classpath:intents.yml"
+
+  # --- 任务风险分级 (用于HITL) ---
+  task-levels:
+    # P0: 高危操作关键词
+    p0-keywords: ["DELETE", "DROP", "REMOVE", "PURGE", "SCALE_DOWN", "TERMINATE"]
+    # P1: 中危操作关键词
+    p1-keywords: ["CREATE", "UPDATE", "PATCH", "SCALE_UP", "BIND"]
+    # P2: 低危操作关键词
+    p2-keywords: ["RESTART", "STOP", "PAUSE"]
+    # P3: 纯查询 (免确认)
+    p3-keywords: ["GET", "QUERY", "LIST", "DESCRIBE", "STATUS", "INFO"]
+
+  # --- HITL人机回环 ---
+  hitl:
+    enabled: true
+    # 确认超时时间(秒)
+    confirmation-timeout-seconds: 60
+    # 命令式确认模板
+    command-confirm-template: "请输入'确认{action}{target}'以继续操作"
+
+  # --- 6大Agent路由 ---
+  agent-routing:
+    default-agent: "query"
+    # 意图前缀 → Agent映射
+    mappings:
+      "user_": "rbac"
+      "role_": "rbac"
+      "deploy_": "deploy"
+      "pod_": "deploy"
+      "service_": "deploy"
+      "storage_": "storage"
+      "pvc_": "storage"
+      "network_": "network"
+      "ingress_": "network"
+      "diagnose_": "diag"
+      "log_": "diag"
+      "node_": "query"
+      "cluster_": "query"
+      "gpu_": "query"
+      "image_": "query"
+
+  # --- kube-manager连接配置 ---
+  backend:
+    # WSL Mirrored模式直连Windows主机
+    base-url: "http://localhost:8100"
+    # 登录接口参数
+    login-username: "${ATLAS_BACKEND_USERNAME:sysadmin}"
+    login-password: "${ATLAS_BACKEND_PASSWORD:}"
+    # 用户组织ID (用于/api/login精确匹配)
+    organization-id: "${ATLAS_ORG_ID:}"
+    # HTTP连接超时
+    connect-timeout-seconds: 10
+    # 读取超时
+    read-timeout-seconds: 30
+
+# --- 日志 ---
+logging:
+  level:
+    com.atlas: DEBUG
+    org.springframework.ai: INFO
