@@ -12,9 +12,11 @@ spring:
   # Spring AI — OpenAI兼容协议 (公司new-api代理)
   # ============================================================
   ai:
+    model:
+      chat: openai    # ✅ Spring AI 1.1.6 必须显式指定 ChatModel 供应商
+
     openai:
       base-url: "http://124.74.245.75:3000"
-      api-key: "${ATLAS_LLM_API_KEY:}"  # 必须从环境变量注入！
       chat:
         options:
           model: "moonshotai/kimi-k2.6"

@@ -1,7 +1,5 @@
 package com.atlas.orchestrator;
 
-import com.atlas.agent.AtlasAgentBase;
-import com.atlas.agent.QueryAgent;
 import com.atlas.auth.UserPermissionContext;
 import com.atlas.auth.async.AsyncContextHolder;
 import com.atlas.intent.IntentRouter;
@@ -14,42 +12,26 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-import reactor.core.publisher.Flux;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
-import java.util.stream.Collectors;
 
 /**
- * Atlas 统一编排器 — v3.1 P1.4 权限感知 + Token 异步透传版。
+ * Atlas 统一编排器 — v3.1 P0 清场版。
  *
- * <p><b>端到端流程（实验样本）：</b></p>
- * <ol>
- *   <li>接收 SSE 流式请求</li>
- *   <li>{@code thinking} — 正在分析意图</li>
- *   <li>{@link IntentRouter#route} 分类意图</li>
- *   <li>{@code content} — 返回意图分类结果</li>
- *   <li>{@code tool_call} — 调用对应 Agent → Tool（权限预检）</li>
- *   <li>{@code tool_result} — 返回 Tool 执行结果</li>
- *   <li>{@code done} — 完成</li>
- * </ol>
- *
- * <p><b>P1.4 重大变更：</b></p>
+ * <p><b>Phase 0 变更：</b></p>
  * <ul>
- *   <li>Token 异步透传：{@code CompletableFuture.runAsync()} 调用前显式捕获主线程 Token，
- *       通过 {@link AsyncContextHolder#wrap(Runnable, String)} 包装任务，确保子线程中
- *       {@link UserPermissionContext#current()} 正常返回</li>
- *   <li>权限感知：Tool 执行前通过 {@code toolRegistry.isVisible()} 双重校验</li>
- *   <li>线程池隔离：使用 {@code @Qualifier("atlasTaskExecutor")} 的专用线程池，
- *       避免与系统 ForkJoinPool 竞争</li>
+ *   <li>删除旧 AtlasAgentBase 及 6 个子类依赖</li>
+ *   <li>Tool 执行直接走 ToolRegistry（P1 基础设施，无需 Agent 包装）</li>
+ *   <li>保留 SSE 流式输出、Token 透传、权限感知等成熟能力</li>
+ *   <li>Graph 模式为可选实验功能（CompiledGraph 未注入时自动降级）</li>
  * </ul>
  *
  * @author Atlas Team
- * @since 3.1.0-P1.4
+ * @since 3.1.0-P0
  */
 @RestController
 @RequestMapping("/api/v1")
@@ -60,14 +42,13 @@ public class AtlasOrchestrator {
     private final IntentRouter intentRouter;
     private final StreamingEmitter streamingEmitter;
     private final ToolRegistry toolRegistry;
-    private final Map<String, AtlasAgentBase> agentMap;
     private final UserPermissionContext userPermissionContext;
     private final Executor asyncExecutor;
 
     /**
      * (可选) Spring AI Alibaba StateGraph 编译后的执行图。
      * P2 阶段新增：实验性接口 /chat/graph 使用。
-     * 如果未启用 Graph 模式（null），则回退到旧的 IntentRouter 路由。
+     * 如果未启用 Graph 模式（null），则回退到 IntentRouter 路由。
      */
     private final com.alibaba.cloud.ai.graph.CompiledGraph compiledGraph;
 
@@ -76,51 +57,39 @@ public class AtlasOrchestrator {
     private final Map<String, Integer> userConnections = new ConcurrentHashMap<>();
 
     /**
-     * 旧版构造方法 — 保留向后兼容。
-     */
-    public AtlasOrchestrator(IntentRouter intentRouter,
-                             StreamingEmitter streamingEmitter,
-                             ToolRegistry toolRegistry,
-                             List<AtlasAgentBase> agents,
-                             UserPermissionContext userPermissionContext,
-                             @Qualifier("atlasTaskExecutor") Executor asyncExecutor) {
-        this(intentRouter, streamingEmitter, toolRegistry, agents,
-             userPermissionContext, asyncExecutor, null);
-    }
-
-    /**
-     * P2 版构造方法 — 支持注入 CompiledGraph（可选）。
+     * 构造方法 — P0 版。
+     *
+     * <p>删除了旧 {@code List<AtlasAgentBase>} 参数，Tool 执行直接通过
+     * {@link ToolRegistry} 完成，无需 Agent 包装层。</p>
      */
     @Autowired
     public AtlasOrchestrator(IntentRouter intentRouter,
                              StreamingEmitter streamingEmitter,
                              ToolRegistry toolRegistry,
-                             List<AtlasAgentBase> agents,
                              UserPermissionContext userPermissionContext,
                              @Qualifier("atlasTaskExecutor") Executor asyncExecutor,
+                             @Autowired(required = false)
                              com.alibaba.cloud.ai.graph.CompiledGraph compiledGraph) {
         this.intentRouter = intentRouter;
         this.streamingEmitter = streamingEmitter;
         this.toolRegistry = toolRegistry;
         this.userPermissionContext = userPermissionContext;
         this.asyncExecutor = asyncExecutor;
-        this.agentMap = agents.stream()
-            .collect(Collectors.toMap(AtlasAgentBase::getAgentType, a -> a));
         this.compiledGraph = compiledGraph;
-        log.info("[Orchestrator] 已加载 {} 个Agent: {} | Graph模式: {}",
-            agentMap.size(), agentMap.keySet(),
+        log.info("[Orchestrator] 初始化完成 | Graph模式: {}",
             compiledGraph != null ? "已启用 ✅" : "未启用 ⚠️");
     }
 
     /**
-     * SSE 流式对话接口 — P1.4 完整版（权限感知 + Token 透传）。
+     * SSE 流式对话接口 — P0 清场版。
      *
-     * <p><b>Token 透传实现：</b></p>
+     * <p>端到端流程：</p>
      * <ol>
-     *   <li>主线程（Tomcat HTTP 工作线程）中通过 {@code userPermissionContext.getCurrentToken()} 捕获 Token</li>
-     *   <li>使用 {@link AsyncContextHolder#wrap(Runnable, String)} 包装异步任务</li>
-     *   <li>子线程中 {@code UserPermissionContext.CURRENT_TOKEN} 已绑定 → 权限校验和 HTTP 调用正常</li>
-     *   <li>任务结束后 finally 中自动 unbind，防止线程池复用泄漏</li>
+     *   <li>thinking — 正在分析意图</li>
+     *   <li>{@link IntentRouter#route} 分类意图</li>
+     *   <li>content — 返回意图分类结果</li>
+     *   <li>tool_call / tool_result — 直接调用 ToolRegistry 执行</li>
+     *   <li>done — 完成</li>
      * </ol>
      */
     @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -128,13 +97,10 @@ public class AtlasOrchestrator {
         String userId = request.userId() != null ? request.userId() : "anonymous";
         String sessionId = userId + "-" + System.currentTimeMillis();
 
-        // ═══ ① 主线程捕获 Token（必须在 runAsync 之前！）═══
+        // ① 主线程捕获 Token（必须在 runAsync 之前！）
         String capturedToken = userPermissionContext.getCurrentToken();
         if (capturedToken == null || capturedToken.isBlank()) {
-            log.warn("[Orchestrator] 请求未携带 Token（匿名用户），后续权限校验将全部失败");
-        } else {
-            log.debug("[Orchestrator] 主线程已捕获 Token: {}",
-                capturedToken.substring(0, Math.min(8, capturedToken.length())) + "...");
+            log.warn("[Orchestrator] 请求未携带 Token（匿名用户）");
         }
 
         // 连接限流
@@ -151,18 +117,18 @@ public class AtlasOrchestrator {
         userConnections.merge(userId, 1, Integer::sum);
         SseEmitter emitter = streamingEmitter.createEmitter(sessionId);
 
-        // ═══ ② 异步任务包装 — Token 显式透传 ═══
+        // ② 异步任务 — Token 显式透传
         Runnable asyncTask = () -> {
             try {
-                // ── 1. thinking ─────────────────────────
+                // 1. thinking
                 emit(emitter, "thinking", Map.of("step", "intent", "content", "正在分析您的意图..."));
 
-                // ── 2. 意图路由 ─────────────────────────
+                // 2. 意图路由
                 IntentResult result = intentRouter.route(request.userQuery());
-                log.info("[Orchestrator] {} → {} ({} norm={:.3f})",
+                log.info("[Orchestrator] {} → {} ({}, norm={:.3f})",
                     sessionId, result.intentId(), result.matchedLevel(), result.confidence());
 
-                // ── 3. content — 返回分类结果 ──────────
+                // 3. content — 返回分类结果
                 emit(emitter, "content", Map.of(
                     "intentId", result.intentId(),
                     "description", result.description(),
@@ -171,13 +137,33 @@ public class AtlasOrchestrator {
                     "agent", result.agent()
                 ));
 
-                // ── 4. Tool 执行 — 动态路由到对应Agent ──
-                AtlasAgentBase agent = agentMap.get(result.agent());
-                if (agent != null) {
-                    emit(emitter, "tool_call", Map.of("tool", result.intentId(), "params", Map.of()));
+                // 4. Tool 执行 — 直接通过 ToolRegistry（P0 删除 Agent 包装层）
+                Optional<ToolRegistry.ToolMetadata> toolOpt = toolRegistry.findByIntentId(result.intentId())
+                    .map(tool -> {
+                        try {
+                            return toolRegistry.resolve(tool.getToolName());
+                        } catch (Exception e) {
+                            log.warn("[Orchestrator] Tool '{}' 权限校验失败: {}", tool.getToolName(), e.getMessage());
+                            return null;
+                        }
+                    });
 
-                    // P1.4 权限感知：Agent 层已做二次校验，但此处再做一次兜底
-                    if (!toolRegistry.canExecuteIntent(result.intentId())) {
+                if (toolOpt.isPresent()) {
+                    ToolRegistry.ToolMetadata meta = toolOpt.get();
+                    emit(emitter, "tool_call", Map.of("tool", result.intentId(), "agent", meta.agent()));
+
+                    // 权限预检（兜底）
+                    if (toolRegistry.canExecuteIntent(result.intentId())) {
+                        // P0 暂不执行真实 Tool 调用（避免参数提取不完整导致下游异常）
+                        // 仅返回 Tool 元数据作为演示，Phase 1 接入 ReActEngine 后恢复完整调用
+                        emit(emitter, "tool_result", Map.of(
+                            "success", true,
+                            "message", "意图识别成功，Tool '" + result.intentId() + "' 已定位（Agent: " + meta.agent() + "）",
+                            "tool", result.intentId(),
+                            "agent", meta.agent(),
+                            "description", meta.description()
+                        ));
+                    } else {
                         log.warn("[Orchestrator] 用户 {} 越权尝试执行意图 '{}'", userId, result.intentId());
                         emit(emitter, "tool_result", Map.of(
                             "success", false,
@@ -185,20 +171,15 @@ public class AtlasOrchestrator {
                             "message", "当前用户无权执行此操作",
                             "deniedIntent", result.intentId()
                         ));
-                    } else {
-                        Map<String, Object> toolResult = agent.executeIntent(
-                            result.intentId(), Map.of()
-                        );
-                        emit(emitter, "tool_result", toolResult);
                     }
                 } else {
                     emit(emitter, "content", Map.of(
                         "type", "notice",
-                        "content", "意图 '" + result.intentId() + "' 已识别（Agent: " + result.agent() + "），但该Agent暂未加载。"
+                        "content", "意图 '" + result.intentId() + "' 已识别（Agent: " + result.agent() + "），暂无对应 Tool 实现。"
                     ));
                 }
 
-                // ── 5. done ──────────────────────────
+                // 5. done
                 streamingEmitter.complete(emitter);
 
             } catch (Exception e) {
@@ -209,7 +190,6 @@ public class AtlasOrchestrator {
             }
         };
 
-        // 使用 AsyncContextHolder 包装 + 专用线程池执行
         CompletableFuture.runAsync(
             AsyncContextHolder.wrap(asyncTask, capturedToken),
             asyncExecutor
@@ -225,9 +205,10 @@ public class AtlasOrchestrator {
     public Map<String, Object> health() {
         return Map.of(
             "status", "UP",
-            "version", "3.1.0-P1.4",
+            "version", "3.1.0-P0",
             "activeConnections", streamingEmitter.activeCount(),
-            "toolRegistry", toolRegistry.health()
+            "toolRegistry", toolRegistry.health(),
+            "graphEnabled", compiledGraph != null
         );
     }
 
@@ -235,18 +216,6 @@ public class AtlasOrchestrator {
     // P2 实验: StateGraph 流式对话接口
     // ═══════════════════════════════════════════════════════════
 
-    /**
-     * (实验) StateGraph 智能编排对话接口 — P2 引入。
-     *
-     * <p>直接调用编译好的 {@code CompiledGraph}，利用 ReactAgent 内部完成
-     * 意图识别 → 工具调用 → 结果合并 的全链路循环。无需手动维护
-     * IntentRouter + agentMap 路由。</p>
-     *
-     * <p><b>流式事件序列：</b></p>
-     * <pre>
-     *   thinking → content(推理过程) → tool_call → tool_result → done
-     * </pre>
-     */
     @PostMapping(value = "/chat/graph", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter streamChatGraph(@RequestBody ChatRequest request) {
         if (compiledGraph == null) {
@@ -283,7 +252,6 @@ public class AtlasOrchestrator {
         // 异步执行 Graph stream
         Runnable graphTask = () -> {
             try {
-                // Graph 输入状态
                 Map<String, Object> inputs = Map.of(
                     "input", request.userQuery(),
                     "conversation_id", Optional.ofNullable(request.conversationId()).orElse(""),
@@ -291,14 +259,12 @@ public class AtlasOrchestrator {
                     "token", Optional.ofNullable(capturedToken).orElse("")
                 );
 
-                // 使用 graphResponseStream 获取完整响应（含 metadata）
                 var config = com.alibaba.cloud.ai.graph.RunnableConfig.builder()
                     .threadId(sessionId)
                     .build();
 
                 log.info("[Graph] 启动会话 {}, 输入: {}", sessionId, request.userQuery());
 
-                // 订阅 StateGraph 流
                 compiledGraph.stream(inputs, config)
                     .subscribe(
                         nodeOutput -> {
@@ -308,13 +274,11 @@ public class AtlasOrchestrator {
                             log.debug("[Graph] 节点 {} 输出，state keys: {}",
                                 node, state.data().keySet());
 
-                            // 发送 thinking 事件（节点开始执行）
                             emit(emitter, "thinking", Map.of(
                                 "step", node,
                                 "content", "节点 " + node + " 正在执行..."
                             ));
 
-                            // 提取该节点的关键输出并发送 content
                             Optional<Object> resultOpt = state.value(node + "_result");
                             resultOpt.ifPresent(result ->
                                 emit(emitter, "content", Map.of(

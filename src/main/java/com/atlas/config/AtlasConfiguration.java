@@ -9,6 +9,7 @@ import com.atlas.intent.rule.RuleMatcher;
 import com.atlas.orchestrator.StreamingEmitter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -66,21 +67,26 @@ public class AtlasConfiguration {
     /**
      * L3 LLM 分类器 — 条件创建。
      *
-     * <p><b>关键</b>：不注入 ChatClient.Builder，而是检查 api-key 配置存在性。
-     * 如果不满足，直接返回 null，避免触发 Spring AI 自动配置的依赖链级联创建。</p>
+     * <p>要求同时满足：1) api-key 已配置 2) Spring AI 自动配置成功创建了 ChatClient.Builder。
+     * 任一不满足则禁用 L3，回退到 L2/L4 规则匹配。不会阻断服务启动。</p>
      */
     @Bean
-    public L3IntentClassifier l3IntentClassifier(Environment env, IntentsLoader intentsLoader) {
+    public L3IntentClassifier l3IntentClassifier(
+            Environment env,
+            IntentsLoader intentsLoader,
+            @Autowired(required = false) ChatClient.Builder chatClientBuilder) {
+        
         String apiKey = env.getProperty("spring.ai.openai.api-key");
         if (apiKey == null || apiKey.isBlank() || apiKey.startsWith("${")) {
             log.warn("[AtlasConfiguration] spring.ai.openai.api-key 未配置，L3 LLM 分类器禁用");
             return null;
         }
+        if (chatClientBuilder == null) {
+            log.warn("[AtlasConfiguration] ChatClient.Builder 不可用（Spring AI 自动配置未生效），L3 禁用");
+            return null;
+        }
         try {
-            // 注意：L3IntentClassifier 内部需要 ChatClient.Builder，
-            // 此时 api-key 已确认存在，Spring AI 自动配置应能成功
-            return new L3IntentClassifier(null, intentsLoader, 0.70);
-            // 上面传 null 给 ChatClient.Builder 会 NPE，需要再想办法...
+            return new L3IntentClassifier(chatClientBuilder, intentsLoader, 0.70);
         } catch (Exception e) {
             log.warn("[AtlasConfiguration] L3 LLM 分类器初始化失败：{}", e.getMessage());
             return null;

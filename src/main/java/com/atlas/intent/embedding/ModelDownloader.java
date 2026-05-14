@@ -57,15 +57,21 @@ public final class ModelDownloader {
     }
 
     private static Path resolve(String fileName, EmbeddingConfig config) {
-        // L1: 本地磁盘
+        // L1: 本地磁盘（根目录 + onnx/子目录）
         Path localDir = Path.of(config.getModelPath());
         Path localFile = localDir.resolve(fileName);
         if (Files.exists(localFile)) {
             log.info("[ModelDownloader] {} 命中本地路径: {}", fileName, localFile);
             return localFile.toAbsolutePath();
         }
+        // 额外检查 onnx/ 子目录（HuggingFace 标准结构）
+        Path onnxFile = localDir.resolve("onnx").resolve(fileName);
+        if (Files.exists(onnxFile)) {
+            log.info("[ModelDownloader] {} 命中本地 onnx 子目录: {}", fileName, onnxFile);
+            return onnxFile.toAbsolutePath();
+        }
 
-        // L2: classpath（开发测试时用）
+        // L2: classpath（开发测试时用）... (保持不变)
         URL classpathUrl = ModelDownloader.class.getResource("/models/all-MiniLM/" + fileName);
         if (classpathUrl != null) {
             try {

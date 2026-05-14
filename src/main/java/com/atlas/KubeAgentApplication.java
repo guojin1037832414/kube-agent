@@ -1,6 +1,5 @@
 package com.atlas;
 
-import org.springframework.ai.model.openai.autoconfigure.*;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
@@ -16,17 +15,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * @version 3.1.0-SNAPSHOT
  * @since 2026-05-14
  */
-@SpringBootApplication(
-    scanBasePackages = "com.atlas",
-    exclude = {
-        OpenAiChatAutoConfiguration.class,
-        OpenAiEmbeddingAutoConfiguration.class,
-        OpenAiAudioSpeechAutoConfiguration.class,
-        OpenAiAudioTranscriptionAutoConfiguration.class,
-        OpenAiImageAutoConfiguration.class,
-        OpenAiModerationAutoConfiguration.class
-    }
-)
+@SpringBootApplication(scanBasePackages = "com.atlas")
 public class KubeAgentApplication {
 
     /**
