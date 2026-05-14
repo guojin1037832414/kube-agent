@@ -494,6 +494,124 @@ intents:
       - "帮助"
     parameters: []
 
+  # --- 集群相关 ---
+  cluster_query:
+    description: "查询集群列表"
+    agent: "query"
+    level: "p3"
+    keywords: ["集群", "cluster", "算力集群", "slurm集群", "hpc集群"]
+    examples:
+      - "查看集群列表"
+      - "有哪些算力集群"
+      - "hpc集群"
+    parameters: []
+
+  # --- Deployment 列表 ---
+  deployment_status:
+    description: "查询Deployment列表"
+    agent: "query"
+    level: "p3"
+    keywords: ["deployment", "工作负载", "应用", "服务实例"]
+    examples:
+      - "查看所有Deployment"
+      - "工作负载列表"
+      - "有哪些应用"
+    parameters: []
+
+  # --- Pod 列表 ---
+  pod_status:
+    description: "查询Pod列表"
+    agent: "query"
+    level: "p3"
+    keywords: ["pod", "容器", "实例"]
+    examples:
+      - "查看所有Pod"
+      - "有哪些容器"
+      - "Pod状态"
+    parameters: []
+
+  # --- Namespace 列表 ---
+  namespace_status:
+    description: "查询Namespace列表"
+    agent: "query"
+    level: "p3"
+    keywords: ["namespace", "命名空间", "ns"]
+    examples:
+      - "查看Namespace"
+      - "有哪些命名空间"
+      - "ns列表"
+    parameters: []
+
+  # --- Service 看板 ---
+  service_status:
+    description: "查询资源看板"
+    agent: "query"
+    level: "p3"
+    keywords: ["service", "服务", "资源", "看板"]
+    examples:
+      - "查看Service"
+      - "服务列表"
+      - "资源看板"
+    parameters: []
+
+  # --- DaemonSet ---
+  daemonset_status:
+    description: "查询DaemonSet状态"
+    agent: "query"
+    level: "p3"
+    keywords: ["daemonset", "守护进程"]
+    examples:
+      - "查看DaemonSet"
+      - "守护进程状态"
+    parameters: []
+
+  # --- DevOps ---
+  devops_pipeline:
+    description: "查询DevOps工作负载"
+    agent: "query"
+    level: "p3"
+    keywords: ["devops", "pipeline", "流水线", "ci/cd"]
+    examples:
+      - "DevOps流水线"
+      - "CI/CD状态"
+    parameters: []
+
+  # --- 节点指标 ---
+  node_metrics:
+    description: "查询节点列表及资源使用率"
+    agent: "query"
+    level: "p3"
+    keywords: ["节点指标", "node metrics", "CPU", "内存", "磁盘"]
+    examples:
+      - "节点CPU使用率"
+      - "节点内存占用"
+      - "机器资源使用率"
+    parameters: []
+
+  # --- GPU 指标 ---
+  gpu_metrics:
+    description: "查询GPU配置映射"
+    agent: "query"
+    level: "p3"
+    keywords: ["GPU指标", "GPU使用率", "显存占用"]
+    examples:
+      - "GPU使用率"
+      - "显存占用"
+      - "GPU配置"
+    parameters: []
+
+  # --- 用户管理 ---
+  user_management:
+    description: "查询用户管理列表"
+    agent: "rbac"
+    level: "p3"
+    keywords: ["用户管理", "账户管理", "成员"]
+    examples:
+      - "用户管理"
+      - "账户列表"
+      - "组织成员"
+    parameters: []
+
   unknown:
     description: "未知意图/兜底"
     agent: "query"

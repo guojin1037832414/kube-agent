@@ -1,5 +1,6 @@
 package com.atlas.tool.impl;
 
+import com.atlas.http.KubeManagerHttpClient;
 import com.atlas.tool.annotation.AtlasToolMapping;
 import com.atlas.tool.annotation.ToolPermission;
 import com.atlas.tool.core.AtlasToolResult;
@@ -11,7 +12,7 @@ import java.util.*;
 /**
  * 创建标准实例(Deployment) Tool — 含默认参数回填。
  *
- * <p>调用 kube-manager API: POST /api/instance/create</p>
+ * <p>调用 kube-manager API: POST /api/{orgId}/deployment</p>
  * <p>Agent归属: deploy | 安全级别: P1</p>
  *
  * <p><b>默认参数(匹配前端表单)</b>:</p>
@@ -36,8 +37,11 @@ import java.util.*;
 @ToolPermission(ToolPermission.Policy.AUTHENTICATED)
 public class DeployCreateTool extends BaseTool {
 
-    public DeployCreateTool() {
+    private final KubeManagerHttpClient httpClient;
+
+    public DeployCreateTool(KubeManagerHttpClient httpClient) {
         super("deploy_create_instance", "创建标准实例(Deployment)，含前端表单默认参数");
+        this.httpClient = httpClient;
     }
 
     @Override
@@ -72,35 +76,69 @@ public class DeployCreateTool extends BaseTool {
                 List.of("请提供镜像名称，例如: ubuntu:22.04"));
         }
 
-        // P1阶段: Mock创建（后续替换为真实HTTP调用）
         int cpu = getIntParam(params, "cpuLimits", 2);
         int mem = getIntParam(params, "memLimits", 8);
         int gpu = getIntParam(params, "gpuPercentLimits", 0);
         int replicas = getIntParam(params, "replicas", 1);
         int bw = getIntParam(params, "bandwidth", 10);
         boolean ssh = getBoolParam(params, "enableWebSsh", true);
+        boolean autoScale = getBoolParam(params, "autoScaleSwitch", false);
 
         log.info("[deploy_create_instance] 创建实例 name={}, image={}, cpu={}, mem={}", name, image, cpu, mem);
 
-        Map<String, Object> data = Map.of(
-            "success", true,
-            "createdName", name,
-            "image", image,
-            "config", Map.of(
-                "cpuLimits", cpu,
-                "memLimits", mem,
-                "gpuPercentLimits", gpu,
-                "replicas", replicas,
-                "bandwidth", bw,
-                "enableWebSsh", ssh
-            ),
-            "action", "deploy_create_instance",
-            "status", "Created",
-            "message", "创建任务已提交, 请稍候确认状态"
-        );
+        try {
+            String orgId = organizationId(params);
+            String path = "/api/" + orgId + "/deployment";
+            Map<String, Object> body = buildCreateBody(params, name, image, cpu, mem, gpu, replicas, bw, ssh, autoScale);
+            Map<String, Object> response = httpClient.post(path, body);
+            Object data = response.containsKey("result") ? response.get("result") : response;
 
-        String summary = "实例 '" + name + "' 创建任务已提交 (镜像: " + image + ", CPU: " + cpu + "核, 内存: " + mem + "GB)";
-        return AtlasToolResult.ok(summary, data);
+            String summary = "实例 '" + name + "' 创建任务已提交 (镜像: " + image + ", CPU: " + cpu + "核, 内存: " + mem + "GB)";
+            return AtlasToolResult.ok(summary, data);
+        } catch (Exception e) {
+            log.error("[deploy_create_instance] 调用 kube-manager API 失败", e);
+            return AtlasToolResult.fail("实例创建失败: " + e.getMessage());
+        }
+    }
+
+    private Map<String, Object> buildCreateBody(
+        Map<String, Object> params,
+        String name,
+        String image,
+        int cpu,
+        int mem,
+        int gpu,
+        int replicas,
+        int bandwidth,
+        boolean enableWebSsh,
+        boolean autoScaleSwitch
+    ) {
+        Map<String, Object> body = filterNullParams(params);
+        body.put("name", name);
+        body.put("image", image);
+        body.put("cpuLimits", cpu);
+        body.put("memLimits", mem);
+        body.put("gpuPercentLimits", gpu);
+        body.put("replicas", replicas);
+        body.put("bandwidth", bandwidth);
+        body.put("enableWebSsh", enableWebSsh);
+        body.put("autoScaleSwitch", autoScaleSwitch);
+        return body;
+    }
+
+    private Map<String, Object> filterNullParams(Map<String, Object> params) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        params.forEach((key, value) -> {
+            if (value != null) {
+                body.put(key, value);
+            }
+        });
+        return body;
+    }
+
+    private String organizationId(Map<String, Object> params) {
+        Object value = params.get("organizationId") != null ? params.get("organizationId") : params.get("orgId");
+        return value != null && !value.toString().isBlank() ? value.toString() : "100001";
     }
 
     private int getIntParam(Map<String, Object> params, String key, int defaultVal) {

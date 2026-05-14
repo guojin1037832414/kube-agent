@@ -1,12 +1,15 @@
 package com.atlas.tool.impl;
 
+import com.atlas.http.KubeManagerHttpClient;
 import com.atlas.tool.annotation.AtlasToolMapping;
 import com.atlas.tool.annotation.ToolPermission;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.tool.core.BaseTool;
 import org.springframework.stereotype.Component;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * 查询日志 Tool。
@@ -25,8 +28,11 @@ import java.util.*;
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class LogQueryTool extends BaseTool {
 
-    public LogQueryTool() {
+    private final KubeManagerHttpClient httpClient;
+
+    public LogQueryTool(KubeManagerHttpClient httpClient) {
         super("log_query", "查询日志");
+        this.httpClient = httpClient;
     }
 
     @Override
@@ -40,23 +46,27 @@ public class LogQueryTool extends BaseTool {
             Map.entry("lines", Integer.class)
         );
     }
+
     @Override
     protected AtlasToolResult doExecute(Map<String, Object> params) {
-        log.info("[log_query] 执行查询日志");
-        String pod = params.get("podName") != null ? params.get("podName").toString() : "unknown-pod";
-                int lines = params.get("lines") instanceof Number n ? n.intValue() : 100;
-                Map<String, Object> data = Map.of(
-                    "podName", pod,
-                    "lines", lines,
-                    "logs", List.of(
-                        "[INFO] 2026-05-14 10:23:45 Application started successfully",
-                        "[INFO] 2026-05-14 10:23:46 Connected to database",
-                        "[WARN] 2026-05-14 10:24:12 Slow query detected: 2.3s",
-                        "[INFO] 2026-05-14 10:25:01 Health check passed",
-                        "[ERROR] 2026-05-14 10:26:33 Connection timeout to upstream"
-                    )
-                );
-                String summary = "Pod " + pod + " 日志查询完成, 返回 " + lines + " 行";
-                return AtlasToolResult.ok(summary, data);
+        try {
+            log.info("[log_query] 执行查询日志");
+            Map<String, Object> query = new HashMap<>();
+            if (params.get("podName") != null) {
+                query.put("keyword", params.get("podName"));
+            }
+            params.forEach((key, value) -> {
+                if (value != null) {
+                    query.putIfAbsent(key, value);
+                }
+            });
+
+            Map<String, Object> response = httpClient.get("/api/log", query.isEmpty() ? null : query);
+            Object data = response.containsKey("result") ? response.get("result") : response;
+            return AtlasToolResult.ok("日志查询完成", data);
+        } catch (Exception e) {
+            log.error("[log_query] 调用 kube-manager API 失败", e);
+            return AtlasToolResult.fail("日志查询失败: " + e.getMessage());
+        }
     }
 }

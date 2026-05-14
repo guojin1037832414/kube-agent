@@ -1,12 +1,14 @@
 package com.atlas.tool.impl;
 
+import com.atlas.http.KubeManagerHttpClient;
 import com.atlas.tool.annotation.AtlasToolMapping;
 import com.atlas.tool.annotation.ToolPermission;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.tool.core.BaseTool;
 import org.springframework.stereotype.Component;
 
-import java.util.*;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * 集群概览/运营看板 Tool。
@@ -21,12 +23,14 @@ import java.util.*;
     intentId = "cluster_overview",
     description = "集群概览/运营看板"
 )
-
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class ClusterOverviewTool extends BaseTool {
 
-    public ClusterOverviewTool() {
+    private final KubeManagerHttpClient httpClient;
+
+    public ClusterOverviewTool(KubeManagerHttpClient httpClient) {
         super("cluster_overview", "集群概览/运营看板");
+        this.httpClient = httpClient;
     }
 
     @Override
@@ -36,22 +40,19 @@ public class ClusterOverviewTool extends BaseTool {
 
     @Override
     protected AtlasToolResult doExecute(Map<String, Object> params) {
-        log.info("[cluster_overview] 执行集群概览/运营看板");
-        Map<String, Object> data = Map.of(
-                    "clusterName", "prod-cluster-1",
-                    "status", "Healthy",
-                    "nodes", Map.of("total", 5, "ready", 4, "notReady", 1),
-                    "pods", Map.of("total", 128, "running", 120, "pending", 5, "failed", 3),
-                    "resources", Map.of(
-                        "cpu", Map.of("total", "64c", "used", "42c", "usage", "65.6%"),
-                        "memory", Map.of("total", "256Gi", "used", "180Gi", "usage", "70.3%"),
-                        "gpu", Map.of("total", 8, "used", 6, "usage", "75%")
-                    ),
-                    "alerts", List.of(
-                        Map.of("level", "warning", "message", "node-4 NotReady", "time", "10m ago")
-                    )
-                );
-                String summary = "集群概览查询完成, 当前集群状态: Healthy";
-                return AtlasToolResult.ok(summary, data);
+        try {
+            String orgId = params.get("organizationId") != null
+                ? params.get("organizationId").toString()
+                : "100001";
+
+            String path = "/api/" + orgId + "/dashboard/resources";
+            Map<String, Object> response = httpClient.get(path);
+            Object data = response.containsKey("result") ? response.get("result") : response;
+
+            return AtlasToolResult.ok("集群概览查询完成", data);
+        } catch (Exception e) {
+            log.error("[cluster_overview] 调用 kube-manager API 失败", e);
+            return AtlasToolResult.fail("集群概览查询失败: " + e.getMessage());
+        }
     }
 }

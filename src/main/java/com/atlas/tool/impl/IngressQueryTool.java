@@ -1,12 +1,14 @@
 package com.atlas.tool.impl;
 
+import com.atlas.http.KubeManagerHttpClient;
 import com.atlas.tool.annotation.AtlasToolMapping;
 import com.atlas.tool.annotation.ToolPermission;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.tool.core.BaseTool;
 import org.springframework.stereotype.Component;
 
-import java.util.*;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * 查询域名/Ingress Tool。
@@ -25,8 +27,11 @@ import java.util.*;
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class IngressQueryTool extends BaseTool {
 
-    public IngressQueryTool() {
+    private final KubeManagerHttpClient httpClient;
+
+    public IngressQueryTool(KubeManagerHttpClient httpClient) {
         super("ingress_query", "查询域名/Ingress");
+        this.httpClient = httpClient;
     }
 
     @Override
@@ -36,17 +41,21 @@ public class IngressQueryTool extends BaseTool {
 
     @Override
     protected AtlasToolResult doExecute(Map<String, Object> params) {
-        log.info("[ingress_query] 执行查询域名/Ingress");
-        List<Map<String, Object>> items = new ArrayList<>();
-                items.add(Map.of("name", "web-ingress", "host", "app.example.com", "path", "/", "service", "svc-web", "tls", true));
-                items.add(Map.of("name", "api-ingress", "host", "api.example.com", "path", "/api", "service", "svc-api", "tls", true));
-        
-                Map<String, Object> data = Map.of(
-                    "total", items.size(),
-                    "list", items
-                );
-        
-                String summary = "查询完成, 共 " + items.size() + " 条记录";
-                return AtlasToolResult.ok(summary, data);
+        try {
+            log.info("[ingress_query] 执行查询域名/Ingress");
+            String orgId = organizationId(params);
+            String path = "/api/" + orgId + "/dashboard/deployment";
+            Map<String, Object> response = httpClient.get(path);
+            Object data = response.containsKey("result") ? response.get("result") : response;
+            return AtlasToolResult.ok("Ingress 查询完成", data);
+        } catch (Exception e) {
+            log.error("[ingress_query] 调用 kube-manager API 失败", e);
+            return AtlasToolResult.fail("Ingress 查询失败: " + e.getMessage());
+        }
+    }
+
+    private String organizationId(Map<String, Object> params) {
+        Object value = params.get("organizationId") != null ? params.get("organizationId") : params.get("orgId");
+        return value != null && !value.toString().isBlank() ? value.toString() : "100001";
     }
 }

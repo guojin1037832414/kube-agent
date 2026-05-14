@@ -1,12 +1,15 @@
 package com.atlas.tool.impl;
 
+import com.atlas.http.KubeManagerHttpClient;
 import com.atlas.tool.annotation.AtlasToolMapping;
 import com.atlas.tool.annotation.ToolPermission;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.tool.core.BaseTool;
 import org.springframework.stereotype.Component;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * 诊断Pod/服务故障 Tool。
@@ -25,8 +28,11 @@ import java.util.*;
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class DiagnosePodTool extends BaseTool {
 
-    public DiagnosePodTool() {
+    private final KubeManagerHttpClient httpClient;
+
+    public DiagnosePodTool(KubeManagerHttpClient httpClient) {
         super("diagnose_pod", "诊断Pod/服务故障");
+        this.httpClient = httpClient;
     }
 
     @Override
@@ -36,20 +42,84 @@ public class DiagnosePodTool extends BaseTool {
 
     @Override
     protected AtlasToolResult doExecute(Map<String, Object> params) {
-        log.info("[diagnose_pod] 执行诊断Pod/服务故障");
-        String target = params.get("targetName") != null ? params.get("targetName").toString() : "未指定Pod";
-                Map<String, Object> data = Map.of(
-                    "target", target,
-                    "status", "Diagnosed",
-                    "findings", List.of(
-                        Map.of("severity", "warning", "issue", "镜像拉取策略可能导致启动延迟", "suggestion", "检查镜像仓库可达性"),
-                        Map.of("severity", "info", "issue", "资源限制设置合理", "suggestion", "无需调整")
-                    ),
-                    "events", List.of(
-                        Map.of("time", "5m ago", "type", "Warning", "reason", "ImagePullBackOff", "message", "Back-off pulling image...")
-                    )
-                );
-                String summary = "Pod " + target + " 诊断完成, 发现 1 个警告";
-                return AtlasToolResult.ok(summary, data);
+        try {
+            log.info("[diagnose_pod] 执行诊断Pod/服务故障");
+            String orgId = organizationId(params);
+            String path = "/api/" + orgId + "/pod";
+            Map<String, Object> response = httpClient.get(path, Map.of("current", "1", "size", "100"));
+            Object data = response.containsKey("result") ? response.get("result") : response;
+
+            String podName = podName(params);
+            if (podName != null) {
+                Object matchedPod = findPod(data, podName);
+                if (matchedPod != null) {
+                    return AtlasToolResult.ok("Pod " + podName + " 诊断完成", Map.of("diagnosis", matchedPod));
+                }
+            }
+
+            String summary = podName != null
+                ? "未找到 Pod " + podName + "，返回 Pod 列表"
+                : "Pod 列表诊断数据查询完成";
+            return AtlasToolResult.ok(summary, data);
+        } catch (Exception e) {
+            log.error("[diagnose_pod] 调用 kube-manager API 失败", e);
+            return AtlasToolResult.fail("Pod 诊断失败: " + e.getMessage());
+        }
+    }
+
+    private String organizationId(Map<String, Object> params) {
+        Object value = params.get("organizationId") != null ? params.get("organizationId") : params.get("orgId");
+        return value != null && !value.toString().isBlank() ? value.toString() : "100001";
+    }
+
+    private String podName(Map<String, Object> params) {
+        Object value = params.get("podName") != null ? params.get("podName") : params.get("targetName");
+        return value != null && !value.toString().isBlank() ? value.toString() : null;
+    }
+
+    private Object findPod(Object data, String podName) {
+        Object records = recordsOf(data);
+        if (records instanceof Collection<?> collection) {
+            for (Object item : collection) {
+                if (matchesPod(item, podName)) {
+                    return item;
+                }
+            }
+        }
+        if (data instanceof Collection<?> collection) {
+            for (Object item : collection) {
+                if (matchesPod(item, podName)) {
+                    return item;
+                }
+            }
+        }
+        if (matchesPod(data, podName)) {
+            return data;
+        }
+        return null;
+    }
+
+    private Object recordsOf(Object value) {
+        if (value instanceof Map<?, ?> map) {
+            if (map.get("records") != null) return map.get("records");
+            if (map.get("list") != null) return map.get("list");
+            if (map.get("rows") != null) return map.get("rows");
+            if (map.get("content") != null) return map.get("content");
+            if (map.get("data") != null) return recordsOf(map.get("data"));
+        }
+        return null;
+    }
+
+    private boolean matchesPod(Object item, String podName) {
+        if (item instanceof Map<?, ?> map) {
+            return valueMatches(map.get("podName"), podName)
+                || valueMatches(map.get("name"), podName)
+                || valueMatches(map.get("metadataName"), podName);
+        }
+        return false;
+    }
+
+    private boolean valueMatches(Object value, String podName) {
+        return value != null && podName.equals(value.toString());
     }
 }

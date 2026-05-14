@@ -2,8 +2,11 @@ package com.atlas.orchestrator;
 
 import com.atlas.auth.UserPermissionContext;
 import com.atlas.auth.async.AsyncContextHolder;
+import com.atlas.http.KubeManagerHttpClient;
 import com.atlas.intent.IntentRouter;
 import com.atlas.intent.core.IntentResult;
+import com.atlas.tool.core.AtlasToolResult;
+import com.atlas.tool.core.BaseTool;
 import com.atlas.tool.core.ToolRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,6 +47,7 @@ public class AtlasOrchestrator {
     private final ToolRegistry toolRegistry;
     private final UserPermissionContext userPermissionContext;
     private final Executor asyncExecutor;
+    private final KubeManagerHttpClient kubeManagerClient;
 
     /**
      * (可选) Spring AI Alibaba StateGraph 编译后的执行图。
@@ -67,6 +71,7 @@ public class AtlasOrchestrator {
                              StreamingEmitter streamingEmitter,
                              ToolRegistry toolRegistry,
                              UserPermissionContext userPermissionContext,
+                             KubeManagerHttpClient kubeManagerClient,
                              @Qualifier("atlasTaskExecutor") Executor asyncExecutor,
                              @Autowired(required = false)
                              com.alibaba.cloud.ai.graph.CompiledGraph compiledGraph) {
@@ -74,6 +79,7 @@ public class AtlasOrchestrator {
         this.streamingEmitter = streamingEmitter;
         this.toolRegistry = toolRegistry;
         this.userPermissionContext = userPermissionContext;
+        this.kubeManagerClient = kubeManagerClient;
         this.asyncExecutor = asyncExecutor;
         this.compiledGraph = compiledGraph;
         log.info("[Orchestrator] 初始化完成 | Graph模式: {}",
@@ -138,31 +144,45 @@ public class AtlasOrchestrator {
                 ));
 
                 // 4. Tool 执行 — 直接通过 ToolRegistry（P0 删除 Agent 包装层）
-                Optional<ToolRegistry.ToolMetadata> toolOpt = toolRegistry.findByIntentId(result.intentId())
-                    .map(tool -> {
-                        try {
-                            return toolRegistry.resolve(tool.getToolName());
-                        } catch (Exception e) {
-                            log.warn("[Orchestrator] Tool '{}' 权限校验失败: {}", tool.getToolName(), e.getMessage());
-                            return null;
-                        }
-                    });
+                Optional<BaseTool> toolOpt = toolRegistry.findByIntentId(result.intentId());
 
                 if (toolOpt.isPresent()) {
-                    ToolRegistry.ToolMetadata meta = toolOpt.get();
-                    emit(emitter, "tool_call", Map.of("tool", result.intentId(), "agent", meta.agent()));
-
+                    BaseTool tool = toolOpt.get();
                     // 权限预检（兜底）
                     if (toolRegistry.canExecuteIntent(result.intentId())) {
-                        // P0 暂不执行真实 Tool 调用（避免参数提取不完整导致下游异常）
-                        // 仅返回 Tool 元数据作为演示，Phase 1 接入 ReActEngine 后恢复完整调用
-                        emit(emitter, "tool_result", Map.of(
-                            "success", true,
-                            "message", "意图识别成功，Tool '" + result.intentId() + "' 已定位（Agent: " + meta.agent() + "）",
-                            "tool", result.intentId(),
-                            "agent", meta.agent(),
-                            "description", meta.description()
-                        ));
+                        emit(emitter, "tool_call", Map.of("tool", result.intentId()));
+
+                        try {
+                            // P1.4 修复：按用户名解析组织ID，Tool 内部据此路由到正确的后端 API
+                            String orgId = kubeManagerClient.resolveOrgId(userId, capturedToken);
+                            if ("sysadmin".equals(orgId)) {
+                                // 超管穿透：使用系统专用组织ID（kube-manager 超管可跨组织查询）
+                                orgId = "100001";
+                            }
+                            Map<String, Object> toolParams = new java.util.HashMap<>();
+                            toolParams.put("userId", userId);
+                            toolParams.put("organizationId", orgId);
+
+                            Map<String, Object> toolResult = tool.execute(toolParams);
+                            boolean success = Boolean.TRUE.equals(toolResult.get("success"));
+                            String message = toolResult.get("message") != null
+                                ? toolResult.get("message").toString() : "";
+                            Object data = toolResult.get("data");
+
+                            emit(emitter, "tool_result", Map.of(
+                                "success", success,
+                                "message", message,
+                                "tool", result.intentId(),
+                                "data", data != null ? data : Map.of()
+                            ));
+                        } catch (Exception e) {
+                            log.error("[Orchestrator] Tool '{}' 执行异常", result.intentId(), e);
+                            emit(emitter, "tool_result", Map.of(
+                                "success", false,
+                                "message", "Tool 执行异常: " + e.getMessage(),
+                                "tool", result.intentId()
+                            ));
+                        }
                     } else {
                         log.warn("[Orchestrator] 用户 {} 越权尝试执行意图 '{}'", userId, result.intentId());
                         emit(emitter, "tool_result", Map.of(

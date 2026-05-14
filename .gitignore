@@ -34,3 +34,18 @@ build/
 ### OS ###
 .DS_Store
 Thumbs.db
+# Jenkins, temp files
+F:\\maven/
+maven-repo/
+target/
+*.log
+*.tmp
+.DS_Store
+.vscode/
+.idea/
+*.iml
+.settings/
+.classpath
+.project
+node_modules/
+

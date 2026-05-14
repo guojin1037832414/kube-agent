@@ -11,25 +11,22 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * 查询角色列表 Tool。
- *
- * <p>意图映射: {@code intentId = "role_query"}</p>
- * <p>Agent归属: rbac | 安全级别: P3</p>
+ * 资源看板查询 Tool — 接入真实 kube-manager API (Service暂无专用接口，使用Dashboard近似)。
  */
 @Component
 @AtlasToolMapping(
-    name = "role_query",
-    agent = "rbac",
-    intentId = "role_query",
-    description = "查询角色列表"
+    name = "service_status",
+    agent = "query",
+    intentId = "service_status",
+    description = "查询资源看板"
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
-public class RoleQueryTool extends BaseTool {
+public class ServiceQueryTool extends BaseTool {
 
     private final KubeManagerHttpClient httpClient;
 
-    public RoleQueryTool(KubeManagerHttpClient httpClient) {
-        super("role_query", "查询角色列表");
+    public ServiceQueryTool(KubeManagerHttpClient httpClient) {
+        super("service_status", "查询资源看板");
         this.httpClient = httpClient;
     }
 
@@ -41,15 +38,14 @@ public class RoleQueryTool extends BaseTool {
     @Override
     protected AtlasToolResult doExecute(Map<String, Object> params) {
         try {
-            log.info("[role_query] 执行查询角色列表");
             String orgId = organizationId(params);
-            String path = "/api/" + orgId + "/role";
-            Map<String, Object> response = httpClient.get(path);
+            String path = "/api/" + orgId + "/dashboard/resources";
+            Map<String, Object> response = httpClient.get(path, Map.of("current", "1", "size", "100"));
             Object data = response.containsKey("result") ? response.get("result") : response;
-            return AtlasToolResult.ok("角色列表查询完成", data);
+            return AtlasToolResult.ok("资源看板查询完成 (近似)", data);
         } catch (Exception e) {
-            log.error("[role_query] 调用 kube-manager API 失败", e);
-            return AtlasToolResult.fail("角色列表查询失败: " + e.getMessage());
+            log.error("[service_status] 调用 kube-manager API 失败", e);
+            return AtlasToolResult.fail("资源看板查询失败: " + e.getMessage());
         }
     }
 

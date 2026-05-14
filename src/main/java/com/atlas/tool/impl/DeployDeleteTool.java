@@ -1,5 +1,6 @@
 package com.atlas.tool.impl;
 
+import com.atlas.http.KubeManagerHttpClient;
 import com.atlas.tool.annotation.AtlasToolMapping;
 import com.atlas.tool.annotation.ToolPermission;
 import com.atlas.tool.core.AtlasToolResult;
@@ -25,8 +26,11 @@ import java.util.*;
 @ToolPermission(ToolPermission.Policy.ADMIN_ONLY)
 public class DeployDeleteTool extends BaseTool {
 
-    public DeployDeleteTool() {
+    private final KubeManagerHttpClient httpClient;
+
+    public DeployDeleteTool(KubeManagerHttpClient httpClient) {
         super("deploy_delete", "删除部署实例");
+        this.httpClient = httpClient;
     }
 
     @Override
@@ -37,14 +41,26 @@ public class DeployDeleteTool extends BaseTool {
     @Override
     protected AtlasToolResult doExecute(Map<String, Object> params) {
         log.info("[deploy_delete] 执行删除部署实例");
-        String target = params.get("name") != null ? params.get("name").toString() 
+        String target = params.get("name") != null ? params.get("name").toString()
             : (params.get("userId") != null ? params.get("userId").toString() : "unknown");
-        Map<String, Object> data = Map.of(
-            "success", true,
-            "action", "deploy_delete",
-            "target", target
-        );
-        String summary = "实例删除成功: " + target;
-        return AtlasToolResult.ok(summary, data);
+
+        try {
+            String orgId = organizationId(params);
+            Map<String, Object> response = httpClient.post(
+                "/api/" + orgId + "/deployment/" + target + "/delete",
+                Map.of()
+            );
+            Object data = response.containsKey("result") ? response.get("result") : response;
+            String summary = "实例删除成功: " + target;
+            return AtlasToolResult.ok(summary, data);
+        } catch (Exception e) {
+            log.error("[deploy_delete] 调用 kube-manager API 失败", e);
+            return AtlasToolResult.fail("实例删除失败: " + e.getMessage());
+        }
+    }
+
+    private String organizationId(Map<String, Object> params) {
+        Object value = params.get("organizationId") != null ? params.get("organizationId") : params.get("orgId");
+        return value != null && !value.toString().isBlank() ? value.toString() : "100001";
     }
 }

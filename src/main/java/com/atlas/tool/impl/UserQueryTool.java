@@ -1,12 +1,14 @@
 package com.atlas.tool.impl;
 
+import com.atlas.http.KubeManagerHttpClient;
 import com.atlas.tool.annotation.AtlasToolMapping;
 import com.atlas.tool.annotation.ToolPermission;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.tool.core.BaseTool;
 import org.springframework.stereotype.Component;
 
-import java.util.*;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * 查询用户列表 Tool。
@@ -25,8 +27,11 @@ import java.util.*;
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class UserQueryTool extends BaseTool {
 
-    public UserQueryTool() {
+    private final KubeManagerHttpClient httpClient;
+
+    public UserQueryTool(KubeManagerHttpClient httpClient) {
         super("user_query", "查询用户列表");
+        this.httpClient = httpClient;
     }
 
     @Override
@@ -41,20 +46,24 @@ public class UserQueryTool extends BaseTool {
             Map.entry("pageSize", Integer.class)
         );
     }
+
     @Override
     protected AtlasToolResult doExecute(Map<String, Object> params) {
-        log.info("[user_query] 执行查询用户列表");
-        List<Map<String, Object>> items = new ArrayList<>();
-                items.add(Map.of("id", "1", "username", "admin", "role", "admin", "status", "active", "createTime", "2026-01-01"));
-                items.add(Map.of("id", "2", "username", "zhaotiandi", "role", "user", "status", "active", "createTime", "2026-03-15"));
-                items.add(Map.of("id", "3", "username", "developer1", "role", "user", "status", "inactive", "createTime", "2026-04-20"));
-        
-                Map<String, Object> data = Map.of(
-                    "total", items.size(),
-                    "list", items
-                );
-        
-                String summary = "查询完成, 共 " + items.size() + " 条记录";
-                return AtlasToolResult.ok(summary, data);
+        try {
+            log.info("[user_query] 执行查询用户列表");
+            String orgId = organizationId(params);
+            String path = "/api/" + orgId + "/user";
+            Map<String, Object> response = httpClient.get(path, Map.of("current", "1", "size", "100"));
+            Object data = response.containsKey("result") ? response.get("result") : response;
+            return AtlasToolResult.ok("用户列表查询完成", data);
+        } catch (Exception e) {
+            log.error("[user_query] 调用 kube-manager API 失败", e);
+            return AtlasToolResult.fail("用户列表查询失败: " + e.getMessage());
+        }
+    }
+
+    private String organizationId(Map<String, Object> params) {
+        Object value = params.get("organizationId") != null ? params.get("organizationId") : params.get("orgId");
+        return value != null && !value.toString().isBlank() ? value.toString() : "100001";
     }
 }

@@ -1,32 +1,36 @@
 package com.atlas.tool.impl;
 
+import com.atlas.http.KubeManagerHttpClient;
 import com.atlas.tool.annotation.AtlasToolMapping;
 import com.atlas.tool.annotation.ToolPermission;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.tool.core.BaseTool;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClientResponseException;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
 
 /**
- * 查询存储卷 Tool。
- *
- * <p>意图映射: {@code intentId = "storage_query"}</p>
- * <p>Agent归属: storage | 安全级别: P3</p>
+ * 存储状态查询 Tool — 接入真实 kube-manager API。
  */
 @Component
 @AtlasToolMapping(
-    name = "storage_query",
+    name = "storage_status",
     agent = "storage",
-    intentId = "storage_query",
-    description = "查询存储卷"
+    intentId = "storage_status",
+    description = "查询 Kubernetes 存储卷/PVC 状态"
 )
-
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class StorageQueryTool extends BaseTool {
 
-    public StorageQueryTool() {
-        super("storage_query", "查询存储卷");
+    private final KubeManagerHttpClient kubeManagerHttpClient;
+
+    public StorageQueryTool(KubeManagerHttpClient kubeManagerHttpClient) {
+        super("storage_status", "查询 Kubernetes 存储卷/PVC 状态");
+        this.kubeManagerHttpClient = kubeManagerHttpClient;
     }
 
     @Override
@@ -36,18 +40,89 @@ public class StorageQueryTool extends BaseTool {
 
     @Override
     protected AtlasToolResult doExecute(Map<String, Object> params) {
-        log.info("[storage_query] 执行查询存储卷");
-        List<Map<String, Object>> items = new ArrayList<>();
-                items.add(Map.of("name", "pvc-data-1", "namespace", "default", "size", "10Gi", "status", "Bound", "storageClass", "default"));
-                items.add(Map.of("name", "pvc-model-1", "namespace", "ml", "size", "100Gi", "status", "Bound", "storageClass", "fast-ssd"));
-                items.add(Map.of("name", "pvc-log-1", "namespace", "default", "size", "50Gi", "status", "Pending", "storageClass", "default"));
-        
-                Map<String, Object> data = Map.of(
-                    "total", items.size(),
-                    "list", items
-                );
-        
-                String summary = "查询完成, 共 " + items.size() + " 条记录";
-                return AtlasToolResult.ok(summary, data);
+        try {
+            String orgId = organizationId(params);
+            Map<String, Object> query = new LinkedHashMap<>();
+            putIfPresent(query, "clusterId", params.get("clusterId"));
+            putIfPresent(query, "namespace", params.get("namespace"));
+            query.put("current", 1);
+            query.put("size", 100);
+            query.put("page", "1");
+            query.put("limit", "100");
+
+            Map<String, Object> response;
+            try {
+                response = kubeManagerHttpClient.get("/api/storage/pageList", query);
+            } catch (RestClientResponseException e) {
+                if (!isNotFound(e)) {
+                    throw e;
+                }
+                try {
+                    response = kubeManagerHttpClient.get("/api/pvc/pageList", query);
+                } catch (RestClientResponseException e2) {
+                    if (!isNotFound(e2)) {
+                        throw e2;
+                    }
+                    response = kubeManagerHttpClient.get("/api/" + orgId + "/file/storage/option", query);
+                }
+            }
+
+            Object data = extractRecords(response);
+            return AtlasToolResult.ok("存储状态查询完成 (from API)，共 " + count(data) + " 条记录", data);
+        } catch (Exception e) {
+            log.error("[storage_status] 调用 kube-manager API 失败", e);
+            return AtlasToolResult.fail("存储状态查询失败: " + e.getMessage());
+        }
+    }
+
+    private void putIfPresent(Map<String, Object> query, String key, Object value) {
+        if (value != null && !value.toString().isBlank()) {
+            query.put(key, value);
+        }
+    }
+
+    private String organizationId(Map<String, Object> params) {
+        Object value = params.get("organizationId") != null ? params.get("organizationId") : params.get("orgId");
+        return value != null && !value.toString().isBlank() ? value.toString() : "100001";
+    }
+
+    private boolean isNotFound(RestClientResponseException e) {
+        return e.getStatusCode().value() == 404;
+    }
+
+    private Object extractRecords(Map<String, Object> response) {
+        Object data = response.get("data");
+        Object records = recordsOf(data);
+        if (records != null) return records;
+        if (data != null) return data;
+
+        Object result = response.get("result");
+        records = recordsOf(result);
+        if (records != null) return records;
+        if (result != null) return result;
+
+        records = recordsOf(response);
+        return records != null ? records : response;
+    }
+
+    private Object recordsOf(Object value) {
+        if (value instanceof Map<?, ?> map) {
+            if (map.get("records") != null) return map.get("records");
+            if (map.get("list") != null) return map.get("list");
+            if (map.get("rows") != null) return map.get("rows");
+            if (map.get("content") != null) return map.get("content");
+        }
+        return null;
+    }
+
+    private int count(Object data) {
+        if (data instanceof Collection<?> collection) return collection.size();
+        if (data instanceof Map<?, ?> map) {
+            Object total = map.get("total");
+            if (total instanceof Number number) return number.intValue();
+            Object list = recordsOf(map);
+            if (list instanceof Collection<?> collection) return collection.size();
+        }
+        return data == null ? 0 : 1;
     }
 }

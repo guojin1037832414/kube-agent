@@ -1,5 +1,6 @@
 package com.atlas.tool.impl;
 
+import com.atlas.http.KubeManagerHttpClient;
 import com.atlas.tool.annotation.AtlasToolMapping;
 import com.atlas.tool.annotation.ToolPermission;
 import com.atlas.tool.core.AtlasToolResult;
@@ -25,8 +26,11 @@ import java.util.*;
 @ToolPermission(ToolPermission.Policy.AUTHENTICATED)
 public class NimCreateTool extends BaseTool {
 
-    public NimCreateTool() {
+    private final KubeManagerHttpClient httpClient;
+
+    public NimCreateTool(KubeManagerHttpClient httpClient) {
         super("nim_create", "创建NIM服务");
+        this.httpClient = httpClient;
     }
 
     @Override
@@ -44,14 +48,34 @@ public class NimCreateTool extends BaseTool {
     protected AtlasToolResult doExecute(Map<String, Object> params) {
         log.info("[nim_create] 执行创建NIM服务");
         String createdName = params.get("name") != null ? params.get("name").toString() : "unknown";
-                Map<String, Object> data = Map.of(
-                    "success", true,
-                    "createdName", createdName,
-                    "action", "nim_create",
-                    "status", "Created",
-                    "message", "创建任务已提交, 请稍候确认状态"
-                );
-                String summary = "创建任务 '" + createdName + "' 已提交";
-                return AtlasToolResult.ok(summary, data);
+
+        try {
+            String orgId = organizationId(params);
+            Map<String, Object> response = httpClient.post(
+                "/api/" + orgId + "/pod",
+                filterNullParams(params)
+            );
+            Object data = response.containsKey("result") ? response.get("result") : response;
+            String summary = "创建任务 '" + createdName + "' 已提交";
+            return AtlasToolResult.ok(summary, data);
+        } catch (Exception e) {
+            log.error("[nim_create] 调用 kube-manager API 失败", e);
+            return AtlasToolResult.fail("NIM服务创建失败: " + e.getMessage());
+        }
+    }
+
+    private Map<String, Object> filterNullParams(Map<String, Object> params) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        params.forEach((key, value) -> {
+            if (value != null) {
+                body.put(key, value);
+            }
+        });
+        return body;
+    }
+
+    private String organizationId(Map<String, Object> params) {
+        Object value = params.get("organizationId") != null ? params.get("organizationId") : params.get("orgId");
+        return value != null && !value.toString().isBlank() ? value.toString() : "100001";
     }
 }

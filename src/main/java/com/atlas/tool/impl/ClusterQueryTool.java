@@ -11,25 +11,22 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * 查询角色列表 Tool。
- *
- * <p>意图映射: {@code intentId = "role_query"}</p>
- * <p>Agent归属: rbac | 安全级别: P3</p>
+ * 集群列表查询 Tool — 接入真实 kube-manager API。
  */
 @Component
 @AtlasToolMapping(
-    name = "role_query",
-    agent = "rbac",
-    intentId = "role_query",
-    description = "查询角色列表"
+    name = "cluster_query",
+    agent = "query",
+    intentId = "cluster_query",
+    description = "查询集群列表"
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
-public class RoleQueryTool extends BaseTool {
+public class ClusterQueryTool extends BaseTool {
 
     private final KubeManagerHttpClient httpClient;
 
-    public RoleQueryTool(KubeManagerHttpClient httpClient) {
-        super("role_query", "查询角色列表");
+    public ClusterQueryTool(KubeManagerHttpClient httpClient) {
+        super("cluster_query", "查询集群列表");
         this.httpClient = httpClient;
     }
 
@@ -41,15 +38,14 @@ public class RoleQueryTool extends BaseTool {
     @Override
     protected AtlasToolResult doExecute(Map<String, Object> params) {
         try {
-            log.info("[role_query] 执行查询角色列表");
             String orgId = organizationId(params);
-            String path = "/api/" + orgId + "/role";
-            Map<String, Object> response = httpClient.get(path);
+            String path = "/api/" + orgId + "/hpc-job/cluster";
+            Map<String, Object> response = httpClient.get(path, Map.of("current", "1", "size", "100"));
             Object data = response.containsKey("result") ? response.get("result") : response;
-            return AtlasToolResult.ok("角色列表查询完成", data);
+            return AtlasToolResult.ok("集群列表查询完成", data);
         } catch (Exception e) {
-            log.error("[role_query] 调用 kube-manager API 失败", e);
-            return AtlasToolResult.fail("角色列表查询失败: " + e.getMessage());
+            log.error("[cluster_query] 调用 kube-manager API 失败", e);
+            return AtlasToolResult.fail("集群列表查询失败: " + e.getMessage());
         }
     }
 

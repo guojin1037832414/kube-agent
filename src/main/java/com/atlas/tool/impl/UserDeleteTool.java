@@ -1,5 +1,6 @@
 package com.atlas.tool.impl;
 
+import com.atlas.http.KubeManagerHttpClient;
 import com.atlas.tool.annotation.AtlasToolMapping;
 import com.atlas.tool.annotation.ToolPermission;
 import com.atlas.tool.core.AtlasToolResult;
@@ -25,8 +26,11 @@ import java.util.*;
 @ToolPermission(ToolPermission.Policy.ADMIN_ONLY)
 public class UserDeleteTool extends BaseTool {
 
-    public UserDeleteTool() {
+    private final KubeManagerHttpClient httpClient;
+
+    public UserDeleteTool(KubeManagerHttpClient httpClient) {
         super("user_delete", "删除用户");
+        this.httpClient = httpClient;
     }
 
     @Override
@@ -38,12 +42,24 @@ public class UserDeleteTool extends BaseTool {
     protected AtlasToolResult doExecute(Map<String, Object> params) {
         log.info("[user_delete] 执行删除用户");
         String target = params.get("userId") != null ? params.get("userId").toString() : "unknown";
-        Map<String, Object> data = Map.of(
-            "success", true,
-            "action", "user_delete",
-            "target", target
-        );
-        String summary = "用户删除成功: " + target;
-        return AtlasToolResult.ok(summary, data);
+
+        try {
+            String orgId = organizationId(params);
+            Map<String, Object> response = httpClient.delete(
+                "/api/" + orgId + "/user/" + target,
+                Map.of()
+            );
+            Object data = response.containsKey("result") ? response.get("result") : response;
+            String summary = "用户删除成功: " + target;
+            return AtlasToolResult.ok(summary, data);
+        } catch (Exception e) {
+            log.error("[user_delete] 调用 kube-manager API 失败", e);
+            return AtlasToolResult.fail("用户删除失败: " + e.getMessage());
+        }
+    }
+
+    private String organizationId(Map<String, Object> params) {
+        Object value = params.get("organizationId") != null ? params.get("organizationId") : params.get("orgId");
+        return value != null && !value.toString().isBlank() ? value.toString() : "100001";
     }
 }

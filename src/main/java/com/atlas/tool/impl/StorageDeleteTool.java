@@ -1,12 +1,14 @@
 package com.atlas.tool.impl;
 
+import com.atlas.http.KubeManagerHttpClient;
 import com.atlas.tool.annotation.AtlasToolMapping;
 import com.atlas.tool.annotation.ToolPermission;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.tool.core.BaseTool;
 import org.springframework.stereotype.Component;
 
-import java.util.*;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * 删除存储卷 Tool。
@@ -25,8 +27,11 @@ import java.util.*;
 @ToolPermission(ToolPermission.Policy.ADMIN_ONLY)
 public class StorageDeleteTool extends BaseTool {
 
-    public StorageDeleteTool() {
+    private final KubeManagerHttpClient httpClient;
+
+    public StorageDeleteTool(KubeManagerHttpClient httpClient) {
         super("storage_delete", "删除存储卷");
+        this.httpClient = httpClient;
     }
 
     @Override
@@ -37,14 +42,26 @@ public class StorageDeleteTool extends BaseTool {
     @Override
     protected AtlasToolResult doExecute(Map<String, Object> params) {
         log.info("[storage_delete] 执行删除存储卷");
-        String target = params.get("name") != null ? params.get("name").toString() 
+        String target = params.get("name") != null ? params.get("name").toString()
             : (params.get("userId") != null ? params.get("userId").toString() : "unknown");
-        Map<String, Object> data = Map.of(
-            "success", true,
-            "action", "storage_delete",
-            "target", target
-        );
-        String summary = "存储卷删除成功: " + target;
-        return AtlasToolResult.ok(summary, data);
+
+        try {
+            String orgId = organizationId(params);
+            Map<String, Object> response = httpClient.post(
+                "/api/" + orgId + "/file/storage/" + target + "/delete",
+                Map.of()
+            );
+            Object data = response.containsKey("result") ? response.get("result") : response;
+            String summary = "存储卷删除成功: " + target;
+            return AtlasToolResult.ok(summary, data);
+        } catch (Exception e) {
+            log.error("[storage_delete] 调用 kube-manager API 失败", e);
+            return AtlasToolResult.fail("存储卷删除失败: " + e.getMessage());
+        }
+    }
+
+    private String organizationId(Map<String, Object> params) {
+        Object value = params.get("organizationId") != null ? params.get("organizationId") : params.get("orgId");
+        return value != null && !value.toString().isBlank() ? value.toString() : "100001";
     }
 }

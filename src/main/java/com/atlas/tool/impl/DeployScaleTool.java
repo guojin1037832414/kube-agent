@@ -1,5 +1,6 @@
 package com.atlas.tool.impl;
 
+import com.atlas.http.KubeManagerHttpClient;
 import com.atlas.tool.annotation.AtlasToolMapping;
 import com.atlas.tool.annotation.ToolPermission;
 import com.atlas.tool.core.AtlasToolResult;
@@ -25,8 +26,11 @@ import java.util.*;
 @ToolPermission(ToolPermission.Policy.AUTHENTICATED)
 public class DeployScaleTool extends BaseTool {
 
-    public DeployScaleTool() {
+    private final KubeManagerHttpClient httpClient;
+
+    public DeployScaleTool(KubeManagerHttpClient httpClient) {
         super("deploy_scale", "扩缩容实例");
+        this.httpClient = httpClient;
     }
 
     @Override
@@ -43,7 +47,8 @@ public class DeployScaleTool extends BaseTool {
     @Override
     protected AtlasToolResult doExecute(Map<String, Object> params) {
         log.info("[deploy_scale] 执行扩缩容实例");
-        String target = params.get("name") != null ? params.get("name").toString() 
+        // TODO: requires PATCH /api/{orgId}/deployment/{name}/scale, client has no PATCH
+        String target = params.get("name") != null ? params.get("name").toString()
                     : (params.get("userId") != null ? params.get("userId").toString() : "unknown");
                 Map<String, Object> data = Map.of(
                     "success", true,

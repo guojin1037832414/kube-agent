@@ -1,5 +1,6 @@
 package com.atlas.tool.impl;
 
+import com.atlas.http.KubeManagerHttpClient;
 import com.atlas.tool.annotation.AtlasToolMapping;
 import com.atlas.tool.annotation.ToolPermission;
 import com.atlas.tool.core.AtlasToolResult;
@@ -24,8 +25,11 @@ import java.util.*;
 @ToolPermission(ToolPermission.Policy.AUTHENTICATED)
 public class StorageCreateTool extends BaseTool {
 
-    public StorageCreateTool() {
+    private final KubeManagerHttpClient httpClient;
+
+    public StorageCreateTool(KubeManagerHttpClient httpClient) {
         super("storage_create", "创建存储卷(PVC)");
+        this.httpClient = httpClient;
     }
 
     @Override
@@ -57,17 +61,40 @@ public class StorageCreateTool extends BaseTool {
 
         log.info("[storage_create] 创建PVC name={}, size={}Gi, class={}", name, size, storageClass);
 
-        Map<String, Object> data = Map.of(
-            "success", true,
-            "createdName", name,
-            "size", size + "Gi",
-            "storageClass", storageClass,
-            "action", "storage_create",
-            "status", "Pending",
-            "message", "存储卷创建任务已提交"
-        );
+        try {
+            String orgId = organizationId(params);
+            Map<String, Object> body = buildCreateBody(params, name, size, storageClass);
+            Map<String, Object> response = httpClient.post("/api/" + orgId + "/file/storage", body);
+            Object data = response.containsKey("result") ? response.get("result") : response;
 
-        String summary = "存储卷 '" + name + "' (" + size + "Gi, class: " + storageClass + ") 创建任务已提交";
-        return AtlasToolResult.ok(summary, data);
+            String summary = "存储卷 '" + name + "' (" + size + "Gi, class: " + storageClass + ") 创建任务已提交";
+            return AtlasToolResult.ok(summary, data);
+        } catch (Exception e) {
+            log.error("[storage_create] 调用 kube-manager API 失败", e);
+            return AtlasToolResult.fail("存储卷创建失败: " + e.getMessage());
+        }
+    }
+
+    private Map<String, Object> buildCreateBody(Map<String, Object> params, String name, int size, String storageClass) {
+        Map<String, Object> body = filterNullParams(params);
+        body.put("name", name);
+        body.put("size", size);
+        body.put("storageClass", storageClass);
+        return body;
+    }
+
+    private Map<String, Object> filterNullParams(Map<String, Object> params) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        params.forEach((key, value) -> {
+            if (value != null) {
+                body.put(key, value);
+            }
+        });
+        return body;
+    }
+
+    private String organizationId(Map<String, Object> params) {
+        Object value = params.get("organizationId") != null ? params.get("organizationId") : params.get("orgId");
+        return value != null && !value.toString().isBlank() ? value.toString() : "100001";
     }
 }

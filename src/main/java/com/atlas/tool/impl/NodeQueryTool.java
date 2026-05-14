@@ -1,21 +1,20 @@
 package com.atlas.tool.impl;
 
+import com.atlas.http.KubeManagerHttpClient;
 import com.atlas.tool.annotation.AtlasToolMapping;
 import com.atlas.tool.annotation.ToolPermission;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.tool.core.BaseTool;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 /**
- * 节点查询 Tool — P1 实验样本。
+ * 节点查询 Tool — P1 阶段接入真实 kube-manager API。
  *
  * <p>意图映射：{@code intentId = "node_query"}，对应 "查询所有节点状态"。</p>
- * <p>纯查询操作，无参数，最简单的端到端打通样本。</p>
+ * <p>API 路径：GET /api/{organizationId}/node?page=1&limit=100</p>
  */
 @Component
 @AtlasToolMapping(
@@ -24,12 +23,14 @@ import java.util.Set;
     intentId = "node_query",
     description = "查询 Kubernetes 集群所有节点的状态、资源使用情况"
 )
-
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class NodeQueryTool extends BaseTool {
 
-    public NodeQueryTool() {
+    private final KubeManagerHttpClient httpClient;
+
+    public NodeQueryTool(KubeManagerHttpClient httpClient) {
         super("node_query", "查询 Kubernetes 集群所有节点的状态、资源使用情况");
+        this.httpClient = httpClient;
     }
 
     @Override
@@ -39,50 +40,27 @@ public class NodeQueryTool extends BaseTool {
 
     @Override
     protected AtlasToolResult doExecute(Map<String, Object> params) {
-        log.info("[node_query] 执行节点查询");
+        try {
+            // ① 从参数获取组织ID，默认 100001
+            String orgId = params.get("organizationId") != null
+                ? params.get("organizationId").toString()
+                : "100001";
 
-        // P1 阶段：Mock 数据（后续替换为 KubeManagerHttpClient 真实调用）
-        List<Map<String, Object>> nodes = mockQueryNodes();
+            // ② 调用 kube-manager 真实 API
+            String path = "/api/" + orgId + "/node";
+            Map<String, Object> response = httpClient.get(path, Map.of("page", "1", "limit", "100"));
 
-        Map<String, Object> data = Map.of(
-            "total", nodes.size(),
-            "list", nodes
-        );
+            // ③ 提取实际数据（如果响应有嵌套 result 结构）
+            Object data = response.containsKey("result") ? response.get("result") : response;
 
-        String summary = nodes.size() > 0
-            ? String.format("集群共有 %d 个节点，其中 %d 个正常，%d 个异常",
-                nodes.size(),
-                nodes.stream().filter(n -> "Ready".equals(n.get("status"))).count(),
-                nodes.stream().filter(n -> !"Ready".equals(n.get("status"))).count())
-            : "当前集群无节点";
+            String summary = data instanceof java.util.List
+                ? String.format("集群共有 %d 个节点", ((java.util.List<?>) data).size())
+                : "节点查询完成";
 
-        return AtlasToolResult.ok(summary, data);
-    }
-
-    // ── Mock 数据（P1 阶段） ────────────────────────────
-
-    private List<Map<String, Object>> mockQueryNodes() {
-        List<Map<String, Object>> nodes = new ArrayList<>();
-        nodes.add(Map.of(
-            "name", "node-1", "status", "Ready",
-            "cpu", "8c", "mem", "32Gi", "age", "45d"
-        ));
-        nodes.add(Map.of(
-            "name", "node-2", "status", "Ready",
-            "cpu", "16c", "mem", "64Gi", "age", "30d"
-        ));
-        nodes.add(Map.of(
-            "name", "node-3", "status", "Ready",
-            "cpu", "8c", "mem", "32Gi", "age", "15d"
-        ));
-        nodes.add(Map.of(
-            "name", "node-4", "status", "NotReady",
-            "cpu", "4c", "mem", "16Gi", "age", "60d"
-        ));
-        nodes.add(Map.of(
-            "name", "node-5", "status", "Ready",
-            "cpu", "8c", "mem", "32Gi", "age", "7d"
-        ));
-        return nodes;
+            return AtlasToolResult.ok(summary, data);
+        } catch (Exception e) {
+            log.error("[node_query] 调用 kube-manager API 失败", e);
+            return AtlasToolResult.fail("节点查询失败: " + e.getMessage());
+        }
     }
 }
