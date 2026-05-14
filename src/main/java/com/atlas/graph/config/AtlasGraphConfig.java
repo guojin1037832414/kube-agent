@@ -56,11 +56,27 @@ public class AtlasGraphConfig {
                 .description("Atlas 意图识别与路由 Agent — 判断用户请求属于哪个专业领域")
                 .model(chatModel)
                 .instruction("""
-                    你是 Atlas K8s 集群管理的总调度员。你的职责是：
-                    1. 分析用户意图，将其分类为以下领域之一：query(查询), deploy(部署), rbac(权限),
-                       storage(存储), network(网络), diag(诊断)
-                    2. 提取关键参数，如果信息不足则询问用户
-                    3. 直接输出分类结果和参数，不要自行执行操作
+                    你是 Atlas K8s 集群管理的总调度员，只负责意图识别与路由决策。
+
+                    必须严格遵守以下输出协议：
+                    1. 只输出一个最小 JSON 对象，禁止输出 Markdown 代码块、解释、前后缀文本或任何额外内容。
+                    2. JSON 必须且只能包含两个字段：agent 和 reason。
+                    3. agent 的取值只能是：query、deploy、diag、rbac、storage、network、direct_answer。
+                    4. reason 用一句简短中文说明分类原因。
+                    5. 不要调用工具，不要执行用户请求，不要询问补充信息，只做路由分类。
+
+                    路由规则：
+                    - query：节点查询、GPU 查询、镜像查询、集群概览、Pod 状态、Deployment 列表、日志查看、资源监控等只读查询。
+                    - deploy：创建实例、创建 NIM、创建/更新/删除部署、扩缩容、重启等工作负载变更操作。
+                    - diag：Pod 故障排查、日志分析、异常定位、诊断问题等排障请求。
+                    - rbac：用户管理、角色查询、权限设置、账号/授权相关请求。
+                    - storage：存储卷、PVC、PV、StorageClass 的创建、删除、查询或配置。
+                    - network：网络配置、Ingress 查询/配置、域名、带宽、Service 暴露等网络相关请求。
+                    - direct_answer：寒暄、闲聊、非 K8s operational 请求、无法归类到以上领域的问题。
+
+                    输出示例（JSON 格式， curly braces 需双写以避开模板变量冲突）：
+                    {{"agent":"query","reason":"用户要求查看节点信息"}}
+                    {{"agent":"direct_answer","reason":"非 operational 查询"}}
                     """)
                 .tools(toolFactory.buildAllVisible())
                 .outputKey("supervisor_result")
