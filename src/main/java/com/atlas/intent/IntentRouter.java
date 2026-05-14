@@ -103,8 +103,10 @@ public class IntentRouter {
         }, "L2");
 
         if (l2 != null) {
-            candidates.add(l2);
-            log.debug("[IntentRouter] L2 Exact 命中: {} (norm={:.3f})", l2.intentId(), l2.confidence());
+            // L2 精确匹配直接短路 — 零 token、零 LLM 延迟
+            log.info("[IntentRouter] L2 精确命中短路: {} (confidence={:.3f})",
+                     l2.intentId(), l2.confidence());
+            return l2;
         }
 
         // ═══════════════════════════════════════════
