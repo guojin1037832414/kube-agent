@@ -216,7 +216,17 @@ public class AtlasGraphConfig {
                     Object result = state.value("supervisor_result").orElse("direct_answer");
                     if (result instanceof Map map) {
                         String agent = (String) map.getOrDefault("agent", "direct_answer");
-                        return agent; // "query", "deploy", "diag", "rbac", "storage", "network", "direct_answer"
+                        return agent;
+                    }
+                    // Fallback: 字符串类型 — 尝试关键词匹配
+                    if (result instanceof String text) {
+                        String lower = text.toLowerCase();
+                        if (lower.contains("query") || lower.contains("查询") || lower.contains("查看")) return "query";
+                        if (lower.contains("deploy") || lower.contains("部署") || lower.contains("创建")) return "deploy";
+                        if (lower.contains("rbac") || lower.contains("用户") || lower.contains("权限") || lower.contains("角色")) return "rbac";
+                        if (lower.contains("storage") || lower.contains("存储") || lower.contains("卷")) return "storage";
+                        if (lower.contains("network") || lower.contains("网络") || lower.contains("ingress")) return "network";
+                        if (lower.contains("diag") || lower.contains("诊断") || lower.contains("日志")) return "diag";
                     }
                     return "direct_answer";
                 }),
