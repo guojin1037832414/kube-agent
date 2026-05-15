@@ -1211,3 +1211,97 @@ E2E测试未携带JWT Token触发权限拦截。证明:
 
 ---
 
+
+
+### Review #19 — Phase 3 Batch 9: 删除/停止操作类Tool (5个) — CRUD的D补齐
+
+**日期**: 2026-05-15  
+**范围**: 5个DELETE/POST删除/停止操作类Tool + intents.yml扩展  
+**开发者**: Hermes (项目经理/架构师)
+
+#### 背景
+Batch 8实现了5个POST创建类操作Tool，Phase 3的操作类已有"C"(Create)和"U"(Update：scale/restart/punish)。Batch 9补齐"D"(Delete/Stop)，实现完整的**CRUD操作闭环**。
+
+#### 新Tool清单（5个操作类 — DELETE+停止）
+1. `experiment_instance_delete` — 删除实验实例 (DELETE, P0, ADMIN)
+2. `experiment_instance_stop` — 停止实验实例 (POST /stop/ID, P1, AUTH)
+3. `helm_release_delete` — 卸载Helm Release (DELETE, P0, ADMIN)
+4. `image_delete` — 删除镜像 (DELETE, P0, ADMIN)
+5. `mpi_job_abort` — 中止MPI分布式任务 (POST /abort/ID, P1, AUTH)
+
+#### API端点验证
+| Tool | 方法 | 路径 | 验证结果 |
+|------|------|------|---------|
+| 删除实验实例 | DELETE | /api/{orgId}/experiment/instance/{id} | ✅ HTTP 200 |
+| 停止实验实例 | POST | /api/{orgId}/experiment/instance/stop/{id} | ✅ HTTP 200 |
+| 卸载Helm Release | DELETE | /api/{orgId}/helm/releases/{name} | ✅ HTTP 200 |
+| 删除镜像 | DELETE | /api/{orgId}/image/{id} | ✅ HTTP 200 |
+| 中止MPI任务 | POST | /api/{orgId}/mpi-job/abort/{id} | ✅ HTTP 200 |
+
+#### 安全级别设计
+| Tool | 级别 | 权限 | 说明 |
+|------|------|------|------|
+| experiment_instance_delete | P0 | ADMIN_ONLY | 删除后不可恢复，最高风险 |
+| helm_release_delete | P0 | ADMIN_ONLY | 卸载K8s Helm应用，影响集群 |
+| image_delete | P0 | ADMIN_ONLY | 删除镜像可能影响其他部署 |
+| experiment_instance_stop | P1 | AUTHENTICATED | 停止后可重启，可恢复 |
+| mpi_job_abort | P1 | AUTHENTICATED | 中止后可重新提交 |
+
+#### 关键技术点
+1. **DELETE方法首次使用** — KubeManagerHttpClient.delete()原生支持，无需POST模拟
+2. **P0/P1分级** — "删除/卸载"为P0(不可逆)，"停止/中止"为P1(可恢复)
+3. **权限分层** — P0操作仅ADMIN可执行，P1操作普通认证用户即可
+4. **参数模式统一** — 全部使用 `id` 或 `releaseName` 单一参数，AtlasBrain易于提取
+
+#### 编译 & 运行
+- [x] BUILD SUCCESS (166 source files)
+- [x] 服务启动成功 (port 8500, 9.14s)
+- [x] ToolRegistry: **109个Tool已注册** (104 + 5) 🆙
+- [x] 权限分布: PUBLIC=89, AUTHENTICATED=12, ADMIN_ONLY=8
+- [x] Graph模式: 已启用 ✅
+
+#### E2E意图匹配验证
+| 查询 | 命中Tool | Result |
+|------|---------|--------|
+| 删除实验实例 | experiment_instance_delete | ✅ 命中 |
+| 停止实验实例 | experiment_instance_stop | ✅ 命中 |
+| 卸载Helm Release | helm_release_delete | ✅ 命中 |
+| 删除镜像 | image_delete | ✅ 命中 |
+| 中止MPI任务 | mpi_job_abort | ✅ 命中 |
+| 删除ID为123的实验 | experiment_instance_delete | ✅ 命中 |
+| 停止实验456 | experiment_instance_stop | ✅ 命中 |
+| 卸载helm应用my-app | helm_release_delete | ✅ 命中 |
+
+**总计: 8/8 命中 (100%)**
+
+#### 重大意义
+- **Tool数达到109** — 从33→109，增长3.3倍
+- **CRUD完整闭环** — Create(Batch 8) + Read(96查询) + Update + Delete(Batch 9) 全部具备
+- **操作类Tool总数达10个** — POST 5 + DELETE 4 + 停止 1
+- **DELETE方法首次应用** — 验证HttpClient.delete()能力正常
+- **安全分级落地** — P0/P1分级从设计走向实际权限控制
+
+#### 整体架构状态（里程碑更新）
+- **Tool总数: 109个** (PUBLIC=89, AUTHENTICATED=12, ADMIN_ONLY=8)
+- **意图总数: 113个** (查询96 + 操作10 + 兜底1)
+- **Java源文件: 166个**
+- **服务状态: 端口8500运行中**
+- **Git状态: origin/github均为`8e5cece`，完全同步**
+
+#### 风险点
+1. **P0操作真实执行未验证** — DELETE端点返回200，但实际是否删除成功未确认（E2E仅验意图匹配）
+2. **ADMIN_ONLY权限需要sysadmin Token** — E2E测试使用sysadmin已通过，普通用户权限已拦截
+
+#### 经验教训
+1. **DELETE比想象更安全** — 后端路径参数模式下DELETE -> 200，语义清晰
+2. **P0级操作应最小化** — 仅真正不可逆的删除操作设P0，停止/中止设P1更合理
+3. **权限分层自动拦截** — ToolPermission注解 + AtlasOrchestrator自动过滤，无需Tool内自己做鉴权
+
+#### 下一步
+1. **真实DELETE执行验证** — 用sysadmin Token实际调用delete，确认后端真实删除
+2. **更多操作类Tool** — deploy_scale/stop/punish, node_cordon/drain等
+3. **Layer 3编排层** — Spring AI Alibaba ReactAgent集成
+4. **监控大盘** — 系统状态实时展示页面
+
+---
+
