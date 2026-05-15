@@ -1335,6 +1335,61 @@ intents:
       - "查看namespace"
     parameters: []
 
+  # --- 云资源列表 ---
+  cloud_resource_list:
+    description: "查询云资源列表"
+    agent: "query"
+    level: "p3"
+    keywords: ["云资源", "cloud", "云服务器", "云实例"]
+    examples:
+      - "云资源列表"
+      - "查看云实例"
+    parameters: []
+
+  # --- 货币查询列表 ---
+  currency_query_list:
+    description: "查询货币列表"
+    agent: "query"
+    level: "p3"
+    keywords: ["货币", "currency", "汇率", "币种"]
+    examples:
+      - "货币列表"
+      - "查看汇率"
+    parameters: []
+
+  # --- 文件素材列表 ---
+  file_material_list:
+    description: "查询文件素材列表"
+    agent: "storage"
+    level: "p3"
+    keywords: ["文件素材", "素材", "file material", "教学素材"]
+    examples:
+      - "文件素材列表"
+      - "查看素材"
+    parameters: []
+
+  # --- GPU详情列表 ---
+  gpu_detail_list:
+    description: "查询GPU详情列表"
+    agent: "query"
+    level: "p3"
+    keywords: ["GPU详情", "gpu detail", "显卡详情", "GPU明细"]
+    examples:
+      - "GPU详情列表"
+      - "查看显卡详情"
+    parameters: []
+
+  # --- LDAP配置列表 ---
+  ldap_config_list:
+    description: "查询LDAP配置列表"
+    agent: "rbac"
+    level: "p3"
+    keywords: ["LDAP", "ldap配置", "目录服务", "认证配置"]
+    examples:
+      - "LDAP配置列表"
+      - "查看认证配置"
+    parameters: []
+
   # ═══════════════════════════════════════════════════════════
   # 兜底意图
   # ═══════════════════════════════════════════════════════════
@@ -1348,13 +1403,13 @@ intents:
     parameters: []
 
   # ═══════════════════════════════════════════════════════════
-  # 意图总数: 98个意图 (含兜底)
-  # Phase 3 新增: +62个 (Batch1 +18, Batch2 +11, Batch3 +9, Batch4 +6, Batch5 +8, Batch6 +10)
-  # QueryAgent:  42个
+  # 意图总数: 103个意图 (含兜底)
+  # Phase 3 新增: +67个 (Batch1 +18, Batch2 +11, Batch3 +9, Batch4 +6, Batch5 +8, Batch6 +10, Batch7 +5)
+  # QueryAgent:  46个
   # DiagAgent:    2个
   # DeployAgent:  33个 (含详情+创建+Helm+Compose+MPI+模板+Slurm)
-  # RBACAgent:   10个
-  # StorageAgent:  7个
+  # RBACAgent:   11个
+  # StorageAgent:  8个
   # NetworkAgent:  2个
   # 通用:          2个 (greeting, help)
   # 兜底:          1个 (unknown)

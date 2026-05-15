@@ -1034,3 +1034,93 @@ Phase 3经过Batch 1-4已新增43个Tool（33→76）。Batch 5覆盖前端剩�
 
 ---
 
+
+
+### Review #17 — Phase 3 Batch 6: 消息/实验/计算/存储类Tool扩展（10个）
+
+**日期**: 2026-05-15  
+**范围**: 10个新查询类Tool + intents.yml扩展  
+**开发者**: Hermes (项目经理/架构师)**强调整个过程中禁止手动编码，全部编码任务交给 Claude Code (CC) 完成**
+
+#### 背景
+Phase 3经过Batch 1-5已新增51个Tool（33→84）。Batch 6继续覆盖前端剩余模块：消息通知/外部链接/数据表/上传状态/资源使用/MIG配置/Slurm节点/实验实例/训练模板/命名空间。
+
+#### API验证结果
+从前端`vue-kube-manager/src/api/`精选10个候选API，**10/10全部可用**：
+
+| API | 路径 | 结果 |
+|-----|------|------|
+| 消息通知列表 | GET /api/{orgId}/message | ✅ 200 |
+| 外部链接列表 | GET /api/{orgId}/external-link | ✅ 200 |
+| 数据表列表 | GET /api/{orgId}/table | ✅ 200 |
+| 上传状态列表 | GET /api/{orgId}/download/status | ✅ 200 |
+| 资源使用列表 | GET /api/{orgId}/resource | ✅ 200 |
+| MIG配置列表 | GET /api/{orgId}/migConfig | ✅ 200 |
+| Slurm节点列表 | GET /api/{orgId}/slurm-node | ✅ 200 |
+| 实验实例列表 | GET /api/{orgId}/experiment/instance | ✅ 200 |
+| 训练任务模板 | GET /api/{orgId}/train-job-template | ✅ 200 |
+| 命名空间列表 | GET /api/{orgId}/namespace | ✅ 200 |
+
+**验证通过率: 10/10 (100%)**
+
+#### 新Tool清单（10个）
+1. `inbox_message_list` — 消息通知列表 (query, public)
+2. `external_link_list` — 外部链接列表 (query, public)
+3. `table_list` — 数据表列表 (query, public)
+4. `upload_status_list` — 上传状态列表 (storage, public)
+5. `resource_usage_list` — 资源使用列表 (query, public)
+6. `mig_config_list` — MIG配置列表 (query, public)
+7. `slurm_node_list` — Slurm节点列表 (deploy, public)
+8. `experiment_instance_list` — 实验实例列表 (query, public)
+9. `job_template_list` — 训练任务模板列表 (deploy, public)
+10. `namespace_list` — 命名空间列表 (query, public)
+
+#### 编译 & 运行
+- [x] BUILD SUCCESS (151 source files)
+- [x] 服务启动成功 (port 8500, 8.9s)
+- [x] ToolRegistry: 94个Tool已注册 (84 + 10)
+- [x] intents.yml: 98个意图
+- [x] Graph模式: 已启用 ✅
+
+#### E2E测试结果
+| 查询 | 命中Tool | 结果 |
+|------|---------|------|
+| 消息通知列表 | inbox_message_list | ✅ 命中 |
+| 外部链接列表 | external_link_list | ✅ 命中 |
+| 数据表列表 | table_list | ✅ 命中 |
+| 上传状态列表 | upload_status_list | ✅ 命中 |
+| 资源使用列表 | resource_usage_list | ✅ 命中 |
+| MIG配置列表 | mig_config_list | ✅ 命中 |
+| Slurm节点列表 | slurm_node_list | ✅ 命中 |
+| 实验实例列表 | experiment_instance_list | ✅ 命中 |
+| 训练任务模板 | job_template_list | ✅ 命中 |
+| 命名空间列表 | namespace_list | ✅ 命中 |
+
+**命中率: 10/10 (100%)**
+
+#### 整体架构状态（更新）
+- Tool总数: 94个 (原33 + 新增61)
+- 意图数: 98个 (原36 + 新增62)
+- 编译文件数: 151个
+- 服务状态: 端口8500运行中
+- Git推送: ⚠️ origin/github仍为旧版本, 本地ahead 4提交
+
+#### 风险点
+1. **Git推送持续受阻** — 4个提交未同步到远程
+2. **查询类Tool占比过高** — 94个中绝大多数是查询类，创建/更新/删除类Tool不足
+3. **前端覆盖率接近饱和** — 45个API文件已覆盖大部分，剩余多为复杂操作
+
+#### 经验教训
+1. **"全绿即批量"策略再次验证成功** — 10个API全部curl验证通过后才批量生成, 0返工
+2. **MigConfigListTool发现新文件** — 之前误以为Batch 3已有，实际是新Tool，说明需要更好的跟踪
+3. **编译时间仍保持<10s** — 151个文件快速编译, 增量开发体验良好
+4. **E2E验证100%命中** — AtlasBrain对新增Tool的自适应能力持续验证
+
+#### 下一步
+1. **Git推送修复** — 重试双推或排查网络
+2. **Batch 7** — 转向复杂操作类Tool: 创建/更新/删除 (需分析前端表单body结构)
+3. **覆盖率统计** — 生成完整的 前端模块 vs Tool 映射矩阵
+4. **Layer 3编排层** — Spring AI Alibaba ReactAgent集成
+
+---
+
