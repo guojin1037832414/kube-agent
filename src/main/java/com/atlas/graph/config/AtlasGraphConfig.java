@@ -198,8 +198,13 @@ public class AtlasGraphConfig {
                         Instant.now()
                     );
 
-                    // AtlasBrain 决策
-                    BrainDecision decision = atlasBrain.decide(ctx);
+                    // AtlasBrain 决策（resume 场景：已有非中断决策则复用，避免重复调用 LLM）
+                    BrainDecision decision = state.value("brain_decision")
+                            .filter(BrainDecision.class::isInstance)
+                            .map(BrainDecision.class::cast)
+                            .filter(d -> d.actionType() != BrainDecision.ActionType.HITL_CONFIRM
+                                     && d.actionType() != BrainDecision.ActionType.ASK_CLARIFY)
+                            .orElseGet(() -> atlasBrain.decide(ctx));
 
                     // 将决策存入 State（供 AtlasOrchestrator SSE 读取）
                     Map<String, Object> updates = new HashMap<>();

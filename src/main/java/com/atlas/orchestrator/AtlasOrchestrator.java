@@ -62,6 +62,9 @@ public class AtlasOrchestrator {
     private static final int MAX_PER_USER = 3;
     private final Map<String, Integer> userConnections = new ConcurrentHashMap<>();
 
+    /** HITL 待确认决策：threadId → BrainDecision（供 HITLController 读取） */
+    private final Map<String, BrainDecision> pendingDecisions = new ConcurrentHashMap<>();
+
     /**
      * 构造方法 — P0 版。
      *
@@ -304,6 +307,8 @@ public class AtlasOrchestrator {
                                 .map(BrainDecision.class::cast)
                                 .ifPresent(decision -> {
                                     if (decision.actionType() == BrainDecision.ActionType.ASK_CLARIFY) {
+                                        // 保存待澄清决策，供 /hitl/clarify 接口读取
+                                        pendingDecisions.put(sessionId, decision);
                                         emit(emitter, "clarify", Map.of(
                                             "reasoning", decision.reasoning(),
                                             "confidence", decision.confidence(),
@@ -313,6 +318,8 @@ public class AtlasOrchestrator {
                                         log.info("[Graph] 会话 {} 触发 clarify: {}",
                                             sessionId, decision.reasoning());
                                     } else if (decision.actionType() == BrainDecision.ActionType.HITL_CONFIRM) {
+                                        // 保存待确认决策，供 /hitl/confirm 接口读取
+                                        pendingDecisions.put(sessionId, decision);
                                         emit(emitter, "hitl_request", Map.of(
                                             "target", decision.target(),
                                             "reasoning", decision.reasoning(),
@@ -364,6 +371,20 @@ public class AtlasOrchestrator {
         );
 
         return emitter;
+    }
+
+    /**
+     * 获取待确认的 HITL 决策（供 HITLController 使用）。
+     */
+    public BrainDecision getPendingDecision(String sessionId) {
+        return pendingDecisions.get(sessionId);
+    }
+
+    /**
+     * 移除已处理的 HITL 决策。
+     */
+    public BrainDecision removePendingDecision(String sessionId) {
+        return pendingDecisions.remove(sessionId);
     }
 
     // ── 私有辅助 ────────────────────────────────────

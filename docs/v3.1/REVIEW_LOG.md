@@ -650,6 +650,60 @@
 - p2-hitl: HITL 高危操作确认节点持久化与交互闭环
 - p2-checkpoint: Checkpoint 持久化 (Redis/MemorySaver 配置)
 - p2-intent-entry: IntentRouter 接入 Graph Entry Node (可选)
-- Phase 3: 前端 button 全覆盖 (60+ 功能点, 缺失 Tool 补齐 + keywords)
+- (P2) Phase 3: 前端 button 全覆盖 (60+ 功能点, 缺失 Tool 补齐 + keywords)
 - Phase 4: 监控/日志/可观测性集成
+
+---
+
+## Review #11 — HITL 闭环实现
+
+**日期**: 2026-05-15  
+**范围**: AtlasOrchestrator + AtlasGraphConfig + HITLController  
+**开发者**: Hermes (自动化编辑管道)
+
+#### 代码修改摘要
+1. **AtlasGraphConfig.java**: supervisor 节点 AtlasBrain 决策增加 resume 检测 — 如果 state 中已有非中断 BrainDecision 则直接复用，避免重复调用 LLM
+2. **AtlasOrchestrator.java**:
+   - 新增 `pendingDecisions` ConcurrentHashMap 存储待确认/澄清决策
+   - HITL/Clarify 检测分支中增加 `pendingDecisions.put(sessionId, decision)` 保存
+   - 新增 `getPendingDecision()` / `removePendingDecision()` 公开接口供 HITLController 读取
+3. **HITLController.java** (新建 210 行):
+   - `POST /api/v1/hitl/confirm` — 人工确认后恢复 Graph 执行
+   - `POST /api/v1/hitl/clarify` — 用户提供补充信息后重新执行
+   - `resumeGraph()` 核心逻辑: checkpoint 读取 → 构建新 BrainDecision → compiledGraph.stream() 流式恢复
+   - HITL_CONFIRM → CALL_TOOL 转换（用户已确认执行）
+   - ASK_CLARIFY → 携带 clarified_input 重新触发 AtlasBrain 决策
+
+#### 技术实现要点
+- **Spring AI Alibaba Checkpoint API**: `compiledGraph.stateOf(threadId)` 读取状态, `compiledGraph.stream(inputs, config)` 恢复执行
+- **resume 短路**: AtlasBrain 节点内检测 `brain_decision` 是否存在且非中断类型 — 存在则复用，避免 LLM 重复决策
+- **上下文传递**: resume 时从 checkpoint 复制 user_id/token/conversation_id/messages 到新 inputs
+- **状态清理**: `removePendingDecision()` 确保每个 HITL 请求只能处理一次（防重放）
+
+#### 编译 & 运行
+- [x] BUILD SUCCESS (90 source files, 3.45s)
+- [x] 服务启动成功 (port 8500, Graph模式: 已启用 ✅)
+- [ ] E2E 测试 — HITL_CONFIRM CLI (待前端配合)
+- [ ] E2E 测试 — ASK_CLARIFY CLI (待前端配合)
+
+#### 已知限制
+- 内存 pendingDecisions 无 TTL，长期运行会积累 — 生产环境需加周期性清理
+- checkpoint 依赖 MemorySaver，服务重启后丢失 — RedisSaver 待配置
+- HITL/Clarify 的前端 UI 交互流程尚未开发（后端接口已就绪）
+
+#### 经验教训
+1. **Spring AI Alibaba StateSnapshot 的 state() 方法** 是可访问的（非 getState()），直接 field access
+2. **CompiledGraph.stream() 的 inputs 会 overwrite state keys** — brain_decision 新值会覆盖旧值，resume 检测必须在旧值被覆盖前完成
+3. **HITL 的"正确"设计取决于产品需求**: 当前是"非阻塞"模式（Graph 完成 → 前端另起请求），LangChain 的"阻塞"模式（interruptBefore merge_result）需要更复杂的流控制
+
+#### 整体架构状态
+- HITL 闭环: ✅ SSE 事件发射 + REST 确认/澄清接口 + resume 执行（前端 UI 待配合）
+- Clarify 闭环: ✅ 同上
+- Checkpoint: ⚠️ MemorySaver（内存），Redis 持久化待配置
+- Multi-step: ❌ 未实现（Phase 3 或后续）
+
+#### 下一步行动
+- Phase 2 收尾: Checkpoint Redis 持久化配置
+- Phase 3: 前端 button 全覆盖 (60+ 功能点, 缺失 Tool 补齐 + keywords)
+- Phase 4: 监控/可观测性 + 多步编排能力
 
