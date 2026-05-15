@@ -863,3 +863,91 @@ Test 15个候选API，**全部可用，0个404**：
 ---
 
 
+### Review #15 — Phase 3 Batch 4: 深度学习/实验/资源管理类Tool扩展（6个）
+
+**日期**: 2026-05-15  
+**范围**: 6个新查询类Tool + intents.yml扩展  
+**开发者**: Hermes (项目经理/架构师)**强调整个过程中禁止手动编码，全部编码任务交给 Claude Code (CC) 完成**
+
+#### 背景
+Phase 3经过Batch 1-3已新增37个Tool（33→70）。Batch 4聚焦前端高频但遗漏的模块：TensorBoard、实验模板、资源预设、配额管理、PyTorch任务、系统信息。
+
+#### API验证结果
+从前端源码`vue-kube-manager/src/api/`发现12个未覆盖API文件，精选6个高频验证：
+
+| API | 路径 | 结果 |
+|-----|------|------|
+| TensorBoard列表 | GET /api/{orgId}/tensorboard | ✅ 200 |
+| 实验模板列表 | GET /api/{orgId}/experiment/template | ✅ 200 |
+| 资源预设列表 | GET /api/{orgId}/resource-preset | ✅ 200 |
+| 我的配额申请 | GET /api/{orgId}/quota/my | ✅ 200 |
+| PyTorch任务列表 | GET /api/{orgId}/pytorch-job | ✅ 200 |
+| 系统信息配置 | GET /api/public/sys-info/all/map | ✅ 200 |
+
+**验证通过率: 6/6 (100%)**
+
+#### 新Tool清单（6个）
+1. `tensorboard_list` — TensorBoard列表 (query, public)
+2. `experiment_template_list` — 实验模板列表 (query, public)
+3. `resource_preset_list` — 资源预设列表 (query, public)
+4. `quota_my_list` — 我的配额申请 (query, public)
+5. `pytorch_job_list` — PyTorch训练任务 (query, public)
+6. `sys_info_map` — 系统信息配置 (query, public)
+
+#### 代码修改摘要
+1. **新增6个Tool类** — 统一Atlas v3.1模板: @Component + @AtlasToolMapping + 继承BaseTool
+2. **扩展intents.yml** — +6意图定义, keywords覆盖中英文变体
+3. **更新统计注释** — 意图总数: 80个, Phase 3新增: +44个
+
+#### 设计决策
+- **sys_info_map使用public路径** — `/api/public/sys-info/all/map`无需认证, 与前端一致
+- **其余5个使用orgId路径** — 通过organizationId(params)辅助方法统一处理orgId
+- **查询类零必填参数** — 分页默认page=1 limit=100
+
+#### 编译 & 运行
+- [x] BUILD SUCCESS (133 source files)
+- [x] 服务启动成功 (port 8500, 8.8s)
+- [x] ToolRegistry: 76个Tool已注册 (70 + 6)
+- [x] intents.yml: 80个意图
+- [x] Graph模式: 已启用 ✅
+
+#### E2E测试结果
+| 查询 | 命中Tool | 结果 |
+|------|---------|------|
+| TensorBoard列表 | tensorboard_list | ✅ 成功 |
+| 实验模板列表 | experiment_template_list | ✅ 成功 |
+| 资源预设列表 | resource_preset_list | ✅ 成功 |
+| 我的配额申请 | quota_my_list | ✅ 成功 |
+| PyTorch任务列表 | pytorch_job_list | ✅ 成功 |
+| 系统信息配置 | sys_info_map | ✅ 成功 |
+
+**命中率: 6/6 (100%)**
+
+#### 整体架构状态（更新）
+- Tool总数: 76个 (原33 + 新增43)
+- 意图数: 80个 (原36 + 新增44)
+- 编译文件数: 133个
+- 服务状态: 端口8500运行中
+- HITL闭环: ✅ 同 Review #11
+- 多步编排: ❌ 未实现
+- Checkpoint: ⚠️ MemorySaver
+- Git推送: ⚠️ origin/github仍为旧版本b48064c, 本地ahead 2提交
+
+#### 风险点
+1. **Git双推受阻** — origin/github超时阻断, 可能WSL网络间歇性问题
+2. **后续创建类Tool复杂度上升** — pytorch_job_save需复杂body构造, 前端默认值对齐要求高
+3. **intents.yml keywords密度** — 仍需大规模口语化扩展
+
+#### 经验教训
+1. **"分类别推进"策略有效** — 按模块类别(TensorBoard/实验/资源)批量验证, 比随机选API更高效
+2. **public API路径直接调用** — 如sys-info/all/map无需orgId, 减少参数处理复杂度
+3. **E2E全命中验证了AtlasBrain自适应能力** — 新增Tool无需改路由代码, 描述自动被LLM理解
+
+#### 下一步
+1. **Git推送修复** — 重试origin/github双推, 或排查网络问题
+2. **Batch 5** — 复杂创建类Tool: pytorch_job_save, job_template_create, dataset_file_list
+3. **覆盖率统计** — 前端45个API文件 vs 76个Tool的完整映射矩阵
+4. **keywords口语化扩展** — 收集更多自然语言变体
+
+---
+

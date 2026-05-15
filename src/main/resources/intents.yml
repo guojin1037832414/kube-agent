@@ -1071,6 +1071,72 @@ intents:
         required: false
         description: "节点名称过滤"
 
+  # --- TensorBoard列表 ---
+  tensorboard_list:
+    description: "查询TensorBoard列表"
+    agent: "query"
+    level: "p3"
+    keywords: ["TensorBoard", "tensorboard列表", "查看tensorboard", "深度学习看板"]
+    examples:
+      - "TensorBoard列表"
+      - "查看所有tensorboard"
+    parameters: []
+
+  # --- 实验模板列表 ---
+  experiment_template_list:
+    description: "查询实验模板列表"
+    agent: "query"
+    level: "p3"
+    keywords: ["实验模板", "模板列表", "训练模板", "experiment模板"]
+    examples:
+      - "实验模板列表"
+      - "查看训练模板"
+    parameters: []
+
+  # --- 资源预设列表 ---
+  resource_preset_list:
+    description: "查询资源预设列表"
+    agent: "query"
+    level: "p3"
+    keywords: ["资源预设", "预设列表", "资源配置", "resource preset"]
+    examples:
+      - "资源预设列表"
+      - "查看资源配置模板"
+    parameters: []
+
+  # --- 我的配额申请 ---
+  quota_my_list:
+    description: "查询我的配额申请列表"
+    agent: "query"
+    level: "p3"
+    keywords: ["我的配额", "配额申请", "quota申请", "资源配额"]
+    examples:
+      - "我的配额申请"
+      - "查看quota列表"
+    parameters: []
+
+  # --- PyTorch任务列表 ---
+  pytorch_job_list:
+    description: "查询PyTorch任务列表"
+    agent: "query"
+    level: "p3"
+    keywords: ["PyTorch任务", "pytorch列表", "训练任务", "深度学习任务"]
+    examples:
+      - "PyTorch任务列表"
+      - "查看pytorch训练任务"
+    parameters: []
+
+  # --- 系统信息配置 ---
+  sys_info_map:
+    description: "查询系统信息配置"
+    agent: "query"
+    level: "p3"
+    keywords: ["系统信息", "系统配置", "sys info", "平台配置"]
+    examples:
+      - "系统信息配置"
+      - "查看平台配置"
+    parameters: []
+
   # ═══════════════════════════════════════════════════════════
   # 兜底意图
   # ═══════════════════════════════════════════════════════════
@@ -1084,9 +1150,9 @@ intents:
     parameters: []
 
   # ═══════════════════════════════════════════════════════════
-  # 意图总数: 74个意图 (含兜底)
-  # Phase 3 新增: +38个 (Batch1 +18, Batch2 +11, Batch3 +9)
-  # QueryAgent:  24个
+  # 意图总数: 80个意图 (含兜底)
+  # Phase 3 新增: +44个 (Batch1 +18, Batch2 +11, Batch3 +9, Batch4 +6)
+  # QueryAgent:  30个
   # DiagAgent:    2个
   # DeployAgent:  29个 (含详情+创建+Helm+Compose+MPI)
   # RBACAgent:    9个
