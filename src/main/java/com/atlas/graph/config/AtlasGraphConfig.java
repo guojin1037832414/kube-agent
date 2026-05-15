@@ -19,8 +19,15 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import com.atlas.brain.AtlasBrain;
+import com.atlas.brain.BrainDecision;
+import com.atlas.brain.ExecutionContext;
+import com.atlas.tool.core.ToolRegistry;
+import java.time.Instant;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static com.alibaba.cloud.ai.graph.StateGraph.END;
 import static com.alibaba.cloud.ai.graph.StateGraph.START;
@@ -48,40 +55,6 @@ public class AtlasGraphConfig {
     // ═══════════════════════════════════════════════════════════
     // 1. ReactAgent 定义（每个专业 Agent）
     // ═══════════════════════════════════════════════════════════
-
-    @Bean
-    public ReactAgent supervisorAgent(ChatModel chatModel, AtlasToolCallbackFactory toolFactory) {
-        return ReactAgent.builder()
-                .name("supervisor")
-                .description("Atlas 意图识别与路由 Agent — 判断用户请求属于哪个专业领域")
-                .model(chatModel)
-                .instruction("""
-                    你是 Atlas K8s 集群管理的总调度员，只负责意图识别与路由决策。
-
-                    必须严格遵守以下输出协议：
-                    1. 只输出一个最小 JSON 对象，禁止输出 Markdown 代码块、解释、前后缀文本或任何额外内容。
-                    2. JSON 必须且只能包含两个字段：agent 和 reason。
-                    3. agent 的取值只能是：query、deploy、diag、rbac、storage、network、direct_answer。
-                    4. reason 用一句简短中文说明分类原因。
-                    5. 不要调用工具，不要执行用户请求，不要询问补充信息，只做路由分类。
-
-                    路由规则：
-                    - query：节点查询、GPU 查询、镜像查询、集群概览、Pod 状态、Deployment 列表、日志查看、资源监控等只读查询。
-                    - deploy：创建实例、创建 NIM、创建/更新/删除部署、扩缩容、重启等工作负载变更操作。
-                    - diag：Pod 故障排查、日志分析、异常定位、诊断问题等排障请求。
-                    - rbac：用户管理、角色查询、权限设置、账号/授权相关请求。
-                    - storage：存储卷、PVC、PV、StorageClass 的创建、删除、查询或配置。
-                    - network：网络配置、Ingress 查询/配置、域名、带宽、Service 暴露等网络相关请求。
-                    - direct_answer：寒暄、闲聊、非 K8s operational 请求、无法归类到以上领域的问题。
-
-                    输出示例（JSON 格式， curly braces 需双写以避开模板变量冲突）：
-                    {{"agent":"query","reason":"用户要求查看节点信息"}}
-                    {{"agent":"direct_answer","reason":"非 operational 查询"}}
-                    """)
-                .tools(toolFactory.buildAllVisible())
-                .outputKey("supervisor_result")
-                .build();
-    }
 
     @Bean
     public ReactAgent queryAgent(ChatModel chatModel, AtlasToolCallbackFactory toolFactory) {
@@ -184,7 +157,8 @@ public class AtlasGraphConfig {
     @Bean
     public CompiledGraph atlasGraph(
             ChatModel chatModel,
-            ReactAgent supervisorAgent,
+            AtlasBrain atlasBrain,
+            ToolRegistry toolRegistry,
             ReactAgent queryAgent,
             ReactAgent deployAgent,
             ReactAgent diagAgent,
@@ -206,8 +180,35 @@ public class AtlasGraphConfig {
         var emitSseNode = node_async(new SseEmitNode(streamingEmitter));
 
         StateGraph graph = new StateGraph("atlas_orchestrator", keyFactory)
-                // 1. Supervisor Agent 识别意图
-                .addNode("supervisor", supervisorAgent.getAndCompileGraph())
+                // 1. AtlasBrain 认知决策节点 — 替代旧 supervisor Agent
+                .addNode("supervisor", node_async(state -> {
+                    // 读取用户输入与上下文
+                    String input = state.value("input").map(Object::toString).orElse("");
+                    String userId = state.value("user_id").map(Object::toString).orElse("anonymous");
+                    String token = state.value("token").map(Object::toString).orElse("");
+
+                    // 构建 ExecutionContext
+                    ExecutionContext ctx = new ExecutionContext(
+                        UUID.randomUUID().toString(),
+                        userId,
+                        input,
+                        List.of(),
+                        Map.of("token", token),
+                        UUID.randomUUID().toString(),
+                        Instant.now()
+                    );
+
+                    // AtlasBrain 决策
+                    BrainDecision decision = atlasBrain.decide(ctx);
+
+                    // 将决策存入 State（供 AtlasOrchestrator SSE 读取）
+                    Map<String, Object> updates = new HashMap<>();
+                    updates.put("brain_decision", decision);
+                    updates.put("supervisor_result", decision); // 兼容旧 key
+
+                    // 返回路由键 — 复用现有条件边目标
+                    return updates;
+                }))
 
                 // 2. 各专业 Agent（作为子图节点）
                 .addNode("query", queryAgent.getAndCompileGraph())
@@ -225,26 +226,59 @@ public class AtlasGraphConfig {
         // 边：START → supervisor
         graph.addEdge(START, "supervisor");
 
-        // 条件边：supervisor 输出决定路由到哪个 Agent
-        // Supervisor Agent 的 outputKey="supervisor_result" 中应包含 routingDecision 字段
+        // 条件边：supervisor 节点输出决定路由到哪个 Agent
+        // AtlasBrain 的 BrainDecision.actionType() 映射为路由键
         graph.addConditionalEdges("supervisor",
                 edge_async(state -> {
-                    Object result = state.value("supervisor_result").orElse("direct_answer");
-                    if (result instanceof Map map) {
-                        String agent = (String) map.getOrDefault("agent", "direct_answer");
-                        return agent;
+                    BrainDecision decision = state.value("brain_decision")
+                            .filter(BrainDecision.class::isInstance)
+                            .map(BrainDecision.class::cast)
+                            .orElse(null);
+
+                    if (decision == null) {
+                        // 无决策 — 回退到直接回答
+                        return "direct_answer";
                     }
-                    // Fallback: 字符串类型 — 尝试关键词匹配
-                    if (result instanceof String text) {
-                        String lower = text.toLowerCase();
-                        if (lower.contains("query") || lower.contains("查询") || lower.contains("查看")) return "query";
-                        if (lower.contains("deploy") || lower.contains("部署") || lower.contains("创建")) return "deploy";
-                        if (lower.contains("rbac") || lower.contains("用户") || lower.contains("权限") || lower.contains("角色")) return "rbac";
-                        if (lower.contains("storage") || lower.contains("存储") || lower.contains("卷")) return "storage";
-                        if (lower.contains("network") || lower.contains("网络") || lower.contains("ingress")) return "network";
-                        if (lower.contains("diag") || lower.contains("诊断") || lower.contains("日志")) return "diag";
+
+                    switch (decision.actionType()) {
+                        case DELEGATE_AGENT:
+                            // 专业 Agent 路由：target 应为 agent 名称
+                            String agent = decision.target() != null
+                                    ? decision.target().toLowerCase()
+                                    : "direct_answer";
+                            return List.of("query", "deploy", "diag", "rbac", "storage", "network")
+                                    .contains(agent) ? agent : "direct_answer";
+
+                        case CALL_TOOL:
+                            // 单工具调用 — 通过 ToolRegistry 映射到对应 Agent
+                            if (decision.target() != null) {
+                                var metaOpt = toolRegistry.listByAgent("query").stream()
+                                        .filter(m -> m.name().equals(decision.target()))
+                                        .findFirst();
+                                if (metaOpt.isPresent()) {
+                                    String agentCode = metaOpt.get().agent();
+                                    if (List.of("query", "deploy", "diag", "rbac", "storage", "network")
+                                            .contains(agentCode)) {
+                                        return agentCode;
+                                    }
+                                }
+                                // 简单 fallback：target 名匹配
+                                String target = decision.target().toLowerCase();
+                                if (target.contains("deploy") || target.contains("创建")) return "deploy";
+                                if (target.contains("diag") || target.contains("诊断")) return "diag";
+                                if (target.contains("rbac") || target.contains("用户")) return "rbac";
+                                if (target.contains("storage") || target.contains("存储")) return "storage";
+                                if (target.contains("network") || target.contains("网络")) return "network";
+                            }
+                            return "query"; // 默认查询
+
+                        case DIRECT_ANSWER:
+                        case ASK_CLARIFY:
+                        case HITL_CONFIRM:
+                        default:
+                            // 直接回答、澄清、HITL 均路由到 direct_answer
+                            return "direct_answer";
                     }
-                    return "direct_answer";
                 }),
                 Map.of(
                         "query", "query",
@@ -288,6 +322,7 @@ public class AtlasGraphConfig {
             strategies.put("input", new ReplaceStrategy());          // 用户原始输入
             strategies.put("messages", new AppendStrategy(false));   // 消息历史
             strategies.put("supervisor_result", new ReplaceStrategy());
+            strategies.put("brain_decision", new ReplaceStrategy());   // AtlasBrain 决策结果
             strategies.put("query_result", new ReplaceStrategy());
             strategies.put("deploy_result", new ReplaceStrategy());
             strategies.put("diag_result", new ReplaceStrategy());

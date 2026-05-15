@@ -16,6 +16,8 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import com.atlas.brain.BrainDecision;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -294,18 +296,48 @@ public class AtlasOrchestrator {
                             log.debug("[Graph] 节点 {} 输出，state keys: {}",
                                 node, state.data().keySet());
 
-                            emit(emitter, "thinking", Map.of(
-                                "step", node,
-                                "content", "节点 " + node + " 正在执行..."
-                            ));
+                        // 节点输出处理 — 增加 AtlasBrain 决策感知（HITL/Clarify）
+                        // 检查当前是否为 supervisor 节点并读取 brain_decision
+                        if ("supervisor".equals(node)) {
+                            state.value("brain_decision")
+                                .filter(BrainDecision.class::isInstance)
+                                .map(BrainDecision.class::cast)
+                                .ifPresent(decision -> {
+                                    if (decision.actionType() == BrainDecision.ActionType.ASK_CLARIFY) {
+                                        emit(emitter, "clarify", Map.of(
+                                            "reasoning", decision.reasoning(),
+                                            "confidence", decision.confidence(),
+                                            "requiredContext", decision.requiredContext() != null
+                                                ? decision.requiredContext() : List.of()
+                                        ));
+                                        log.info("[Graph] 会话 {} 触发 clarify: {}",
+                                            sessionId, decision.reasoning());
+                                    } else if (decision.actionType() == BrainDecision.ActionType.HITL_CONFIRM) {
+                                        emit(emitter, "hitl_request", Map.of(
+                                            "target", decision.target(),
+                                            "reasoning", decision.reasoning(),
+                                            "confidence", decision.confidence(),
+                                            "parameters", decision.parameters() != null
+                                                ? decision.parameters() : Map.of()
+                                        ));
+                                        log.info("[Graph] 会话 {} 触发 hitl_request: target={}",
+                                            sessionId, decision.target());
+                                    }
+                                });
+                        }
 
-                            Optional<Object> resultOpt = state.value(node + "_result");
-                            resultOpt.ifPresent(result ->
-                                emit(emitter, "content", Map.of(
-                                    "node", node,
-                                    "result", result.toString()
-                                ))
-                            );
+                        emit(emitter, "thinking", Map.of(
+                            "step", node,
+                            "content", "节点 " + node + " 正在执行..."
+                        ));
+
+                        Optional<Object> resultOpt = state.value(node + "_result");
+                        resultOpt.ifPresent(result ->
+                            emit(emitter, "content", Map.of(
+                                "node", node,
+                                "result", result.toString()
+                            ))
+                        );
                         },
                         err -> {
                             log.error("[Graph] 会话 {} 流式错误", sessionId, err);

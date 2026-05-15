@@ -575,3 +575,81 @@
 
 *[后续Review将持续追加...]*
 
+---
+
+## Review #10 — AtlasBrain (认知决策引擎) Phase 2 集成完成
+
+**日期**: 2026-05-15  
+**范围**: AtlasGraphConfig + AtlasOrchestrator + 6个新 Brain 文件  
+**开发者**: Hermes (自动化编辑管道)
+
+#### 代码修改摘要
+1. **新建 6 个文件** (Phase 1):
+   - `BrainDecision.java` — 决策结果结构 (ActionType + target + parameters + reasoning + confidence + requiredContext)
+   - `AtlasMessage.java` — 消息模型 + 工厂方法
+   - `ExecutionContext.java` — 执行上下文 (sessionId + userId + userQuery + history + env + conversationId + createdAt)
+   - `BrainParseException.java` — 结构化输出解析失败异常
+   - `StructuredOutputParser.java` — sanitize + retry 提取 JSON (BeanOutputConverter + 3次重试)
+   - `AtlasBrain.java` — 核心决策器: decide(ExecutionContext) → BrainDecision
+
+2. **修改 AtlasGraphConfig.java** (Phase 2):
+   - 删除 `supervisorAgent` @Bean (ReactAgent, 绑定33个工具)
+   - `atlasGraph()` 方法签名: `-supervisorAgent +AtlasBrain +ToolRegistry`
+   - supervisor 节点替换: `supervisorAgent.getAndCompileGraph()` → 自定义 `node_async` (读取 state → 构建 ExecutionContext → atlasBrain.decide() → 按 ActionType 映射路由键)
+   - 条件边重写: `state.value("supervisor_result")` → `BrainDecision.actionType()` switch 映射
+   - KeyStrategyFactory 新增 `brain_decision` (ReplaceStrategy)
+
+3. **修改 AtlasOrchestrator.java** (Phase 2):
+   - Graph stream subscribe 路径中增加 supervisor 节点决策感知
+   - `ASK_CLARIFY` → SSE `clarify` 事件 (携带 reasoning + confidence + requiredContext)
+   - `HITL_CONFIRM` → SSE `hitl_request` 事件 (携带 target + reasoning + confidence + parameters)
+
+4. **启动依赖修复**:
+   - `AtlasBrain`: `ChatClient` 注入 → `ChatModel` 注入 + `ChatClient.builder(chatModel).build()`
+   - `StructuredOutputParser`: 移除 ChatClient 字段持有 → 改为方法参数传入
+   - 原因: `ChatClient` Bean 只有当 api-key 有效且 Spring AI 自动配置成功时才存在, `ChatModel` 始终可用
+
+#### 优点
+1. **零工具绑定 Supervisor**: AtlasBrain 不绑定任何工具, 纯 LLM 结构化输出决策, 避免了 ReactAgent 绑定全量工具的 token 浪费
+2. **路由键兼容**: 完全复用现有条件边目标 (query/deploy/diag/rbac/storage/network/direct_answer), 不破坏下游汇聚逻辑
+3. **HITL/Clarify 事件化**: supervisor 节点输出直接通过 SSE 事件流推送到前端, 无需额外状态轮询
+4. **启动鲁棒性**: ChatModel 注入保证无论 api-key 是否有效都能启动 (Graph 可用, Brain 决策可能 fallback)
+
+#### 风险点
+1. ⚠️ **CALL_TOOL → Agent 映射**: ToolRegistry 按 "query" Agent 列表搜索 tool name 映射, 可能有漏网之鱼; 已有 keyword fallback（'deploy'/'diag'/'rbac'/'storage'/'network'）
+2. ⚠️ **LLM 结构化输出可靠性**: confidence < 0.6 应 fallback 到 ASK_CLARIFY, 但 LLM 可能在置信度低时仍输出 CALL_TOOL
+3. ⚠️ **HITL 未闭环**: hitl_request SSE 事件已发射, 但前端如何响应、如何 resume Graph 执行尚未实现
+4. ⚠️ **Clarify 未闭环**: clarify 事件已发射, 但用户补充信息如何重新注入 Graph 未实现
+
+#### 测试验证
+- [x] BUILD SUCCESS (89 source files, 3.96s)
+- [x] 服务启动成功 (Graph模式: 已启用 ✅, port 8500)
+- [x] E2E 测试 — CALL_TOOL: `actionType=CALL_TOOL, target=node_query` → 路由到 query Agent ✅
+- [x] E2E 测试 — DIRECT_ANSWER: `actionType=DIRECT_ANSWER` → 路由到 direct_answer ✅
+- [ ] E2E 测试 — DELEGATE_AGENT (待测)
+- [ ] E2E 测试 — ASK_CLARIFY (待测, 需 LLM 触发)
+- [ ] E2E 测试 — HITL_CONFIRM (待测, 需高危操作触发)
+- [ ] 单元测试: AtlasBrain 决策逻辑 (待补)
+
+#### 经验教训
+1. **ChatClient vs ChatModel 注入差异**: ChatClient 是条件 Bean (api-key 有效时才存在), ChatModel 是 unconditional Bean。依赖注入时必须分析 Bean 的创建条件。
+2. **自动化编辑管道在高确定性场景下高效**: 5个结构明确的编辑操作, patch 工具 30 秒完成, CC 需分 4-5 个 tmux 任务且每个需写 prompt。
+3. **ExecutionContext 的构造器签名变更**, 需要在调用点同步更新 — 编译错误是最佳防线。
+4. **StateGraph 的 node_async G/R 签名是 `Map<String, Object>`**, 返回的 Map 会 merged 到 state, 不需要显式 putState。
+
+#### 当前架构状态
+- L0: StateGraph 已启用 (supervisor → query/deploy/diag/rbac/storage/network/direct_answer → merge → emit)
+- L1: Embedding 预筛 (ONNX 模型, 35个意图预计算)
+- L2/L4: RuleMatcher 规则匹配
+- L3: LLM 分类器 (AtlasBrain 决策)
+- Graph: AtlasBrain → 6个专业 Agent → merge_result → SSE
+- HITL: 流事件已发射, 交互闭环待实现
+- Checkpoint: MemorySaver 已注册, 持久化策略待配置
+
+#### 下一步行动 (Phase 2 剩余)
+- p2-hitl: HITL 高危操作确认节点持久化与交互闭环
+- p2-checkpoint: Checkpoint 持久化 (Redis/MemorySaver 配置)
+- p2-intent-entry: IntentRouter 接入 Graph Entry Node (可选)
+- Phase 3: 前端 button 全覆盖 (60+ 功能点, 缺失 Tool 补齐 + keywords)
+- Phase 4: 监控/日志/可观测性集成
+
