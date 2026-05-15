@@ -1225,6 +1225,116 @@ intents:
       - "查看待审批的quota"
     parameters: []
 
+  # --- 消息通知列表 ---
+  inbox_message_list:
+    description: "查询消息通知列表"
+    agent: "query"
+    level: "p3"
+    keywords: ["消息", "通知", "消息列表", "站内信", "inbox"]
+    examples:
+      - "消息通知列表"
+      - "查看站内信"
+    parameters: []
+
+  # --- 外部链接列表 ---
+  external_link_list:
+    description: "查询外部链接列表"
+    agent: "query"
+    level: "p3"
+    keywords: ["外部链接", "链接列表", "外链", "external link"]
+    examples:
+      - "外部链接列表"
+      - "查看外链"
+    parameters: []
+
+  # --- 数据表列表 ---
+  table_list:
+    description: "查询数据表列表"
+    agent: "query"
+    level: "p3"
+    keywords: ["数据表", "表列表", "table", "数据库表"]
+    examples:
+      - "数据表列表"
+      - "查看表"
+    parameters: []
+
+  # --- 上传状态列表 ---
+  upload_status_list:
+    description: "查询上传状态列表"
+    agent: "storage"
+    level: "p3"
+    keywords: ["上传状态", "上传进度", "upload", "文件上传状态"]
+    examples:
+      - "上传状态列表"
+      - "查看上传进度"
+    parameters: []
+
+  # --- 资源使用列表 ---
+  resource_usage_list:
+    description: "查询资源使用列表"
+    agent: "query"
+    level: "p3"
+    keywords: ["资源使用", "资源列表", "resource usage", "资源占用"]
+    examples:
+      - "资源使用列表"
+      - "查看资源占用"
+    parameters: []
+
+  # --- MIG配置列表 ---
+  mig_config_list:
+    description: "查询MIG配置列表"
+    agent: "query"
+    level: "p3"
+    keywords: ["MIG配置", "mig", "GPU配置", "多实例GPU"]
+    examples:
+      - "MIG配置列表"
+      - "查看MIG配置"
+    parameters: []
+
+  # --- Slurm节点列表 ---
+  slurm_node_list:
+    description: "查询Slurm节点列表"
+    agent: "deploy"
+    level: "p3"
+    keywords: ["Slurm节点", "slurm节点", "计算节点", "集群节点"]
+    examples:
+      - "Slurm节点列表"
+      - "查看计算节点"
+    parameters: []
+
+  # --- 实验实例列表 ---
+  experiment_instance_list:
+    description: "查询实验实例列表"
+    agent: "query"
+    level: "p3"
+    keywords: ["实验实例", "实例列表", "experiment实例", "实验环境"]
+    examples:
+      - "实验实例列表"
+      - "查看实验环境"
+    parameters: []
+
+  # --- 训练任务模板列表 ---
+  job_template_list:
+    description: "查询训练任务模板列表"
+    agent: "deploy"
+    level: "p3"
+    keywords: ["训练模板", "任务模板", "job template", "训练任务模板"]
+    examples:
+      - "训练任务模板列表"
+      - "查看训练模板"
+    parameters: []
+
+  # --- 命名空间列表 ---
+  namespace_list:
+    description: "查询命名空间列表"
+    agent: "query"
+    level: "p3"
+    keywords: ["命名空间", "namespace", "ns列表", "k8s命名空间"]
+    examples:
+      - "命名空间列表"
+      - "查看namespace"
+    parameters: []
+
   # ═══════════════════════════════════════════════════════════
   # 兜底意图
   # ═══════════════════════════════════════════════════════════
@@ -1238,13 +1348,13 @@ intents:
     parameters: []
 
   # ═══════════════════════════════════════════════════════════
-  # 意图总数: 88个意图 (含兜底)
-  # Phase 3 新增: +52个 (Batch1 +18, Batch2 +11, Batch3 +9, Batch4 +6, Batch5 +8)
-  # QueryAgent:  35个
+  # 意图总数: 98个意图 (含兜底)
+  # Phase 3 新增: +62个 (Batch1 +18, Batch2 +11, Batch3 +9, Batch4 +6, Batch5 +8, Batch6 +10)
+  # QueryAgent:  42个
   # DiagAgent:    2个
-  # DeployAgent:  31个 (含详情+创建+Helm+Compose+MPI+模板+Slurm)
+  # DeployAgent:  33个 (含详情+创建+Helm+Compose+MPI+模板+Slurm)
   # RBACAgent:   10个
-  # StorageAgent:  6个
+  # StorageAgent:  7个
   # NetworkAgent:  2个
   # 通用:          2个 (greeting, help)
   # 兜底:          1个 (unknown)
