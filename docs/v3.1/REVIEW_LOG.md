@@ -801,10 +801,64 @@ Phase 3 前端60+功能点 vs 现有33个Tool，存在>20个缺口。之前初�
 - Checkpoint: ⚠️ MemorySaver
 
 #### 下一步行动
-1. Batch 2: P1查询类 + 创建类Tool（约15个 — image_pull, mpi_job_save, compose_deploy等）
-2. Batch 3: 更多前端API的curl验证（需JWT token权限提升后）
-3. intents.yml 口语化变体持续扩展
-4. Review #12 → GitLab/GitHub 双推
+### Review #13 — Phase 3 Batch 2: P1查询+详情+创建类Tool扩展
+
+**日期**: 2026-05-15  
+**范围**: 11个新Tool (P1查询8个 + 详情2个 + 创建1个), intents.yml扩展  
+**开发者**: Hermes (项目经理/架构师)**强调整个过程中禁止手动编码，全部编码任务交给 Claude Code (CC) 完成**
+
+#### 背景
+Batch 1验证了"从前端源码提取API→curl验证→生成Tool"方法论的高效性。Batch 2继续覆盖剩余前端模块：首页/NIM、行业方案、存储详情、全局模型、部署详情、用户详情、镜像拉取。
+
+#### API验证结果
+Test 15个候选API，**全部可用，0个404**：
+- 8个GET查询类 → 正常返回数据
+- 2个GET详情类 → API存在（资源可能不存在，属预期）
+- 1个POST创建类 → API存在（缺少必填参数返回错误，属预期）
+- 4个Helm相关 → API存在但Helm服务不可达（连接拒绝）
+
+#### 新Tool清单（11个）— 全部后端验证
+1. `home_nim_list` — 首页NIM列表 (query, public)
+2. `home_model_list` — 首页模型列表 (query, public)
+3. `home_repository_list` — AI应用仓库 (query, public)
+4. `home_industry_list` — 行业方案 (query, public)
+5. `home_industry_class_list` — 行业分类 (query, public)
+6. `file_storage_option` — 存储选项 (storage)
+7. `file_select_storage` — 存储详情 (storage, 需name参数)
+8. `sys_model_list` — 全局模型 (query, public)
+9. `deployment_detail` — 部署详情 (query, 需name参数)
+10. `user_detail` — 用户详情 (rbac, 需id参数)
+11. `image_pull` — 拉取镜像 (deploy, POST, 需imageName)
+
+#### 关键设计决策
+- **带参数的Tool首次实现** — `deployment_detail`/`user_detail`/`image_pull` 需要必填参数
+- **AtlasBrain参数提取已验证** — "查看aaaa的详情" → 自动提取 `name=aaaa`，置信度0.9
+- **ASK_CLARIFY参数校验** — "用户1的详情" → 因"1"语义不明确，返回澄清请求
+- **image_pull POST方法** — 首个体改变后端状态的Tool，安全级别P1
+
+#### 编译 & 运行
+- [x] BUILD SUCCESS (119 source files, 1.395s增量编译)
+- [x] 服务启动成功 (port 8500)
+- [x] ToolRegistry: 62个Tool已注册 (原33 + Batch1 18 + Batch2 11)
+- [x] intents.yml: 65个意图
+
+#### E2E测试结果
+| 查询 | 决策 | 目标Tool | 参数提取 | 置信度 |
+|------|------|---------|---------|--------|
+| NIM服务列表 | CALL_TOOL | home_nim_list | — | 0.95 |
+| 查看aaaa详情 | CALL_TOOL | deployment_detail | name=aaaa ✅ | 0.90 |
+| 用户1的详情 | ASK_CLARIFY | — | 模糊ID，请求确认 | 0.50 |
+| 拉取ubuntu镜像 | ASK_CLARIFY | — | 缺少标签版本 | 0.75 |
+
+#### 观察
+- AtlasBrain对简单查询(无需参数)路由越来越快，置信度>0.9
+- 带参数的查询中，当参数能从query明确提取时正确路由(如"aaaa详情"提取name)
+- 当参数语义模糊时(如"用户1"不确定是ID还是用户名)，返回ASK_CLARIFY保护用户
+
+#### 下一步
+1. Batch 3: 更复杂的创建操作 — mpi_job_save(复杂body, autoScale), compose_deploy(多volume映射)
+2. 前端button→意图→Tool的完整映射覆盖率统计
+3. intents.yml keywords口语化变体大规模扩展
 
 ---
 

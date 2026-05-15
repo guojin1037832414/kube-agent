@@ -816,6 +816,139 @@ intents:
     parameters: []
 
   # ═══════════════════════════════════════════════════════════
+  # Batch 2 新增意图 — 2026-05-15（P1查询 + 详情 + 创建）
+  # ═══════════════════════════════════════════════════════════
+
+  # --- 首页/NIM (Public API) ---
+  home_nim_list:
+    description: "查询首页NIM服务列表"
+    agent: "query"
+    level: "p3"
+    keywords: ["NIM", "首页NIM", "NIM服务"]
+    examples:
+      - "NIM服务列表"
+      - "首页有什么NIM"
+    parameters: []
+
+  home_model_list:
+    description: "查询首页模型列表"
+    agent: "query"
+    level: "p3"
+    keywords: ["首页模型", "模型广场", "推荐模型"]
+    examples:
+      - "首页模型列表"
+      - "推荐模型"
+    parameters: []
+
+  home_repository_list:
+    description: "查询首页AI应用仓库列表"
+    agent: "query"
+    level: "p3"
+    keywords: ["AI应用", "应用仓库", "repository", "应用市场"]
+    examples:
+      - "AI应用仓库"
+      - "应用市场"
+    parameters: []
+
+  home_industry_list:
+    description: "查询行业方案列表"
+    agent: "query"
+    level: "p3"
+    keywords: ["行业方案", "解决方案", "行业", "industry"]
+    examples:
+      - "行业方案"
+      - "解决方案列表"
+    parameters: []
+
+  home_industry_class_list:
+    description: "查询行业分类列表"
+    agent: "query"
+    level: "p3"
+    keywords: ["行业分类", "分类列表"]
+    examples:
+      - "行业分类"
+    parameters: []
+
+  # --- 存储详情 ---
+  file_storage_option:
+    description: "查询存储选项配置"
+    agent: "storage"
+    level: "p3"
+    keywords: ["存储选项", "存储配置", "storage option"]
+    examples:
+      - "存储选项配置"
+      - "有哪些存储类型"
+    parameters: []
+
+  file_select_storage:
+    description: "根据名称查询存储详情"
+    agent: "storage"
+    level: "p3"
+    keywords: ["存储详情", "存储信息", "selectStorage"]
+    examples:
+      - "xx存储详情"
+    parameters:
+      - name: "name"
+        type: "string"
+        required: true
+        description: "存储名称"
+
+  # --- 全局模型 ---
+  sys_model_list:
+    description: "查询全局模型列表"
+    agent: "query"
+    level: "p3"
+    keywords: ["全局模型", "系统模型", "所有模型"]
+    examples:
+      - "全局模型列表"
+      - "所有组织的模型"
+    parameters: []
+
+  # --- 详情类 ---
+  deployment_detail:
+    description: "查询部署实例详情"
+    agent: "query"
+    level: "p3"
+    keywords: ["部署详情", "deployment详情", "实例详情", "应用详情"]
+    examples:
+      - "查看aaaa的详情"
+      - "deployment详情"
+    parameters:
+      - name: "name"
+        type: "string"
+        required: true
+        description: "部署实例名称"
+
+  user_detail:
+    description: "查询用户详情"
+    agent: "rbac"
+    level: "p3"
+    keywords: ["用户详情", "用户信息", "用户资料"]
+    examples:
+      - "用户1的详情"
+      - "查看用户信息"
+    parameters:
+      - name: "id"
+        type: "string"
+        required: true
+        description: "用户ID"
+
+  # --- 创建/操作类 ---
+  image_pull:
+    description: "拉取容器镜像到仓库"
+    agent: "deploy"
+    level: "p1"
+    keywords: ["拉取镜像", "pull镜像", "下载镜像", "镜像拉取"]
+    examples:
+      - "拉取ubuntu镜像"
+      - "pull nginx"
+    parameters:
+      - name: "imageName"
+        type: "string"
+        required: true
+        description: "镜像名称，如 'ubuntu:22.04'"
+
+  # ═══════════════════════════════════════════════════════════
   # 兜底意图
   # ═══════════════════════════════════════════════════════════
 
