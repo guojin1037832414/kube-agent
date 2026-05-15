@@ -949,6 +949,68 @@ intents:
         description: "镜像名称，如 'ubuntu:22.04'"
 
   # ═══════════════════════════════════════════════════════════
+  # Batch 3 新增意图 — 2026-05-15（角色管理增强+Helm+裸金属+GPU）
+  # ═══════════════════════════════════════════════════════════
+
+  # --- 角色管理增强 ---
+  role_editable:
+    description: "查询可编辑角色列表"
+    agent: "rbac"
+    level: "p3"
+    keywords: ["可编辑角色", "编辑角色", "editable角色"]
+    examples:
+      - "可编辑的角色"
+      - "有哪些角色可以编辑"
+    parameters: []
+
+  role_assignable:
+    description: "查询可分配角色列表"
+    agent: "rbac"
+    level: "p3"
+    keywords: ["可分配角色", "assignable角色", "可授权角色"]
+    examples:
+      - "可分配的角色"
+      - "可以赋给用户的角色"
+    parameters: []
+
+  # --- 裸金属模板 ---
+  bare_metal_template:
+    description: "查询裸金属配置模板列表"
+    agent: "deploy"
+    level: "p3"
+    keywords: ["裸金属模板", "bare metal模板", "物理机配置模板"]
+    examples:
+      - "裸金属配置模板"
+      - "物理机模板"
+    parameters: []
+
+  # --- Helm (带备注:Helm服务可能未连接) ---
+  helm_chart_info:
+    description: "查询Helm Chart详细信息"
+    agent: "deploy"
+    level: "p3"
+    keywords: ["Helm Chart", "chart详情", "helm图表"]
+    examples:
+      - "查看nginx chart"
+      - "Helm chart详情"
+    parameters:
+      - name: "chart"
+        type: "string"
+        required: true
+        description: "Chart名称，如 'nginx'、'mysql'"
+
+  # --- GPU映射详情 ---
+  gpu_map_detail:
+    description: "查询GPU映射配置详情"
+    agent: "query"
+    level: "p3"
+    keywords: ["GPU映射", "gpu-map", "GPU详情", "显卡配置"]
+    examples:
+      - "GPU映射配置"
+      - "显卡映射详情"
+    parameters: []
+
+  # ═══════════════════════════════════════════════════════════
   # 兜底意图
   # ═══════════════════════════════════════════════════════════
 
