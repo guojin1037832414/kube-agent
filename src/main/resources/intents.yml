@@ -1011,6 +1011,67 @@ intents:
     parameters: []
 
   # ═══════════════════════════════════════════════════════════
+  # Batch 3 Part 2 — 剩余查询类 + NodeDetailTool 修复
+  # ═══════════════════════════════════════════════════════════
+
+  # --- 分布式计算详情 ---
+  mpi_job_detail:
+    description: "查询MPI分布式计算任务详情"
+    agent: "deploy"
+    level: "p3"
+    keywords: ["MPI详情", "mpi任务详情", "分布式任务详情"]
+    examples:
+      - "查看MPI任务xx的详情"
+    parameters:
+      - name: "id"
+        type: "string"
+        required: true
+        description: "MPI任务ID"
+
+  # --- Helm历史记录 ---
+  helm_release_history:
+    description: "查询Helm Release历史记录"
+    agent: "deploy"
+    level: "p3"
+    keywords: ["Helm历史", "release历史", "chart历史", "helm回滚记录"]
+    examples:
+      - "查看nginx release的历史"
+    parameters:
+      - name: "release"
+        type: "string"
+        required: true
+        description: "Release名称"
+
+  # --- Helm Chart搜索 ---
+  helm_chart_search:
+    description: "搜索Helm Chart"
+    agent: "deploy"
+    level: "p3"
+    keywords: ["搜索Helm", "Helm搜索", "chart搜索", "找chart"]
+    examples:
+      - "搜索nginx chart"
+      - "有哪些mysql chart"
+    parameters:
+      - name: "keyword"
+        type: "string"
+        required: false
+        description: "搜索关键词"
+
+  # --- 节点详情（修复版） ---
+  node_detail:
+    description: "查询节点列表（带名称过滤）"
+    agent: "query"
+    level: "p3"
+    keywords: ["节点详情", "node详情", "节点信息"]
+    examples:
+      - "查看k8s-master节点的信息"
+    parameters:
+      - name: "name"
+        type: "string"
+        required: false
+        description: "节点名称过滤"
+
+  # ═══════════════════════════════════════════════════════════
   # 兜底意图
   # ═══════════════════════════════════════════════════════════
 
@@ -1023,13 +1084,14 @@ intents:
     parameters: []
 
   # ═══════════════════════════════════════════════════════════
-  # 意图总数: 25个意图
-  # QueryAgent:  6个 (node_query, node_detail, gpu_query, image_query, cluster_overview, resource_monitor)
-  # DiagAgent:   2个 (diagnose_pod, log_query)
-  # DeployAgent: 6个 (deploy_create_instance, deploy_scale, deploy_delete, deploy_restart, nim_create, distributed_create)
-  # RBACAgent:   4个 (user_query, user_create, user_delete, role_query)
-  # StorageAgent:3个 (storage_query, storage_create, storage_delete)
-  # NetworkAgent:2个 (network_query, ingress_query)
-  # 通用:         2个 (greeting, help)
-  # 兜底:         1个 (unknown)
+  # 意图总数: 74个意图 (含兜底)
+  # Phase 3 新增: +38个 (Batch1 +18, Batch2 +11, Batch3 +9)
+  # QueryAgent:  24个
+  # DiagAgent:    2个
+  # DeployAgent:  29个 (含详情+创建+Helm+Compose+MPI)
+  # RBACAgent:    9个
+  # StorageAgent:  5个
+  # NetworkAgent:  2个
+  # 通用:          2个 (greeting, help)
+  # 兜底:          1个 (unknown)
   # ═══════════════════════════════════════════════════════════

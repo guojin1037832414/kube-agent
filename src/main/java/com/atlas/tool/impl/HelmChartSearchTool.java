@@ -11,26 +11,26 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * 查询节点信息 Tool — 接入真实 kube-manager API。
+ * 搜索Helm Chart Tool — 接入真实 kube-manager API。
  *
- * <p>意图映射: {@code intentId = "node_detail"}</p>
- * <p>Agent归属: query | 安全级别: P3</p>
- * <p>API路径: GET /api/{orgId}/node</p>
+ * <p>意图映射: {@code intentId = "helm_chart_search"}</p>
+ * <p>Agent归属: deploy | 安全级别: P3</p>
+ * <p>API路径: GET /api/{orgId}/helm/repositories/charts</p>
  */
 @Component
 @AtlasToolMapping(
-    name = "node_detail",
-    agent = "query",
-    intentId = "node_detail",
-    description = "查询节点信息"
+    name = "helm_chart_search",
+    agent = "deploy",
+    intentId = "helm_chart_search",
+    description = "搜索Helm Chart"
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
-public class NodeDetailTool extends BaseTool {
+public class HelmChartSearchTool extends BaseTool {
 
     private final KubeManagerHttpClient httpClient;
 
-    public NodeDetailTool(KubeManagerHttpClient httpClient) {
-        super("node_detail", "查询节点信息");
+    public HelmChartSearchTool(KubeManagerHttpClient httpClient) {
+        super("helm_chart_search", "搜索Helm Chart");
         this.httpClient = httpClient;
     }
 
@@ -43,17 +43,17 @@ public class NodeDetailTool extends BaseTool {
     protected AtlasToolResult doExecute(Map<String, Object> params) {
         try {
             String orgId = organizationId(params);
-            String path = "/api/{orgId}/node".replace("{orgId}", orgId);
-            Object nameParam = params.get("name");
-            if (nameParam != null && !nameParam.toString().isBlank()) {
-                path += "?name=" + nameParam;
+            String path = "/api/{orgId}/helm/repositories/charts".replace("{orgId}", orgId);
+            Object kwParam = params.get("keyword");
+            if (kwParam != null && !kwParam.toString().isBlank()) {
+                path += "?keyword=" + kwParam;
             }
             Map<String, Object> response = httpClient.get(path, Map.of("page", "1", "limit", "100"));
             Object data = response.containsKey("result") ? response.get("result") : response;
-            return AtlasToolResult.ok("查询节点信息完成", data);
+            return AtlasToolResult.ok("搜索Helm Chart完成", data);
         } catch (Exception e) {
-            log.error("[node_detail] 调用 kube-manager API 失败", e);
-            return AtlasToolResult.fail("查询节点信息失败: " + e.getMessage());
+            log.error("[helm_chart_search] 调用 kube-manager API 失败", e);
+            return AtlasToolResult.fail("搜索Helm Chart失败: " + e.getMessage());
         }
     }
 
