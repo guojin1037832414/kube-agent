@@ -951,3 +951,86 @@ Phase 3经过Batch 1-3已新增37个Tool（33→70）。Batch 4聚焦前端高�
 
 ---
 
+
+
+### Review #16 — Phase 3 Batch 5: 平台管理/计算/存储类Tool扩展（8个）
+
+**日期**: 2026-05-15  
+**范围**: 8个新查询类Tool + intents.yml扩展  
+**开发者**: Hermes (项目经理/架构师)**强调整个过程中禁止手动编码，全部编码任务交给 Claude Code (CC) 完成**
+
+#### 背景
+Phase 3经过Batch 1-4已新增43个Tool（33→76）。Batch 5覆盖前端剩余高频模块：数据集/课件/订单/下载/镜像仓库/模板/Slurm/配额审批。
+
+#### API验证结果
+从前端`vue-kube-manager/src/api/`精选8个候选API，**8/8全部可用**：
+
+| API | 路径 | 结果 |
+|-----|------|------|
+| 数据集列表 | GET /api/{orgId}/data-set | ✅ 200 |
+| 课件列表 | GET /api/{orgId}/courseware/list | ✅ 200 |
+| 订单列表 | GET /api/{orgId}/lease/order | ✅ 200 |
+| 文件下载任务 | GET /api/{orgId}/download | ✅ 200 |
+| 镜像仓库列表 | GET /api/{orgId}/registry | ✅ 200 |
+| 模板列表 | GET /api/{orgId}/template | ✅ 200 |
+| Slurm集群 | GET /api/{orgId}/bcm/slurm-cluster | ✅ 200 |
+| 配额审批列表 | GET /api/{orgId}/quota/receive | ✅ 200 |
+
+**验证通过率: 8/8 (100%)**
+
+#### 新Tool清单（8个）
+1. `data_set_list` — 数据集列表 (query, public)
+2. `courseware_list` — 课件列表 (query, public)
+3. `order_list` — 订单列表 (query, public)
+4. `download_task_list` — 文件下载任务 (storage, public)
+5. `registry_list` — 镜像仓库列表 (query, public)
+6. `template_list` — 模板列表 (deploy, public)
+7. `slurm_cluster_list` — Slurm集群列表 (deploy, public)
+8. `quota_receive_list` — 配额审批列表 (rbac, public)
+
+#### 编译 & 运行
+- [x] BUILD SUCCESS (141 source files)
+- [x] 服务启动成功 (port 8500, 8.9s)
+- [x] ToolRegistry: 84个Tool已注册 (76 + 8)
+- [x] intents.yml: 88个意图
+- [x] Graph模式: 已启用 ✅
+
+#### E2E测试结果
+| 查询 | 命中Tool | 结果 |
+|------|---------|------|
+| 数据集列表 | data_set_list | ✅ 成功 |
+| 课件列表 | courseware_list | ✅ 成功 |
+| 订单列表 | order_list | ✅ 成功 |
+| 文件下载任务 | download_task_list | ✅ 成功 |
+| 镜像仓库列表 | registry_list | ✅ 成功 |
+| 模板列表 | template_list | ✅ 成功 |
+| Slurm集群列表 | slurm_cluster_list | ✅ 成功 |
+| 配额审批列表 | quota_receive_list | ✅ 成功 |
+
+**命中率: 8/8 (100%)**
+
+#### 整体架构状态（更新）
+- Tool总数: 84个 (原33 + 新增51)
+- 意图数: 88个 (原36 + 新增52)
+- 编译文件数: 141个
+- 服务状态: 端口8500运行中
+- Git推送: ⚠️ origin/github仍为旧版本, 本地ahead 3提交
+
+#### 风险点
+1. **Git推送持续受阻** — 建议稍后排查WSL网络或改用备用通道
+2. **查询类Tool密度过高** — 未来Batch需转向创建类/详情类Tool
+3. **前端API覆盖率仍然有限** — 45个API文件仅覆盖约20个模块
+
+#### 经验教训
+1. **"全绿即批量"策略验证成功** — 8个API全部curl验证通过后才批量生成, 0返工
+2. **多Agent归属合理分配** — storage/deploy/rbac/query按功能域分配, 架构清晰
+3. **编译时间保持在10s内** — 141个文件仍快速编译, 增量开发体验良好
+
+#### 下一步
+1. **Git推送修复** — 重试双推或排查网络
+2. **Batch 6** — 复杂创建类Tool: pytorch_job_save, dataset_upload, template_create
+3. **覆盖率统计** — 生成前端45模块 vs 84Tool完整映射
+4. **Layer 3编排层推进** — Spring AI Alibaba ReactAgent PoC
+
+---
+

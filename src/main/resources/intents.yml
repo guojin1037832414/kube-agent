@@ -1137,6 +1137,94 @@ intents:
       - "查看平台配置"
     parameters: []
 
+  # --- 数据集列表 ---
+  data_set_list:
+    description: "查询数据集列表"
+    agent: "query"
+    level: "p3"
+    keywords: ["数据集", "data set", "数据集列表", "查看数据集"]
+    examples:
+      - "数据集列表"
+      - "查看所有数据集"
+    parameters: []
+
+  # --- 课件列表 ---
+  courseware_list:
+    description: "查询课件列表"
+    agent: "query"
+    level: "p3"
+    keywords: ["课件", "courseware", "课件列表", "教学资源"]
+    examples:
+      - "课件列表"
+      - "查看课件"
+    parameters: []
+
+  # --- 订单列表 ---
+  order_list:
+    description: "查询订单列表"
+    agent: "query"
+    level: "p3"
+    keywords: ["订单", "order", "订单列表", "我的订单", "租赁订单"]
+    examples:
+      - "订单列表"
+      - "查看我的订单"
+    parameters: []
+
+  # --- 文件下载任务列表 ---
+  download_task_list:
+    description: "查询文件下载任务列表"
+    agent: "storage"
+    level: "p3"
+    keywords: ["下载任务", "文件下载", "download", "下载列表"]
+    examples:
+      - "下载任务列表"
+      - "查看文件下载"
+    parameters: []
+
+  # --- 镜像仓库列表 ---
+  registry_list:
+    description: "查询镜像仓库列表"
+    agent: "query"
+    level: "p3"
+    keywords: ["镜像仓库", "registry", "harbor", "仓库列表"]
+    examples:
+      - "镜像仓库列表"
+      - "查看registry"
+    parameters: []
+
+  # --- 模板列表 ---
+  template_list:
+    description: "查询模板列表"
+    agent: "deploy"
+    level: "p3"
+    keywords: ["模板", "template", "模板列表", "部署模板"]
+    examples:
+      - "模板列表"
+      - "查看部署模板"
+    parameters: []
+
+  # --- Slurm集群列表 ---
+  slurm_cluster_list:
+    description: "查询Slurm集群列表"
+    agent: "deploy"
+    level: "p3"
+    keywords: ["Slurm集群", "slurm", "集群列表", "计算集群"]
+    examples:
+      - "Slurm集群列表"
+      - "查看计算集群"
+    parameters: []
+
+  # --- 配额审批列表 ---
+  quota_receive_list:
+    description: "查询配额审批列表"
+    agent: "rbac"
+    level: "p3"
+    keywords: ["配额审批", "quota审批", "审批列表", "待审批配额"]
+    examples:
+      - "配额审批列表"
+      - "查看待审批的quota"
+    parameters: []
+
   # ═══════════════════════════════════════════════════════════
   # 兜底意图
   # ═══════════════════════════════════════════════════════════
@@ -1150,13 +1238,13 @@ intents:
     parameters: []
 
   # ═══════════════════════════════════════════════════════════
-  # 意图总数: 80个意图 (含兜底)
-  # Phase 3 新增: +44个 (Batch1 +18, Batch2 +11, Batch3 +9, Batch4 +6)
-  # QueryAgent:  30个
+  # 意图总数: 88个意图 (含兜底)
+  # Phase 3 新增: +52个 (Batch1 +18, Batch2 +11, Batch3 +9, Batch4 +6, Batch5 +8)
+  # QueryAgent:  35个
   # DiagAgent:    2个
-  # DeployAgent:  29个 (含详情+创建+Helm+Compose+MPI)
-  # RBACAgent:    9个
-  # StorageAgent:  5个
+  # DeployAgent:  31个 (含详情+创建+Helm+Compose+MPI+模板+Slurm)
+  # RBACAgent:   10个
+  # StorageAgent:  6个
   # NetworkAgent:  2个
   # 通用:          2个 (greeting, help)
   # 兜底:          1个 (unknown)
