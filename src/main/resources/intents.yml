@@ -1390,6 +1390,93 @@ intents:
       - "查看认证配置"
     parameters: []
 
+  # ════════════════════════════════════════════════════════
+  # 操作类意图 (POST - 会修改后端状态)
+  # ════════════════════════════════════════════════════════
+
+  # --- 启动实验实例 ---
+  experiment_start:
+    description: "启动实验实例"
+    agent: "deploy"
+    level: "p1"
+    keywords: ["启动实验", "启动实例", "experiment start", "运行实验", "开启实验"]
+    examples:
+      - "启动实验实例"
+      - "运行实验"
+    parameters:
+      - name: "id"
+        type: "string"
+        required: true
+        description: "实验实例ID"
+
+  # --- 提交MPI分布式任务 ---
+  mpi_job_submit:
+    description: "提交MPI分布式任务"
+    agent: "deploy"
+    level: "p1"
+    keywords: ["提交MPI", "mpi提交", "分布式任务提交", "运行MPI", "启动mpi"]
+    examples:
+      - "提交MPI任务"
+      - "运行分布式任务"
+    parameters:
+      - name: "id"
+        type: "string"
+        required: true
+        description: "MPI任务ID"
+
+  # --- 创建Compose部署 ---
+  compose_deploy_create:
+    description: "创建Compose部署"
+    agent: "deploy"
+    level: "p1"
+    keywords: ["创建compose", "compose部署", "docker compose", "编排部署"]
+    examples:
+      - "创建compose部署"
+      - "编排docker compose"
+    parameters:
+      - name: "name"
+        type: "string"
+        required: true
+        description: "Compose部署名称"
+      - name: "yaml"
+        type: "string"
+        required: true
+        description: "Compose YAML配置"
+
+  # --- 提交PyTorch训练任务 ---
+  pytorch_job_submit:
+    description: "提交PyTorch训练任务"
+    agent: "deploy"
+    level: "p1"
+    keywords: ["提交pytorch", "pytorch提交", "训练任务提交", "运行pytorch", "启动pytorch"]
+    examples:
+      - "提交pytorch训练"
+      - "运行pytorch任务"
+    parameters:
+      - name: "id"
+        type: "string"
+        required: true
+        description: "PyTorch任务ID"
+
+  # --- 添加Helm仓库 ---
+  helm_repo_add:
+    description: "添加Helm仓库"
+    agent: "deploy"
+    level: "p1"
+    keywords: ["添加helm仓库", "helm repo", "chart仓库", "添加chart源"]
+    examples:
+      - "添加helm仓库"
+      - "新增chart源"
+    parameters:
+      - name: "name"
+        type: "string"
+        required: true
+        description: "Helm仓库名称"
+      - name: "url"
+        type: "string"
+        required: true
+        description: "Helm仓库URL"
+
   # ═══════════════════════════════════════════════════════════
   # 兜底意图
   # ═══════════════════════════════════════════════════════════
@@ -1403,14 +1490,7 @@ intents:
     parameters: []
 
   # ═══════════════════════════════════════════════════════════
-  # 意图总数: 103个意图 (含兜底)
-  # Phase 3 新增: +67个 (Batch1 +18, Batch2 +11, Batch3 +9, Batch4 +6, Batch5 +8, Batch6 +10, Batch7 +5)
-  # QueryAgent:  46个
-  # DiagAgent:    2个
-  # DeployAgent:  33个 (含详情+创建+Helm+Compose+MPI+模板+Slurm)
-  # RBACAgent:   11个
-  # StorageAgent:  8个
-  # NetworkAgent:  2个
-  # 通用:          2个 (greeting, help)
-  # 兜底:          1个 (unknown)
+  # 意图总数: 108个意图 (含兜底)
+  # 查询类: 96个 | 操作类: 5个 | 兜底: 1个
+  # Phase 3 新增: +72个
   # ═══════════════════════════════════════════════════════════
