@@ -1477,6 +1477,85 @@ intents:
         required: true
         description: "Helm仓库URL"
 
+  # ════════════════════════════════════════════════════════
+  # 操作类意图 Batch 9 — 删除/停止类 (DELETE/POST)
+  # ════════════════════════════════════════════════════════
+
+  # --- 删除实验实例 ---
+  experiment_instance_delete:
+    description: "删除实验实例"
+    agent: "deploy"
+    level: "p0"
+    keywords: ["删除实验", "删除实例", "experiment delete", "移除实验", "删除实验实例"]
+    examples:
+      - "删除实验实例"
+      - "移除这个实验"
+    parameters:
+      - name: "id"
+        type: "string"
+        required: true
+        description: "实验实例ID"
+
+  # --- 停止实验实例 ---
+  experiment_instance_stop:
+    description: "停止实验实例"
+    agent: "deploy"
+    level: "p1"
+    keywords: ["停止实验", "停止实例", "experiment stop", "暂停实验", "终止实验"]
+    examples:
+      - "停止实验实例"
+      - "暂停这个实验"
+    parameters:
+      - name: "id"
+        type: "string"
+        required: true
+        description: "实验实例ID"
+
+  # --- 卸载Helm Release ---
+  helm_release_delete:
+    description: "卸载Helm Release"
+    agent: "deploy"
+    level: "p0"
+    keywords: ["卸载helm", "删除release", "helm uninstall", "移除helm应用", "卸载chart"]
+    examples:
+      - "卸载Helm Release"
+      - "删除这个chart"
+    parameters:
+      - name: "releaseName"
+        type: "string"
+        required: true
+        description: "Helm Release名称"
+
+  # --- 删除镜像 ---
+  image_delete:
+    description: "删除镜像"
+    agent: "deploy"
+    level: "p0"
+    keywords: ["删除镜像", "移除镜像", "image delete", "删除容器镜像", "清理镜像"]
+    examples:
+      - "删除镜像"
+      - "移除这个镜像"
+    parameters:
+      - name: "id"
+        type: "string"
+        required: true
+        description: "镜像ID或名称"
+
+  # --- 中止MPI任务 ---
+  mpi_job_abort:
+    description: "中止MPI分布式任务"
+    agent: "deploy"
+    level: "p1"
+    keywords: ["中止mpi", "停止mpi", "mpi abort", "终止mpi任务", "取消分布式任务"]
+    examples:
+      - "中止MPI任务"
+      - "停止分布式计算"
+    parameters:
+      - name: "id"
+        type: "string"
+        required: true
+        description: "MPI任务ID"
+
   # ═══════════════════════════════════════════════════════════
   # 兜底意图
   # ═══════════════════════════════════════════════════════════
@@ -1490,7 +1569,7 @@ intents:
     parameters: []
 
   # ═══════════════════════════════════════════════════════════
-  # 意图总数: 108个意图 (含兜底)
-  # 查询类: 96个 | 操作类: 5个 | 兜底: 1个
-  # Phase 3 新增: +72个
+  # 意图总数: 113个意图 (含兜底)
+  # 查询类: 96个 | 操作类: 10个 (POST 5 + DELETE 4 + 停止 1) | 兜底: 1个
+  # Phase 3 新增: +77个
   # ═══════════════════════════════════════════════════════════
