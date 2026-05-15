@@ -278,7 +278,7 @@ public class AtlasOrchestrator {
         Runnable graphTask = () -> {
             try {
                 Map<String, Object> inputs = Map.of(
-                    "input", request.userQuery(),
+                    "input", Optional.ofNullable(request.userQuery()).orElse(""),
                     "conversation_id", Optional.ofNullable(request.conversationId()).orElse(""),
                     "user_id", userId,
                     "token", Optional.ofNullable(capturedToken).orElse("")

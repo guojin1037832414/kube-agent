@@ -612,6 +612,213 @@ intents:
       - "组织成员"
     parameters: []
 
+  # ═══════════════════════════════════════════════════════════
+  # Batch 1 新增意图 — 2026-05-15（从前端源码提取真实API）
+  # ═══════════════════════════════════════════════════════════
+
+  # --- Dashboard 运营看板 ---
+  dashboard_deployment_count:
+    description: "查询Dashboard部署统计信息"
+    agent: "query"
+    level: "p3"
+    keywords: ["Dashboard部署", "部署统计", "统计信息", "部署计数", "nim统计"]
+    examples:
+      - "Dashboard部署统计"
+      - "部署统计信息"
+      - "有多少个部署"
+      - "NIM数量统计"
+    parameters: []
+
+  dashboard_easy_flow:
+    description: "查询Dashboard流程列表"
+    agent: "query"
+    level: "p3"
+    keywords: ["Dashboard流程", "easy-flow", "工作流", "流程列表"]
+    examples:
+      - "Dashboard流程"
+      - "工作流列表"
+    parameters: []
+
+  dashboard_image_count:
+    description: "查询Dashboard镜像统计信息"
+    agent: "query"
+    level: "p3"
+    keywords: ["Dashboard镜像", "镜像统计", "镜像计数"]
+    examples:
+      - "Dashboard镜像统计"
+      - "镜像数量"
+    parameters: []
+
+  # --- 镜像仓库 ---
+  image_repository:
+    description: "查询镜像仓库列表"
+    agent: "query"
+    level: "p3"
+    keywords: ["镜像仓库", "仓库", "registry", "harbor"]
+    examples:
+      - "查看镜像仓库"
+      - "有哪些镜像仓库"
+      - "Harbor仓库"
+    parameters: []
+
+  image_detail_by_name:
+    description: "根据镜像名称查询详情"
+    agent: "query"
+    level: "p3"
+    keywords: ["镜像详情", "镜像版本", "镜像信息"]
+    examples:
+      - "查看镜像详情"
+      - "xx镜像有什么版本"
+    parameters:
+      - name: "name"
+        type: "string"
+        required: true
+        description: "镜像名称"
+
+  # --- 全局GPU ---
+  gpu_global_list:
+    description: "查询所有组织GPU列表"
+    agent: "query"
+    level: "p3"
+    keywords: ["全局GPU", "所有GPU", "GPU列表"]
+    examples:
+      - "所有组织的GPU"
+      - "全局GPU信息"
+    parameters: []
+
+  # --- 模型管理 ---
+  model_list:
+    description: "查询模型列表"
+    agent: "query"
+    level: "p3"
+    keywords: ["模型", "model", "模型列表"]
+    examples:
+      - "查看模型列表"
+      - "有哪些模型"
+    parameters: []
+
+  # --- 节点分配 ---
+  node_allocation:
+    description: "查询各组织节点分配情况"
+    agent: "query"
+    level: "p3"
+    keywords: ["节点分配", "组织节点", "节点归属"]
+    examples:
+      - "节点分配情况"
+      - "各组织有多少节点"
+    parameters: []
+
+  # --- 分布式计算 (MPI Job) ---
+  mpi_job_list:
+    description: "查询MPI分布式计算任务列表"
+    agent: "deploy"
+    level: "p3"
+    keywords: ["MPI", "分布式计算", "mpi任务", "并行计算"]
+    examples:
+      - "MPI任务列表"
+      - "分布式计算任务"
+      - "mpi job"
+    parameters: []
+
+  # --- 标准实例 (Compose) ---
+  compose_list:
+    description: "查询Compose部署列表"
+    agent: "deploy"
+    level: "p3"
+    keywords: ["Compose", "docker-compose", "编排"]
+    examples:
+      - "Compose列表"
+      - "docker compose部署"
+    parameters: []
+
+  # --- Helm ---
+  helm_release_list:
+    description: "查询Helm Release发布列表"
+    agent: "deploy"
+    level: "p3"
+    keywords: ["Helm", "Release", "chart", "helm发布"]
+    examples:
+      - "Helm发布列表"
+      - "已部署的chart"
+    parameters: []
+
+  helm_repo_list:
+    description: "查询Helm仓库列表"
+    agent: "deploy"
+    level: "p3"
+    keywords: ["Helm仓库", "chart仓库", "helm repo"]
+    examples:
+      - "Helm仓库列表"
+      - "chart源"
+    parameters: []
+
+  # --- 裸金属应用 ---
+  bare_metal_app_list:
+    description: "查询裸金属应用列表"
+    agent: "deploy"
+    level: "p3"
+    keywords: ["裸金属", "bare metal", "物理机应用", "物理集群"]
+    examples:
+      - "裸金属应用"
+      - "物理机应用列表"
+    parameters: []
+
+  # --- 文件存储 (Storage) ---
+  file_list:
+    description: "查询文件存储列表"
+    agent: "storage"
+    level: "p3"
+    keywords: ["文件列表", "存储列表", "文件管理"]
+    examples:
+      - "查看文件列表"
+      - "存储文件"
+    parameters: []
+
+  file_volume_path:
+    description: "查询存储卷路径列表"
+    agent: "storage"
+    level: "p3"
+    keywords: ["存储卷", "volume", "卷路径", "挂载路径"]
+    examples:
+      - "存储卷路径"
+      - "volume列表"
+    parameters: []
+
+  # --- 组织权限 (RBAC) ---
+  organization_list:
+    description: "查询组织列表"
+    agent: "rbac"
+    level: "p3"
+    keywords: ["组织", "organization", "租户", "org"]
+    examples:
+      - "组织列表"
+      - "所有租户"
+    parameters: []
+
+  register_audit_list:
+    description: "查询组织注册审核列表"
+    agent: "rbac"
+    level: "p3"
+    keywords: ["注册审核", "审核列表", "待审核"]
+    examples:
+      - "注册审核列表"
+      - "待审核的组织"
+    parameters: []
+
+  permission_menu_list:
+    description: "查询权限菜单列表"
+    agent: "rbac"
+    level: "p3"
+    keywords: ["权限菜单", "菜单列表", "权限配置"]
+    examples:
+      - "权限菜单"
+      - "菜单列表"
+    parameters: []
+
+  # ═══════════════════════════════════════════════════════════
+  # 兜底意图
+  # ═══════════════════════════════════════════════════════════
+
   unknown:
     description: "未知意图/兜底"
     agent: "query"
