@@ -1353,3 +1353,41 @@ Batch 8实现了5个POST创建类操作Tool，Phase 3的操作类已有"C"(Creat
 
 ---
 
+
+## Review #21 — Phase 2-A Token透传修复：Graph异步线程ThreadLocal兼容
+
+**日期**: 2026-05-16  
+**范围**: `AtlasGraphConfig.java` tool_call 节点  
+**开发者**: Hermes (架构师)
+
+### 问题根因
+- `AtlasOrchestrator` 的 `AsyncContextHolder.wrap()` 在主线程调用 `runSupervisorGraph()` 时设置 ThreadLocal，但 `supervisorGraph.stream().subscribe()` 是异步非阻塞的；`run()` 方法返回后 wrap() 的 `finally` 立即清理了 ThreadLocal。
+- `tool_call` 节点在执行 `tool.execute()` 时，KubeManagerHttpClient 内部的 `resolveToken()` 已无法从 ThreadLocal 读到 Token。
+- 降级登录路径也因 `doFallbackLogin()` 调用 `restClient.post().uri("/api/login")` 时未配置 `organizationId=100001`，导致后端返回 `SYS_UNAUTHORIZED`。
+
+### 代码修改
+- `AtlasGraphConfig.java` 的 `tool_call` 节点内：
+  - `execute()` 之前先 `UserPermissionContext.CURRENT_TOKEN.set(token)`
+  - 使用 `try { ... } finally { CURRENT_TOKEN.remove() }` 保证线程池复用不泄漏
+- 将原有未包裹在 try-finally 中的 Tool 执行逻辑完整包裹了一层
+
+### 测试验证
+- [x] E2E测试通过：curl -H "Authorization: Bearer ..." -> `/api/v1/chat/stream` 返回 8 个节点数据
+- [x] SSE 事件流顺序正确：`thinking -> supervisor -> tool_call -> content(✅ 8个节点) -> tool_result(完整JSON) -> done`
+- [x] 后端 8100 真实 API 调用成功（返回 200 + 节点列表）
+- [x] 工作树干净，编译通过
+
+### 优点
+- 性能无损：ThreadLocal 设置/清理成本极低，不影响总耗时（4.5s LLM + 0.2s HTTP）
+- 安全：finally 块保证任何异常路径下 ThreadLocal 都被清理
+- 兼容：无需修改 `KubeManagerHttpClient`、`BaseTool`、`NodeQueryTool` 等已有 109 个 Tool
+
+### 风险点
+- ⚠️ 若 Graph 引擎使用 ForkJoinPool 的任务窃取（Task Stealing），设置 ThreadLocal 的线程和执行 Tool 的线程可能不同（但目前 StateGraph 的 `node_async` 是同步执行在等待线程上，非窃取模式）
+- 降级登录路径 `doFallbackLogin` 的配置 `organizationId` 硬编码为 `1`，与大部分测试用户所在的 `100001` 不匹配；未来应改为动态探测或配置化
+
+### 经验教训
+1. **ThreadLocal 在异步流中的生命周期**：`CompletableFuture` / `subscribe()` / 回调函数 三者的执行线程可能不同。确保 Token 可用的唯一可靠方式是在 Token 消费点（本条路的读端）自行设置。
+2. **降级登录不工作 → 检查配置**：`login-password` 和 `organizationId` 必须同时在 `KubeManagerHttpClient` 和 `application.yml` 中正确配置。一条配置缺漏会导致整个降级链路失效。
+3. **日志是最强武器**：`grep "Token"` 立即发现 `Token 为空，跳过上下文包装` → 上游没传 → curl 的 token 提取失败。每次遇到复杂链路，先看日志再读代码。
+
