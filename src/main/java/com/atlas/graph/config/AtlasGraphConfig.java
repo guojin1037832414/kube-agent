@@ -341,16 +341,18 @@ public class AtlasGraphConfig {
             strategies.put("conversation_id", new ReplaceStrategy());
             strategies.put("user_id", new ReplaceStrategy());
             strategies.put("token", new ReplaceStrategy());          // 透传的 Token
+            strategies.put("answer", new ReplaceStrategy());         // 直接回答 / tool_call 返回
+            strategies.put("tool_result", new ReplaceStrategy());      // Tool 结构化结果
             return strategies;
         };
     }
-
     /**
      * Supervisor 图 — AtlasBrain 决策节点 + 条件路由。
      * START → supervisor → [conditional] → {direct_answer, ask_clarify, tool_call, delegate} → END
      */
     @Bean
-    public CompiledGraph supervisorGraph(AtlasBrain atlasBrain, ToolRegistry toolRegistry) throws GraphStateException {
+    public CompiledGraph supervisorGraph(AtlasBrain atlasBrain, ToolRegistry toolRegistry,
+                                         com.atlas.http.KubeManagerHttpClient kubeManagerClient) throws GraphStateException {
         StateGraph graph = new StateGraph("supervisor", buildKeyStrategyFactory());
 
         // 1. Supervisor 节点：调用 AtlasBrain 做决策
@@ -421,9 +423,67 @@ public class AtlasGraphConfig {
         graph.addNode("tool_call", node_async((OverAllState state) -> {
             BrainDecision d = state.value("brain_decision")
                 .filter(BrainDecision.class::isInstance)
-                .map(BrainDecision.class::cast).orElse(null);
-            String tool = (d != null) ? d.target() : "unknown";
-            return java.util.Map.of("answer", "[TOOl_CALL] " + tool);
+                .map(BrainDecision.class::cast)
+                .orElse(null);
+            if (d == null) {
+                return java.util.Map.of("answer", "[无决策] AtlasBrain 未产生有效决策");
+            }
+
+            String intentId = d.target();
+            String userId = state.value("user_id").map(Object::toString).orElse("anonymous");
+            String token = state.value("token").map(Object::toString).orElse("");
+
+            // 1. 查找 Tool
+            java.util.Optional<com.atlas.tool.core.BaseTool> toolOpt = toolRegistry.findByIntentId(intentId);
+            if (toolOpt.isEmpty()) {
+                return java.util.Map.of("answer",
+                    "⚠️ 意图 '" + intentId + "' 已识别，暂无对应 Tool 实现。");
+            }
+
+            com.atlas.tool.core.BaseTool tool = toolOpt.get();
+
+            // 2. 权限检查
+            if (!toolRegistry.canExecuteIntent(intentId)) {
+                return java.util.Map.of("answer",
+                    "❌ 权限不足：无权执行 '" + intentId + "'");
+            }
+
+            // 3. 构建参数（注册 k8s 网络问题暂缓动态 orgId 查询，先用固定值）
+            String orgId = "100001";
+            // 注：后续恢复 kubeManagerClient.resolveOrgId(userId, token) 动态查询
+            java.util.Map<String, Object> toolParams = new java.util.HashMap<>();
+            toolParams.put("userId", userId);
+            toolParams.put("organizationId", orgId);
+            if (d.parameters() != null) {
+                toolParams.putAll(d.parameters());
+            }
+
+            // 4. 执行 Tool
+            try {
+                java.util.Map<String, Object> toolResult = tool.execute(toolParams);
+                boolean success = Boolean.TRUE.equals(toolResult.get("success"));
+                String message = toolResult.get("message") != null
+                    ? toolResult.get("message").toString() : "";
+                Object data = toolResult.get("data");
+
+                // 5. 生成简洁回答
+                String summary = data instanceof java.util.List
+                    ? String.format("✅ %s（共 %d 条数据）", message, ((java.util.List<?>) data).size())
+                    : "✅ " + message;
+
+                java.util.Map<String, Object> updates = new java.util.HashMap<>();
+                updates.put("answer", summary);
+                updates.put("tool_result", java.util.Map.of(
+                    "success", success,
+                    "message", message,
+                    "tool", intentId,
+                    "data", data != null ? data : java.util.Map.of()
+                ));
+                return updates;
+            } catch (Exception e) {
+                return java.util.Map.of("answer",
+                    "❌ Tool 执行异常: " + e.getMessage());
+            }
         }));
 
         graph.addNode("delegate", node_async((OverAllState state) -> {

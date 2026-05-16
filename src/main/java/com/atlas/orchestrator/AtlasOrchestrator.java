@@ -448,6 +448,12 @@ public class AtlasOrchestrator {
                                                 ? decision.parameters() : Map.of()
                                         ));
                                     }
+                                    // Phase 2: CALL_TOOL 分支 — Graph 节点 tool_call 执行 Tool，
+                                    // 结果写入 answer，此处仅 emit 事件供前端感知
+                                    else if (decision.actionType() == BrainDecision.ActionType.CALL_TOOL) {
+                                        log.info("[Graph] 会话 {} 路由到 tool_call: target={}",
+                                            sessionId, decision.target());
+                                    }
                                 });
                         }
 
@@ -463,6 +469,14 @@ public class AtlasOrchestrator {
                                 "result", ans.toString()
                             ))
                         );
+
+                        // 输出 tool_result（tool_call 节点写入的结构化结果）
+                        state.value("tool_result")
+                            .filter(Map.class::isInstance)
+                            .map(Map.class::cast)
+                            .ifPresent(tr ->
+                                emit(emitter, "tool_result", tr)
+                            );
                     },
                     err -> {
                         log.error("[Supervisor] 会话 {} 流式错误", sessionId, err);
