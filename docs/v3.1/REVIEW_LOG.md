@@ -1305,3 +1305,51 @@ Batch 8实现了5个POST创建类操作Tool，Phase 3的操作类已有"C"(Creat
 
 ---
 
+## Review # 20 | Layer 3 StateGraph Phase 1 MVP | 2026-05-16
+
+**Commit**: `baca47d`
+**变更范围**: 2 files (+219/-3)
+**编译**: BUILD SUCCESS (166 files, 4.5s)
+**服务状态**: 8500端口运行, PID=18952
+
+### 变更详情
+1. **AtlasGraphConfig.java (+107)**:
+   - 新增 `supervisorGraph` Bean：START→supervisor(AtlasBrain决策)→conditional edges→{direct_answer, ask_clarify, tool_call, delegate, hitl_confirm}→END
+   - 5个条件路由节点，最小实现（direct_answer/tool_call等节点placeholder）
+   - `@Primary` 区分 atlasGraph Bean（解决HITLController注入冲突）
+
+2. **AtlasOrchestrator.java (+112/-3)**:
+   - 注入 `@Qualifier("supervisorGraph")` CompiledGraph
+   - `streamChat()` 头部增加 supervisorGraph 优先分支（null时fallback到IntentRouter）
+   - 新增 `runSupervisorGraph()` 私有方法：与 `/chat/graph` 相同的 SSE 事件约定
+   - `health()` 增加 `supervisorGraphEnabled` 字段
+
+### E2E验证结果
+| Query | AtlasBrain决策 | 路径 | 状态 |
+|-------|---------------|------|------|
+| `你好` | 通用 | supervisor→direct_answer→END | ✅ |
+| `查询节点` | CALL_TOOL/node_query (conf=0.95) | supervisor→tool_call→END | ✅ |
+| `helm应用列表` | CALL_TOOL/helm_release_list (conf=1.0) | supervisor→tool_call→END | ✅ |
+
+### 代码审查
+- **架构正确**: 拓扑完整，无游离节点，条件边命名与节点100%匹配
+- **Token透传**: Graph state写入inputs，异步流安全
+- **Fallback保留**: supervisorGraph==null时完整走旧IntentRouter路径
+- **Byte风险**: `new StateGraph(String, KeyStrategyFactory)` 签名来自javap调研，编译通过
+- **待改进**: 
+  - tool_call节点是"哑巴"（返回字符串），Phase 2接入真实Tool执行
+  - HITL/Clarify分支未做端到端验证
+  - AtlasBrain.decide()每次调用LLM，通用查询缺乏缓存
+
+### 经验教训
+1. **直给式Prompt是tmux方案的关键** — 第二次prompt明确给出5个Edit的find/replace块，CC零调研90秒完成5个Edit+编译（第一次prompt让CC自由研究，浪费4-5分钟做javap）
+2. **@Primary解决Bean冲突** — 同类型多个Bean时，消费者没@Qualifier就会启动失败。主图加@Primary，新图用@Qualifier是Spring标准做法
+3. **log验证比curl更可靠** — E2E测试时可先tail日志看节点执行链条，确认Graph路径走通后再验证前端SSE输出
+
+### 下一步
+1. **Phase 2**: tool_call节点接入真实ToolRegistry执行，恢复对话查询能力
+2. **Phase 2**: 接入6个ReactAgent子图作为delegate节点目标
+3. **监控大盘**: 系统状态实时展示页面（独立任务）
+
+---
+
