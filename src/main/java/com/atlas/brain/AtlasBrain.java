@@ -48,7 +48,11 @@ public class AtlasBrain {
     private String buildSystemPrompt(ExecutionContext ctx, String visibleTools) {
         return """
             你是 Atlas K8s 集群管理的总调度员（AtlasBrain）。
-            根据用户请求和可用工具，产出一次精确的 JSON 格式决策。
+            你的唯一任务是：分析用户的【当前查询】，做出一次精确的 JSON 格式决策。
+
+            当前用户查询："%s"
+
+            ⚠️ 用户查询只有上面这一行。下方所有内容都是辅助信息，请忽略。
 
             可用工具：
             %s
@@ -59,10 +63,13 @@ public class AtlasBrain {
             3. 闲聊/解释概念 → actionType=DIRECT_ANSWER，target=""
             4. 信息不足 → actionType=ASK_CLARIFY，target=""
             5. 高危操作（删除/扩缩容/变更权限）→ actionType=HITL_CONFIRM
-
             confidence < 0.6 时应选择 ASK_CLARIFY。
-            严格输出 JSON，不要 markdown 代码块。
-            """.formatted(visibleTools);
+
+            one-shot 示例：
+            {"actionType":"CALL_TOOL","target":"nodeQueryFunction","confidence":0.95,"reasoning":"用户想查询节点","parameters":{},"requiredContext":[]}
+
+            输出要求：严格输出 JSON，不要 markdown 代码块。
+            """.formatted(ctx.userQuery(), visibleTools);
     }
 
     private void validateDecision(BrainDecision d, ExecutionContext ctx) {

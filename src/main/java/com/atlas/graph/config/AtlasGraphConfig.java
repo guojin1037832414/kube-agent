@@ -351,9 +351,29 @@ public class AtlasGraphConfig {
      * START → supervisor → [conditional] → {direct_answer, ask_clarify, tool_call, delegate} → END
      */
     @Bean
-    public CompiledGraph supervisorGraph(AtlasBrain atlasBrain, ToolRegistry toolRegistry,
-                                         com.atlas.http.KubeManagerHttpClient kubeManagerClient) throws GraphStateException {
+    public CompiledGraph supervisorGraph(
+            AtlasBrain atlasBrain, ToolRegistry toolRegistry,
+            com.atlas.http.KubeManagerHttpClient kubeManagerClient,
+            ReactAgent queryAgent,
+            ReactAgent deployAgent,
+            ReactAgent diagAgent,
+            ReactAgent rbacAgent,
+            ReactAgent storageAgent,
+            ReactAgent networkAgent
+    ) throws GraphStateException {
         StateGraph graph = new StateGraph("supervisor", buildKeyStrategyFactory());
+
+        // ═══════════════════════════════════════════════════════════
+        // Agent 映射表 — 供 delegate 节点根据 BrainDecision.target 路由
+        // ═══════════════════════════════════════════════════════════
+        final java.util.Map<String, ReactAgent> agentMap = java.util.Map.of(
+            "query", queryAgent,
+            "deploy", deployAgent,
+            "diag", diagAgent,
+            "rbac", rbacAgent,
+            "storage", storageAgent,
+            "network", networkAgent
+        );
 
         // 1. Supervisor 节点：调用 AtlasBrain 做决策
         graph.addNode("supervisor", node_async((OverAllState state) -> {
@@ -506,8 +526,103 @@ public class AtlasGraphConfig {
             BrainDecision d = state.value("brain_decision")
                 .filter(BrainDecision.class::isInstance)
                 .map(BrainDecision.class::cast).orElse(null);
-            String agent = (d != null) ? d.target() : "unknown";
-            return java.util.Map.of("answer", "[DELEGATE] " + agent);
+            if (d == null || d.target() == null) {
+                return Map.of("answer", "[DELEGATE] 无目标 Agent");
+            }
+            String agentName = d.target().toLowerCase();
+            ReactAgent agent = agentMap.get(agentName);
+            if (agent == null) {
+                return Map.of("answer", "[DELEGATE] 未知 Agent: " + agentName);
+            }
+            try {
+                // ==============================
+                // 1. 构建子图输入：复用父图 state 中的 key
+                // ==============================
+                Map<String, Object> subInputs = new HashMap<>();
+                state.value("input").ifPresent(v -> subInputs.put("input", v));
+                state.value("user_id").ifPresent(v -> subInputs.put("user_id", v));
+                state.value("token").ifPresent(v -> subInputs.put("token", v));
+                state.value("messages").ifPresent(v -> subInputs.put("messages", v));
+
+                // ==============================
+                // 2. Token 透传：在子图执行前显式设置 ThreadLocal
+                // ==============================
+                String token = state.value("token").map(Object::toString).orElse("");
+                boolean tokenSet = false;
+                if (!token.isBlank()) {
+                    com.atlas.auth.UserPermissionContext.CURRENT_TOKEN.set(token);
+                    tokenSet = true;
+                }
+
+                // ==============================
+                // 3. 执行子图（在 Graph 异步线程中同步等待结果）
+                // ==============================
+                CompiledGraph subGraph = agent.getAndCompileGraph();
+
+                String threadId = state.value("_graph_execution_id_")
+                    .map(Object::toString).orElse(UUID.randomUUID().toString());
+                com.alibaba.cloud.ai.graph.RunnableConfig subConfig =
+                    com.alibaba.cloud.ai.graph.RunnableConfig.builder()
+                        .threadId(threadId + "-" + agentName)
+                        .build();
+
+                String outputKey = agentName + "_result"; // query_result, deploy_result, ...
+                try {
+                    java.util.Map<String, Object> result = subGraph.stream(subInputs, subConfig)
+                        .filter(no -> no.isEND())
+                        .map(no -> {
+                            // END 节点的 state 包含所有节点产生的数据
+                            com.alibaba.cloud.ai.graph.OverAllState endState = no.state();
+                            Map<String, Object> endResult = new HashMap<>();
+                            // 提取子图 outputKey 对应的结果
+                            endState.value(outputKey).ifPresent(v ->
+                                endResult.put(outputKey, v));
+                            // fallback：提取 answer
+                            endState.value("answer").ifPresent(v ->
+                                endResult.put("answer", v));
+                            // 提取 messages（子图的对话记录）
+                            endState.value("messages").ifPresent(v ->
+                                endResult.put("messages", v));
+                            return endResult;
+                        })
+                        .blockFirst();
+
+                    if (result == null) {
+                        return Map.of("answer", "[Agent " + agentName + " 执行超时]");
+                    }
+
+                    // 构造最终 state 更新
+                    Map<String, Object> updates = new HashMap<>();
+                    Object agentOutput = result.get(outputKey);
+                    if (agentOutput == null) {
+                        agentOutput = result.get("answer"); // fallback
+                    }
+                    Object messages = result.get("messages");
+
+                    String summary = "[Agent " + agentName + " 执行完成]";
+                    if (agentOutput instanceof String s) {
+                        summary = s;
+                    } else if (agentOutput != null) {
+                        summary = agentOutput.toString();
+                    }
+
+                    updates.put("answer", summary);
+                    updates.put(outputKey, agentOutput != null ? agentOutput : Map.of());
+                    if (messages != null) {
+                        updates.put("messages", messages);
+                    }
+                    updates.put("agent_executed", agentName);
+                    return updates;
+                } finally {
+                    // 清理 ThreadLocal，防止泄漏
+                    if (tokenSet) {
+                        com.atlas.auth.UserPermissionContext.CURRENT_TOKEN.remove();
+                    }
+                }
+            } catch (Exception e) {
+                return Map.of("answer",
+                    "[DELEGATE] Agent " + agentName + " 执行异常: " + e.getMessage());
+            }
         }));
 
         graph.addNode("hitl_confirm", node_async((OverAllState state) -> {
