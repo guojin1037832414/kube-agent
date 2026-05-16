@@ -3,6 +3,7 @@ package com.atlas.graph.config;
 import com.alibaba.cloud.ai.graph.CompiledGraph;
 import com.alibaba.cloud.ai.graph.KeyStrategy;
 import com.alibaba.cloud.ai.graph.KeyStrategyFactory;
+import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.StateGraph;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import com.alibaba.cloud.ai.graph.checkpoint.config.SaverConfig;
@@ -18,6 +19,7 @@ import com.atlas.orchestrator.StreamingEmitter;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 
 import com.atlas.brain.AtlasBrain;
 import com.atlas.brain.BrainDecision;
@@ -151,10 +153,11 @@ public class AtlasGraphConfig {
     }
 
     // ═══════════════════════════════════════════════════════════
-    // 2. StateGraph 组装
+    // 2. StateGraph 组装 (主图)
     // ═══════════════════════════════════════════════════════════
 
     @Bean
+    @Primary
     public CompiledGraph atlasGraph(
             ChatModel chatModel,
             AtlasBrain atlasBrain,
@@ -340,5 +343,109 @@ public class AtlasGraphConfig {
             strategies.put("token", new ReplaceStrategy());          // 透传的 Token
             return strategies;
         };
+    }
+
+    /**
+     * Supervisor 图 — AtlasBrain 决策节点 + 条件路由。
+     * START → supervisor → [conditional] → {direct_answer, ask_clarify, tool_call, delegate} → END
+     */
+    @Bean
+    public CompiledGraph supervisorGraph(AtlasBrain atlasBrain, ToolRegistry toolRegistry) throws GraphStateException {
+        StateGraph graph = new StateGraph("supervisor", buildKeyStrategyFactory());
+
+        // 1. Supervisor 节点：调用 AtlasBrain 做决策
+        graph.addNode("supervisor", node_async((OverAllState state) -> {
+            String input = state.value("input").map(Object::toString).orElse("");
+            String userId = state.value("user_id").map(Object::toString).orElse("anonymous");
+            String token = state.value("token").map(Object::toString).orElse("");
+
+            ExecutionContext ctx = new ExecutionContext(
+                UUID.randomUUID().toString(), userId, input,
+                java.util.Collections.emptyList(),
+                java.util.Map.of("token", token),
+                UUID.randomUUID().toString(), Instant.now()
+            );
+
+            BrainDecision decision = atlasBrain.decide(ctx);
+
+            java.util.Map<String, Object> updates = new java.util.HashMap<>();
+            updates.put("brain_decision", decision);
+            updates.put("reasoning", decision.reasoning());
+            return updates;
+        }));
+
+        // 2. 条件边：根据 BrainDecision.actionType 路由
+        graph.addConditionalEdges("supervisor",
+            edge_async((OverAllState state) -> {
+                BrainDecision decision = state.value("brain_decision")
+                    .filter(BrainDecision.class::isInstance)
+                    .map(BrainDecision.class::cast)
+                    .orElse(null);
+                if (decision == null) return "direct_answer";
+                return switch (decision.actionType()) {
+                    case DIRECT_ANSWER -> "direct_answer";
+                    case ASK_CLARIFY -> "ask_clarify";
+                    case CALL_TOOL -> "tool_call";
+                    case DELEGATE_AGENT -> "delegate";
+                    case HITL_CONFIRM -> "hitl_confirm";
+                };
+            }),
+            java.util.Map.of(
+                "direct_answer", "direct_answer",
+                "ask_clarify", "ask_clarify",
+                "tool_call", "tool_call",
+                "delegate", "delegate",
+                "hitl_confirm", "hitl_confirm"
+            )
+        );
+
+        // 3. 各目标节点（最小实现）
+        graph.addNode("direct_answer", node_async((OverAllState state) -> {
+            BrainDecision d = state.value("brain_decision")
+                .filter(BrainDecision.class::isInstance)
+                .map(BrainDecision.class::cast).orElse(null);
+            String answer = (d != null) ? d.reasoning() : "No reasoning available";
+            return java.util.Map.of("answer", answer);
+        }));
+
+        graph.addNode("ask_clarify", node_async((OverAllState state) -> {
+            BrainDecision d = state.value("brain_decision")
+                .filter(BrainDecision.class::isInstance)
+                .map(BrainDecision.class::cast).orElse(null);
+            String answer = (d != null && d.requiredContext() != null)
+                ? "请补充以下信息: " + String.join(", ", d.requiredContext())
+                : "请补充更多信息";
+            return java.util.Map.of("answer", answer);
+        }));
+
+        graph.addNode("tool_call", node_async((OverAllState state) -> {
+            BrainDecision d = state.value("brain_decision")
+                .filter(BrainDecision.class::isInstance)
+                .map(BrainDecision.class::cast).orElse(null);
+            String tool = (d != null) ? d.target() : "unknown";
+            return java.util.Map.of("answer", "[TOOl_CALL] " + tool);
+        }));
+
+        graph.addNode("delegate", node_async((OverAllState state) -> {
+            BrainDecision d = state.value("brain_decision")
+                .filter(BrainDecision.class::isInstance)
+                .map(BrainDecision.class::cast).orElse(null);
+            String agent = (d != null) ? d.target() : "unknown";
+            return java.util.Map.of("answer", "[DELEGATE] " + agent);
+        }));
+
+        graph.addNode("hitl_confirm", node_async((OverAllState state) -> {
+            return java.util.Map.of("answer", "[HITL_CONFIRM] 请人工确认此操作");
+        }));
+
+        // 4. 连接边
+        graph.addEdge(START, "supervisor");
+        graph.addEdge("direct_answer", END);
+        graph.addEdge("ask_clarify", END);
+        graph.addEdge("tool_call", END);
+        graph.addEdge("delegate", END);
+        graph.addEdge("hitl_confirm", END);
+
+        return graph.compile();
     }
 }

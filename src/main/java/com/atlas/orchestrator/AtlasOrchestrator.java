@@ -52,6 +52,13 @@ public class AtlasOrchestrator {
     private final KubeManagerHttpClient kubeManagerClient;
 
     /**
+     * (Phase1) Supervisor Graph compiled from AtlasBrain decision + conditional routing.
+     * Injected from AtlasGraphConfig.supervisorGraph().
+     * When non-null, /chat/stream routes through this graph instead of IntentRouter.
+     */
+    private final com.alibaba.cloud.ai.graph.CompiledGraph supervisorGraph;
+
+    /**
      * (可选) Spring AI Alibaba StateGraph 编译后的执行图。
      * P2 阶段新增：实验性接口 /chat/graph 使用。
      * 如果未启用 Graph 模式（null），则回退到 IntentRouter 路由。
@@ -79,6 +86,10 @@ public class AtlasOrchestrator {
                              KubeManagerHttpClient kubeManagerClient,
                              @Qualifier("atlasTaskExecutor") Executor asyncExecutor,
                              @Autowired(required = false)
+                             @Qualifier("supervisorGraph")
+                             com.alibaba.cloud.ai.graph.CompiledGraph supervisorGraph,
+                             @Autowired(required = false)
+                             @Qualifier("atlasGraph")
                              com.alibaba.cloud.ai.graph.CompiledGraph compiledGraph) {
         this.intentRouter = intentRouter;
         this.streamingEmitter = streamingEmitter;
@@ -86,8 +97,10 @@ public class AtlasOrchestrator {
         this.userPermissionContext = userPermissionContext;
         this.kubeManagerClient = kubeManagerClient;
         this.asyncExecutor = asyncExecutor;
+        this.supervisorGraph = supervisorGraph;
         this.compiledGraph = compiledGraph;
-        log.info("[Orchestrator] 初始化完成 | Graph模式: {}",
+        log.info("[Orchestrator] 初始化完成 | SupervisorGraph: {} | AtlasGraph: {}",
+            supervisorGraph != null ? "已启用 ✅" : "未启用 ⚠️",
             compiledGraph != null ? "已启用 ✅" : "未启用 ⚠️");
     }
 
@@ -131,6 +144,14 @@ public class AtlasOrchestrator {
         // ② 异步任务 — Token 显式透传
         Runnable asyncTask = () -> {
             try {
+                // Phase 1: Supervisor Graph 优先路由（AtlasBrain 决策 + 条件边）
+                if (supervisorGraph != null) {
+                    runSupervisorGraph(request, emitter, userId, sessionId, capturedToken);
+                    return;
+                }
+
+                // Fallback: 传统 IntentRouter（保留完整 P0 逻辑）
+
                 // 1. thinking
                 emit(emitter, "thinking", Map.of("step", "intent", "content", "正在分析您的意图..."));
 
@@ -233,7 +254,8 @@ public class AtlasOrchestrator {
             "version", "3.1.0-P0",
             "activeConnections", streamingEmitter.activeCount(),
             "toolRegistry", toolRegistry.health(),
-            "graphEnabled", compiledGraph != null
+            "graphEnabled", compiledGraph != null,
+            "supervisorGraphEnabled", supervisorGraph != null
         );
     }
 
@@ -371,6 +393,93 @@ public class AtlasOrchestrator {
         );
 
         return emitter;
+    }
+
+    /**
+     * Phase 1: Supervisor Graph 流式执行。
+     * 使用 supervisorGraph Bean（START → supervisor → conditional edges → END），
+     * 保持与 /chat/graph 相同的 SSE 事件约定。
+     */
+    private void runSupervisorGraph(ChatRequest request, SseEmitter emitter,
+                                     String userId, String sessionId, String token) {
+        try {
+            Map<String, Object> inputs = Map.of(
+                "input", Optional.ofNullable(request.userQuery()).orElse(""),
+                "conversation_id", Optional.ofNullable(request.conversationId()).orElse(""),
+                "user_id", userId,
+                "token", Optional.ofNullable(token).orElse("")
+            );
+
+            var config = com.alibaba.cloud.ai.graph.RunnableConfig.builder()
+                .threadId(sessionId)
+                .build();
+
+            log.info("[Supervisor] 启动会话 {}, 输入: {}", sessionId, request.userQuery());
+
+            supervisorGraph.stream(inputs, config)
+                .subscribe(
+                    nodeOutput -> {
+                        String node = nodeOutput.node();
+                        var state = nodeOutput.state();
+
+                        log.debug("[Supervisor] 节点 {} 输出, state keys: {}",
+                            node, state.data().keySet());
+
+                        if ("supervisor".equals(node)) {
+                            state.value("brain_decision")
+                                .filter(BrainDecision.class::isInstance)
+                                .map(BrainDecision.class::cast)
+                                .ifPresent(decision -> {
+                                    if (decision.actionType() == BrainDecision.ActionType.ASK_CLARIFY) {
+                                        pendingDecisions.put(sessionId, decision);
+                                        emit(emitter, "clarify", Map.of(
+                                            "reasoning", decision.reasoning(),
+                                            "confidence", decision.confidence(),
+                                            "requiredContext", decision.requiredContext() != null
+                                                ? decision.requiredContext() : List.of()
+                                        ));
+                                    } else if (decision.actionType() == BrainDecision.ActionType.HITL_CONFIRM) {
+                                        pendingDecisions.put(sessionId, decision);
+                                        emit(emitter, "hitl_request", Map.of(
+                                            "target", decision.target(),
+                                            "reasoning", decision.reasoning(),
+                                            "confidence", decision.confidence(),
+                                            "parameters", decision.parameters() != null
+                                                ? decision.parameters() : Map.of()
+                                        ));
+                                    }
+                                });
+                        }
+
+                        emit(emitter, "thinking", Map.of(
+                            "step", node,
+                            "content", "节点 " + node + " 正在执行..."
+                        ));
+
+                        // 输出 answer（direct_answer/tool_call 等节点写入的 key）
+                        state.value("answer").ifPresent(ans ->
+                            emit(emitter, "content", Map.of(
+                                "node", node,
+                                "result", ans.toString()
+                            ))
+                        );
+                    },
+                    err -> {
+                        log.error("[Supervisor] 会话 {} 流式错误", sessionId, err);
+                        streamingEmitter.error(emitter, err.getMessage());
+                        userConnections.merge(userId, -1, Integer::sum);
+                    },
+                    () -> {
+                        log.info("[Supervisor] 会话 {} 完成", sessionId);
+                        streamingEmitter.complete(emitter);
+                        userConnections.merge(userId, -1, Integer::sum);
+                    }
+                );
+        } catch (Exception e) {
+            log.error("[Supervisor] 会话 {} 异常", sessionId, e);
+            streamingEmitter.error(emitter, e.getMessage());
+            userConnections.merge(userId, -1, Integer::sum);
+        }
     }
 
     /**
