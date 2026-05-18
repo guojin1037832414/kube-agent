@@ -2,7 +2,8 @@
 # 注意: api-key 禁止写入此文件！通过环境变量或启动参数注入
 
 server:
-  port: 8500
+  # port: 8500
+  port: 8300
 
 spring:
   application:

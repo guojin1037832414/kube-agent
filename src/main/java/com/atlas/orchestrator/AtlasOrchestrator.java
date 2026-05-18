@@ -39,7 +39,7 @@ import java.util.concurrent.Executor;
  * @since 3.1.0-P0
  */
 @RestController
-@RequestMapping("/api/v1")
+@RequestMapping("/api/agent")
 public class AtlasOrchestrator {
 
     private static final Logger log = LoggerFactory.getLogger(AtlasOrchestrator.class);
@@ -69,8 +69,8 @@ public class AtlasOrchestrator {
     private static final int MAX_PER_USER = 3;
     private final Map<String, Integer> userConnections = new ConcurrentHashMap<>();
 
-    /** HITL 待确认决策：threadId → BrainDecision（供 HITLController 读取） */
-    private final Map<String, BrainDecision> pendingDecisions = new ConcurrentHashMap<>();
+    /** HITL 待确认决策缓存: TTL + 幂等性 + 安全审计 (M1.5) */
+    private final TimedDecisionCache decisionCache;
 
     /**
      * 构造方法 — P0 版。
@@ -84,6 +84,7 @@ public class AtlasOrchestrator {
                              ToolRegistry toolRegistry,
                              UserPermissionContext userPermissionContext,
                              KubeManagerHttpClient kubeManagerClient,
+                             TimedDecisionCache decisionCache,
                              @Qualifier("atlasTaskExecutor") Executor asyncExecutor,
                              @Autowired(required = false)
                              @Qualifier("supervisorGraph")
@@ -96,6 +97,7 @@ public class AtlasOrchestrator {
         this.toolRegistry = toolRegistry;
         this.userPermissionContext = userPermissionContext;
         this.kubeManagerClient = kubeManagerClient;
+        this.decisionCache = decisionCache;
         this.asyncExecutor = asyncExecutor;
         this.supervisorGraph = supervisorGraph;
         this.compiledGraph = compiledGraph;
@@ -330,27 +332,30 @@ public class AtlasOrchestrator {
                                 .ifPresent(decision -> {
                                     if (decision.actionType() == BrainDecision.ActionType.ASK_CLARIFY) {
                                         // 保存待澄清决策，供 /hitl/clarify 接口读取
-                                        pendingDecisions.put(sessionId, decision);
+                                        String confirmToken = decisionCache.put(sessionId, decision);
                                         emit(emitter, "clarify", Map.of(
+                                            "threadId", sessionId,
                                             "reasoning", decision.reasoning(),
                                             "confidence", decision.confidence(),
                                             "requiredContext", decision.requiredContext() != null
                                                 ? decision.requiredContext() : List.of()
                                         ));
-                                        log.info("[Graph] 会话 {} 触发 clarify: {}",
-                                            sessionId, decision.reasoning());
+                                        log.info("[Graph] 会话 {} 触发 clarify: token={}",
+                                            sessionId, confirmToken.substring(0, 8) + "...");
                                     } else if (decision.actionType() == BrainDecision.ActionType.HITL_CONFIRM) {
                                         // 保存待确认决策，供 /hitl/confirm 接口读取
-                                        pendingDecisions.put(sessionId, decision);
+                                        String confirmToken = decisionCache.put(sessionId, decision);
                                         emit(emitter, "hitl_request", Map.of(
+                                            "threadId", sessionId,
                                             "target", decision.target(),
                                             "reasoning", decision.reasoning(),
                                             "confidence", decision.confidence(),
                                             "parameters", decision.parameters() != null
-                                                ? decision.parameters() : Map.of()
+                                                ? decision.parameters() : Map.of(),
+                                            "confirmToken", confirmToken
                                         ));
-                                        log.info("[Graph] 会话 {} 触发 hitl_request: target={}",
-                                            sessionId, decision.target());
+                                        log.info("[Graph] 会话 {} 触发 hitl_request: target={}, token={}",
+                                            sessionId, decision.target(), confirmToken.substring(0, 8) + "...");
                                     }
                                 });
                         }
@@ -431,21 +436,24 @@ public class AtlasOrchestrator {
                                 .map(BrainDecision.class::cast)
                                 .ifPresent(decision -> {
                                     if (decision.actionType() == BrainDecision.ActionType.ASK_CLARIFY) {
-                                        pendingDecisions.put(sessionId, decision);
+                                        decisionCache.put(sessionId, decision);
                                         emit(emitter, "clarify", Map.of(
+                                            "threadId", sessionId,
                                             "reasoning", decision.reasoning(),
                                             "confidence", decision.confidence(),
                                             "requiredContext", decision.requiredContext() != null
                                                 ? decision.requiredContext() : List.of()
                                         ));
                                     } else if (decision.actionType() == BrainDecision.ActionType.HITL_CONFIRM) {
-                                        pendingDecisions.put(sessionId, decision);
+                                        String confirmToken2 = decisionCache.put(sessionId, decision);
                                         emit(emitter, "hitl_request", Map.of(
+                                            "threadId", sessionId,
                                             "target", decision.target(),
                                             "reasoning", decision.reasoning(),
                                             "confidence", decision.confidence(),
                                             "parameters", decision.parameters() != null
-                                                ? decision.parameters() : Map.of()
+                                                ? decision.parameters() : Map.of(),
+                                            "confirmToken", confirmToken2
                                         ));
                                     }
                                     // Phase 2: CALL_TOOL 分支 — Graph 节点 tool_call 执行 Tool，
@@ -499,15 +507,15 @@ public class AtlasOrchestrator {
     /**
      * 获取待确认的 HITL 决策（供 HITLController 使用）。
      */
-    public BrainDecision getPendingDecision(String sessionId) {
-        return pendingDecisions.get(sessionId);
+    public TimedDecisionCache.Entry getPendingDecision(String sessionId) {
+        return decisionCache.get(sessionId);
     }
 
     /**
-     * 移除已处理的 HITL 决策。
+     * 移除已处理的 HITL 决策（支持 Token 校验）。
      */
-    public BrainDecision removePendingDecision(String sessionId) {
-        return pendingDecisions.remove(sessionId);
+    public BrainDecision removePendingDecision(String sessionId, String confirmToken) {
+        return decisionCache.remove(sessionId, confirmToken);
     }
 
     // ── 私有辅助 ────────────────────────────────────

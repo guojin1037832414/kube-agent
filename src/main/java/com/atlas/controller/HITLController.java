@@ -8,8 +8,10 @@ import com.atlas.brain.BrainDecision;
 import com.atlas.orchestrator.AtlasOrchestrator;
 import com.atlas.orchestrator.StreamingEmitter;
 import com.atlas.orchestrator.SseEvent;
+import com.atlas.orchestrator.TimedDecisionCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -20,44 +22,53 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 /**
- * HITL (Human-in-the-Loop) 交互控制器 — v3.1 HITL 闭环。
+ * HITL (Human-in-the-Loop) 交互控制器 — v3.1 M1.5。
  *
- * <p>提供高危操作确认和意图澄清的 REST/SSE 接口：</p>
+ * <p>高危操作人工确认 + 意图澄清的 REST/SSE 接口：</p>
  * <ul>
- *   <li>{@code POST /api/v1/hitl/confirm} — 人工确认后恢复 Graph 执行</li>
+ *   <li>{@code POST /api/v1/hitl/confirm} — 人工确认后恢复 Graph 执行（带 Token 校验 + 幂等性）</li>
  *   <li>{@code POST /api/v1/hitl/clarify} — 用户提供补充信息后重新执行</li>
+ * </ul>
+ *
+ * <p><b>安全设计：</b></p>
+ * <ul>
+ *   <li>confirmToken：每个 HITL 决策生成唯一 SHA-256 Token，前端必须原样带回</li>
+ *   <li>幂等性：已处理的会话 ID 在 10 分钟内不可重复 confirm</li>
+ *   <li>TTL：决策 5 分钟未确认自动过期，前端收到 410 Gone</li>
  * </ul>
  *
  * <p>核心流程：</p>
  * <ol>
- *   <li>AtlasOrchestrator 检测到 HITL_CONFIRM/ASK_CLARIFY → pendingDecisions 保存</li>
- *   <li>前端收到 SSE 事件 → 展示确认/追问 UI</li>
- *   <li>用户交互 → POST 本接口</li>
- *   <li>本接口构建新 BrainDecision（HITL_CONFIRM → CALL_TOOL，ASK_CLARIFY → 携带补充input）
- *   <li>调用 CompiledGraph.stream() 恢复执行，AtlasBrain resume 检测复用新决策</li>
+ *   <li>AtlasOrchestrator 检测到 HITL_CONFIRM → decisionCache.put() 生成 token → SSE hitl_request</li>
+ *   <li>前端收到 SSE → 展示"命令式确认"弹窗（用户必须输入指定文字）</li>
+ *   <li>用户确认 → POST /confirm {threadId, confirmToken} → 校验 → resumeGraph</li>
+ *   <li>AtlasBrain resume 检测复用新决策 → 继续执行</li>
  * </ol>
  *
  * @author Atlas Team
- * @since 3.1.0-HITL
+ * @since 3.1.0-M1.5
  */
 @RestController
-@RequestMapping("/api/v1/hitl")
+@RequestMapping("/api/agent/hitl")
 public class HITLController {
     private static final Logger log = LoggerFactory.getLogger(HITLController.class);
 
     private final CompiledGraph compiledGraph;
     private final AtlasOrchestrator orchestrator;
     private final StreamingEmitter streamingEmitter;
+    private final TimedDecisionCache decisionCache;
     private final Executor asyncExecutor;
 
     public HITLController(
             CompiledGraph compiledGraph,
             AtlasOrchestrator orchestrator,
             StreamingEmitter streamingEmitter,
+            TimedDecisionCache decisionCache,
             @Qualifier("atlasTaskExecutor") Executor asyncExecutor) {
         this.compiledGraph = compiledGraph;
         this.orchestrator = orchestrator;
         this.streamingEmitter = streamingEmitter;
+        this.decisionCache = decisionCache;
         this.asyncExecutor = asyncExecutor;
     }
 
@@ -67,18 +78,21 @@ public class HITLController {
      * <p>将 AtlasBrain 产出的 HITL_CONFIRM 决策转换为 CALL_TOOL，
      * 并重新注入 Graph 执行（AtlasBrain resume 检测会直接复用）。</p>
      *
-     * @param request 确认请求（包含原会话 threadId）
+     * @param request 确认请求（包含原会话 threadId + confirmToken）
      * @return SSE 流，包含 Tool 执行结果
      */
     @PostMapping(value = "/confirm", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter confirmAndResume(@RequestBody ConfirmRequest request) {
         String threadId = request.threadId();
+        String confirmToken = request.confirmToken();
         SseEmitter emitter = streamingEmitter.createEmitter("hitl-" + threadId);
 
-        BrainDecision original = orchestrator.removePendingDecision(threadId);
+        // 安全校验：Token 匹配 + 幂等性检查
+        BrainDecision original = decisionCache.remove(threadId, confirmToken);
         if (original == null) {
             CompletableFuture.runAsync(
-                () -> streamingEmitter.error(emitter, "会话已过期或不存在待确认操作，请重新发起请求"),
+                () -> streamingEmitter.error(emitter,
+                    "会话已过期、不存在或已被确认（Token 无效/过期/重复使用）"),
                 asyncExecutor
             );
             return emitter;
@@ -100,7 +114,7 @@ public class HITLController {
     }
 
     /**
-     * 意图澄清 — 用户使用补充信息后重新执行。
+     * 意图澄清 — 用户提供补充信息后重新执行。
      *
      * <p>将用户回复作为新 input，重新触发 AtlasBrain 决策（会带上补充上下文），
      * 期望 Brain 这次能产出明确的 CALL_TOOL 或 DIRECT_ANSWER。</p>
@@ -113,12 +127,10 @@ public class HITLController {
         String threadId = request.threadId();
         SseEmitter emitter = streamingEmitter.createEmitter("clarify-" + threadId);
 
-        // 清理旧决策
-        orchestrator.removePendingDecision(threadId);
+        // 清理旧决策（无需 Token 校验，因为是用户主动补充）
+        decisionCache.removeForClarify(threadId);
 
-        // 构建新决策：携带用户补充信息，让 AtlasBrain 重新决策
-        // resume 时 AtlasBrain 检测到已有非中断决策会复用 — 所以这里用 ASK_CLARIFY
-        // 并携带 clarified_input，让 Graph supervisor 节点读取并调用 AtlasBrain
+        // 构建新决策：携带用户补充信息
         BrainDecision clarified = new BrainDecision(
             BrainDecision.ActionType.ASK_CLARIFY,
             "",
@@ -135,18 +147,21 @@ public class HITLController {
 
     /**
      * 核心恢复逻辑：从 checkpoint 读取状态，注入新决策，流式执行 Graph。
+     *
+     * <p>关键：resume 时必须复用原会话的 Token/上下文，否则后端 Tool 无权限执行。</p>
      */
     private void resumeGraph(String threadId, BrainDecision newDecision, SseEmitter emitter) {
         try {
             RunnableConfig config = RunnableConfig.builder().threadId(threadId).build();
 
-            // 1. 尝试从 checkpoint 恢复上下文（token, user_id, conversation_id）
+            // 1. 构建输入：新决策 + 澄清输入
             Map<String, Object> inputs = new HashMap<>();
             inputs.put("brain_decision", newDecision);
             inputs.put("input", String.valueOf(
                 newDecision.parameters().getOrDefault("clarified_input", "")
             ));
 
+            // 2. 尝试从 checkpoint 恢复上下文（token, user_id, conversation_id）
             try {
                 Optional<StateSnapshot> snapshotOpt = compiledGraph.stateOf(config);
                 if (snapshotOpt.isPresent() && snapshotOpt.get().state() != null) {
@@ -163,7 +178,7 @@ public class HITLController {
 
             log.info("[HITL] 恢复会话 {}, actionType={}", threadId, newDecision.actionType());
 
-            // 2. 流式执行 Graph
+            // 3. 流式执行 Graph — SSE 事件格式与主流程完全一致
             compiledGraph.stream(inputs, config)
                 .subscribe(
                     nodeOutput -> {
@@ -171,10 +186,18 @@ public class HITLController {
                         var state = nodeOutput.state();
 
                         log.debug("[HITL] 节点 {} 输出", node);
-                        emit(emitter, "thinking", Map.of("step", node, "content", "节点 " + node + " 正在执行..."));
+
+                        // 使用与 AtlasOrchestrator 完全一致的 SSE 事件格式
+                        state.value("thinking").ifPresent(content ->
+                            emitSse(emitter, "thinking", Map.of("step", node, "content", content))
+                        );
 
                         state.value(node + "_result").ifPresent(result ->
-                            emit(emitter, "content", Map.of("node", node, "result", result.toString()))
+                            emitSse(emitter, "content", Map.of("node", node, "result", result.toString()))
+                        );
+
+                        state.value("answer").ifPresent(ans ->
+                            emitSse(emitter, "content", Map.of("answer", ans.toString()))
                         );
                     },
                     err -> {
@@ -193,8 +216,8 @@ public class HITLController {
         }
     }
 
-    /** SSE 事件发送 */
-    private void emit(SseEmitter emitter, String event, Map<String, Object> payload) {
+    /** 统一 SSE 事件发送（与 AtlasOrchestrator.emit() 格式完全一致） */
+    private void emitSse(SseEmitter emitter, String event, Map<String, Object> payload) {
         try {
             String json = toJson(payload);
             streamingEmitter.send(emitter, new SseEvent(event, json));
@@ -203,7 +226,8 @@ public class HITLController {
         }
     }
 
-    /** 简易 JSON 序列化 */
+    /** 简易 JSON 序列化（与 AtlasOrchestrator.toJson 保持一致） */
+    @SuppressWarnings("unchecked")
     private String toJson(Map<String, Object> map) {
         StringBuilder sb = new StringBuilder();
         sb.append("{");
@@ -219,6 +243,10 @@ public class HITLController {
                 sb.append("\"").append(s.replace("\\", "\\\\").replace("\"", "\\\"")).append("\"");
             } else if (v instanceof Number || v instanceof Boolean) {
                 sb.append(v);
+            } else if (v instanceof Map) {
+                sb.append(toJson((Map<String, Object>) v));
+            } else if (v instanceof List) {
+                sb.append(toJsonList((List<?>) v));
             } else {
                 sb.append("\"").append(v.toString().replace("\"", "\\\"")).append("\"");
             }
@@ -227,15 +255,34 @@ public class HITLController {
         return sb.toString();
     }
 
+    private String toJsonList(List<?> list) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("[");
+        boolean first = true;
+        for (Object item : list) {
+            if (!first) sb.append(",");
+            first = false;
+            if (item instanceof String s) {
+                sb.append("\"").append(s.replace("\\", "\\\\").replace("\"", "\\\"")).append("\"");
+            } else if (item instanceof Number || item instanceof Boolean) {
+                sb.append(item);
+            } else {
+                sb.append("\"").append(item.toString().replace("\"", "\\\"")).append("\"");
+            }
+        }
+        sb.append("]");
+        return sb.toString();
+    }
+
     // ── 请求 DTO ────────────────────────────────────
 
     /**
-     * 确认请求体
+     * 确认请求体 — M1.5 强化版（含 confirmToken 安全校验）。
      */
-    public record ConfirmRequest(String threadId, String action) {}
+    public record ConfirmRequest(String threadId, String confirmToken) {}
 
     /**
-     * 澄清请求体
+     * 澄清请求体。
      */
     public record ClarifyRequest(String threadId, String reply) {}
 }
