@@ -1,9 +1,11 @@
 # Atlas v3.1 — AI Agent for kube-manager
 
-> **版本**: 3.1.0-SNAPSHOT  
-> **日期**: 2026-05-14  
-> **状态**: 🚧 开发中（P0 阶段）  
-> **架构**: 6专业Agent + L1-L4任务分级 + 本地Embedding语义预筛 + Human-in-the-Loop  
+> **版本**: 3.1.0-SNAPSHOT
+> **日期**: 2026-05-14
+> **状态**: ✅ M1.5 已完成（AtlasBrain 单次决策 + StateGraph + 6 Worker + HITL SSE 后端）
+> **当前里程碑**: M2 查询全覆盖（即将启动）
+> **架构**: AtlasBrain + StateGraph + 6 ReactAgent Worker + L1-L4 意图路由 + HITL SSE
+> **路线图**: 见 `ROADMAP.md`  
 
 ---
 
