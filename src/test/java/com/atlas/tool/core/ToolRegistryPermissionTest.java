@@ -5,8 +5,11 @@ import com.atlas.tool.annotation.ToolPermission;
 import com.atlas.tool.exception.PermissionDeniedException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.util.Map;
 import java.util.Set;
@@ -27,7 +30,8 @@ import static org.junit.jupiter.api.Assertions.*;
  *
  * @version 3.1.0-P1.4
  */
-@SpringBootTest(classes = ToolRegistryPermissionTest.TestConfig.class)
+@SpringBootTest
+@ActiveProfiles("test")
 class ToolRegistryPermissionTest {
 
     @Autowired
@@ -35,6 +39,9 @@ class ToolRegistryPermissionTest {
 
     @Autowired
     private UserPermissionContext userPermissionContext;
+
+    @MockBean
+    private org.springframework.ai.chat.model.ChatModel chatModel;
 
     @BeforeEach
     void setUp() {

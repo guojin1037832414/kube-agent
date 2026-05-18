@@ -1,0 +1,17 @@
+# Spring AI 测试配置 — 提供 dummy key 避免 context 启动失败
+# 测试时所有 ChatClient 调用通过 @MockBean 替换，此 key 不会被实际使用
+spring:
+  ai:
+    openai:
+      api-key: sk-test-dummy-key-for-unit-testing-only
+      base-url: http://localhost:9999/test-endpoint
+
+  # 关闭外部服务自动配置（测试中不需要）
+  autoconfigure:
+    exclude:
+      # 如有需要排除的自动配置类可在此添加
+
+---
+# 测试 profile 激活时：禁用 SSE 连接、关闭 actuator 端口占用
+server:
+  port: 0  # 随机端口，避免测试时端口冲突
