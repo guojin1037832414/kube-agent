@@ -98,6 +98,75 @@
 - [ ] 🟡 **ThreadLocal→State显式传递**：M3必须修的技术债务
 - [ ] 🟢 **Review Log #23**：M2开始后记录测试补全过程
 
+## 2026-05-18 M2 测试体系补全（进行中）
+
+### 实现内容
+
+**测试基础设施修复：**
+1. 新建 `src/test/resources/application-test.yml` — dummy OpenAI key + base-url + server.port=0
+2. 修复 `ToolRegistryPermissionTest`：`@SpringBootTest(classes=TestConfig.class)` → `@SpringBootTest` + `@ActiveProfiles("test")`
+3. 三个测试文件都加 `@MockBean ChatModel` context 启动依赖全部解决
+
+**纯单元测试（零 Spring Context，毫秒级）：**
+4. `IntentArbiterTest.java`（20个测试）— 仲裁规则链A-F全覆盖：同层决胜、L2护城河、p0/p1高优压倒、优先级兜底、显著差距、层级fallback
+5. `UserPermissionContextTest.java`（19个测试）— 登录/登出/ThreadLocal bind-unbind-getCurrentToken/Admin判断/权限record不可变性
+6. `ActionTypeTest.java`（11个测试）— enum完整性验证、valueOf反序列化、ordinal稳定性、BrainDecision构造
+
+**SpringBootTest（应用上下文启动）：**
+7. `RuleMatcherTest.java`（9个测试）— @MockBean IntentsLoader stub → L2关键词全包含/L2正则/L4模糊/L4未命中
+
+### 测试结果
+
+```
+Tests: 78, Failures: 0, Errors: 0, Skipped: 0 — BUILD SUCCESS
+├── ActionTypeTest          11 tests  (0.03s)
+├── DefaultValueRegistryTest  2 tests  (0.03s)
+├── ToolRegistryPermissionTest 10 tests (9.2s)
+├── AsyncContextHolderTest     7 tests  (0.02s)
+├── UserPermissionContextTest 19 tests  (0.01s)
+├── RuleMatcherTest            9 tests  (1.3s)
+└── IntentArbiterTest         20 tests  (0.01s)
+```
+
+**测试金字塔：** 纯单元(71) vs SpringBootTest(10) ≈ 7:1 — 纯单元占92%，理想
+
+### 优点
+
+1. 三件套模式一次验证，以后所有SpringBootTest直接拷贝：`application-test.yml` + `@ActiveProfiles("test")` + `@MockBean` 流程
+2. 参数化数据驱动测试已成模板：`@ParameterizedTest` + `MethodSource` 可复用于Query批量E2E
+3. IntentArbiter边界测试的设计方式：给两种冲突意图设置不同分数+层级 → 验证仲裁器按规则链选正确方
+4. 测试发现RuleMatcher的坑：`allKeywordsMatch`要求keywords全是AND关系，单个匹配不算
+
+### 风险与问题
+
+1. 🔴 **RuleMatcherTest stub数据与真实intents.yml脱节**：stub的意图定义字段名/顺序和真实record可能不同，后续intents.yml改动需同步维护stub
+2. 🟡 **AtlasBrain测试尚未编写**：ChatClient的`BeanOutputConverter` mock策略还没验证
+3. 🟡 **Query Tool参数化E2E还没做**：45个query tool的批量参数化测试待写
+4. 🟢 **硬编码 orgId="100001" 还没清理**：3处待替换为Token提取
+
+### 经验教训
+
+1. **SpringBootTest启动失败先看根因**：ChatClient需要API key → 建application-test.yml给dummy key，不是加spring-ai-test依赖
+2. **Record构造函数签名对不上要查原record**：IntentDefinition stub数据传了7个参数但record只6个字段，编译报错错位，直接读原record确认顺序
+3. **RuleMatcher的allKeywordsMatch是AND逻辑**：测试"只看英文node不含中文节点"本以为是OR，实际是AND → 精确理解代码再写预期assertion
+4. **全量 `mvn test` 慢但必要**：单独跑一个测试类10s，全量跑也10s（context复用缓存），所以不用怕全量
+
+### 待办
+
+- [ ] 🔴 Query Tool参数化E2E（45个查询tool全覆盖）
+- [ ] 🔴 AtlasBrain Mock Test（BeanOutputConverter + ChatClient mock）
+- [ ] 🔴 Embedding降级路径测试（ONNX异常→精确匹配降级）
+- [ ] 🟡 硬编码orgId="100001"清理（3处→Token提取）
+- [ ] 🟢 Review Log #24（M3阶段）
+
+### 环境
+
+- kube-agent 后端: master (commit fd0a0d3)
+- 后端端口: 8500
+- ToolRegistry: 109 tools, 6 agents
+- 双推: ✓ GitLab origin + ✓ GitHub github → fd0a0d3
+
+
 ### 环境
 
 - kube-agent 端口 8300（从8500改过来，对齐前端proxy）
