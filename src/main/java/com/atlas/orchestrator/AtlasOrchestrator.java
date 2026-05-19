@@ -520,13 +520,55 @@ public class AtlasOrchestrator {
 
     // ── 私有辅助 ────────────────────────────────────
 
-    private void emit(SseEmitter emitter, String event, Map<String, Object> payload) {
+    private void emit(SseEmitter emitter, String backendEventType, Map<String, Object> payload) {
         try {
-            String json = toJson(payload);
-            streamingEmitter.send(emitter, new SseEvent(event, json));
+            // ═══════════════════════════════════════════════════════════
+            // SSE 格式适配：将后端 StateGraph 事件翻译为前端兼容格式
+            // 前端期望：data:{"type":"thinking","content":"..."}
+            // ═══════════════════════════════════════════════════════════
+            String frontType = mapToFrontType(backendEventType);
+            Map<String, Object> enriched = new java.util.HashMap<>();
+            enriched.put("type", frontType);
+            enriched.putAll(payload);
+
+            // content 兜底映射（若原 payload 无 content 字段，从语义相关字段推断）
+            if (!enriched.containsKey("content")) {
+                String derived = deriveContent(frontType, enriched);
+                if (derived != null) {
+                    enriched.put("content", derived);
+                }
+            }
+
+            String json = toJson(enriched);
+            streamingEmitter.send(emitter, new SseEvent(backendEventType, json));
         } catch (Exception e) {
             log.warn("[Orchestrator] SSE 发送失败: {}", e.getMessage());
         }
+    }
+
+    /**
+     * 后端事件名 → 前端 SseEventType 映射。
+     */
+    private String mapToFrontType(String backend) {
+        return switch (backend) {
+            case "tool_call"  -> "tool_start";
+            case "tool_result"-> "tool_done";
+            default           -> backend;
+        };
+    }
+
+    /**
+     * 根据事件类型和已有字段推断 content 内容。
+     * 确保前端 content/title 等字段始终有值可渲染。
+     */
+    private String deriveContent(String type, Map<String, Object> data) {
+        return switch (type) {
+            case "content"  -> data.containsKey("result") ? data.get("result").toString() : null;
+            case "tool_done"-> data.containsKey("message") ? data.get("message").toString()
+                          : (data.containsKey("error") ? data.get("error").toString() : null);
+            case "tool_start"-> data.containsKey("tool") ? "调用工具: " + data.get("tool") : null;
+            default         -> null;
+        };
     }
 
     @SuppressWarnings("unchecked")
@@ -557,5 +599,8 @@ public class AtlasOrchestrator {
 
     // ── 请求 DTO ────────────────────────────────────
 
-    public record ChatRequest(String conversationId, String userQuery, String userId) {}
+    public record ChatRequest(
+        String conversationId,
+        @com.fasterxml.jackson.annotation.JsonAlias("message") String userQuery,
+        String userId) {}
 }
