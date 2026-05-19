@@ -478,11 +478,15 @@ public class AtlasGraphConfig {
                         "❌ 权限不足：无权执行 '" + intentId + "'");
                 }
 
-                // 3. 按用户名解析组织ID，Tool 内部据此路由到正确的后端 API
-                String orgId = kubeManagerClient.resolveOrgId(userId, token);
-                if ("sysadmin".equals(orgId)) {
-                    // 超管穿透：使用系统专用组织ID（kube-manager 超管可跨组织查询）
-                    orgId = "100001";
+                // 3. 读取 orgId（从 state 透传，不再桶式搜索 + sysadmin 穿透硬编码）
+                String orgId = state.value("orgId").map(Object::toString).orElse("");
+                if (orgId.isBlank()) {
+                    // fallback: 用 ThreadLocal 透传的 orgId（如有）
+                    orgId = com.atlas.auth.UserPermissionContext.getCurrentOrgId();
+                }
+                if (orgId == null || orgId.isBlank()) {
+                    // 最后防线：配置化 fallback
+                    orgId = kubeManagerClient.getFallbackOrgId();
                 }
                 java.util.Map<String, Object> toolParams = new java.util.HashMap<>();
                 toolParams.put("userId", userId);
