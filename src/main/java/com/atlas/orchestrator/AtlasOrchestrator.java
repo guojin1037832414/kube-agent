@@ -9,6 +9,7 @@ import com.atlas.store.SessionStore;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.tool.core.BaseTool;
 import com.atlas.tool.core.ToolRegistry;
+import com.atlas.orchestrator.polish.ToolResultPolishingService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -78,6 +79,9 @@ public class AtlasOrchestrator {
     /** HITL 待确认决策缓存: TTL + 幂等性 + 安全审计 (M1.5) */
     private final TimedDecisionCache decisionCache;
 
+    /** (P3.1) Tool 结果 LLM 润色服务 — B方案 */
+    private final ToolResultPolishingService polishingService;
+
     /**
      * 构造方法 — P0 版。
      *
@@ -91,6 +95,7 @@ public class AtlasOrchestrator {
                              UserPermissionContext userPermissionContext,
                              KubeManagerHttpClient kubeManagerClient,
                              TimedDecisionCache decisionCache,
+                             ToolResultPolishingService polishingService,
                              @Qualifier("atlasTaskExecutor") Executor asyncExecutor,
                              SessionStore sessionStore,
                              @Autowired(required = false)
@@ -105,13 +110,15 @@ public class AtlasOrchestrator {
         this.userPermissionContext = userPermissionContext;
         this.kubeManagerClient = kubeManagerClient;
         this.decisionCache = decisionCache;
+        this.polishingService = polishingService;
         this.asyncExecutor = asyncExecutor;
         this.sessionStore = sessionStore;
         this.supervisorGraph = supervisorGraph;
         this.compiledGraph = compiledGraph;
-        log.info("[Orchestrator] 初始化完成 | SupervisorGraph: {} | AtlasGraph: {}",
+        log.info("[Orchestrator] 初始化完成 | SupervisorGraph: {} | AtlasGraph: {} | Polishing: {}",
             supervisorGraph != null ? "已启用 ✅" : "未启用 ⚠️",
-            compiledGraph != null ? "已启用 ✅" : "未启用 ⚠️");
+            compiledGraph != null ? "已启用 ✅" : "未启用 ⚠️",
+            polishingService != null ? "已启用 ✅" : "未启用 ⚠️");
     }
 
     /**
@@ -246,17 +253,24 @@ public class AtlasOrchestrator {
                                 ? toolResult.get("message").toString() : "";
                             Object data = toolResult.get("data");
 
-                            // M2.7 Fix: 将 tool_result 转成 content 推送给前端（SSE v3 类型对齐）
-                            StringBuilder resultText = new StringBuilder();
-                            if (success) {
-                                resultText.append("✅ ").append(message);
-                                if (data != null) {
-                                    resultText.append("\n\n```\n").append(data).append("\n```");
+                            // M3.1: Tool 结果经 LLM 润色后推送
+                            try {
+                                String polished = polishingService.polishSync(toolResult, request.userQuery());
+                                emit(emitter, "content", Map.of("content", polished));
+                            } catch (Exception polishEx) {
+                                log.warn("[Orchestrator] 润色失败，fallback到原始格式: {}", polishEx.getMessage());
+                                // fallback: 原始硬编码格式
+                                StringBuilder resultText = new StringBuilder();
+                                if (success) {
+                                    resultText.append("✅ ").append(message);
+                                    if (data != null) {
+                                        resultText.append("\n\n```\n").append(data).append("\n```");
+                                    }
+                                } else {
+                                    resultText.append("❌ ").append(message);
                                 }
-                            } else {
-                                resultText.append("❌ ").append(message);
+                                emit(emitter, "content", Map.of("content", resultText.toString()));
                             }
-                            emit(emitter, "content", Map.of("content", resultText.toString()));
                         } catch (Exception e) {
                             log.error("[Orchestrator] Tool '{}' 执行异常", result.intentId(), e);
                             emit(emitter, "content", Map.of(
@@ -520,29 +534,33 @@ public class AtlasOrchestrator {
                             "content", "节点 " + node + " 正在执行..."
                         ));
 
-                        // ── M2.8 FIX: 删除 answer 的 content emit，避免与 tool_result 重复输出 ──
-                        // state.value("answer") 的内容已由 tool_result 兜底转为 content 推送，
-                        // 不再单独 emit，防止前端收到双份 content 事件叠加。
-
-                        // 输出 tool_result（tool_call 节点写入的结构化结果）— M2.7 转成 content
-                        state.value("tool_result")
-                            .filter(Map.class::isInstance)
-                            .map(Map.class::cast)
-                            .ifPresent(tr -> {
-                                @SuppressWarnings("unchecked")
-                                Map<String, Object> trMap = (Map<String, Object>) tr;
-                                Object success = trMap.get("success");
-                                Object msg = trMap.get("message");
-                                Object data = trMap.get("data");
-                                StringBuilder sb = new StringBuilder();
-                                if (Boolean.TRUE.equals(success)) {
-                                    sb.append("✅ ").append(msg != null ? msg : "执行完成");
-                                    if (data != null) sb.append("\n\n").append(data);
-                                } else {
-                                    sb.append("❌ ").append(msg != null ? msg : "执行失败");
-                                }
-                                emit(emitter, "content", Map.of("content", sb.toString()));
-                            });
+                        // ── M3.1: Tool 结果经 LLM 润色后推送（仅 tool_call 节点触发）──
+                        if ("tool_call".equals(node)) {
+                            state.value("tool_result")
+                                .filter(Map.class::isInstance)
+                                .map(Map.class::cast)
+                                .ifPresent(tr -> {
+                                    @SuppressWarnings("unchecked")
+                                    Map<String, Object> trMap = (Map<String, Object>) tr;
+                                    try {
+                                        String polished = polishingService.polishSync(trMap, request.userQuery());
+                                        emit(emitter, "content", Map.of("content", polished));
+                                    } catch (Exception polishEx) {
+                                        log.warn("[Supervisor] 润色失败，fallback到原始格式: {}", polishEx.getMessage());
+                                        Object success = trMap.get("success");
+                                        Object msg = trMap.get("message");
+                                        Object data = trMap.get("data");
+                                        StringBuilder sb = new StringBuilder();
+                                        if (Boolean.TRUE.equals(success)) {
+                                            sb.append("✅ ").append(msg != null ? msg : "执行完成");
+                                            if (data != null) sb.append("\n\n").append(data);
+                                        } else {
+                                            sb.append("❌ ").append(msg != null ? msg : "执行失败");
+                                        }
+                                        emit(emitter, "content", Map.of("content", sb.toString()));
+                                    }
+                                });
+                        }
                     },
                     err -> {
                         log.error("[Supervisor] 会话 {} 流式错误", sessionId, err);
