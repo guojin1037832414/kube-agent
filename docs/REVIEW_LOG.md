@@ -372,3 +372,78 @@ Tests: 86, Failures: 0, Errors: 0, Skipped: 0 — BUILD SUCCESS
 - 前端: `1b76eec` dev 分支
 - 双推: ✓ GitLab origin
 
+
+---
+
+## 2026-05-19 M2.7-P3.1 完成：orgId 硬编码全线修复 + 认证透传闭环
+
+### 问题根因
+哥哥发现日志中 `username=anonymous 回退100001` — 登录用户 zhaotiandi (org=100002) 被错误路由到 100001，原因是：
+1. kube-manager /api/login 返回 `result` 为**纯 JWT String**（非 Object），无 orgId 字段
+2. AuthController 只解析了 `userNode.organizationId` 和 `result.orgId`，未覆盖 JWT 字串场景
+3. AtlasOrchestrator 的 streamChat 未从 SessionStore 取 orgId，而是调用 `resolveOrgId()` 桶式搜索+硬编码回退
+4. KubeManagerHttpClient.resolveOrgId() fallback 硬编码 `"100001"` 回退（全局 12 处）
+
+### 实现内容
+
+**P0: AuthController 登录后反查 orgId**
+- 注入 `KubeManagerHttpClient` 依赖
+- 成功登录后，若响应未携带 orgId（或只剩 "1"），用 token 反查 `resolveOrgId(username, token)` → 桶式搜索找到真实 orgId
+- zhaotiandi → **100002** ✅
+
+**P1: UserPermissionContext + AsyncContextHolder ThreadLocal 扩展**
+- 新增 `CURRENT_ORG_ID ThreadLocal<String>`，与 `CURRENT_TOKEN` 配对
+- `bind(token)` 保持兼容；新增 `bind(token, orgId)` 同时绑定
+- `unbind()` 同时清理 token + orgId
+- 新增 `getCurrentOrgId()` 静态方法供 Tool 侧读取
+- AsyncContextHolder 新增 `wrap(Runnable, token, orgId)` 双透传
+
+**P2: AtlasOrchestrator.streamChat() 改造**
+- `capturedOrgId = sessionData.organizationId()` — **直接从 SessionData 取，不再桶式搜索**
+- `userPermissionContext.bind(capturedToken, capturedOrgId)` — 主线程绑定双 ThreadLocal
+- `final var finalOrgId` — lambda final 变量传递
+- `AsyncContextHolder.wrap(asyncTask, finalToken, finalOrgId)` — 异步任务双透传
+- `runSupervisorGraph` 签名增加 `orgId` 参数，inputs Map 增加 `"orgId"` 字段
+- Fallback（IntentRouter 路径）内不再 `resolveOrgId()`，改为 `finalOrgId → ThreadLocal → fallback`
+- 删除所有 `sysadmin 穿透 → 100001` 硬编码
+
+**P3: KubeManagerHttpClient 配置化**
+- 新增 `@Value("${atlas.backend.fallback-org-id:100001}")` `fallbackOrgId`
+- 新增 `getFallbackOrgId()` getter
+- `resolveOrgId()` 中 4 处 `"100001"` → `fallbackOrgId`
+- 保留 `doFallbackLogin()` 中 `organizationId=1` 不变（sysadmin 登录 kube-manager 硬性要求）
+
+### E2E 验证
+
+1. **curl 登录**: `POST /api/agent/login` body=`{"username":"zhaotiandi","password":"ninePwd!"}`
+   - 返回 `"organizationId":"100002"` ✅
+   
+2. **curl /me**: `GET /api/agent/me X-Session-Id=ses_xxx`
+   - 返回 `"organizationId":"100002", "role":"user"` ✅
+
+3. **curl SSE 聊天**: `POST /api/agent/chat/stream?sessionId=xxx` -d `'{"userQuery":"我当前运行的实例列表"}'`
+   - Superviور Graph → `target=pod_status` → `✅ Deployment列表查询完成（共 0 条数据）`
+   - 注意：orgId=100002 下无实例，但 Tool 正确调用了 Deployment（不再是 Pod）
+
+### 变更文件
+
+```
+M src/main/java/com/atlas/controller/AuthController.java       (+16, -1)
+M src/main/java/com/atlas/auth/UserPermissionContext.java       (+32, -2)
+M src/main/java/com/atlas/auth/async/AsyncContextHolder.java    (+37, -0)
+M src/main/java/com/atlas/orchestrator/AtlasOrchestrator.java   (+32, -10)
+M src/main/java/com/atlas/http/KubeManagerHttpClient.java       (+12, -4) + 4处100001替换
+```
+
+### 提交
+
+- Commit: `b8a6b83`
+- 双推: ✓ GitLab origin + ✓ GitHub github
+- 变更: 6 files changed, 256 insertions(+), 59 deletions(-)
+
+### 待办
+
+- [ ] P4: 71个 Tool 批量删除私有 organizationId 方法，抽到 BaseTool 统一实现
+- [ ] 前端 SSE `data:` 混入 content 字符串问题（format 修复）
+- [ ] 处理 SupervisorGraph `tool_call` Node：将 orgId 注入 Tool params（Graph 内部线程池透传）
+- [ ] zhaotiandi orgId=100002 下实际创建实例测试（Deployment 查询返回非空数据）

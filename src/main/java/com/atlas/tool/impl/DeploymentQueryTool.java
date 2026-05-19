@@ -40,7 +40,7 @@ public class DeploymentQueryTool extends BaseTool {
         try {
             String orgId = organizationId(params);
             String path = "/api/" + orgId + "/deployment";
-            Map<String, Object> response = httpClient.get(path, Map.of("current", "1", "size", "100"));
+            Map<String, Object> response = httpClient.get(path, Map.of("page", "1", "limit", "100"));
             Object data = response.containsKey("result") ? response.get("result") : response;
             return AtlasToolResult.ok("Deployment列表查询完成", data);
         } catch (Exception e) {
