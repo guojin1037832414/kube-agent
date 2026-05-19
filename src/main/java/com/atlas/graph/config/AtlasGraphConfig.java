@@ -478,9 +478,12 @@ public class AtlasGraphConfig {
                         "❌ 权限不足：无权执行 '" + intentId + "'");
                 }
 
-                // 3. 构建参数（注册 k8s 网络问题暂缓动态 orgId 查询，先用固定值）
-                String orgId = "100001";
-                // 注：后续恢复 kubeManagerClient.resolveOrgId(userId, token) 动态查询
+                // 3. 按用户名解析组织ID，Tool 内部据此路由到正确的后端 API
+                String orgId = kubeManagerClient.resolveOrgId(userId, token);
+                if ("sysadmin".equals(orgId)) {
+                    // 超管穿透：使用系统专用组织ID（kube-manager 超管可跨组织查询）
+                    orgId = "100001";
+                }
                 java.util.Map<String, Object> toolParams = new java.util.HashMap<>();
                 toolParams.put("userId", userId);
                 toolParams.put("organizationId", orgId);

@@ -51,7 +51,12 @@ public class EmbeddingMatcher {
      */
     @PostConstruct
     public void precompute() {
-        for (var def : intentsLoader.getAllIntents()) {
+        var allIntents = intentsLoader.getAllIntents();
+        if (allIntents == null) {
+            log.warn("[EmbeddingMatcher] getAllIntents() 返回 null，跳过预计算");
+            return;
+        }
+        for (var def : allIntents) {
             if (def.examples() == null || def.examples().isEmpty()) continue;
             float[][] vecs = embeddingService.batchEncode(def.examples());
             float[] avg = averageVectors(vecs);
