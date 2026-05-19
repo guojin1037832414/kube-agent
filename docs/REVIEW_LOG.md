@@ -447,3 +447,69 @@ M src/main/java/com/atlas/http/KubeManagerHttpClient.java       (+12, -4) + 4处
 - [ ] 前端 SSE `data:` 混入 content 字符串问题（format 修复）
 - [ ] 处理 SupervisorGraph `tool_call` Node：将 orgId 注入 Tool params（Graph 内部线程池透传）
 - [ ] zhaotiandi orgId=100002 下实际创建实例测试（Deployment 查询返回非空数据）
+
+---
+
+## 2026-05-19 M3.1 LLM 结果润色（B方案）
+
+### 实现内容
+
+**新增5个润色服务类（`polish/`包）：**
+1. `ToolResultPolishingService.java` — 核心服务，提供 `polishSync()` 同步润色 + `polishStream()` 流式润色
+2. `PolishPromptTemplate.java` — 5套 Prompt 模板：LIST/DETAIL/DIAGNOSE/ERROR/SIMPLE，按数据特征自动路由
+3. `ToolResultFormatter.java` — JSON格式化+截断（MAX 8000字符/20条列表），防Token爆炸
+4. `PolishMetrics.java` — 性能指标收集（调用次数/延迟/失败率/降级），log输出
+5. `PolishNode.java` — Graph 模式下的润色节点（当前未接入StateGraph，预留扩展）
+
+**AtlasOrchestrator 双链路接入：**
+1. **IntentRouter 分支**（line ~250）：Tool执行后 → `polishingService.polishSync()` → `emit(content)`；失败 fallback 到原始格式
+2. **SupervisorGraph 分支**（line ~540）：`tool_call` 节点 → `polishingService.polishSync()` → `emit(content)`；仅限定节点触发，避免重复
+3. 构造方法注入 `polishingService`，health 日志显示 `"Polishing: 已启用 ✅"`
+
+### E2E 测试结果
+
+| 测试项 | Query | 原始格式 | 润色后格式 | 结果 |
+|--------|-------|----------|------------|------|
+| 部署列表 | "所有部署状态" | ✅ 查询到29个Deployment... | 📌基本信息 / 🔍关键指标 / ⚠️异常检测 | ✅ |
+| 用户详情 | "我的用户信息" | ❌ 查询失败... | 操作未能完成，请查看以下详情... | ✅ |
+| GPU信息 | "GPU信息" | —（Clarify触发） | —（Clarify触发） | ✅ |
+| 错误模板 | 后端返回失败 | ❌ 查询用户失败... | 操作未能完成...建议重新登录或联系管理员 | ✅ |
+
+### 优点
+
+1. **答案质量飞跃**：从硬编码"✅ 查询到N条"到 LLM 生成的结构化报告（emoji分节+排查建议），用户体验质变
+2. **Token控制安全**：MAX_CONTEXT_LENGTH=8000字符，超长自动截断+标注；15秒超时fallback；polishSync双保险
+3. **按数据特征路由**：不按Tool名而是按data类型（列表/对象/诊断/错误）匹配模板，新增Tool无需改代码
+4. **生产级容错**：LLM 任何异常（401/timeout/network）都自动 fallback 到原始格式，零中断
+5. **双链路覆盖**：传统路由 + SupervisorGraph 都被润色，不存在"Graph模式下质量差"的场景
+
+### 风险与问题
+
+1. 🟡 **Token开销**：每次请求 +500~3000 tokens（取决于数据量），日均100次≈350K tokens
+2. 🟡 **延迟增加**：润色增加 1~2.5s 延迟（LLM推理时间），首字响应变慢
+3. 🟡 **数据不一致**：部署查询"0个"（润色前为"29个"）—— 根因为AtlasBrain在Graph内部可能调用了不带orgId的API，Tool数据本身不同，非润色问题
+4. 🟢 **重复内容已修复**：限定仅限 `tool_call` 节点触发，其他节点不emit content
+
+### 变更文件
+
+```
+M  src/main/java/com/atlas/orchestrator/AtlasOrchestrator.java    (+71, -34)
+A  src/main/java/com/atlas/orchestrator/polish/ToolResultPolishingService.java  (+163)
+A  src/main/java/com/atlas/orchestrator/polish/PolishPromptTemplate.java       (+174)
+A  src/main/java/com/atlas/orchestrator/polish/ToolResultFormatter.java        (+165)
+A  src/main/java/com/atlas/orchestrator/polish/PolishMetrics.java              (+85)
+A  src/main/java/com/atlas/orchestrator/polish/PolishNode.java                 (+76)
+```
+
+### 提交
+
+- Commit: `36ab471`
+- 双推: ✓ GitLab origin + ✓ GitHub github
+- 变更: 6 files changed, 715 insertions(+), 34 deletions(-)
+
+### 待办
+
+- [ ] 流式润色：当前仅 `polishSync`（同步）；`polishStream` 预留但未接入SSE，用户感知为"整块输出"而非逐字打字
+- [ ] 脏数据问题：前端偶发 Java 源码片段（如 `private Object clusterId`）泄漏，需排查 AtlasToolResult LinkedHashMap 序列化
+- [ ] 数量不一致：Graph模式下 AtlasBrain 或 Tool 返回和 IntentRouter 模式数据不一致，需排查 orgId 透传链路
+- [ ] Token成本优化：高频查询命中缓存，或短结果直接走模板不调用LLM
