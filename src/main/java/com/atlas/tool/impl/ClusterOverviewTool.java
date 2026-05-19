@@ -47,7 +47,7 @@ public class ClusterOverviewTool extends BaseTool {
 
             String path = "/api/" + orgId + "/dashboard/resources";
             Map<String, Object> response = httpClient.get(path);
-            Object data = response.containsKey("result") ? response.get("result") : response;
+            Object data = extractData(response);
 
             return AtlasToolResult.ok("集群概览查询完成", data);
         } catch (Exception e) {

@@ -42,7 +42,7 @@ public class ImagePullTool extends BaseTool {
     @Override
     protected AtlasToolResult doExecute(Map<String, Object> params) {
         try {
-            String orgId = organizationId(params);
+            String orgId = resolveOrganizationId(params);
             String path = "/api/{orgId}/image/pull".replace("{orgId}", orgId);
 
             // image_pull 需要 imageName 参数
@@ -51,16 +51,11 @@ public class ImagePullTool extends BaseTool {
                 return AtlasToolResult.fail("缺少必填参数: imageName (镜像名称)");
             }
             Map<String, Object> response = httpClient.post(path, Map.of("imageName", imageName.toString()));
-            Object data = response.containsKey("result") ? response.get("result") : response;
+            Object data = extractData(response);
             return AtlasToolResult.ok("拉取容器镜像到仓库完成", data);
         } catch (Exception e) {
             log.error("[image_pull] 调用 kube-manager API 失败", e);
             return AtlasToolResult.fail("拉取容器镜像到仓库失败: " + e.getMessage());
         }
-    }
-
-    private String organizationId(Map<String, Object> params) {
-        Object value = params.get("organizationId") != null ? params.get("organizationId") : params.get("orgId");
-        return value != null && !value.toString().isBlank() ? value.toString() : "100001";
     }
 }

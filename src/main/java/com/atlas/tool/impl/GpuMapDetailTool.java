@@ -45,8 +45,8 @@ public class GpuMapDetailTool extends BaseTool {
         try {
             String path = "/api/gpu/all/gpu-map";
 
-            Map<String, Object> response = httpClient.get(path, Map.of());
-            Object data = response.containsKey("result") ? response.get("result") : response;
+            Map<String, Object> response = httpClient.getWithAutoPagination(path);
+            Object data = extractData(response);
             return AtlasToolResult.ok("查询GPU映射配置详情完成", data);
         } catch (Exception e) {
             log.error("[gpu_map_detail] 调用 kube-manager API 失败", e);

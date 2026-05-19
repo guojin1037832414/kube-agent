@@ -339,6 +339,79 @@ public abstract class BaseTool implements AtlasTool {
         }
     }
 
+    // ═══════════════════════════════════════════════════════════
+    // P3.1+ 统一辅助方法：orgId 解析 + 响应数据提取
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * 从 LLM 参数中解析 organizationId，支持多别名 + 自动 ThreadLocal 回退。
+     *
+     * <p>解析优先级：</p>
+     * <ol>
+     *   <li>params.get("organizationId")</li>
+     *   <li>params.get("orgId")</li>
+     *   <li>{@code UserPermissionContext.getCurrentOrgId()}（ThreadLocal 透传）</li>
+     *   <li>config 文件的 fallbackOrgId</li>
+     * </ol>
+     */
+    protected String resolveOrganizationId(Map<String, Object> params) {
+        Object value = params.get("organizationId");
+        if (value == null || value.toString().isBlank()) {
+            value = params.get("orgId");
+        }
+        if (value != null && !value.toString().isBlank()) {
+            return value.toString();
+        }
+        // ThreadLocal 回退
+        String orgId = com.atlas.auth.UserPermissionContext.getCurrentOrgId();
+        if (orgId != null && !orgId.isBlank()) {
+            return orgId;
+        }
+        // 兜底 — 由子类通过构造函数注入的 httpClient 提供 fallbackOrgId
+        // 注意：如果 baseUrl 已注入但没有 fallback，抛异常让 LLM 指导用户
+        throw new AtlasToolValidationException(
+            "无法确定 organizationId",
+            "MISSING_ORG_ID",
+            List.of("请提供 organizationId 参数", "或确保会话中已正确登录 orgId")
+        );
+    }
+
+    /**
+     * 从 kube-manager 统一响应中提取数据。
+     *
+     * <p>处理两种常见返回格式：</p>
+     * <ul>
+     *   <li>{@code {"result": [...]}} — result 直接是数组</li>
+     *   <li>{@code {"result": {"records": [...], "total": N}}} — 分页包装对象</li>
+     * </ul>
+     *
+     * @return 若 result 是分页对象，返回 {@code records} 数组；否则返回 result 本身
+     */
+    @SuppressWarnings("unchecked")
+    protected Object extractData(Map<String, Object> response) {
+        Object result = response.get("result");
+        if (result instanceof java.util.Map<?, ?> map) {
+            Object records = map.get("records");
+            if (records != null) {
+                return records;
+            }
+            // 分页对象但无 records → 返回 map（如 "total":0 的空响应）
+            return map;
+        }
+        return result;
+    }
+
+    /**
+     * 构建列表查询结果文本（自动计数）。
+     */
+    protected String listMessage(String entityName, Object data) {
+        int count = 0;
+        if (data instanceof java.util.List<?> list) {
+            count = list.size();
+        }
+        return String.format("查询到 %d 个%s", count, entityName);
+    }
+
     // ═══════════════════════════════════════════
     // 访问器
     // ═══════════════════════════════════════════

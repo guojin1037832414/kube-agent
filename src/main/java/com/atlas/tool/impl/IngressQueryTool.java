@@ -43,19 +43,14 @@ public class IngressQueryTool extends BaseTool {
     protected AtlasToolResult doExecute(Map<String, Object> params) {
         try {
             log.info("[ingress_query] 执行查询域名/Ingress");
-            String orgId = organizationId(params);
+            String orgId = resolveOrganizationId(params);
             String path = "/api/" + orgId + "/dashboard/deployment";
             Map<String, Object> response = httpClient.get(path);
-            Object data = response.containsKey("result") ? response.get("result") : response;
+            Object data = extractData(response);
             return AtlasToolResult.ok("Ingress 查询完成", data);
         } catch (Exception e) {
             log.error("[ingress_query] 调用 kube-manager API 失败", e);
             return AtlasToolResult.fail("Ingress 查询失败: " + e.getMessage());
         }
-    }
-
-    private String organizationId(Map<String, Object> params) {
-        Object value = params.get("organizationId") != null ? params.get("organizationId") : params.get("orgId");
-        return value != null && !value.toString().isBlank() ? value.toString() : "100001";
     }
 }

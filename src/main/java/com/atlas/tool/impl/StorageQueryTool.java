@@ -41,7 +41,7 @@ public class StorageQueryTool extends BaseTool {
     @Override
     protected AtlasToolResult doExecute(Map<String, Object> params) {
         try {
-            String orgId = organizationId(params);
+            String orgId = resolveOrganizationId(params);
             Map<String, Object> query = new LinkedHashMap<>();
             putIfPresent(query, "clusterId", params.get("clusterId"));
             putIfPresent(query, "namespace", params.get("namespace"));
@@ -79,11 +79,6 @@ public class StorageQueryTool extends BaseTool {
         if (value != null && !value.toString().isBlank()) {
             query.put(key, value);
         }
-    }
-
-    private String organizationId(Map<String, Object> params) {
-        Object value = params.get("organizationId") != null ? params.get("organizationId") : params.get("orgId");
-        return value != null && !value.toString().isBlank() ? value.toString() : "100001";
     }
 
     private boolean isNotFound(RestClientResponseException e) {

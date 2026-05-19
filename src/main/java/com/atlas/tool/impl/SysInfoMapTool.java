@@ -44,8 +44,8 @@ public class SysInfoMapTool extends BaseTool {
         try {
             String path = "/api/public/sys-info/all/map";
 
-            Map<String, Object> response = httpClient.get(path, Map.of());
-            Object data = response.containsKey("result") ? response.get("result") : response;
+            Map<String, Object> response = httpClient.getWithAutoPagination(path);
+            Object data = extractData(response);
             return AtlasToolResult.ok("查询系统信息配置完成", data);
         } catch (Exception e) {
             log.error("[sys_info_map] 调用 kube-manager API 失败", e);

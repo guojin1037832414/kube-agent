@@ -62,7 +62,7 @@ public class LogQueryTool extends BaseTool {
             });
 
             Map<String, Object> response = httpClient.get("/api/log", query.isEmpty() ? null : query);
-            Object data = response.containsKey("result") ? response.get("result") : response;
+            Object data = extractData(response);
             return AtlasToolResult.ok("日志查询完成", data);
         } catch (Exception e) {
             log.error("[log_query] 调用 kube-manager API 失败", e);

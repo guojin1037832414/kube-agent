@@ -39,8 +39,8 @@ public class NamespaceQueryTool extends BaseTool {
     protected AtlasToolResult doExecute(Map<String, Object> params) {
         try {
             String path = "/api/namespace";
-            Map<String, Object> response = httpClient.get(path, Map.of());
-            Object data = response.containsKey("result") ? response.get("result") : response;
+            Map<String, Object> response = httpClient.getWithAutoPagination(path);
+            Object data = extractData(response);
             return AtlasToolResult.ok("Namespace列表查询完成", data);
         } catch (Exception e) {
             log.error("[namespace_status] 调用 kube-manager API 失败", e);

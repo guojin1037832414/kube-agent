@@ -43,8 +43,8 @@ public class OrganizationListTool extends BaseTool {
     protected AtlasToolResult doExecute(Map<String, Object> params) {
         try {
             String path = "/api/organization";
-            Map<String, Object> response = httpClient.get(path, Map.of("page", "1", "limit", "100"));
-            Object data = response.containsKey("result") ? response.get("result") : response;
+            Map<String, Object> response = httpClient.getWithAutoPagination(path);
+            Object data = extractData(response);
             return AtlasToolResult.ok("查询组织列表完成", data);
         } catch (Exception e) {
             log.error("[organization_list] 调用 kube-manager API 失败", e);

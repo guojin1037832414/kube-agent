@@ -42,19 +42,14 @@ public class RoleQueryTool extends BaseTool {
     protected AtlasToolResult doExecute(Map<String, Object> params) {
         try {
             log.info("[role_query] 执行查询角色列表");
-            String orgId = organizationId(params);
+            String orgId = resolveOrganizationId(params);
             String path = "/api/" + orgId + "/role";
             Map<String, Object> response = httpClient.get(path);
-            Object data = response.containsKey("result") ? response.get("result") : response;
+            Object data = extractData(response);
             return AtlasToolResult.ok("角色列表查询完成", data);
         } catch (Exception e) {
             log.error("[role_query] 调用 kube-manager API 失败", e);
             return AtlasToolResult.fail("角色列表查询失败: " + e.getMessage());
         }
-    }
-
-    private String organizationId(Map<String, Object> params) {
-        Object value = params.get("organizationId") != null ? params.get("organizationId") : params.get("orgId");
-        return value != null && !value.toString().isBlank() ? value.toString() : "100001";
     }
 }

@@ -47,7 +47,7 @@ public class GpuQueryTool extends BaseTool {
 
             String path = "/api/" + orgId + "/node/all/gpu-map";
             Map<String, Object> response = httpClient.get(path);
-            Object data = response.containsKey("result") ? response.get("result") : response;
+            Object data = extractData(response);
 
             return AtlasToolResult.ok("GPU配置查询完成", data);
         } catch (Exception e) {

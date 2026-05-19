@@ -44,22 +44,17 @@ public class UserDeleteTool extends BaseTool {
         String target = params.get("userId") != null ? params.get("userId").toString() : "unknown";
 
         try {
-            String orgId = organizationId(params);
+            String orgId = resolveOrganizationId(params);
             Map<String, Object> response = httpClient.delete(
                 "/api/" + orgId + "/user/" + target,
                 Map.of()
             );
-            Object data = response.containsKey("result") ? response.get("result") : response;
+            Object data = extractData(response);
             String summary = "用户删除成功: " + target;
             return AtlasToolResult.ok(summary, data);
         } catch (Exception e) {
             log.error("[user_delete] 调用 kube-manager API 失败", e);
             return AtlasToolResult.fail("用户删除失败: " + e.getMessage());
         }
-    }
-
-    private String organizationId(Map<String, Object> params) {
-        Object value = params.get("organizationId") != null ? params.get("organizationId") : params.get("orgId");
-        return value != null && !value.toString().isBlank() ? value.toString() : "100001";
     }
 }

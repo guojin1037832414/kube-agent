@@ -47,22 +47,17 @@ public class MpiJobAbortTool extends BaseTool {
         }
 
         try {
-            String orgId = organizationId(params);
+            String orgId = resolveOrganizationId(params);
             Map<String, Object> response = httpClient.post(
                 "/api/" + orgId + "/mpi-job/abort/" + id,
                 Map.of()
             );
-            Object data = response.containsKey("result") ? response.get("result") : response;
+            Object data = extractData(response);
             String summary = "MPI任务已中止: ID=" + id;
             return AtlasToolResult.ok(summary, data);
         } catch (Exception e) {
             log.error("[mpi_job_abort] 调用 kube-manager API 失败", e);
             return AtlasToolResult.fail("MPI任务中止失败: " + e.getMessage());
         }
-    }
-
-    private String organizationId(Map<String, Object> params) {
-        Object value = params.get("organizationId") != null ? params.get("organizationId") : params.get("orgId");
-        return value != null && !value.toString().isBlank() ? value.toString() : "100001";
     }
 }

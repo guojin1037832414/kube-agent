@@ -47,22 +47,17 @@ public class HelmReleaseDeleteTool extends BaseTool {
         }
 
         try {
-            String orgId = organizationId(params);
+            String orgId = resolveOrganizationId(params);
             Map<String, Object> response = httpClient.delete(
                 "/api/" + orgId + "/helm/releases/" + releaseName,
                 Map.of()
             );
-            Object data = response.containsKey("result") ? response.get("result") : response;
+            Object data = extractData(response);
             String summary = "Helm Release已卸载: " + releaseName;
             return AtlasToolResult.ok(summary, data);
         } catch (Exception e) {
             log.error("[helm_release_delete] 调用 kube-manager API 失败", e);
             return AtlasToolResult.fail("Helm Release卸载失败: " + e.getMessage());
         }
-    }
-
-    private String organizationId(Map<String, Object> params) {
-        Object value = params.get("organizationId") != null ? params.get("organizationId") : params.get("orgId");
-        return value != null && !value.toString().isBlank() ? value.toString() : "100001";
     }
 }

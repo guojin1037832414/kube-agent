@@ -43,20 +43,15 @@ public class RoleAssignableListTool extends BaseTool {
     @Override
     protected AtlasToolResult doExecute(Map<String, Object> params) {
         try {
-            String orgId = organizationId(params);
+            String orgId = resolveOrganizationId(params);
             String path = "/api/{orgId}/role/assignable".replace("{orgId}", orgId);
 
-            Map<String, Object> response = httpClient.get(path, Map.of());
-            Object data = response.containsKey("result") ? response.get("result") : response;
+            Map<String, Object> response = httpClient.getWithAutoPagination(path);
+            Object data = extractData(response);
             return AtlasToolResult.ok("查询可分配角色列表完成", data);
         } catch (Exception e) {
             log.error("[role_assignable] 调用 kube-manager API 失败", e);
             return AtlasToolResult.fail("查询可分配角色列表失败: " + e.getMessage());
         }
-    }
-
-    private String organizationId(Map<String, Object> params) {
-        Object value = params.get("organizationId") != null ? params.get("organizationId") : params.get("orgId");
-        return value != null && !value.toString().isBlank() ? value.toString() : "100001";
     }
 }

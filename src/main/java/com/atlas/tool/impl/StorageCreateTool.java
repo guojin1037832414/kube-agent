@@ -62,10 +62,10 @@ public class StorageCreateTool extends BaseTool {
         log.info("[storage_create] 创建PVC name={}, size={}Gi, class={}", name, size, storageClass);
 
         try {
-            String orgId = organizationId(params);
+            String orgId = resolveOrganizationId(params);
             Map<String, Object> body = buildCreateBody(params, name, size, storageClass);
             Map<String, Object> response = httpClient.post("/api/" + orgId + "/file/storage", body);
-            Object data = response.containsKey("result") ? response.get("result") : response;
+            Object data = extractData(response);
 
             String summary = "存储卷 '" + name + "' (" + size + "Gi, class: " + storageClass + ") 创建任务已提交";
             return AtlasToolResult.ok(summary, data);
@@ -91,10 +91,5 @@ public class StorageCreateTool extends BaseTool {
             }
         });
         return body;
-    }
-
-    private String organizationId(Map<String, Object> params) {
-        Object value = params.get("organizationId") != null ? params.get("organizationId") : params.get("orgId");
-        return value != null && !value.toString().isBlank() ? value.toString() : "100001";
     }
 }

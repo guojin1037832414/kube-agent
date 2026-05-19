@@ -43,19 +43,14 @@ public class NetworkQueryTool extends BaseTool {
     protected AtlasToolResult doExecute(Map<String, Object> params) {
         try {
             log.info("[network_query] 执行查询网络配置");
-            String orgId = organizationId(params);
+            String orgId = resolveOrganizationId(params);
             String path = "/api/" + orgId + "/dashboard/deployment";
             Map<String, Object> response = httpClient.get(path);
-            Object data = response.containsKey("result") ? response.get("result") : response;
+            Object data = extractData(response);
             return AtlasToolResult.ok("网络配置查询完成", data);
         } catch (Exception e) {
             log.error("[network_query] 调用 kube-manager API 失败", e);
             return AtlasToolResult.fail("网络配置查询失败: " + e.getMessage());
         }
-    }
-
-    private String organizationId(Map<String, Object> params) {
-        Object value = params.get("organizationId") != null ? params.get("organizationId") : params.get("orgId");
-        return value != null && !value.toString().isBlank() ? value.toString() : "100001";
     }
 }

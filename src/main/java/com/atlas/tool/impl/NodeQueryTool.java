@@ -41,23 +41,13 @@ public class NodeQueryTool extends BaseTool {
     @Override
     protected AtlasToolResult doExecute(Map<String, Object> params) {
         try {
-            // ① 从参数获取组织ID，默认 100001
-            String orgId = params.get("organizationId") != null
-                ? params.get("organizationId").toString()
-                : "100001";
+            String orgId = resolveOrganizationId(params);
 
-            // ② 调用 kube-manager 真实 API
             String path = "/api/" + orgId + "/node";
-            Map<String, Object> response = httpClient.get(path, Map.of("page", "1", "limit", "100"));
+            Map<String, Object> response = httpClient.getWithAutoPagination(path);
+            Object data = extractData(response);
 
-            // ③ 提取实际数据（如果响应有嵌套 result 结构）
-            Object data = response.containsKey("result") ? response.get("result") : response;
-
-            String summary = data instanceof java.util.List
-                ? String.format("集群共有 %d 个节点", ((java.util.List<?>) data).size())
-                : "节点查询完成";
-
-            return AtlasToolResult.ok(summary, data);
+            return AtlasToolResult.ok(listMessage("节点", data), data);
         } catch (Exception e) {
             log.error("[node_query] 调用 kube-manager API 失败", e);
             return AtlasToolResult.fail("节点查询失败: " + e.getMessage());

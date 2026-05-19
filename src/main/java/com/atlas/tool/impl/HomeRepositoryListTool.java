@@ -44,8 +44,8 @@ public class HomeRepositoryListTool extends BaseTool {
         try {
             String path = "/api/public/home-info/repository";
 
-            Map<String, Object> response = httpClient.get(path, Map.of());
-            Object data = response.containsKey("result") ? response.get("result") : response;
+            Map<String, Object> response = httpClient.getWithAutoPagination(path);
+            Object data = extractData(response);
             return AtlasToolResult.ok("查询首页AI应用仓库列表完成", data);
         } catch (Exception e) {
             log.error("[home_repository_list] 调用 kube-manager API 失败", e);

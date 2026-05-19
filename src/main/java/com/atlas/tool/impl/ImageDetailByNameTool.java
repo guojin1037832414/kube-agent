@@ -42,23 +42,18 @@ public class ImageDetailByNameTool extends BaseTool {
     @Override
     protected AtlasToolResult doExecute(Map<String, Object> params) {
         try {
-            String orgId = organizationId(params);
+            String orgId = resolveOrganizationId(params);
             String path = "/api/{orgId}/image/name".replace("{orgId}", orgId);
             Object nameParam = params.get("name");
             if (nameParam != null && !nameParam.toString().isBlank()) {
                 path += "?name=" + nameParam;
             }
-            Map<String, Object> response = httpClient.get(path, Map.of("page", "1", "limit", "100"));
-            Object data = response.containsKey("result") ? response.get("result") : response;
+            Map<String, Object> response = httpClient.getWithAutoPagination(path);
+            Object data = extractData(response);
             return AtlasToolResult.ok("根据名称查询镜像详情完成", data);
         } catch (Exception e) {
             log.error("[image_detail_by_name] 调用 kube-manager API 失败", e);
             return AtlasToolResult.fail("根据名称查询镜像详情失败: " + e.getMessage());
         }
-    }
-
-    private String organizationId(Map<String, Object> params) {
-        Object value = params.get("organizationId") != null ? params.get("organizationId") : params.get("orgId");
-        return value != null && !value.toString().isBlank() ? value.toString() : "100001";
     }
 }

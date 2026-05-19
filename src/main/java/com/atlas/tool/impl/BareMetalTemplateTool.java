@@ -45,8 +45,8 @@ public class BareMetalTemplateTool extends BaseTool {
         try {
             String path = "/api/bare-metal-config-template";
 
-            Map<String, Object> response = httpClient.get(path, Map.of());
-            Object data = response.containsKey("result") ? response.get("result") : response;
+            Map<String, Object> response = httpClient.getWithAutoPagination(path);
+            Object data = extractData(response);
             return AtlasToolResult.ok("查询裸金属配置模板列表完成", data);
         } catch (Exception e) {
             log.error("[bare_metal_template] 调用 kube-manager API 失败", e);

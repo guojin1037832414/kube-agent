@@ -38,19 +38,14 @@ public class NodeMetricsTool extends BaseTool {
     @Override
     protected AtlasToolResult doExecute(Map<String, Object> params) {
         try {
-            String orgId = organizationId(params);
+            String orgId = resolveOrganizationId(params);
             String path = "/api/" + orgId + "/node";
-            Map<String, Object> response = httpClient.get(path, Map.of("current", "1", "size", "100"));
-            Object data = response.containsKey("result") ? response.get("result") : response;
+            Map<String, Object> response = httpClient.getWithAutoPagination(path);
+            Object data = extractData(response);
             return AtlasToolResult.ok("节点列表及资源使用率查询完成", data);
         } catch (Exception e) {
             log.error("[node_metrics] 调用 kube-manager API 失败", e);
             return AtlasToolResult.fail("节点列表及资源使用率查询失败: " + e.getMessage());
         }
-    }
-
-    private String organizationId(Map<String, Object> params) {
-        Object value = params.get("organizationId") != null ? params.get("organizationId") : params.get("orgId");
-        return value != null && !value.toString().isBlank() ? value.toString() : "100001";
     }
 }

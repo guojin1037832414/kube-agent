@@ -87,11 +87,11 @@ public class DeployCreateTool extends BaseTool {
         log.info("[deploy_create_instance] 创建实例 name={}, image={}, cpu={}, mem={}", name, image, cpu, mem);
 
         try {
-            String orgId = organizationId(params);
+            String orgId = resolveOrganizationId(params);
             String path = "/api/" + orgId + "/deployment";
             Map<String, Object> body = buildCreateBody(params, name, image, cpu, mem, gpu, replicas, bw, ssh, autoScale);
             Map<String, Object> response = httpClient.post(path, body);
-            Object data = response.containsKey("result") ? response.get("result") : response;
+            Object data = extractData(response);
 
             String summary = "实例 '" + name + "' 创建任务已提交 (镜像: " + image + ", CPU: " + cpu + "核, 内存: " + mem + "GB)";
             return AtlasToolResult.ok(summary, data);
@@ -134,11 +134,6 @@ public class DeployCreateTool extends BaseTool {
             }
         });
         return body;
-    }
-
-    private String organizationId(Map<String, Object> params) {
-        Object value = params.get("organizationId") != null ? params.get("organizationId") : params.get("orgId");
-        return value != null && !value.toString().isBlank() ? value.toString() : "100001";
     }
 
     private int getIntParam(Map<String, Object> params, String key, int defaultVal) {

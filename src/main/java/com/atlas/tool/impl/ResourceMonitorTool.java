@@ -43,19 +43,14 @@ public class ResourceMonitorTool extends BaseTool {
     protected AtlasToolResult doExecute(Map<String, Object> params) {
         try {
             log.info("[resource_monitor] 执行资源监控查询(CPU/内存/存储)");
-            String orgId = organizationId(params);
+            String orgId = resolveOrganizationId(params);
             String path = "/api/" + orgId + "/resource";
             Map<String, Object> response = httpClient.get(path);
-            Object data = response.containsKey("result") ? response.get("result") : response;
+            Object data = extractData(response);
             return AtlasToolResult.ok("资源监控查询完成", data);
         } catch (Exception e) {
             log.error("[resource_monitor] 调用 kube-manager API 失败", e);
             return AtlasToolResult.fail("资源监控查询失败: " + e.getMessage());
         }
-    }
-
-    private String organizationId(Map<String, Object> params) {
-        Object value = params.get("organizationId") != null ? params.get("organizationId") : params.get("orgId");
-        return value != null && !value.toString().isBlank() ? value.toString() : "100001";
     }
 }

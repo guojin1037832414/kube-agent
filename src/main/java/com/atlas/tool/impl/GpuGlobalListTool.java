@@ -43,8 +43,8 @@ public class GpuGlobalListTool extends BaseTool {
     protected AtlasToolResult doExecute(Map<String, Object> params) {
         try {
             String path = "/api/gpu";
-            Map<String, Object> response = httpClient.get(path, Map.of("page", "1", "limit", "100"));
-            Object data = response.containsKey("result") ? response.get("result") : response;
+            Map<String, Object> response = httpClient.getWithAutoPagination(path);
+            Object data = extractData(response);
             return AtlasToolResult.ok("查询全局GPU信息列表完成", data);
         } catch (Exception e) {
             log.error("[gpu_global_list] 调用 kube-manager API 失败", e);

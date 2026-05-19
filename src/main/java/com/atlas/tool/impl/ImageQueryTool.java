@@ -46,8 +46,8 @@ public class ImageQueryTool extends BaseTool {
                 : "100001";
 
             String path = "/api/" + orgId + "/image";
-            Map<String, Object> response = httpClient.get(path, Map.of("current", "1", "size", "100"));
-            Object data = response.containsKey("result") ? response.get("result") : response;
+            Map<String, Object> response = httpClient.getWithAutoPagination(path);
+            Object data = extractData(response);
 
             return AtlasToolResult.ok("镜像查询完成", data);
         } catch (Exception e) {

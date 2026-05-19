@@ -38,19 +38,14 @@ public class UserManagementTool extends BaseTool {
     @Override
     protected AtlasToolResult doExecute(Map<String, Object> params) {
         try {
-            String orgId = organizationId(params);
+            String orgId = resolveOrganizationId(params);
             String path = "/api/" + orgId + "/user";
-            Map<String, Object> response = httpClient.get(path, Map.of("current", "1", "size", "100"));
-            Object data = response.containsKey("result") ? response.get("result") : response;
+            Map<String, Object> response = httpClient.getWithAutoPagination(path);
+            Object data = extractData(response);
             return AtlasToolResult.ok("用户管理列表查询完成", data);
         } catch (Exception e) {
             log.error("[user_management] 调用 kube-manager API 失败", e);
             return AtlasToolResult.fail("用户管理列表查询失败: " + e.getMessage());
         }
-    }
-
-    private String organizationId(Map<String, Object> params) {
-        Object value = params.get("organizationId") != null ? params.get("organizationId") : params.get("orgId");
-        return value != null && !value.toString().isBlank() ? value.toString() : "100001";
     }
 }

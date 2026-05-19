@@ -42,20 +42,15 @@ public class QuotaReceiveListTool extends BaseTool {
     @Override
     protected AtlasToolResult doExecute(Map<String, Object> params) {
         try {
-            String orgId = organizationId(params);
+            String orgId = resolveOrganizationId(params);
             String path = "/api/" + orgId + "/quota/receive";
 
-            Map<String, Object> response = httpClient.get(path, Map.of("page", "1", "limit", "100"));
-            Object data = response.containsKey("result") ? response.get("result") : response;
+            Map<String, Object> response = httpClient.getWithAutoPagination(path);
+            Object data = extractData(response);
             return AtlasToolResult.ok("查询配额审批列表完成", data);
         } catch (Exception e) {
             log.error("[quota_receive_list] 调用 kube-manager API 失败", e);
             return AtlasToolResult.fail("查询配额审批列表失败: " + e.getMessage());
         }
-    }
-
-    private String organizationId(Map<String, Object> params) {
-        Object value = params.get("organizationId") != null ? params.get("organizationId") : params.get("orgId");
-        return value != null && !value.toString().isBlank() ? value.toString() : "100001";
     }
 }

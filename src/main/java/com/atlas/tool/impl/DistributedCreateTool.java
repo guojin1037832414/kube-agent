@@ -44,12 +44,12 @@ public class DistributedCreateTool extends BaseTool {
         String createdName = params.get("name") != null ? params.get("name").toString() : "unknown";
 
         try {
-            String orgId = organizationId(params);
+            String orgId = resolveOrganizationId(params);
             Map<String, Object> response = httpClient.post(
                 "/api/" + orgId + "/bcm/slurm-cluster",
                 filterNullParams(params)
             );
-            Object data = response.containsKey("result") ? response.get("result") : response;
+            Object data = extractData(response);
             String summary = "创建任务 '" + createdName + "' 已提交";
             return AtlasToolResult.ok(summary, data);
         } catch (Exception e) {
@@ -66,10 +66,5 @@ public class DistributedCreateTool extends BaseTool {
             }
         });
         return body;
-    }
-
-    private String organizationId(Map<String, Object> params) {
-        Object value = params.get("organizationId") != null ? params.get("organizationId") : params.get("orgId");
-        return value != null && !value.toString().isBlank() ? value.toString() : "100001";
     }
 }

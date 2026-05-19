@@ -43,24 +43,19 @@ public class HelmChartInfoTool extends BaseTool {
     @Override
     protected AtlasToolResult doExecute(Map<String, Object> params) {
         try {
-            String orgId = organizationId(params);
+            String orgId = resolveOrganizationId(params);
             String path = "/api/{orgId}/helm/charts/single".replace("{orgId}", orgId);
 
             Object chartParam = params.get("chart");
             if (chartParam != null && !chartParam.toString().isBlank()) {
                 path += "?chart=" + chartParam;
             }
-            Map<String, Object> response = httpClient.get(path, Map.of());
-            Object data = response.containsKey("result") ? response.get("result") : response;
+            Map<String, Object> response = httpClient.getWithAutoPagination(path);
+            Object data = extractData(response);
             return AtlasToolResult.ok("查询Helm Chart详情完成", data);
         } catch (Exception e) {
             log.error("[helm_chart_info] 调用 kube-manager API 失败", e);
             return AtlasToolResult.fail("查询Helm Chart详情失败: " + e.getMessage());
         }
-    }
-
-    private String organizationId(Map<String, Object> params) {
-        Object value = params.get("organizationId") != null ? params.get("organizationId") : params.get("orgId");
-        return value != null && !value.toString().isBlank() ? value.toString() : "100001";
     }
 }
