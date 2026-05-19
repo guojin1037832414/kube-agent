@@ -82,6 +82,43 @@ public class AsyncContextHolder {
     }
 
     /**
+     * 包装 Runnable — 同时透传 token + orgId（P3.1 orgId 链路修复新增）。
+     *
+     * <p>用法：</p>
+     * <pre>{@code
+     * String token = userPermissionContext.getCurrentToken();
+     * String orgId = UserPermissionContext.getCurrentOrgId();
+     * CompletableFuture.runAsync(AsyncContextHolder.wrap(() -> ... , token, orgId));
+     * }</pre>
+     */
+    public static Runnable wrap(Runnable task, String token, String orgId) {
+        boolean hasToken = token != null && !token.isBlank();
+        boolean hasOrgId = orgId != null && !orgId.isBlank();
+        if (!hasToken && !hasOrgId) {
+            log.debug("[AsyncContextHolder] Token 和 OrgId 均为空，跳过上下文包装");
+            return task;
+        }
+        return () -> {
+            if (hasToken) {
+                UserPermissionContext.CURRENT_TOKEN.set(token);
+            }
+            if (hasOrgId) {
+                UserPermissionContext.CURRENT_ORG_ID.set(orgId);
+            }
+            log.debug("[AsyncContextHolder] Token+OrgId 已绑定到异步线程: token={}, orgId={}",
+                hasToken ? token.substring(0, Math.min(8, token.length())) + "..." : "none",
+                hasOrgId ? orgId : "none");
+            try {
+                task.run();
+            } finally {
+                UserPermissionContext.CURRENT_TOKEN.remove();
+                UserPermissionContext.CURRENT_ORG_ID.remove();
+                log.debug("[AsyncContextHolder] Token+OrgId 已从异步线程解绑");
+            }
+        };
+    }
+
+    /**
      * 包装 Supplier（用于 {@link CompletableFuture#supplyAsync(Supplier, Executor)}）。
      *
      * @param supplier 原始 Supplier

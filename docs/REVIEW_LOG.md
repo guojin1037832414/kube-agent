@@ -342,3 +342,33 @@ Tests: 86, Failures: 0, Errors: 0, Skipped: 0 — BUILD SUCCESS
 - 双推: ✓ GitLab origin + ✓ GitHub github
 - 变更: 14 files, +2144/-4
 
+
+---
+
+## 2026-05-19 M2.6 完成：UserPermissionContext 缓存升级 Caffeine + HITL 端到端验证
+
+### 实现内容
+
+**M2.6 UserPermissionContext.cache → Caffeine（30min TTL）：**
+1. 裸 `ConcurrentHashMap` → `Caffeine.newBuilder().expireAfterAccess(30min).maximumSize(10000).build()`
+2. `onLogin` 加 TTL 日志标识
+3. `onLogout`：`getIfPresent` + `invalidate` 替代 `Map.remove`
+4. `current()`：`getIfPresent` 替代 `Map.get`
+5. 86 个测试全过，BUILD SUCCESS
+
+**HITL 弹窗验证（浏览器端到端）：**
+6. `AtlasBrain.isHighRisk()` 含"删除"→ 触发 `HITL_CONFIRM` → SSE `hitl_request`
+7. 前端 ChatView.vue watch(pendingHitl) → ElMessageBox.prompt 命令式确认弹窗
+8. 测试场景：用户说"删除名为 aaaa 的实例" → 弹窗"⚠️ 高危操作确认" → Escape 取消 → 操作终止
+9. 前端 router 加 `?dev=1` 开发模式跳过登录（便于浏览器自动化测试）
+
+### 前端改动
+
+- `src/router/index.ts`：路由守卫 `!to.query.dev`（前端 dev 分支 `1b76eec`）
+
+### 提交
+
+- 后端: `b1418e2` (M1.5), `46fbff3` (SSE fix), `70f8626` (REVIEW_LOG)
+- 前端: `1b76eec` dev 分支
+- 双推: ✓ GitLab origin
+

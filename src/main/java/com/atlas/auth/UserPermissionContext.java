@@ -50,6 +50,12 @@ public class UserPermissionContext {
      */
     public static final ThreadLocal<String> CURRENT_TOKEN = new ThreadLocal<>();
 
+    /**
+     * ThreadLocal — 当前请求上下文中的组织 ID（P3.1 orgId 链路修复新增）。
+     * <p>与 CURRENT_TOKEN 配对使用，保证 orgId 在异步线程中不丢失。</p>
+     */
+    public static final ThreadLocal<String> CURRENT_ORG_ID = new ThreadLocal<>();
+
     /** 内存权限缓存：token → 用户权限快照（Caffeine，30min TTL） */
     private final Cache<String, UserPermission> cache;
 
@@ -101,10 +107,26 @@ public class UserPermissionContext {
     }
 
     /**
+     * 同时绑定 token 和 orgId 到当前线程（P3.1 orgId 链路修复新增）。
+     * <p>用于 AtlasOrchestrator.streamChat() 在认证成功后手动绑定上下文。</p>
+     *
+     * @param token  JWT Token
+     * @param orgId  组织 ID
+     */
+    public void bind(String token, String orgId) {
+        CURRENT_TOKEN.set(token);
+        if (orgId != null && !orgId.isBlank()) {
+            CURRENT_ORG_ID.set(orgId);
+        }
+    }
+
+    /**
      * 请求结束后清除 ThreadLocal（防止线程池复用导致信息泄漏）。
+     * <p>P3.1：同时清除 CURRENT_ORG_ID。</p>
      */
     public void unbind() {
         CURRENT_TOKEN.remove();
+        CURRENT_ORG_ID.remove();
     }
 
     /**
@@ -123,6 +145,15 @@ public class UserPermissionContext {
      */
     public String getCurrentToken() {
         return CURRENT_TOKEN.get();
+    }
+
+    /**
+     * 便捷方法：获取当前线程绑定的组织ID（P3.1 orgId 链路修复新增）。
+     *
+     * @return 当前线程的 orgId，null 表示未绑定
+     */
+    public static String getCurrentOrgId() {
+        return CURRENT_ORG_ID.get();
     }
 
     // ═══════════════════════════════════════════════════════════

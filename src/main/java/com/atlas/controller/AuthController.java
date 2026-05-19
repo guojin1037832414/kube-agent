@@ -47,17 +47,20 @@ public class AuthController {
     private final UserPermissionContext userPermissionContext;
     private final SessionStore sessionStore;
     private final ObjectMapper objectMapper;
+    private final KubeManagerHttpClient kubeManagerClient;  // ← P3.1: 用于登录后反查 orgId
 
     public AuthController(
             @Value("${kube.manager.base-url:http://localhost:8100}") String baseUrl,
             RestClient.Builder restClientBuilder,
             UserPermissionContext userPermissionContext,
             SessionStore sessionStore,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            KubeManagerHttpClient kubeManagerClient) {
         this.restClient = restClientBuilder.baseUrl(baseUrl).build();
         this.userPermissionContext = userPermissionContext;
         this.sessionStore = sessionStore;
         this.objectMapper = objectMapper;
+        this.kubeManagerClient = kubeManagerClient;
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -129,17 +132,40 @@ public class AuthController {
                         .body(ApiResponse.fail("登录服务响应异常"));
             }
 
-            // 提取用户信息
+            // 尝试从响应中解析更详细的用户信息
+            // kube-manager 返回格式可能为 {"result": {"orgId":"100002", "token":"jwt..."}, "success": true}
+            // 或 {"user": {"organizationId":"100002"}, ...}
             String username = request.getUsername();
             String resolvedOrgId = orgId;
             String role = "user";
             Set<String> permissions = Set.of();
 
-            // 尝试从响应中解析更详细的用户信息
+            // 1. 尝试 result 对象（kube-manager /api/login 的实际格式）
+            JsonNode resultNode = root.path("result");
+            if (resultNode.isObject()) {
+                resolvedOrgId = resultNode.path("orgId").asText(resolvedOrgId);
+                resolvedOrgId = resultNode.path("organizationId").asText(resolvedOrgId);
+            }
+            // 2. 尝试 user 节点
             JsonNode userNode = root.path("user");
             if (userNode.isObject()) {
                 resolvedOrgId = userNode.path("organizationId").asText(resolvedOrgId);
                 role = userNode.path("role").asText(role);
+            }
+            // 3. 根级别 fallback
+            resolvedOrgId = root.path("organizationId").asText(resolvedOrgId);
+
+            // P3.1: 如果响应未包含 orgId，用 token 反查（kube-manager 返回 result 为纯 JWT String）
+            if (resolvedOrgId == null || resolvedOrgId.isBlank() || "1".equals(resolvedOrgId)) {
+                try {
+                    String fetchedOrgId = kubeManagerClient.resolveOrgId(username, token);
+                    if (fetchedOrgId != null && !fetchedOrgId.isBlank() && !"sysadmin".equals(fetchedOrgId)) {
+                        resolvedOrgId = fetchedOrgId;
+                        log.info("[Auth] 登录后反查 orgId: user={}, orgId={}", username, resolvedOrgId);
+                    }
+                } catch (Exception e) {
+                    log.warn("[Auth] 登录后反查 orgId 失败，使用默认值: user={}, error={}", username, e.getMessage());
+                }
             }
 
             // ── 缓存到 UserPermissionContext ──

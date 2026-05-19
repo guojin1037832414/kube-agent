@@ -5,6 +5,7 @@ import com.atlas.auth.async.AsyncContextHolder;
 import com.atlas.http.KubeManagerHttpClient;
 import com.atlas.intent.IntentRouter;
 import com.atlas.intent.core.IntentResult;
+import com.atlas.store.SessionStore;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.tool.core.BaseTool;
 import com.atlas.tool.core.ToolRegistry;
@@ -65,6 +66,11 @@ public class AtlasOrchestrator {
      */
     private final com.alibaba.cloud.ai.graph.CompiledGraph compiledGraph;
 
+    /**
+     * 会话存储 — 从 X-Session-Id 反查 JWT Token，驱动后端 API 调用权限。
+     */
+    private final SessionStore sessionStore;
+
     /** 每用户最大并发连接数 */
     private static final int MAX_PER_USER = 3;
     private final Map<String, Integer> userConnections = new ConcurrentHashMap<>();
@@ -86,6 +92,7 @@ public class AtlasOrchestrator {
                              KubeManagerHttpClient kubeManagerClient,
                              TimedDecisionCache decisionCache,
                              @Qualifier("atlasTaskExecutor") Executor asyncExecutor,
+                             SessionStore sessionStore,
                              @Autowired(required = false)
                              @Qualifier("supervisorGraph")
                              com.alibaba.cloud.ai.graph.CompiledGraph supervisorGraph,
@@ -99,6 +106,7 @@ public class AtlasOrchestrator {
         this.kubeManagerClient = kubeManagerClient;
         this.decisionCache = decisionCache;
         this.asyncExecutor = asyncExecutor;
+        this.sessionStore = sessionStore;
         this.supervisorGraph = supervisorGraph;
         this.compiledGraph = compiledGraph;
         log.info("[Orchestrator] 初始化完成 | SupervisorGraph: {} | AtlasGraph: {}",
@@ -119,14 +127,47 @@ public class AtlasOrchestrator {
      * </ol>
      */
     @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter streamChat(@RequestBody ChatRequest request) {
-        String userId = request.userId() != null ? request.userId() : "anonymous";
-        String sessionId = userId + "-" + System.currentTimeMillis();
+    public SseEmitter streamChat(@RequestBody ChatRequest request,
+                                  jakarta.servlet.http.HttpServletRequest httpReq) {
+        // ── M2.7 认证修复: 从 header 或 query param 提取 X-Session-Id，反查 JWT Token
+        String clientSessionId = httpReq.getHeader("X-Session-Id");
+        if (clientSessionId == null || clientSessionId.isBlank()) {
+            clientSessionId = httpReq.getParameter("sessionId");
+        }
 
-        // ① 主线程捕获 Token（必须在 runAsync 之前！）
-        String capturedToken = userPermissionContext.getCurrentToken();
+        String userId = "anonymous";
+        String sessionId = userId + "-" + System.currentTimeMillis();
+        String capturedToken = null;
+        String capturedOrgId = null;  // P3.1: 从 SessionData 直接取 orgId
+
+        if (clientSessionId != null && !clientSessionId.isBlank()) {
+            var sessionOpt = sessionStore.findById(clientSessionId);
+            if (sessionOpt.isPresent()) {
+                var sessionData = sessionOpt.get();
+                capturedToken = sessionData.token();
+                capturedOrgId = sessionData.organizationId();  // ← 直接取，不再桶式搜索
+                userId = sessionData.username() != null ? sessionData.username() : "anonymous";
+                // sessionId 保留内部追踪用途，仍用 clientSessionId 前缀加时间戳避免冲突
+                sessionId = clientSessionId + "-" + System.currentTimeMillis();
+                // 绑定 ThreadLocal（主线程），供异步透传使用
+                userPermissionContext.bind(capturedToken, capturedOrgId);  // ← 同时绑定 token+orgId
+                log.info("[Orchestrator] SSE 认证成功: user={}, orgId={}, sessionId={}, token={}...",
+                    userId, capturedOrgId, clientSessionId,
+                    capturedToken.length() > 8 ? capturedToken.substring(0, 8) : capturedToken);
+            } else {
+                log.warn("[Orchestrator] X-Session-Id 无效或已过期: {}", clientSessionId);
+            }
+        }
+
+        // 如果 SessionStore 未命中，回退到 AuthTokenFilter 可能已绑定的 Token
         if (capturedToken == null || capturedToken.isBlank()) {
-            log.warn("[Orchestrator] 请求未携带 Token（匿名用户）");
+            capturedToken = userPermissionContext.getCurrentToken();
+            if (capturedToken != null && !capturedToken.isBlank()) {
+                log.info("[Orchestrator] SSE 回退到 Authorization Bearer Token");
+            }
+        }
+        if (capturedToken == null || capturedToken.isBlank()) {
+            log.warn("[Orchestrator] 请求未携带有效 Token（匿名用户）");
         }
 
         // 连接限流
@@ -143,12 +184,18 @@ public class AtlasOrchestrator {
         userConnections.merge(userId, 1, Integer::sum);
         SseEmitter emitter = streamingEmitter.createEmitter(sessionId);
 
-        // ② 异步任务 — Token 显式透传
+        // ── final 包装：Java lambda 要求引用的局部变量为 final/effectively final
+        // ② 异步任务 — Token + OrgId 显式透传（P3.1 修复）
+        final var finalUserId = userId;
+        final var finalSessionId = sessionId;
+        final var finalToken = capturedToken;
+        final var finalOrgId = capturedOrgId;  // ← P3.1 新增
+
         Runnable asyncTask = () -> {
             try {
                 // Phase 1: Supervisor Graph 优先路由（AtlasBrain 决策 + 条件边）
                 if (supervisorGraph != null) {
-                    runSupervisorGraph(request, emitter, userId, sessionId, capturedToken);
+                    runSupervisorGraph(request, emitter, finalUserId, finalSessionId, finalToken, finalOrgId);
                     return;
                 }
 
@@ -160,9 +207,9 @@ public class AtlasOrchestrator {
                 // 2. 意图路由
                 IntentResult result = intentRouter.route(request.userQuery());
                 log.info("[Orchestrator] {} → {} ({}, norm={:.3f})",
-                    sessionId, result.intentId(), result.matchedLevel(), result.confidence());
+                    finalSessionId, result.intentId(), result.matchedLevel(), result.confidence());
 
-                // 3. content — 返回分类结果
+                // 3. content — 返回意图分类结果
                 emit(emitter, "content", Map.of(
                     "intentId", result.intentId(),
                     "description", result.description(),
@@ -181,14 +228,16 @@ public class AtlasOrchestrator {
                         emit(emitter, "tool_call", Map.of("tool", result.intentId()));
 
                         try {
-                            // P1.4 修复：按用户名解析组织ID，Tool 内部据此路由到正确的后端 API
-                            String orgId = kubeManagerClient.resolveOrgId(userId, capturedToken);
-                            if ("sysadmin".equals(orgId)) {
-                                // 超管穿透：使用系统专用组织ID（kube-manager 超管可跨组织查询）
-                                orgId = "100001";
+                            // P3.1 修复：直接从 SessionData 取 orgId（不再桶式搜索/硬编码）
+                            String orgId = finalOrgId;
+                            if (orgId == null || orgId.isBlank()) {
+                                orgId = UserPermissionContext.getCurrentOrgId(); // 异步 ThreadLocal 透传
+                            }
+                            if (orgId == null || orgId.isBlank()) {
+                                orgId = kubeManagerClient.getFallbackOrgId(); // 配置文件兜底
                             }
                             Map<String, Object> toolParams = new java.util.HashMap<>();
-                            toolParams.put("userId", userId);
+                            toolParams.put("userId", finalUserId);
                             toolParams.put("organizationId", orgId);
 
                             Map<String, Object> toolResult = tool.execute(toolParams);
@@ -197,49 +246,49 @@ public class AtlasOrchestrator {
                                 ? toolResult.get("message").toString() : "";
                             Object data = toolResult.get("data");
 
-                            emit(emitter, "tool_result", Map.of(
-                                "success", success,
-                                "message", message,
-                                "tool", result.intentId(),
-                                "data", data != null ? data : Map.of()
-                            ));
+                            // M2.7 Fix: 将 tool_result 转成 content 推送给前端（SSE v3 类型对齐）
+                            StringBuilder resultText = new StringBuilder();
+                            if (success) {
+                                resultText.append("✅ ").append(message);
+                                if (data != null) {
+                                    resultText.append("\n\n```\n").append(data).append("\n```");
+                                }
+                            } else {
+                                resultText.append("❌ ").append(message);
+                            }
+                            emit(emitter, "content", Map.of("content", resultText.toString()));
                         } catch (Exception e) {
                             log.error("[Orchestrator] Tool '{}' 执行异常", result.intentId(), e);
-                            emit(emitter, "tool_result", Map.of(
-                                "success", false,
-                                "message", "Tool 执行异常: " + e.getMessage(),
-                                "tool", result.intentId()
+                            emit(emitter, "content", Map.of(
+                                "content", "❌ Tool 执行异常: " + e.getMessage()
                             ));
                         }
                     } else {
-                        log.warn("[Orchestrator] 用户 {} 越权尝试执行意图 '{}'", userId, result.intentId());
-                        emit(emitter, "tool_result", Map.of(
-                            "success", false,
-                            "error", "权限不足",
-                            "message", "当前用户无权执行此操作",
-                            "deniedIntent", result.intentId()
-                        ));
+                        // 权限不足
+                        emit(emitter, "content", Map.of("content", "⛔ 无权执行此操作"));
+                        emit(emitter, "done", Map.of());
                     }
                 } else {
-                    emit(emitter, "content", Map.of(
-                        "type", "notice",
-                        "content", "意图 '" + result.intentId() + "' 已识别（Agent: " + result.agent() + "），暂无对应 Tool 实现。"
-                    ));
+                    // Tool 未找到
+                    emit(emitter, "content", Map.of("content", "暂不支持此操作"));
+                    emit(emitter, "done", Map.of());
                 }
 
-                // 5. done
-                streamingEmitter.complete(emitter);
-
+                // 5. done — 完成
+                emit(emitter, "done", Map.of());
             } catch (Exception e) {
-                log.error("[Orchestrator] 会话异常: {}", sessionId, e);
-                streamingEmitter.error(emitter, e.getMessage());
+                log.error("[Orchestrator] {} 处理异常", finalSessionId, e);
+                emit(emitter, "error", Map.of("content", "内部错误"));
+                emit(emitter, "done", Map.of());
             } finally {
-                userConnections.merge(userId, -1, Integer::sum);
+                userConnections.merge(finalUserId, -1, Integer::sum);
             }
         };
 
+        // ③ 提交到线程池执行（非阻塞返回 emitter）
+        // P3.1: 同时透传 token + orgId
         CompletableFuture.runAsync(
-            AsyncContextHolder.wrap(asyncTask, capturedToken),
+            AsyncContextHolder.wrap(asyncTask, finalToken, finalOrgId),
             asyncExecutor
         );
 
@@ -406,13 +455,14 @@ public class AtlasOrchestrator {
      * 保持与 /chat/graph 相同的 SSE 事件约定。
      */
     private void runSupervisorGraph(ChatRequest request, SseEmitter emitter,
-                                     String userId, String sessionId, String token) {
+                                     String userId, String sessionId, String token, String orgId) {
         try {
             Map<String, Object> inputs = Map.of(
                 "input", Optional.ofNullable(request.userQuery()).orElse(""),
                 "conversation_id", Optional.ofNullable(request.conversationId()).orElse(""),
                 "user_id", userId,
-                "token", Optional.ofNullable(token).orElse("")
+                "token", Optional.ofNullable(token).orElse(""),
+                "orgId", Optional.ofNullable(orgId).orElse("")  // ← P3.1: 显式传入 orgId
             );
 
             var config = com.alibaba.cloud.ai.graph.RunnableConfig.builder()
@@ -478,13 +528,25 @@ public class AtlasOrchestrator {
                             ))
                         );
 
-                        // 输出 tool_result（tool_call 节点写入的结构化结果）
+                        // 输出 tool_result（tool_call 节点写入的结构化结果）— M2.7 转成 content
                         state.value("tool_result")
                             .filter(Map.class::isInstance)
                             .map(Map.class::cast)
-                            .ifPresent(tr ->
-                                emit(emitter, "tool_result", tr)
-                            );
+                            .ifPresent(tr -> {
+                                @SuppressWarnings("unchecked")
+                                Map<String, Object> trMap = (Map<String, Object>) tr;
+                                Object success = trMap.get("success");
+                                Object msg = trMap.get("message");
+                                Object data = trMap.get("data");
+                                StringBuilder sb = new StringBuilder();
+                                if (Boolean.TRUE.equals(success)) {
+                                    sb.append("✅ ").append(msg != null ? msg : "执行完成");
+                                    if (data != null) sb.append("\n\n").append(data);
+                                } else {
+                                    sb.append("❌ ").append(msg != null ? msg : "执行失败");
+                                }
+                                emit(emitter, "content", Map.of("content", sb.toString()));
+                            });
                     },
                     err -> {
                         log.error("[Supervisor] 会话 {} 流式错误", sessionId, err);

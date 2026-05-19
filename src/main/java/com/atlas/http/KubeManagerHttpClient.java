@@ -87,8 +87,19 @@ public class KubeManagerHttpClient {
     private volatile long fallbackTokenExpiry = 0L;
     private static final long TOKEN_TTL_MS = 25 * 60 * 1000; // 25分钟
 
+    @Value("${atlas.backend.fallback-org-id:100001}")
+    private String fallbackOrgId;
+
     public KubeManagerHttpClient(UserPermissionContext userPermissionContext) {
         this.userPermissionContext = userPermissionContext;
+    }
+
+    /**
+     * 获取配置的 fallback orgId（P3.1 配置化修复）。
+     * <p>当 ThreadLocal 无 orgId 且 Tool 参数未提供时，使用此默认值。</p>
+     */
+    public String getFallbackOrgId() {
+        return fallbackOrgId;
     }
 
     /**
@@ -421,8 +432,8 @@ public class KubeManagerHttpClient {
      */
     public String resolveOrgId(String username, String authToken) {
         if (username == null || username.isBlank()) {
-            log.warn("[resolveOrgId] username为空，回退到默认组织100001");
-            return "100001";
+            log.warn("[resolveOrgId] username为空，回退到默认组织 {}", fallbackOrgId);
+            return fallbackOrgId;
         }
 
         // 超管标记穿透（sysadmin 用特殊标记，让 Tool 决定是否全局模式）
@@ -445,8 +456,8 @@ public class KubeManagerHttpClient {
                 effectiveToken = fallbackAuthToken;
                 log.debug("[resolveOrgId] 使用降级 Token 查询 username={}", username);
             } else {
-                log.warn("[resolveOrgId] username={} 但无有效Token，无法查组织ID，回退100001", username);
-                return "100001";
+                log.warn("[resolveOrgId] username={} 但无有效Token，无法查组织ID，回退{}", username, fallbackOrgId);
+                return fallbackOrgId;
             }
         }
 
@@ -491,9 +502,9 @@ public class KubeManagerHttpClient {
             return found;
         }
 
-        log.warn("[resolveOrgId] username={} 在所有已知组织中未找到，回退100001", username);
-        orgIdCache.put(username, new OrgIdEntry("100001", 60L * 1000)); // 短缓存避免反复查
-        return "100001";
+        log.warn("[resolveOrgId] username={} 在所有已知组织中未找到，回退{}", username, fallbackOrgId);
+        orgIdCache.put(username, new OrgIdEntry(fallbackOrgId, 60L * 1000)); // 短缓存避免反复查
+        return fallbackOrgId;
     }
 
     /**
