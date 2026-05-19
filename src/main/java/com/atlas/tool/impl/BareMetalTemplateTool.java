@@ -45,7 +45,7 @@ public class BareMetalTemplateTool extends BaseTool {
         try {
             String path = "/api/bare-metal-config-template";
 
-            Map<String, Object> response = httpClient.getWithAutoPagination(path);
+            Map<String, Object> response = httpClient.get(path, Map.of("page", "1", "limit", "100"));
             Object data = extractData(response);
             return AtlasToolResult.ok("查询裸金属配置模板列表完成", data);
         } catch (Exception e) {

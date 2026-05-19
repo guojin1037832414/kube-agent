@@ -44,7 +44,7 @@ public class BareMetalAppListTool extends BaseTool {
         try {
             String orgId = resolveOrganizationId(params);
             String path = "/api/{orgId}/bare-metal-application".replace("{orgId}", orgId);
-            Map<String, Object> response = httpClient.getWithAutoPagination(path);
+            Map<String, Object> response = httpClient.get(path, Map.of("page", "1", "limit", "100"));
             Object data = extractData(response);
             return AtlasToolResult.ok("查询裸金属应用列表完成", data);
         } catch (Exception e) {

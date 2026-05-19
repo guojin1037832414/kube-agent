@@ -45,7 +45,7 @@ public class NamespaceListTool extends BaseTool {
             String orgId = resolveOrganizationId(params);
             String path = "/api/" + orgId + "/namespace";
 
-            Map<String, Object> response = httpClient.getWithAutoPagination(path);
+            Map<String, Object> response = httpClient.get(path, Map.of("page", "1", "limit", "100"));
             Object data = extractData(response);
             return AtlasToolResult.ok("查询命名空间列表完成", data);
         } catch (Exception e) {

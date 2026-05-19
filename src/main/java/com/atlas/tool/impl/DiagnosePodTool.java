@@ -46,7 +46,7 @@ public class DiagnosePodTool extends BaseTool {
             log.info("[diagnose_pod] 执行诊断Pod/服务故障");
             String orgId = resolveOrganizationId(params);
             String path = "/api/" + orgId + "/pod";
-            Map<String, Object> response = httpClient.getWithAutoPagination(path);
+            Map<String, Object> response = httpClient.get(path, Map.of("page", "1", "limit", "100"));
             Object data = extractData(response);
 
             String podName = podName(params);

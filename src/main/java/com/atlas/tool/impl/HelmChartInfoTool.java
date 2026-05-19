@@ -50,7 +50,7 @@ public class HelmChartInfoTool extends BaseTool {
             if (chartParam != null && !chartParam.toString().isBlank()) {
                 path += "?chart=" + chartParam;
             }
-            Map<String, Object> response = httpClient.getWithAutoPagination(path);
+            Map<String, Object> response = httpClient.get(path, Map.of("page", "1", "limit", "100"));
             Object data = extractData(response);
             return AtlasToolResult.ok("查询Helm Chart详情完成", data);
         } catch (Exception e) {

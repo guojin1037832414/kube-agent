@@ -40,7 +40,7 @@ public class GpuMetricsTool extends BaseTool {
         try {
             String orgId = resolveOrganizationId(params);
             String path = "/api/" + orgId + "/node/all/gpu-map";
-            Map<String, Object> response = httpClient.getWithAutoPagination(path);
+            Map<String, Object> response = httpClient.get(path, Map.of("page", "1", "limit", "100"));
             Object data = extractData(response);
             return AtlasToolResult.ok("GPU配置映射查询完成", data);
         } catch (Exception e) {

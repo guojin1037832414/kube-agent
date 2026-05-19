@@ -44,7 +44,7 @@ public class HomeIndustryListTool extends BaseTool {
         try {
             String path = "/api/public/home-info/industry-solutions";
 
-            Map<String, Object> response = httpClient.getWithAutoPagination(path);
+            Map<String, Object> response = httpClient.get(path, Map.of("page", "1", "limit", "100"));
             Object data = extractData(response);
             return AtlasToolResult.ok("查询行业方案列表完成", data);
         } catch (Exception e) {

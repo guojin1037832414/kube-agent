@@ -49,7 +49,7 @@ public class FileSelectStorageTool extends BaseTool {
             if (nameParam != null && !nameParam.toString().isBlank()) {
                 path += "?name=" + nameParam;
             }
-            Map<String, Object> response = httpClient.getWithAutoPagination(path);
+            Map<String, Object> response = httpClient.get(path, Map.of("page", "1", "limit", "100"));
             Object data = extractData(response);
             return AtlasToolResult.ok("根据名称查询存储详情完成", data);
         } catch (Exception e) {

@@ -45,7 +45,7 @@ public class ResourceUsageListTool extends BaseTool {
             String orgId = resolveOrganizationId(params);
             String path = "/api/" + orgId + "/resource";
 
-            Map<String, Object> response = httpClient.getWithAutoPagination(path);
+            Map<String, Object> response = httpClient.get(path, Map.of("page", "1", "limit", "100"));
             Object data = extractData(response);
             return AtlasToolResult.ok("查询资源使用列表完成", data);
         } catch (Exception e) {

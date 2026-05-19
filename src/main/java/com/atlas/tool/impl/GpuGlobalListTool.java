@@ -43,7 +43,7 @@ public class GpuGlobalListTool extends BaseTool {
     protected AtlasToolResult doExecute(Map<String, Object> params) {
         try {
             String path = "/api/gpu";
-            Map<String, Object> response = httpClient.getWithAutoPagination(path);
+            Map<String, Object> response = httpClient.get(path, Map.of("page", "1", "limit", "100"));
             Object data = extractData(response);
             return AtlasToolResult.ok("查询全局GPU信息列表完成", data);
         } catch (Exception e) {

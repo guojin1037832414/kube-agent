@@ -48,7 +48,7 @@ public class HelmChartSearchTool extends BaseTool {
             if (kwParam != null && !kwParam.toString().isBlank()) {
                 path += "?keyword=" + kwParam;
             }
-            Map<String, Object> response = httpClient.getWithAutoPagination(path);
+            Map<String, Object> response = httpClient.get(path, Map.of("page", "1", "limit", "100"));
             Object data = extractData(response);
             return AtlasToolResult.ok("搜索Helm Chart完成", data);
         } catch (Exception e) {

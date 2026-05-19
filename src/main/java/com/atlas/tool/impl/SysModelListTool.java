@@ -44,7 +44,7 @@ public class SysModelListTool extends BaseTool {
         try {
             String path = "/api/model";
 
-            Map<String, Object> response = httpClient.getWithAutoPagination(path);
+            Map<String, Object> response = httpClient.get(path, Map.of("page", "1", "limit", "100"));
             Object data = extractData(response);
             return AtlasToolResult.ok("查询全局模型列表完成", data);
         } catch (Exception e) {

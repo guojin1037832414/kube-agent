@@ -45,7 +45,7 @@ public class SlurmClusterListTool extends BaseTool {
             String orgId = resolveOrganizationId(params);
             String path = "/api/" + orgId + "/bcm/slurm-cluster";
 
-            Map<String, Object> response = httpClient.getWithAutoPagination(path);
+            Map<String, Object> response = httpClient.get(path, Map.of("page", "1", "limit", "100"));
             Object data = extractData(response);
             return AtlasToolResult.ok("查询Slurm集群列表完成", data);
         } catch (Exception e) {

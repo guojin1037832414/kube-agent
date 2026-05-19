@@ -49,7 +49,7 @@ public class UserDetailTool extends BaseTool {
             if (idParam != null && !idParam.toString().isBlank()) {
                 path += "/" + idParam;
             }
-            Map<String, Object> response = httpClient.getWithAutoPagination(path);
+            Map<String, Object> response = httpClient.get(path, Map.of("page", "1", "limit", "100"));
             Object data = extractData(response);
             return AtlasToolResult.ok("查询用户详情完成", data);
         } catch (Exception e) {

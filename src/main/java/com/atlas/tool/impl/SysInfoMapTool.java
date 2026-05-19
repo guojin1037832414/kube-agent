@@ -44,7 +44,7 @@ public class SysInfoMapTool extends BaseTool {
         try {
             String path = "/api/public/sys-info/all/map";
 
-            Map<String, Object> response = httpClient.getWithAutoPagination(path);
+            Map<String, Object> response = httpClient.get(path, Map.of("page", "1", "limit", "100"));
             Object data = extractData(response);
             return AtlasToolResult.ok("查询系统信息配置完成", data);
         } catch (Exception e) {

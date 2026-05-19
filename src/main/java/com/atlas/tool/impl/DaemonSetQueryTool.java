@@ -40,7 +40,7 @@ public class DaemonSetQueryTool extends BaseTool {
         try {
             String orgId = resolveOrganizationId(params);
             String path = "/api/" + orgId + "/dashboard/deployment";
-            Map<String, Object> response = httpClient.getWithAutoPagination(path);
+            Map<String, Object> response = httpClient.get(path, Map.of("page", "1", "limit", "100"));
             Object data = extractData(response);
             return AtlasToolResult.ok("DaemonSet状态查询完成 (近似)", data);
         } catch (Exception e) {

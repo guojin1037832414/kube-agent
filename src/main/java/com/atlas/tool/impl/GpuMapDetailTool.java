@@ -45,7 +45,7 @@ public class GpuMapDetailTool extends BaseTool {
         try {
             String path = "/api/gpu/all/gpu-map";
 
-            Map<String, Object> response = httpClient.getWithAutoPagination(path);
+            Map<String, Object> response = httpClient.get(path, Map.of("page", "1", "limit", "100"));
             Object data = extractData(response);
             return AtlasToolResult.ok("查询GPU映射配置详情完成", data);
         } catch (Exception e) {

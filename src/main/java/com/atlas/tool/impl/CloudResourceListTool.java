@@ -45,7 +45,7 @@ public class CloudResourceListTool extends BaseTool {
             String orgId = resolveOrganizationId(params);
             String path = "/api/{orgId}/cloud".replace("{orgId}", orgId);
 
-            Map<String, Object> response = httpClient.getWithAutoPagination(path);
+            Map<String, Object> response = httpClient.get(path, Map.of("page", "1", "limit", "100"));
             Object data = extractData(response);
             return AtlasToolResult.ok("查询云资源列表完成", data);
         } catch (Exception e) {

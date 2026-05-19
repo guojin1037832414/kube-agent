@@ -45,8 +45,6 @@ public class StorageQueryTool extends BaseTool {
             Map<String, Object> query = new LinkedHashMap<>();
             putIfPresent(query, "clusterId", params.get("clusterId"));
             putIfPresent(query, "namespace", params.get("namespace"));
-            query.put("current", 1);
-            query.put("size", 100);
             query.put("page", "1");
             query.put("limit", "100");
 

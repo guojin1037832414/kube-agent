@@ -45,7 +45,7 @@ public class FileStorageOptionTool extends BaseTool {
             String orgId = resolveOrganizationId(params);
             String path = "/api/{orgId}/file/storage/option".replace("{orgId}", orgId);
 
-            Map<String, Object> response = httpClient.getWithAutoPagination(path);
+            Map<String, Object> response = httpClient.get(path, Map.of("page", "1", "limit", "100"));
             Object data = extractData(response);
             return AtlasToolResult.ok("查询存储选项配置完成", data);
         } catch (Exception e) {
