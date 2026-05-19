@@ -520,13 +520,9 @@ public class AtlasOrchestrator {
                             "content", "节点 " + node + " 正在执行..."
                         ));
 
-                        // 输出 answer（direct_answer/tool_call 等节点写入的 key）
-                        state.value("answer").ifPresent(ans ->
-                            emit(emitter, "content", Map.of(
-                                "node", node,
-                                "result", ans.toString()
-                            ))
-                        );
+                        // ── M2.8 FIX: 删除 answer 的 content emit，避免与 tool_result 重复输出 ──
+                        // state.value("answer") 的内容已由 tool_result 兜底转为 content 推送，
+                        // 不再单独 emit，防止前端收到双份 content 事件叠加。
 
                         // 输出 tool_result（tool_call 节点写入的结构化结果）— M2.7 转成 content
                         state.value("tool_result")
