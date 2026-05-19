@@ -258,13 +258,24 @@ public class AtlasOrchestrator {
                                 String polished = polishingService.polishSync(toolResult, request.userQuery());
                                 emit(emitter, "content", Map.of("content", polished));
                             } catch (Exception polishEx) {
-                                log.warn("[Orchestrator] 润色失败，fallback到原始格式: {}", polishEx.getMessage());
-                                // fallback: 原始硬编码格式
+                                log.warn("[Orchestrator] 润色失败，fallback到安全格式: {}", polishEx.getMessage());
+                                // M3.2 FIX: fallback 用 Jackson 安全序列化 data，避免 toString() 泄漏类源码
+                                String safeData = "(无法格式化数据)";
+                                if (data != null) {
+                                    try {
+                                        safeData = new com.fasterxml.jackson.databind.ObjectMapper()
+                                            .writerWithDefaultPrettyPrinter()
+                                            .writeValueAsString(data);
+                                    } catch (Exception jsonEx) {
+                                        // 最后防线：仅提取字符串值
+                                        safeData = String.valueOf(data);
+                                    }
+                                }
                                 StringBuilder resultText = new StringBuilder();
                                 if (success) {
                                     resultText.append("✅ ").append(message);
-                                    if (data != null) {
-                                        resultText.append("\n\n```\n").append(data).append("\n```");
+                                    if (!safeData.isEmpty() && !"{}".equals(safeData)) {
+                                        resultText.append("\n\n```\n").append(safeData).append("\n```");
                                     }
                                 } else {
                                     resultText.append("❌ ").append(message);
@@ -546,14 +557,27 @@ public class AtlasOrchestrator {
                                         String polished = polishingService.polishSync(trMap, request.userQuery());
                                         emit(emitter, "content", Map.of("content", polished));
                                     } catch (Exception polishEx) {
-                                        log.warn("[Supervisor] 润色失败，fallback到原始格式: {}", polishEx.getMessage());
+                                        log.warn("[Supervisor] 润色失败，fallback到安全格式: {}", polishEx.getMessage());
                                         Object success = trMap.get("success");
                                         Object msg = trMap.get("message");
                                         Object data = trMap.get("data");
+                                        // M3.2 FIX: Jackson 安全序列化 data
+                                        String safeData = "(无法格式化数据)";
+                                        if (data != null) {
+                                            try {
+                                                safeData = new com.fasterxml.jackson.databind.ObjectMapper()
+                                                    .writerWithDefaultPrettyPrinter()
+                                                    .writeValueAsString(data);
+                                            } catch (Exception jsonEx) {
+                                                safeData = String.valueOf(data);
+                                            }
+                                        }
                                         StringBuilder sb = new StringBuilder();
                                         if (Boolean.TRUE.equals(success)) {
                                             sb.append("✅ ").append(msg != null ? msg : "执行完成");
-                                            if (data != null) sb.append("\n\n").append(data);
+                                            if (!safeData.isEmpty() && !"{}".equals(safeData)) {
+                                                sb.append("\n\n```\n").append(safeData).append("\n```");
+                                            }
                                         } else {
                                             sb.append("❌ ").append(msg != null ? msg : "执行失败");
                                         }
