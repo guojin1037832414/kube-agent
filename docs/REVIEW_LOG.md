@@ -302,3 +302,43 @@ Tests: 86, Failures: 0, Errors: 0, Skipped: 0 — BUILD SUCCESS
 - 后端端口: 8300
 - ToolRegistry: 109 tools, 6 agents
 - 双推: ✓ GitLab origin + ✓ GitHub github → 133da20
+
+---
+
+## 2026-05-19 M2.5 完成：SSE格式修复 + 登录会话API补齐 + 浏览器E2E验证
+
+### 实现内容
+
+**S1 SSE 格式不兼容修复（根因：P1 StateGraph 原生事件 vs 前端期望格式）：**
+1. `AtlasOrchestrator.emit()` — 后端事件 → 前端事件名映射（`tool_call`→`tool_start`, `tool_result`→`tool_done`）
+2. `mapToFrontType()` + `deriveContent()` — payload 中若无 `content` 字段，从 `result`/`message`/语义推断兜底
+3. 输出样例验证：`data:{"type":"thinking","content":"节点 __START__ 正在执行..."}` ✅
+4. `ChatRequest` 添加 `@JsonAlias("message")` — 修复前端发 `message`、后端期望 `userQuery` 导致的空输入 Bug
+
+**S2 登录/会话/Me API 补齐（新增 10 个文件）：**
+5. `AuthController.java` — `/api/agent/login`（代理 kube-manager）、`/logout`、`/me`
+6. `ConversationController.java` — 会话 CRUD + 标题更新
+7. `SessionStore.java` — Caffeine 内存存储，TTL=30min, maxSize=5000
+8. `ConversationStore.java` — Caffeine 内存存储，TTL=24h, maxSize=5000
+9. `ApiResponse.java` — 统一响应包装体
+10. `LoginRequest.java` / `LoginResponse.java` / `SessionData.java` / `Conversation.java` / `ConversationDetailDto.java` / `ConversationItemDto.java`
+
+**S3 浏览器 E2E 验证：**
+11. 登录页 `zhaotiandi/ninePwd!` → 跳转聊天页 ✅
+12. 发送"查询集群中有多少个节点" → AI 回复 "节点查询完成" 正常渲染 ✅
+13. "思考中..."不再卡住，流式事件按序渲染 ✅
+14. 左侧会话列表自动创建并选中 ✅
+15. 顶部显示"登出"按钮 ✅
+
+### 技术要点
+
+- **SSE 格式转换逻辑后端化**：前端保持零修改，风险最小化
+- **`@JsonAlias("message")`**：零前端侵入式解决字段名不匹配，Spring 自动反序列化兜底
+- **Caffeine 内存存储**：与现有 `TimedDecisionCache` 同技术栈，无需 Redis/DB
+
+### 提交
+
+- Commit: `46fbff3`
+- 双推: ✓ GitLab origin + ✓ GitHub github
+- 变更: 14 files, +2144/-4
+
