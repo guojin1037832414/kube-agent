@@ -248,7 +248,7 @@ Tests: 86, Failures: 0, Errors: 0, Skipped: 0 — BUILD SUCCESS
 
 ### 待办
 
-- [ ] M2.5 双推 GitLab + GitHub
+- [x] M2.5 双推 GitLab + GitHub ✅
 - [ ] M3.1 AtlasGraphConfig supervisor 节点 try-catch BrainParseException
 - [ ] M3.2 EmbeddingMatcher 命中集成测试（真实 ONNX session）
 - [ ] M3.3 AtlasOrchestrator v2 与 AtlasBrain v3 决策机制统一
@@ -256,8 +256,49 @@ Tests: 86, Failures: 0, Errors: 0, Skipped: 0 — BUILD SUCCESS
 
 ### 环境
 
-- kube-agent 后端: master (当前未commit)
+- kube-agent 后端: master (commit 133da20)
 - 后端端口: 8300
 - ToolRegistry: 109 tools, 6 agents
 - 权限分布: PUBLIC=89, AUTHENTICATED=*** ADMIN_ONLY=8
 - 测试: 86/86 BUILD SUCCESS
+
+---
+
+## 2026-05-19 M2.5 双推完成 + 文档审查与索引生成
+
+### 实现内容
+
+**M2.5 双推：**
+1. `git push origin master` → GitLab 同步成功
+2. `git push github master` → GitHub 同步成功
+3. Commit `133da20` 已同步到双远程
+
+**文档审查与治理（Phase X 后续）：**
+4. 审查全项目 25+ 文档，标记过时内容
+5. 迁移 3 份文档到 `docs/archive/`（加 ARCHIVED_ 前缀）
+6. 为 7 份文档添加 [DEPRECATED] 前缀标记
+7. 更新 `DEVELOPMENT_GUIDE.md` 开发顺序（P0-P4 → M0-M5）
+8. 更新 `ADR-008` 状态为 `Accepted` + Superseded 说明
+9. 归档 `P1.4-Architecture-Review.md`
+10. 生成统一文档索引 `docs/INDEX.md`
+
+### 过时文档清单
+
+| 文件 | 处理方式 | 原因 |
+|------|----------|------|
+| `P2_ARCHITECTURE_SPRING_AI_ALIBABA.md` | 移入 archive | 基于假设性 API（ReactAgent.builder 等），实际已手写 AtlasBrain |
+| `M1.5_PLAN.md` | 移入 archive | M1.5 后端已完成，计划中的"待完成"全部过时 |
+| `P1.4-Architecture-Review.md` | 移入 archive | P1.4 权限阶段已结束 |
+| `TOOL_GAP_MATRIX.md` | [DEPRECATED] | 基于 33 tools（v3.1.0-P1.4），实际已 109 tools |
+| `P2_BRAIN_AUDIT_CHECKLIST.md` | [DEPRECATED] | Phase2 AtlasBrain 集成已完成，历史审计参考 |
+| `AUDIT_CHECKLIST_20260515.md` | [DEPRECATED] | 109 Tool 批次审计已完成，历史参考 |
+| `FRONTEND_API_INVENTORY.md` | [DEPRECATED] | 基于旧版前端 API 盘点，部分 API 已变化 |
+| `ATLASBRAIN_ENCODE_PLAN.md` | [DEPRECATED] | AtlasBrain 编码计划，实际实现已偏离计划 |
+| `STATEGRAPH_REACTAGENT_INTEGRATION_REPORT.md` | [DEPRECATED] | 调研报告，实际集成方式已调整 |
+
+### 环境
+
+- kube-agent 后端: master (commit 133da20)
+- 后端端口: 8300
+- ToolRegistry: 109 tools, 6 agents
+- 双推: ✓ GitLab origin + ✓ GitHub github → 133da20

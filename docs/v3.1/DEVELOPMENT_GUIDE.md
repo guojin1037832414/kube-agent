@@ -53,20 +53,25 @@ export ATLAS_LLM_API_KEY="sk-T5BnkBXiizu15sO3OSq8csiVEFL0Oypjcgiw1lWx21aZBGhw"
 
 - 所有新增类必须有 **中文注释**
 - 提交前必须跑通 `mvn test`
-- 修改必须记录到 REVIEW_LOG.md
--遵循 **专家会诊 → 编码 → Review → 测试 → 记录** 流程
+- 修改记录到 `docs/REVIEW_LOG.md`
+- 遵循 **专家会诊 → 编码 → Review → 测试 → 记录 → GitLab+GitHub 双推** 流程
+- 文档更新门控：新增/修改 Tool、API、Config、Prompt → 必须同步更新契约文档
 
 ---
 
-## 模块开发顺序
+## 模块开发顺序 (Milestone)
 
 ```
-P0: 骨架 → Embedding → 意图L1-L2 → SSE基础
-P1: 意图L3-L4 → QueryAgent → Tool全覆盖 → 权限感知
-P2: 其余5个Agent → ReAct → MCP → Orchestrator
-P3: HITL → 审计日志 → 安全治理
-P4: 监控大盘 → 性能优化 → CI/CD
+M0: 地基 — v2.x 基线、23 Plugin、ChatMemory、SSE 流式
+M1: 智能引擎 — L1-L4 意图路由、AtlasBrain 决策、StateGraph 编排、6 Worker、109 Tool
+  M1.5: HITL SSE 后端闭环（前端弹窗代码完成，待 M3 联调）
+M2: 查询全覆盖与质量加固 — 35+ 单元测试、Query E2E ≥95%、硬编码清理
+M3: 写操作 + HITL 前端联调 — ThreadLocal→State 重构、浏览器验证 HITL
+M4: Plan-and-Execute + Reflection — 多步任务拆解、自我修正循环
+M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrails
 ```
+
+> 详细路线图见项目根目录 `ROADMAP.md`
 
 ---
 

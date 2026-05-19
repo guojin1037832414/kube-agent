@@ -116,11 +116,18 @@ P3-查询     免确认，直出结果              立即返回
 - 支持 OpenAI 兼容协议（公司代理可用）
 - 相比手写所有组件，开发周期从 4-6 周缩短至 2 周
 
+**实施修正（2026-05-18）**:
+- 实际未使用 `ReactAgent.builder()` 等假设性 API（框架文档与源码存在偏差）
+- 最终采用 **手写 AtlasBrain + StateGraph `node_async`/`addConditionalEdges`** 实现决策循环
+- 框架的 `StateGraph` / `CompiledGraph.stream()` / `MemorySaver` 被实际使用并验证有效
+- 原 `P2_ARCHITECTURE_SPRING_AI_ALIBABA.md` 已归档，保留 ADR-008 记录决策历史
+
 **废弃的旧方案**: 手写的 ReActEngine、AgentGraph、AgentState Record、Checkpoint 实现
 **保留的组件**: BaseTool 体系、IntentRouter L1-L4、ToolRegistry 权限感知、SSE 流式
+**实际使用**: StateGraph API、CompiledGraph.stream()、MemorySaver、OverAllState
 
 **详细文档**: [ADR-008-SPRING_AI_ALIBABA.md](ADR-008-SPRING_AI_ALIBABA.md)  
-**架构方案**: [P2_ARCHITECTURE_SPRING_AI_ALIBABA.md](p2/P2_ARCHITECTURE_SPRING_AI_ALIBABA.md)
+**原架构方案**: [docs/archive/ARCHIVED_20260519_P2_ARCHITECTURE_SPRING_AI_ALIBABA.md](../../archive/ARCHIVED_20260519_P2_ARCHITECTURE_SPRING_AI_ALIBABA.md) (已归档)
 
 ---
 

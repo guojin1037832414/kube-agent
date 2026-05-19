@@ -166,10 +166,10 @@ spring-ai-alibaba (根 POM)
 
 ## 相关文档
 
-- [P2 架构方案（新版）](../p2/P2_ARCHITECTURE_SPRING_AI_ALIBABA.md)
+- [ADR-008-SPRING_AI_ALIBABA.md](ADR-008-SPRING_AI_ALIBABA.md)
 - [Spring AI Alibaba 官方文档](https://java2ai.com/docs/frameworks/agent-framework/quick-start/)
 - [Spring AI Alibaba Graph 文档](https://java2ai.com/docs/frameworks/graph-core/quick-start/)
-- [旧版 P2 架构方案（已废弃）](../../P2_AGENT_SPLIT_ARCHITECTURE.md) — 保留参考
+- [旧版 P2 架构方案（已归档）](../../archive/ARCHIVED_20260519_P2_ARCHITECTURE_SPRING_AI_ALIBABA.md) — 保留作为决策历史参考
 
 ---
 
