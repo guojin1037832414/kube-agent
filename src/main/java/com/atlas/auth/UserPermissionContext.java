@@ -1,11 +1,13 @@
 package com.atlas.auth;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 用户权限上下文 — 登录时缓存用户权限，避免每次请求查询后端。
@@ -48,8 +50,15 @@ public class UserPermissionContext {
      */
     public static final ThreadLocal<String> CURRENT_TOKEN = new ThreadLocal<>();
 
-    /** 内存权限缓存：token → 用户权限快照 */
-    private final Map<String, UserPermission> cache = new ConcurrentHashMap<>();
+    /** 内存权限缓存：token → 用户权限快照（Caffeine，30min TTL） */
+    private final Cache<String, UserPermission> cache;
+
+    public UserPermissionContext() {
+        this.cache = Caffeine.newBuilder()
+            .expireAfterAccess(Duration.ofMinutes(30))
+            .maximumSize(10000)
+            .build();
+    }
 
     // ═══════════════════════════════════════════════════════════
     // ① 登录时写入 / 登出时清除
@@ -66,14 +75,15 @@ public class UserPermissionContext {
     public void onLogin(String token, String username, String role, Set<String> permissions) {
         UserPermission perm = new UserPermission(token, username, role, permissions);
         cache.put(token, perm);
-        log.info("[UserPermissionContext] 用户登录缓存: {} (role={})", username, role);
+        log.info("[UserPermissionContext] 用户登录缓存: {} (role={}, TTL=30min)", username, role);
     }
 
     /**
      * 用户登出时调用 — 清除缓存。
      */
     public void onLogout(String token) {
-        UserPermission removed = cache.remove(token);
+        UserPermission removed = cache.getIfPresent(token);
+        cache.invalidate(token);
         if (removed != null) {
             log.info("[UserPermissionContext] 用户登出清除: {}", removed.username);
         }
@@ -125,7 +135,7 @@ public class UserPermissionContext {
     public Optional<UserPermission> current() {
         String token = CURRENT_TOKEN.get();
         if (token == null || token.isBlank()) return Optional.empty();
-        return Optional.ofNullable(cache.get(token));
+        return Optional.ofNullable(cache.getIfPresent(token));
     }
 
     /**
