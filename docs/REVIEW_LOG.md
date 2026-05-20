@@ -740,3 +740,68 @@ java -jar target/kube-agent-3.1.0-SNAPSHOT.jar   --server.port=8500   --spring.a
 - ReAct 第 3 轮 LLM 调用仍出现超时，但已有兜底摘要，后续可继续优化 LLM timeout、工具观察截断策略和最终总结体验。
 - Graph State 已不包含运行期对象，但仍需保持后续开发纪律：禁止将 `SseEmitter`、Lambda、Spring Bean、Executor、Socket 等对象放入 State。
 
+---
+
+## 2026-05-20 M3.2 ReAct 收敛优化：参数别名归一化与目标资源未找到提前终止
+
+### 背景
+上一轮真实 SSE E2E 虽然已经打通 ReAct 过程事件，但 `/react 诊断 default namespace 的 nginx-1 pod CrashLoopBackOff 原因` 在工具返回长列表后仍可能继续进入第 3/4 轮 LLM，出现耗时过长和兜底摘要体验偏弱的问题。
+
+### 专家会诊结论
+- 不优先通过单纯加大 LLM timeout 解决问题。
+- 优先做 Observation 瘦身、明确 stop policy 和目标资源未找到时的早停收敛。
+- 当工具已返回“未找到指定资源，返回列表”时，继续让 LLM 基于其它资源猜测会增加误诊风险，应直接停止并请用户核对资源名/namespace/集群。
+
+### 根因分析
+1. LLM Action 参数存在 snake_case/camelCase 混用：实际输出过 `pod_name` 或 `name`，但 `DiagnosePodTool` 只识别 `podName/targetName`。
+2. 参数未归一化时，`diagnose_pod` 收不到目标 Pod 名，退化为“Pod 列表诊断数据查询完成”，导致 ReAct 继续规划后续工具。
+3. Observation 原先只保留头部，遇到日志/列表时容易丢失尾部线索。
+4. 早停分支如果在 ReActEngine 内部直接 emit content，会与 Orchestrator 的统一 answer 输出重复。
+
+### 主要改动
+- `ReActEngine.java`
+  - `mergeInitialAndActionParams(...)` 后新增 `normalizeActionParamAliases(...)`。
+  - 支持 `pod_name/pod/name/target_name -> podName`、`node_name/node -> nodeName`、`deployment_name/instance_name -> deploymentName`、`name_space/ns -> namespace`。
+  - 新增 `isTargetResourceNotFoundObservation(...)`，识别“未找到 + 返回 + 列表 / not found + return + list”。
+  - 新增 `generateTargetNotFoundSummary(...)`，在不额外调用 LLM 的情况下生成稳定、低延迟、可控的用户回复。
+  - `truncateObservation(...)` 从“只保留头部”改为“2/3 头部 + 1/3 尾部”，并明确标记“截断/不完整”。
+  - target_not_found 早停分支不再主动 emit content，统一交给 Orchestrator 输出一次，避免 SSE 重复 content。
+- `ReActEngineParamMergeTest.java`
+  - 新增 snake_case 参数别名归一化测试。
+  - 新增 canonical 参数不被 alias 覆盖测试。
+- `ReActEnginePolicyTest.java`
+  - 新增目标资源未找到识别测试。
+  - 新增正常 Observation 不误判测试。
+  - 新增头尾截断测试。
+  - 新增未找到资源用户友好摘要测试。
+
+### 验证结果
+- 定向回归测试：`mvn -Dtest=ReActEngineParamMergeTest,ReActEnginePolicyTest,ReActMemoryTest,AtlasBrainMockTest,AtlasOrchestratorJsonTest test`。
+  - 结果：26/26 通过，BUILD SUCCESS。
+- 构建：`mvn package -DskipTests`，BUILD SUCCESS。
+- 服务重启：旧 8500 JVM 已 kill，新服务 PID `70912`，`/actuator/health` 返回 `UP`。
+- 真实 SSE E2E：登录 `zhaotiandi/ninePwd!` 后请求 `/react 诊断 default namespace 的 nginx-1 pod CrashLoopBackOff 原因`。
+  - LLM 实际输出：`Action: {"tool":"diagnose_pod","params":{"pod_name":"nginx-1","namespace":"default"}}`。
+  - 参数归一化后 tool_start metadata 同时包含 `pod_name=nginx-1` 与 `podName=nginx-1`。
+  - 工具返回：`未找到 Pod nginx-1，返回 Pod 列表`。
+  - ReAct 日志：`stopReason=target_not_found, steps=1, totalMs=3522, success=true`。
+  - SSE 事件统计：`thinking=6`、`tool_start=1`、`tool_done=1`、`observation=1`、`content=1`、`done=1`。
+  - JSON 解析：`BAD=0`。
+  - 重复 content：已消除，仅输出 1 次最终 content。
+
+### 代码 Review
+**优点：**
+- 将参数归一化放在 ReAct 引擎边界，避免逐个 Tool 重复兼容 LLM 命名习惯。
+- target_not_found 是显式 stop policy，减少无效 LLM 调用和误诊风险。
+- 未找到资源时不再基于其它 Pod/资源猜测，符合运维诊断安全性。
+- 新增单测覆盖纯策略逻辑，不依赖真实 LLM，回归成本低。
+
+**风险：**
+- `name -> podName` 是启发式归一化，未来非 Pod 工具如果也传 `name` 可能出现语义歧义；后续更优方案是结合 tool schema 做工具级参数规范化。
+- 当前候选资源只在工具提示中截断展示，尚未结构化 TopN 候选；后续可由 Tool 返回 candidates 字段，让前端展示候选卡片。
+
+### 后续建议
+1. 为 `DiagnosePodTool` / `PodStatusTool` 等核心工具补结构化 candidates，避免把全量列表放进 Observation。
+2. 引入工具 schema 参数契约，让 LLM Prompt 明确每个工具的 canonical 参数名。
+3. 将参数别名归一化从 ReActEngine 提升为 `ToolParameterNormalizer`，为全部 Agent/Tool 复用。
+4. 增加真实存在 Pod 的成功诊断 E2E，验证非 target_not_found 路径仍可多步推理。

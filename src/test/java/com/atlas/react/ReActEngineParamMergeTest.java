@@ -33,4 +33,38 @@ class ReActEngineParamMergeTest {
         assertEquals("c1", merged.get("conversationId"));
         assertEquals("nginx-1", merged.get("podName"));
     }
+
+    @Test
+    void testMergeInitialAndActionParams_normalizesSnakeCaseAliases() throws Exception {
+        Method method = ReActEngine.class.getDeclaredMethod(
+            "mergeInitialAndActionParams", Map.class, Map.class);
+        method.setAccessible(true);
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> merged = (Map<String, Object>) method.invoke(
+            null,
+            Map.of("token", "t1", "organizationId", "100002", "conversationId", "c1"),
+            Map.of("pod_name", "nginx-1", "node_name", "node-a", "name_space", "default")
+        );
+
+        assertEquals("nginx-1", merged.get("podName"));
+        assertEquals("node-a", merged.get("nodeName"));
+        assertEquals("default", merged.get("namespace"));
+    }
+
+    @Test
+    void testMergeInitialAndActionParams_doesNotOverrideCanonicalValue() throws Exception {
+        Method method = ReActEngine.class.getDeclaredMethod(
+            "mergeInitialAndActionParams", Map.class, Map.class);
+        method.setAccessible(true);
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> merged = (Map<String, Object>) method.invoke(
+            null,
+            Map.of(),
+            Map.of("podName", "canonical-pod", "pod_name", "alias-pod")
+        );
+
+        assertEquals("canonical-pod", merged.get("podName"));
+    }
 }

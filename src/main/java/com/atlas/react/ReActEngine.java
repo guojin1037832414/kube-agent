@@ -243,6 +243,19 @@ public class ReActEngine {
                 memory.addStep(thought, toolName, params, observation, toolSuccess, toolCostMs);
                 log.info("[ReActEngine] 第 {} 轮完成，tool={}, success={}, costMs={}",
                     steps, toolName, toolSuccess, toolCostMs);
+
+                // 10. 目标资源未找到时提前收敛。
+                // K8s 诊断中，如果用户明确指定了资源，而工具已经返回“未找到 Pod/资源”，
+                // 继续把全量列表喂给 LLM 做第三轮推理只会放大 token 和超时风险，还可能误诊其他资源。
+                // 因此这里直接生成清晰的用户回复，并建议核对名称/namespace/集群。
+                if (toolSuccess && isTargetResourceNotFoundObservation(rawObservation)) {
+                    stopReason = "target_not_found";
+                    finalAnswer = generateTargetNotFoundSummary(rawObservation, userQuery);
+                    // 不在引擎内部额外发送 content，避免与 Orchestrator 统一 answer 输出重复。
+                    // finalAnswer 会通过 ReActResult 返回，由上层统一以一次 content 事件推送给前端。
+                    log.info("[ReActEngine] 目标资源未找到，提前终止 ReAct。tool={}, steps={}", toolName, steps);
+                    break;
+                }
             }
 
             // 达到最大步数仍未结束
@@ -406,6 +419,11 @@ public class ReActEngine {
      * <p>规则：初始参数先放入，Action 参数后放入并覆盖同名 key，
      * 这样可以保证 token / orgId / conversationId 等会话级上下文稳定透传，
      * 同时允许 LLM 在某一轮显式指定更细粒度的工具参数。</p>
+     *
+     * <p>LLM 在生成 Action JSON 时容易混用 snake_case / camelCase，例如
+     * {@code pod_name}、{@code node_name}。但现有 Tool 多数按前端/Java 习惯读取
+     * {@code podName}、{@code nodeName}。这里在 ReAct 引擎边界做轻量别名归一化，
+     * 避免工具因为参数名不匹配退化成列表查询。</p>
      */
     private static Map<String, Object> mergeInitialAndActionParams(Map<String, Object> initialParams,
                                                                     Map<String, Object> actionParams) {
@@ -416,7 +434,39 @@ public class ReActEngine {
         if (actionParams != null && !actionParams.isEmpty()) {
             merged.putAll(actionParams);
         }
+        normalizeActionParamAliases(merged);
         return merged;
+    }
+
+    /**
+     * 归一化 LLM Action 参数别名。
+     *
+     * <p>只在目标 camelCase 参数不存在时补充，避免覆盖工具或用户显式传入的精确参数。</p>
+     */
+    private static void normalizeActionParamAliases(Map<String, Object> params) {
+        if (params == null || params.isEmpty()) {
+            return;
+        }
+        copyFirstPresentAlias(params, "podName", "pod_name", "pod", "name", "targetName", "target_name");
+        copyFirstPresentAlias(params, "nodeName", "node_name", "node");
+        copyFirstPresentAlias(params, "deploymentName", "deployment_name", "deployment", "instanceName", "instance_name");
+        copyFirstPresentAlias(params, "namespace", "name_space", "ns");
+    }
+
+    /**
+     * 从一组别名中复制第一个非空值到规范参数名。
+     */
+    private static void copyFirstPresentAlias(Map<String, Object> params, String canonicalKey, String... aliases) {
+        if (params.containsKey(canonicalKey) && params.get(canonicalKey) != null) {
+            return;
+        }
+        for (String alias : aliases) {
+            Object value = params.get(alias);
+            if (value != null && !value.toString().isBlank()) {
+                params.put(canonicalKey, value);
+                return;
+            }
+        }
     }
 
     /**
@@ -453,8 +503,20 @@ public class ReActEngine {
     private String truncateObservation(String text, int maxChars) {
         if (text == null) return "";
         if (text.length() <= maxChars) return text;
-        return text.substring(0, maxChars - 50)
-            + "... [截断/不完整，原始长度 " + text.length() + " 字符]";
+
+        // 头尾保留：K8s/日志类 Observation 通常头部包含概要，尾部可能包含最近错误或列表末尾线索。
+        // 只保留头部会丢失后续判断依据；因此按 2/3 头部 + 1/3 尾部分配预算。
+        String marker = "\n... [截断/不完整，原始长度 " + text.length() + " 字符，已省略中间部分] ...\n";
+        int bodyBudget = Math.max(0, maxChars - marker.length());
+        if (bodyBudget <= 0) {
+            return marker;
+        }
+        int headLength = Math.max(1, bodyBudget * 2 / 3);
+        int tailLength = Math.max(1, bodyBudget - headLength);
+        if (headLength + tailLength >= text.length()) {
+            return text;
+        }
+        return text.substring(0, headLength) + marker + text.substring(text.length() - tailLength);
     }
 
     /**
@@ -464,6 +526,47 @@ public class ReActEngine {
         if (text == null) return "";
         if (text.length() <= maxLen) return text;
         return text.substring(0, maxLen) + "...";
+    }
+
+    /**
+     * 判断 Observation 是否表示“用户指定的目标资源不存在”。
+     *
+     * <p>当前 kube-manager 兼容接口在精确资源未命中时，常返回类似
+     * “未找到 Pod nginx-1，返回 Pod 列表”的成功响应。该响应虽然 success=true，
+     * 但语义上已经无法继续诊断指定目标；若继续进入下一轮 LLM，模型会拿全量列表猜测，
+     * 既浪费 token，也容易误诊。因此需要在引擎层做收敛。</p>
+     *
+     * @param observation 原始工具返回字符串
+     * @return true 表示应提前停止并请用户确认资源信息
+     */
+    private boolean isTargetResourceNotFoundObservation(String observation) {
+        if (observation == null || observation.isBlank()) {
+            return false;
+        }
+        String normalized = observation.toLowerCase();
+        return (observation.contains("未找到") || normalized.contains("not found"))
+            && (observation.contains("返回") || normalized.contains("return"))
+            && (observation.contains("列表") || normalized.contains("list"));
+    }
+
+    /**
+     * 生成目标资源未找到时的用户友好回复。
+     *
+     * <p>这里不再调用 LLM 做额外总结，保证低延迟、低 token、稳定可控。
+     * 后续若工具层返回结构化 candidates，可在此追加 Top 3~5 候选资源。</p>
+     */
+    private String generateTargetNotFoundSummary(String observation, String userQuery) {
+        String shortObservation = truncate(observation, 500);
+        return "没有找到你指定的目标资源，所以我先停止继续自动诊断，避免基于其它资源误判。\n\n"
+            + "**当前结论**：工具返回了“未找到目标资源”的结果。\n"
+            + "**原始问题**：" + userQuery + "\n"
+            + "**工具提示**：" + shortObservation + "\n\n"
+            + "建议哥哥核对下面几项后再继续：\n"
+            + "1. 资源名称是否拼写正确；\n"
+            + "2. namespace 是否正确；\n"
+            + "3. 当前集群/登录账号是否是预期环境；\n"
+            + "4. 资源是否已经被删除，或还没有创建成功。\n\n"
+            + "你可以直接告诉我正确的资源名和 namespace，我会继续接着诊断。";
     }
 
     /**
