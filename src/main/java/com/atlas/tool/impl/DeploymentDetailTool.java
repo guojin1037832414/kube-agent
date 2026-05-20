@@ -5,8 +5,10 @@ import com.atlas.tool.annotation.AtlasToolMapping;
 import com.atlas.tool.annotation.ToolPermission;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.tool.core.BaseTool;
+import com.atlas.tool.core.ToolParameterSpec;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -39,6 +41,25 @@ public class DeploymentDetailTool extends BaseTool {
         return Set.of("name");
     }
 
+    /**
+     * 部署实例详情参数契约。
+     *
+     * <p>注意：当前 Tool 执行逻辑读取的 canonical 字段是 {@code name}。本轮作为小样本
+     * 先不重构执行字段为 deploymentName，避免 schema 与实际读取逻辑不一致导致必填校验失败。
+     * description 中明确该 name 仅表示 Deployment/实例名称。</p>
+     */
+    @Override
+    public List<ToolParameterSpec> getParameterSpecs() {
+        return List.of(
+            ToolParameterSpec.stringParam(
+                "name",
+                "要查询详情的 Deployment/实例名称。这里的 name 不是 Pod、Node、Service、Namespace 或用户名称。",
+                true,
+                List.of("deploymentName", "deployment_name", "deployment", "deploy", "deployName", "instanceName", "instance_name", "targetName", "target_name")
+            )
+        );
+    }
+
     @Override
     protected AtlasToolResult doExecute(Map<String, Object> params) {
         try {
@@ -46,10 +67,13 @@ public class DeploymentDetailTool extends BaseTool {
             String path = "/api/{orgId}/deployment".replace("{orgId}", orgId);
 
             Object nameParam = params.get("name");
+            Map<String, Object> query = new java.util.HashMap<>();
+            query.put("page", "1");
+            query.put("limit", "100");
             if (nameParam != null && !nameParam.toString().isBlank()) {
-                path += "?name=" + nameParam;
+                query.put("name", nameParam.toString());
             }
-            Map<String, Object> response = httpClient.get(path, Map.of("page", "1", "limit", "100"));
+            Map<String, Object> response = httpClient.get(path, query);
             Object data = extractData(response);
             return AtlasToolResult.ok("查询部署实例详情完成", data);
         } catch (Exception e) {

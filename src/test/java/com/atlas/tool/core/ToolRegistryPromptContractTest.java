@@ -2,7 +2,10 @@ package com.atlas.tool.core;
 
 import com.atlas.auth.UserPermissionContext;
 import com.atlas.tool.annotation.AtlasToolMapping;
+import com.atlas.tool.impl.DeploymentDetailTool;
 import com.atlas.tool.impl.DiagnosePodTool;
+import com.atlas.tool.impl.LogQueryTool;
+import com.atlas.tool.impl.NodeDetailTool;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -32,6 +35,33 @@ class ToolRegistryPromptContractTest {
         assertFalse(prompt.contains("target_name"), "工具目录不应逐项输出 alias，避免 prompt 膨胀");
         assertFalse(prompt.contains("name_space"), "工具目录不应逐项输出 alias，避免 prompt 膨胀");
         assertFalse(prompt.contains(" ns"), "工具目录不应逐项输出 alias，避免 prompt 膨胀");
+    }
+
+    @Test
+    void buildSystemPrompt_shouldExposeFirstBatchDiagnosticToolContracts() {
+        ToolRegistry registry = new ToolRegistry(List.of(
+            new LogQueryTool(null),
+            new DeploymentDetailTool(null),
+            new NodeDetailTool(null)
+        ), new UserPermissionContext());
+        registry.init();
+
+        String prompt = registry.buildSystemPromptForCurrentUser();
+
+        assertTrue(prompt.contains("log_query"));
+        assertTrue(prompt.contains("podName(string,可选"));
+        assertTrue(prompt.contains("namespace(string,可选"));
+        assertTrue(prompt.contains("lines(integer,可选"));
+
+        assertTrue(prompt.contains("deployment_detail"));
+        assertTrue(prompt.contains("name(string,必填,要查询详情的 Deployment/实例名称"));
+
+        assertTrue(prompt.contains("node_detail"));
+        assertTrue(prompt.contains("name(string,可选,要查询详情的 Kubernetes Node 节点名称"));
+
+        assertFalse(prompt.contains("deployment_name"), "ReAct prompt 不应展开 deployment alias");
+        assertFalse(prompt.contains("node_name"), "ReAct prompt 不应展开 node alias");
+        assertFalse(prompt.contains("tailLines"), "ReAct prompt 不应展开日志 alias");
     }
 
     @Test

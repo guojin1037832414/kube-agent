@@ -5,9 +5,11 @@ import com.atlas.tool.annotation.AtlasToolMapping;
 import com.atlas.tool.annotation.ToolPermission;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.tool.core.BaseTool;
+import com.atlas.tool.core.ToolParameterSpec;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -44,6 +46,38 @@ public class LogQueryTool extends BaseTool {
     protected Map<String, Class<?>> getParamTypes() {
         return Map.ofEntries(
             Map.entry("lines", Integer.class)
+        );
+    }
+
+    /**
+     * 日志查询参数契约。
+     *
+     * <p>当前后端日志接口以 keyword 查询 Pod/日志关键字，因此 canonical 仍使用
+     * 现有 Tool 实际读取的 {@code podName}，避免 schema-first 后字段名与执行逻辑脱节。
+     * aliases 仅用于兼容历史 LLM 输出，不会在 ReAct 工具目录中主动展示。</p>
+     */
+    @Override
+    public List<ToolParameterSpec> getParameterSpecs() {
+        return List.of(
+            ToolParameterSpec.stringParam(
+                "podName",
+                "要查询日志的 Pod 名称或明确日志目标。不要填写 Deployment、Node、Namespace 名称。",
+                false,
+                List.of("pod_name", "pod", "targetName", "target_name", "keyword")
+            ),
+            ToolParameterSpec.stringParam(
+                "namespace",
+                "Pod 所在命名空间，例如 default、prod。",
+                false,
+                List.of("name_space", "ns", "namespaceName")
+            ),
+            new ToolParameterSpec(
+                "lines",
+                "integer",
+                "返回最近多少行日志，例如 50、100、200。未指定时由后端默认处理。",
+                false,
+                List.of("line", "tail", "tailLines", "limit")
+            )
         );
     }
 

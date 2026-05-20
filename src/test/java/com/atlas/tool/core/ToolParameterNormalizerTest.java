@@ -1,7 +1,10 @@
 package com.atlas.tool.core;
 
 import com.atlas.auth.UserPermissionContext;
+import com.atlas.tool.impl.DeploymentDetailTool;
 import com.atlas.tool.impl.DiagnosePodTool;
+import com.atlas.tool.impl.LogQueryTool;
+import com.atlas.tool.impl.NodeDetailTool;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
@@ -46,6 +49,37 @@ class ToolParameterNormalizerTest {
         assertEquals("nginx-schema", result.get("podName"));
         assertEquals("default", result.get("namespace"));
         assertEquals("nginx-schema", result.get("target_name"), "schema-first 也必须保留原始字段，方便审计");
+    }
+
+    @Test
+    void normalize_schemaFirstShouldNormalizeFirstBatchDiagnosticTools() {
+        ToolRegistry registry = new ToolRegistry(java.util.List.of(
+            new LogQueryTool(null),
+            new DeploymentDetailTool(null),
+            new NodeDetailTool(null)
+        ), new UserPermissionContext());
+        registry.init();
+        ToolParameterNormalizer schemaFirstNormalizer = new ToolParameterNormalizer(registry);
+
+        Map<String, Object> logResult = schemaFirstNormalizer.normalize("log_query", Map.of(
+            "pod_name", "nginx-log",
+            "tailLines", 200,
+            "ns", "default"
+        ));
+        assertEquals("nginx-log", logResult.get("podName"));
+        assertEquals(200, logResult.get("lines"));
+        assertEquals("default", logResult.get("namespace"));
+
+        Map<String, Object> deploymentResult = schemaFirstNormalizer.normalize("deployment_detail", Map.of(
+            "deploymentName", "web-deploy"
+        ));
+        assertEquals("web-deploy", deploymentResult.get("name"), "deployment_detail 当前执行逻辑读取 name，应由 schema alias 补齐");
+        assertFalse(deploymentResult.containsKey("deploymentName_extra"));
+
+        Map<String, Object> nodeResult = schemaFirstNormalizer.normalize("node_detail", Map.of(
+            "nodeName", "worker-1"
+        ));
+        assertEquals("worker-1", nodeResult.get("name"), "node_detail 当前执行逻辑读取 name，应由 schema alias 补齐");
     }
 
     @Test
