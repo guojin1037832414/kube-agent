@@ -5,9 +5,11 @@ import com.atlas.tool.annotation.AtlasToolMapping;
 import com.atlas.tool.annotation.ToolPermission;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.tool.core.BaseTool;
+import com.atlas.tool.core.ToolParameterSpec;
 import org.springframework.stereotype.Component;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -39,6 +41,24 @@ public class HelmChartInfoTool extends BaseTool {
     @Override
     protected Set<String> getRequiredParams() {
         return Set.of("chart");
+    }
+
+    /**
+     * Helm Chart 详情查询参数契约。
+     *
+     * <p>当前执行逻辑读取的 canonical 字段是 {@code chart}。这里的 chart 表示 Helm Chart
+     * 名称或标识，不是 Helm Release 名称，也不是 Dashboard 图表。</p>
+     */
+    @Override
+    public List<ToolParameterSpec> getParameterSpecs() {
+        return List.of(
+            ToolParameterSpec.stringParam(
+                "chart",
+                "要查询详情的 Helm Chart 名称或标识。这里的 chart 不是 Helm Release 名称，也不是 Dashboard 图表。",
+                true,
+                List.of("chartName", "chart_name", "helmChart", "helm_chart")
+            )
+        );
     }
 
     @Override

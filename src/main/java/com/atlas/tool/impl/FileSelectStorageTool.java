@@ -5,9 +5,11 @@ import com.atlas.tool.annotation.AtlasToolMapping;
 import com.atlas.tool.annotation.ToolPermission;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.tool.core.BaseTool;
+import com.atlas.tool.core.ToolParameterSpec;
 import org.springframework.stereotype.Component;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -38,6 +40,24 @@ public class FileSelectStorageTool extends BaseTool {
     @Override
     protected Set<String> getRequiredParams() {
         return Set.of("name");
+    }
+
+    /**
+     * 存储详情查询参数契约。
+     *
+     * <p>当前执行逻辑读取的 canonical 字段是 {@code name}。这里的 name 严格表示
+     * 存储卷/PVC 名称，不是普通文件名、目录名、镜像名或 StorageClass 名称。</p>
+     */
+    @Override
+    public List<ToolParameterSpec> getParameterSpecs() {
+        return List.of(
+            ToolParameterSpec.stringParam(
+                "name",
+                "要查询详情的存储卷/PVC 名称。这里的 name 不是文件名、目录名、镜像名称或 StorageClass 名称。",
+                true,
+                List.of("storageName", "storage_name", "storage", "pvc", "pvcName", "pvc_name", "volumeName", "volume_name", "targetName", "target_name")
+            )
+        );
     }
 
     @Override

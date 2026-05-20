@@ -5,9 +5,11 @@ import com.atlas.tool.annotation.AtlasToolMapping;
 import com.atlas.tool.annotation.ToolPermission;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.tool.core.BaseTool;
+import com.atlas.tool.core.ToolParameterSpec;
 import org.springframework.stereotype.Component;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -38,6 +40,23 @@ public class HelmChartSearchTool extends BaseTool {
     @Override
     protected Set<String> getRequiredParams() {
         return Set.of();
+    }
+
+    /**
+     * Helm Chart 搜索参数契约。
+     *
+     * <p>keyword 是模糊搜索关键字，可为空；它不是精确 Chart 名称、Release 名称或仓库名称。</p>
+     */
+    @Override
+    public List<ToolParameterSpec> getParameterSpecs() {
+        return List.of(
+            ToolParameterSpec.stringParam(
+                "keyword",
+                "Helm Chart 模糊搜索关键字，可为空；不是精确 Chart 名称、Helm Release 名称或仓库名称。",
+                false,
+                List.of("q", "query", "search", "searchText", "search_text", "filter")
+            )
+        );
     }
 
     @Override

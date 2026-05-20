@@ -4,6 +4,10 @@ import com.atlas.auth.UserPermissionContext;
 import com.atlas.tool.annotation.AtlasToolMapping;
 import com.atlas.tool.impl.DeploymentDetailTool;
 import com.atlas.tool.impl.DiagnosePodTool;
+import com.atlas.tool.impl.FileSelectStorageTool;
+import com.atlas.tool.impl.HelmChartInfoTool;
+import com.atlas.tool.impl.HelmChartSearchTool;
+import com.atlas.tool.impl.ImageDetailByNameTool;
 import com.atlas.tool.impl.LogQueryTool;
 import com.atlas.tool.impl.NodeDetailTool;
 import org.junit.jupiter.api.Test;
@@ -62,6 +66,36 @@ class ToolRegistryPromptContractTest {
         assertFalse(prompt.contains("deployment_name"), "ReAct prompt 不应展开 deployment alias");
         assertFalse(prompt.contains("node_name"), "ReAct prompt 不应展开 node alias");
         assertFalse(prompt.contains("tailLines"), "ReAct prompt 不应展开日志 alias");
+    }
+
+    @Test
+    void buildSystemPrompt_shouldExposeSecondBatchStorageImageHelmToolContracts() {
+        ToolRegistry registry = new ToolRegistry(List.of(
+            new FileSelectStorageTool(null),
+            new ImageDetailByNameTool(null),
+            new HelmChartInfoTool(null),
+            new HelmChartSearchTool(null)
+        ), new UserPermissionContext());
+        registry.init();
+
+        String prompt = registry.buildSystemPromptForCurrentUser();
+
+        assertTrue(prompt.contains("file_select_storage"));
+        assertTrue(prompt.contains("name(string,必填,要查询详情的存储卷/PVC 名称"));
+
+        assertTrue(prompt.contains("image_detail_by_name"));
+        assertTrue(prompt.contains("name(string,可选,要查询详情的容器镜像名称或镜像引用"));
+
+        assertTrue(prompt.contains("helm_chart_info"));
+        assertTrue(prompt.contains("chart(string,必填,要查询详情的 Helm Chart 名称或标识"));
+
+        assertTrue(prompt.contains("helm_chart_search"));
+        assertTrue(prompt.contains("keyword(string,可选,Helm Chart 模糊搜索关键字"));
+
+        assertFalse(prompt.contains("storage_name"), "ReAct prompt 不应展开 storage alias");
+        assertFalse(prompt.contains("image_name"), "ReAct prompt 不应展开 image alias");
+        assertFalse(prompt.contains("chart_name"), "ReAct prompt 不应展开 chart alias");
+        assertFalse(prompt.contains("searchText"), "ReAct prompt 不应展开 keyword alias");
     }
 
     @Test

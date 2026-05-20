@@ -3,6 +3,10 @@ package com.atlas.tool.core;
 import com.atlas.auth.UserPermissionContext;
 import com.atlas.tool.impl.DeploymentDetailTool;
 import com.atlas.tool.impl.DiagnosePodTool;
+import com.atlas.tool.impl.FileSelectStorageTool;
+import com.atlas.tool.impl.HelmChartInfoTool;
+import com.atlas.tool.impl.HelmChartSearchTool;
+import com.atlas.tool.impl.ImageDetailByNameTool;
 import com.atlas.tool.impl.LogQueryTool;
 import com.atlas.tool.impl.NodeDetailTool;
 import org.junit.jupiter.api.Test;
@@ -80,6 +84,44 @@ class ToolParameterNormalizerTest {
             "nodeName", "worker-1"
         ));
         assertEquals("worker-1", nodeResult.get("name"), "node_detail 当前执行逻辑读取 name，应由 schema alias 补齐");
+    }
+
+    @Test
+    void normalize_schemaFirstShouldNormalizeSecondBatchStorageImageHelmTools() {
+        ToolRegistry registry = new ToolRegistry(java.util.List.of(
+            new FileSelectStorageTool(null),
+            new ImageDetailByNameTool(null),
+            new HelmChartInfoTool(null),
+            new HelmChartSearchTool(null)
+        ), new UserPermissionContext());
+        registry.init();
+        ToolParameterNormalizer schemaFirstNormalizer = new ToolParameterNormalizer(registry);
+
+        Map<String, Object> storageResult = schemaFirstNormalizer.normalize("file_select_storage", Map.of(
+            "storageName", "test-storage"
+        ));
+        assertEquals("test-storage", storageResult.get("name"), "file_select_storage 当前执行逻辑读取 name，应由 storageName alias 补齐");
+        assertEquals("test-storage", storageResult.get("storageName"), "原始 alias 字段必须保留，方便审计");
+        assertFalse(storageResult.containsKey("storageClass"), "storageName 不应误映射为 storageClass");
+
+        Map<String, Object> imageResult = schemaFirstNormalizer.normalize("image_detail_by_name", Map.of(
+            "imageName", "library/nginx:1.25"
+        ));
+        assertEquals("library/nginx:1.25", imageResult.get("name"), "image_detail_by_name 当前执行逻辑读取 name，应由 imageName alias 补齐");
+        assertFalse(imageResult.containsKey("podName"), "镜像名称不能被误归一为 Pod 名称");
+        assertFalse(imageResult.containsKey("deploymentName"), "镜像名称不能被误归一为 Deployment 名称");
+
+        Map<String, Object> chartInfoResult = schemaFirstNormalizer.normalize("helm_chart_info", Map.of(
+            "chartName", "bitnami/redis"
+        ));
+        assertEquals("bitnami/redis", chartInfoResult.get("chart"), "helm_chart_info 当前执行逻辑读取 chart，应由 chartName alias 补齐");
+        assertFalse(chartInfoResult.containsKey("releaseName"), "Chart 名称不能被误归一为 Helm Release 名称");
+
+        Map<String, Object> chartSearchResult = schemaFirstNormalizer.normalize("helm_chart_search", Map.of(
+            "searchText", "redis"
+        ));
+        assertEquals("redis", chartSearchResult.get("keyword"), "helm_chart_search 当前执行逻辑读取 keyword，应由 searchText alias 补齐");
+        assertFalse(chartSearchResult.containsKey("name"), "模糊搜索词不能被误归一为精确 name");
     }
 
     @Test

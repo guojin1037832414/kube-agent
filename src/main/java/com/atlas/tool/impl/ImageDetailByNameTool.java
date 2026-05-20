@@ -5,9 +5,11 @@ import com.atlas.tool.annotation.AtlasToolMapping;
 import com.atlas.tool.annotation.ToolPermission;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.tool.core.BaseTool;
+import com.atlas.tool.core.ToolParameterSpec;
 import org.springframework.stereotype.Component;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -38,6 +40,24 @@ public class ImageDetailByNameTool extends BaseTool {
     @Override
     protected Set<String> getRequiredParams() {
         return Set.of();
+    }
+
+    /**
+     * 镜像详情查询参数契约。
+     *
+     * <p>当前执行逻辑读取的 canonical 字段是 {@code name}，后端 query 参数同样为 name。
+     * 这里的 name 仅表示容器镜像名称或镜像引用，不是 Pod、Deployment 或存储名称。</p>
+     */
+    @Override
+    public List<ToolParameterSpec> getParameterSpecs() {
+        return List.of(
+            ToolParameterSpec.stringParam(
+                "name",
+                "要查询详情的容器镜像名称或镜像引用，例如 nginx:latest、library/nginx:1.25。这里的 name 不是 Pod、Deployment 或存储名称。",
+                false,
+                List.of("imageName", "image_name", "image", "containerImage", "container_image", "imageRef", "image_ref", "targetName", "target_name")
+            )
+        );
     }
 
     @Override
