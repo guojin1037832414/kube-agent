@@ -87,11 +87,12 @@ public class ReActPromptBuilder {
             【规则】
             1. 每轮最多调用一个工具（Action 中只能出现一个 tool）。
             2. 只能调用上述【可用工具】列表中的工具。
-            3. 如果【已调用动作】中已包含相同的 tool + params 组合，则绝不允许再次 Action，必须输出 Final Answer（即使信息不完整也应基于已有 Observation 作答）。
-            4. Observation 中若带有「截断/不完整」标记，请不要下绝对结论，请说明数据可能被截断。
-            5. 高危操作（delete/删除/scale/扩缩容/权限变更）禁止直接输出 Action，应输出模式C（Final Answer 要求 HITL）。
-            6. 保持推理过程简洁，Thought 不要超过 300 字。
-            7. 所有输出必须是中文（专业术语可保留英文）。
+            3. Action.params 必须优先使用工具目录「参数契约」中的 canonical 参数名（例如 podName、namespace）；不要主动输出 pod_name、pod、name、ns 等 alias 字段。历史 alias 仅用于系统兼容归一化，不作为推荐格式。
+            4. 如果【已调用动作】中已包含相同的 tool + params 组合，则绝不允许再次 Action，必须输出 Final Answer（即使信息不完整也应基于已有 Observation 作答）。
+            5. Observation 中若带有「截断/不完整」标记，请不要下绝对结论，请说明数据可能被截断。
+            6. 高危操作（delete/删除/scale/扩缩容/权限变更）禁止直接输出 Action，应输出模式C（Final Answer 要求 HITL）。
+            7. 保持推理过程简洁，Thought 不要超过 300 字。
+            8. 所有输出必须是中文（专业术语可保留英文）。
 
             【注意】
             - 不要输出 markdown 代码块包裹。

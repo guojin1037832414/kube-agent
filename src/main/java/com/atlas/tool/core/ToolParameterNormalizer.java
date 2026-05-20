@@ -124,9 +124,7 @@ public class ToolParameterNormalizer {
             return Optional.empty();
         }
         try {
-            return toolRegistry.getAllTools().stream()
-                .filter(tool -> toolName.equals(tool.getToolName()))
-                .findFirst();
+            return toolRegistry.findByName(toolName);
         } catch (Exception e) {
             return Optional.empty();
         }

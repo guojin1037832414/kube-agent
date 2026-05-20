@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 
 import jakarta.annotation.PostConstruct;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Atlas Tool 注册中心 — v3.1 P1.4 权限感知完整版。
@@ -288,6 +289,10 @@ public class ToolRegistry {
             sb.append("[").append(entry.getKey()).append("]\n");
             for (ToolMetadata t : entry.getValue()) {
                 sb.append(String.format("  • %s: %s\n", t.name(), t.description()));
+                String parameterContract = buildCompactParameterContract(t.instance());
+                if (!parameterContract.isBlank()) {
+                    sb.append("    参数契约: ").append(parameterContract).append("\n");
+                }
             }
             sb.append("\n");
         }
@@ -296,8 +301,43 @@ public class ToolRegistry {
         sb.append("1. 只能使用上述列表中的工具\n");
         sb.append("2. 如果用户请求超出可用工具范围，请礼貌拒绝并说明权限限制\n");
         sb.append("3. 调用工具前确保已收集所有必填参数\n");
+        sb.append("4. Action.params 必须优先使用参数契约中的 canonical 参数名；历史 alias 仅用于系统兼容归一化，不要主动输出 alias 字段\n");
 
         return sb.toString();
+    }
+
+    /**
+     * 构建面向 ReAct/LLM 的紧凑参数契约。
+     *
+     * <p>设计目标：</p>
+     * <ul>
+     *   <li>只展示 canonical 参数名、类型、必填性和极简说明，降低 prompt 膨胀；</li>
+     *   <li>不逐项输出 aliases，避免诱导 LLM 生成 alias；</li>
+     *   <li>通过全局兼容提示说明 alias 会被归一化，保留旧参数兼容语义。</li>
+     * </ul>
+     */
+    private String buildCompactParameterContract(BaseTool tool) {
+        if (tool == null) {
+            return "";
+        }
+        List<ToolParameterSpec> specs = tool.getParameterSpecs();
+        if (specs == null || specs.isEmpty()) {
+            return "未声明结构化参数；按工具说明传入 JSON 对象";
+        }
+
+        return specs.stream()
+            .map(this::formatParameterSpec)
+            .collect(Collectors.joining("; "));
+    }
+
+    private String formatParameterSpec(ToolParameterSpec spec) {
+        String required = spec.required() ? "必填" : "可选";
+        String type = spec.type() == null || spec.type().isBlank() ? "string" : spec.type();
+        String description = spec.description() == null ? "" : spec.description().strip();
+        if (description.isBlank()) {
+            return String.format("%s(%s,%s)", spec.name(), type, required);
+        }
+        return String.format("%s(%s,%s,%s)", spec.name(), type, required, description);
     }
 
     /**
@@ -353,7 +393,7 @@ public class ToolRegistry {
         private final String description;
         private final String intentId;
         private final String agent;
-        private final AtlasTool instance;
+        private final BaseTool instance;
 
         // ── P1.4 新增：权限字段 ──
         private final ToolPermission.Policy permissionPolicy;
@@ -361,7 +401,7 @@ public class ToolRegistry {
         private final boolean adminOnly;
 
         public ToolMetadata(String name, String description, String intentId,
-                             String agent, AtlasTool instance,
+                             String agent, BaseTool instance,
                              ToolPermission.Policy permissionPolicy,
                              Set<String> requiredRoles,
                              boolean adminOnly) {
@@ -379,7 +419,7 @@ public class ToolRegistry {
         public String description() { return description; }
         public String intentId() { return intentId; }
         public String agent() { return agent; }
-        public AtlasTool instance() { return instance; }
+        public BaseTool instance() { return instance; }
 
         // 新增 getters
         public ToolPermission.Policy permissionPolicy() { return permissionPolicy; }

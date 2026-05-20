@@ -949,3 +949,72 @@ java -jar target/kube-agent-3.1.0-SNAPSHOT.jar \
 - P1：让 `ReActPromptBuilder` 工具目录读取 `ToolParameterSpec`，从 prompt 源头减少 alias 输出。
 - P2：给 `ToolRegistry` 增加 `findByName()`，normalizer 走 O(1) 查找。
 - P3：继续扩展诊断类 Tool schema（如 node/deployment/log），每批 3~5 个，保持 E2E 回归。
+
+---
+
+## 2026-05-20 M4.1 Tool Schema Prompt 接入：ReAct 工具目录参数契约
+
+### 背景
+
+上一小步已经完成 `diagnose_pod` 的 Tool Schema 小样本，并让 `ToolParameterNormalizer` 支持 schema-first + fallback-second。真实 SSE E2E 证明 LLM 即使输出 `pod_name`，执行前也能补齐 canonical `podName`。本轮继续按“先实验再铺开”原则，不扩展新的业务 Tool schema，而是把已存在的参数契约接入手写 ReAct Prompt 源头，引导 LLM 优先生成 canonical 参数。
+
+### 实现内容
+
+1. `ToolRegistry.buildSystemPromptForCurrentUser()` 追加轻量参数契约输出：
+   - 对声明了 `ToolParameterSpec` 的 Tool 输出 canonical 参数名、类型、必填性、说明。
+   - 对未声明 specs 的旧 Tool 输出兼容提示：`未声明结构化参数；按工具说明传入 JSON 对象`。
+   - 不逐项输出 aliases，避免诱导 LLM 主动生成 alias。
+2. `ReActPromptBuilder` 规则增强：明确 `Action.params` 必须优先使用参数契约中的 canonical 参数名，例如 `podName`、`namespace`，不要主动输出 `pod_name`、`pod`、`name`、`ns` 等 alias。
+3. `ToolParameterNormalizer` 内部查找 Tool 从 `getAllTools().stream()` 改为 `toolRegistry.findByName(toolName)`，统一走注册表 O(1) 查找入口。
+4. 新增 `ToolRegistryPromptContractTest`，锁定 ReAct 工具目录的参数契约输出格式和旧 Tool 兼容提示。
+
+### 测试结果
+
+| 测试项 | 命令/方式 | 结果 |
+|--------|-----------|------|
+| 目标单测 | `mvn -Dtest=ToolRegistryPromptContractTest,ToolParameterNormalizerTest,ToolInputSchemaBuilderTest,AtlasToolCallbackTest,ReActEngineParamMergeTest test` | ✅ 17 tests, 0 failures |
+| 编译打包 | `mvn -DskipTests package` | ✅ BUILD SUCCESS |
+| 服务启动 | `java -jar target/kube-agent-3.1.0-SNAPSHOT.jar ...` | ✅ PID 77640，`/actuator/health=UP` |
+| 登录 | `POST /api/agent/login` zhaotiandi/ninePwd! | ✅ sessionId 返回，orgId=100002 |
+| 真实 SSE E2E | `POST /api/agent/chat/stream` 查询“诊断 default 命名空间下名为 nginx-not-exist-schema 的 pod 问题” | ✅ 调用 `diagnose_pod`，done 正常 |
+| Prompt schema 生效证据 | SSE thinking + tool_start.params | ✅ LLM 明确提到“参数契约包含 podName 和 namespace”；`params` 中出现 canonical `podName`，未出现 `pod_name` |
+
+### Review：优点
+
+1. **从源头降低 alias 输出概率**：上一轮 normalizer 是执行前兜底，本轮 prompt schema 让 LLM 直接生成 canonical 参数，链路更干净。
+2. **不扩大业务范围**：没有给更多 Tool 强行补 schema，只复用 `diagnose_pod` 小样本，降低回归风险。
+3. **兼容旧 Tool**：未声明 specs 的 Tool 仍可出现在工具目录中，并保留“按说明传 JSON 对象”的提示。
+4. **Prompt 控制更稳**：工具目录只展示 canonical 参数，不展开 alias 列表，避免模型被 alias 反向诱导。
+5. **查找入口统一**：normalizer 改用 `ToolRegistry.findByName()`，避免重复 stream 扫描。
+
+### Review：风险与后续改进
+
+1. **旧 Tool 参数仍不结构化**：未声明 specs 的 Tool 只能显示泛化提示，后续需按诊断类/查询类/操作类分批补齐。
+2. **参数契约文案可能变长**：当前只输出紧凑格式，避免 JSON Schema 全量塞进 prompt；后续如 Tool schema 大规模扩展，需要加入长度预算。
+3. **`ToolMetadata.instance` 类型收窄为 `BaseTool`**：与当前 `ToolRegistry` 注册源 `List<BaseTool>` 一致，编译与测试通过；若未来引入非 BaseTool 的 AtlasTool，需要另行设计 adapter。
+4. **真实 LLM 行为仍有不确定性**：本轮 E2E 已证明当前 prompt 能引导 canonical，但 normalizer fallback 仍必须保留。
+
+### 经验教训
+
+1. 子 agent 即使报告“已完成”，Hermes 也必须重新读 diff、跑编译和 E2E；本轮子 agent 中途修改文件后曾出现编译错误风险，主流程接管验证是必要的。
+2. Prompt schema 生效不能只看单测，要看真实 SSE 里的 LLM Thought 和 `tool_start.metadata.params`。
+3. alias 不一定要暴露给 LLM；更好的策略是 prompt 只教 canonical，系统执行层兼容 alias。
+4. 先增强基础设施，再扩业务 Tool schema，比直接大批量补 Tool 更安全。
+
+### 当前运行方式
+
+```bash
+cd /home/guojin/kube-agent
+mvn -DskipTests package
+java -jar target/kube-agent-3.1.0-SNAPSHOT.jar \
+  --server.port=8500 \
+  --spring.ai.openai.base-url=http://124.74.245.75:3000 \
+  --spring.ai.openai.api-key=sk-T5BnkBXiizu15sO3OSq8csiVEFL0Oypjcgiw1lWx21aZBGhw \
+  --spring.ai.openai.chat.options.model=moonshotai/kimi-k2.6
+```
+
+### 下一步建议
+
+- P1：继续保持小批量，给诊断类 Tool 补参数契约（node/deployment/log），每批 3~5 个。
+- P2：为 Tool prompt 增加长度预算和按 agent/意图裁剪能力，避免未来工具数扩大后 prompt 膨胀。
+- P3：操作类 Tool schema 可逐步增加 defaultValue/example/enum，确保创建操作继承前端默认值约束。
