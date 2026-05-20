@@ -18,6 +18,7 @@ import com.atlas.graph.node.ToolResultMergeNode;
 import com.atlas.orchestrator.StreamingEmitter;
 import com.atlas.react.ReActEngine;
 import com.atlas.react.ReActResult;
+import com.atlas.react.ReActEventSink;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -352,6 +353,7 @@ public class AtlasGraphConfig {
             strategies.put("react_node_result", new ReplaceStrategy()); // ReAct 节点最终答案
             strategies.put("react_result", new ReplaceStrategy());      // ReAct 完整结果对象
             strategies.put("react_steps", new ReplaceStrategy());       // ReAct 步骤列表
+            strategies.put("react_event_sink", new ReplaceStrategy());  // ReAct 过程事件回调（仅运行期对象）
             strategies.put("final_answer", new ReplaceStrategy());   // 最终 SSE 输出
             strategies.put("conversation_id", new ReplaceStrategy());
             strategies.put("user_id", new ReplaceStrategy());
@@ -391,8 +393,14 @@ public class AtlasGraphConfig {
             initialParams.put("organizationId", orgId);
             initialParams.put("conversationId", conversationId);
 
-            // 3. 执行同步 ReAct 推理循环（M3.2：阻塞调用，无 SSE 流式）
-            ReActResult result = engine.run(input, initialParams);
+            // 3. 执行同步 ReAct 推理循环。
+            //    若上层 Orchestrator 在 State 中注入了 react_event_sink，则引擎会在每轮 Thought/Action/Observation
+            //    生命周期中实时回调；未注入时自动退化为普通同步 run。
+            ReActEventSink eventSink = state.value("react_event_sink")
+                .filter(ReActEventSink.class::isInstance)
+                .map(ReActEventSink.class::cast)
+                .orElse(ReActEventSink.NOOP);
+            ReActResult result = engine.runWithEvents(input, initialParams, eventSink);
 
             // 4. 组装 State 更新：answer 作为通用最终答案 key，
             //    react_node_result / react_result / react_steps 供精细化展示和调试

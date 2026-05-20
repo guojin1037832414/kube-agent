@@ -636,3 +636,47 @@ ReAct MVP 第一批已完成：核心循环、记忆、提示词、结果模型�
 
 ### 结果说明
 ReAct 现在不仅能进入 `react_node`，而且会话级上下文已经稳定灌入到每轮工具参数中。下一步再做流式事件时，基础上下文链路会更稳，不容易出现 `orgId/token` 丢失或工具调用串租户的问题。
+
+
+---
+
+## M3.2 ReAct 第三批：事件化与 SSE 细粒度输出（2026-05-20）
+
+### 本批次目标
+在不重写 Graph、不拆异步架构的前提下，将原本同步黑盒的 ReAct 执行过程事件化，让前端可以实时看到 ReAct 的思考、工具调用、工具完成、Observation 和最终内容。
+
+### 主要改动
+- 新增 `ReActEvent.java`
+  - 定义 ReAct 内部领域事件：`thinking`、`tool_start`、`tool_done`、`observation`、`content`、`error`。
+  - 该模型不依赖 SSE 或 Web 层，后续可复用于审计日志、调试面板或 WebSocket。
+- 新增 `ReActEventSink.java`
+  - 定义事件接收器接口，并提供 `NOOP` 默认实现。
+  - 保证同步 `run()` 兼容非流式场景。
+- `ReActEngine.java`
+  - 新增 `runWithEvents(...)`，原 `run(...)` 委托给 `runWithEvents(..., NOOP)`。
+  - 每轮开始发送 `thinking`。
+  - Action 执行前发送 `tool_start`。
+  - 工具完成后发送 `tool_done`。
+  - Observation 截断后发送 `observation` 预览。
+  - Final Answer / 兜底答案发送 `content`。
+  - 事件发送异常被捕获并记录 warn，不影响主推理流程。
+- `AtlasGraphConfig.java`
+  - `react_node` 从 Graph state 中读取 `react_event_sink`。
+  - 调用 `engine.runWithEvents(input, initialParams, eventSink)`。
+  - KeyStrategy 新增 `react_event_sink`，用于运行期对象透传。
+- `AtlasOrchestrator.java`
+  - `runSupervisorGraph` 注入 `ReActEventSink`，将 ReAct 领域事件翻译成现有 SSE JSON 格式。
+  - 增加 `reactContentEmitted` 去重保护，避免 `runWithEvents` 已经发送最终 content 后，`react_node` 完成时重复推送最终答案。
+
+### 验证结果
+- `mvn clean compile -DskipTests`：BUILD SUCCESS
+- `mvn test -Dtest=ReActEngineParamMergeTest,SupervisorGraphReactRoutingTest,ReActMemoryTest,ActionTypeTest,AtlasBrainMockTest`：30/30 通过
+- `mvn test`：BUILD SUCCESS（100/100 通过）
+
+### 当前限制
+- 目前 LLM 本身仍是同步完整响应解析，不做 token delta 逐字流式；本批次的“流式”是 ReAct 生命周期事件流。
+- Observation 只发送 500 字符预览，完整数据仍保存在 ReActMemory / ReActResult 中，避免前端大包卡顿。
+- 前端如果要展示专用 Observation 卡片，需要识别 `type=observation`；若不识别，仍不会影响最终 `content` 输出。
+
+### 结论
+ReAct 已从“完成后一次性返回最终答案”升级为“执行中持续发送过程事件”。这为后续前端工具卡片、诊断时间线、可观测性审计和更高级的流式推理体验打下基础。

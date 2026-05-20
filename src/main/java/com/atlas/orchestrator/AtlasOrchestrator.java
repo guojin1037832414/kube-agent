@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.atlas.brain.BrainDecision;
+import com.atlas.react.ReActEventSink;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -482,13 +483,29 @@ public class AtlasOrchestrator {
     private void runSupervisorGraph(ChatRequest request, SseEmitter emitter,
                                      String userId, String sessionId, String token, String orgId) {
         try {
-            Map<String, Object> inputs = Map.of(
-                "input", Optional.ofNullable(request.userQuery()).orElse(""),
-                "conversation_id", Optional.ofNullable(request.conversationId()).orElse(""),
-                "user_id", userId,
-                "token", Optional.ofNullable(token).orElse(""),
-                "orgId", Optional.ofNullable(orgId).orElse("")  // ← P3.1: 显式传入 orgId
-            );
+            // ReAct 事件流会在执行过程中主动发送 content；这里记录是否已发送最终内容，
+            // 防止 react_node 完成后再从 state 里重复推送同一份最终答案。
+            java.util.concurrent.atomic.AtomicBoolean reactContentEmitted = new java.util.concurrent.atomic.AtomicBoolean(false);
+            ReActEventSink reactEventSink = event -> {
+                if ("content".equals(event.type())) {
+                    reactContentEmitted.set(true);
+                }
+                emit(emitter, event.type(), Map.of(
+                    "step", event.step(),
+                    "content", event.content(),
+                    "tool", event.tool(),
+                    "success", event.success(),
+                    "metadata", event.metadata() != null ? event.metadata() : Map.of()
+                ));
+            };
+
+            Map<String, Object> inputs = new java.util.HashMap<>();
+            inputs.put("input", Optional.ofNullable(request.userQuery()).orElse(""));
+            inputs.put("conversation_id", Optional.ofNullable(request.conversationId()).orElse(""));
+            inputs.put("user_id", userId);
+            inputs.put("token", Optional.ofNullable(token).orElse(""));
+            inputs.put("orgId", Optional.ofNullable(orgId).orElse("")); // ← P3.1: 显式传入 orgId
+            inputs.put("react_event_sink", reactEventSink);              // ← M3.2: ReAct 细粒度事件回调
 
             var config = com.alibaba.cloud.ai.graph.RunnableConfig.builder()
                 .threadId(sessionId)
@@ -587,7 +604,7 @@ public class AtlasOrchestrator {
                         }
 
                         // ── M3.2: ReAct 节点结果推送（手写 ReAct 引擎执行结果）──
-                        if ("react_node".equals(node)) {
+                        if ("react_node".equals(node) && !reactContentEmitted.get()) {
                             String reactAnswer = state.value("react_node_result")
                                 .map(Object::toString)
                                 .orElseGet(() -> state.value("answer")

@@ -113,6 +113,25 @@ public class ReActEngine {
      * @return {@link ReActResult} 包含最终答案或失败信息
      */
     public ReActResult run(String userQuery, Map<String, Object> initialParams) {
+        return runWithEvents(userQuery, initialParams, ReActEventSink.NOOP);
+    }
+
+    /**
+     * 执行 ReAct 推理循环，并在关键节点向外发送过程事件。
+     *
+     * <p>该方法仍然是同步执行，只是把原本黑盒的 Thought/Action/Observation
+     * 生命周期通过 {@link ReActEventSink} 暴露给上层编排器。这样既不破坏原有
+     * {@link #run(String, Map)} 调用，又能让 SSE 前端实时看到工具调用进度。</p>
+     *
+     * @param userQuery     用户原始查询
+     * @param initialParams 初始上下文参数
+     * @param eventSink     事件接收器；为空时自动降级为 NOOP
+     * @return ReAct 最终聚合结果
+     */
+    public ReActResult runWithEvents(String userQuery,
+                                     Map<String, Object> initialParams,
+                                     ReActEventSink eventSink) {
+        ReActEventSink sink = eventSink != null ? eventSink : ReActEventSink.NOOP;
         long totalStartMs = System.currentTimeMillis();
         ReActMemory memory = new ReActMemory(objectMapper);
 
@@ -126,6 +145,7 @@ public class ReActEngine {
             while (steps < DEFAULT_MAX_STEPS) {
                 steps++;
                 log.debug("[ReActEngine] ===== 第 {} 轮开始 =====", steps);
+                emitEvent(sink, ReActEvent.thinking(steps, "步骤 " + steps + "：正在分析问题并规划下一步..."));
 
                 // 1. 构建当前轮次系统提示词
                 String systemPrompt = promptBuilder.buildSystemPrompt(userQuery, memory);
@@ -138,6 +158,7 @@ public class ReActEngine {
                     log.warn("[ReActEngine] 第 {} 轮 LLM 超时", steps);
                     stopReason = "timeout";
                     finalAnswer = generateTimeoutSummary(memory, userQuery);
+                    emitEvent(sink, ReActEvent.error(steps, "LLM 调用超时，已基于现有信息生成兜底摘要"));
                     break;
                 }
 
@@ -152,6 +173,7 @@ public class ReActEngine {
                     finalAnswer = finalAnswerOpt.get().trim();
                     memory.addStep(thought, null, null, "[Final Answer]", true, 0);
                     stopReason = "final_answer";
+                    emitEvent(sink, ReActEvent.content(steps, finalAnswer));
                     log.info("[ReActEngine] 收到 Final Answer，停止。steps={}", steps);
                     break;
                 }
@@ -163,16 +185,19 @@ public class ReActEngine {
                     finalAnswer = thought; // 退化为用 Thought 作为答案
                     memory.addStep(thought, null, null, finalAnswer, true, 0);
                     stopReason = "no_action_parsed";
+                    emitEvent(sink, ReActEvent.content(steps, finalAnswer));
                     break;
                 }
 
                 String toolName = action.toolName();
                 Map<String, Object> params = mergeInitialAndActionParams(initialParams, action.params());
+                emitEvent(sink, ReActEvent.thinking(steps, thought));
 
                 // 5. 工具可见性检查
                 if (!toolRegistry.isVisible(toolName)) {
                     String obs = "工具 '" + toolName + "' 对当前用户不可见或不存在。请只调用可见工具列表中的工具。";
                     memory.addStep(thought, toolName, params, obs, false, 0);
+                    emitEvent(sink, ReActEvent.error(steps, obs));
                     log.warn("[ReActEngine] 调用不可见工具: {}", toolName);
                     continue;
                 }
@@ -185,6 +210,7 @@ public class ReActEngine {
                         + memory.formatSummary();
                     memory.addStep(thought, toolName, params,
                         "[重复动作，循环终止]", false, 0);
+                    emitEvent(sink, ReActEvent.error(steps, "检测到重复工具调用，已终止循环并基于现有结果作答"));
                     break;
                 }
 
@@ -193,6 +219,7 @@ public class ReActEngine {
                 String observation;
                 boolean toolSuccess;
                 try {
+                    emitEvent(sink, ReActEvent.toolStart(steps, toolName, params));
                     ToolRegistry.ToolMetadata meta = toolRegistry.resolve(toolName);
                     Map<String, Object> toolResult = meta.instance().execute(params);
                     observation = serializeToolResult(toolResult);
@@ -205,7 +232,12 @@ public class ReActEngine {
                 long toolCostMs = System.currentTimeMillis() - toolStartMs;
 
                 // 8. Observation 截断
+                String rawObservation = observation;
                 observation = truncateObservation(observation, MAX_OBSERVATION_CHARS);
+                boolean observationTruncated = rawObservation != null && observation != null
+                    && rawObservation.length() > observation.length();
+                emitEvent(sink, ReActEvent.toolDone(steps, toolName, toolSuccess, toolCostMs));
+                emitEvent(sink, ReActEvent.observation(steps, toolName, observation, observationTruncated));
 
                 // 9. 记录记忆
                 memory.addStep(thought, toolName, params, observation, toolSuccess, toolCostMs);
@@ -238,6 +270,9 @@ public class ReActEngine {
         log.info("[ReActEngine] 推理结束, stopReason={}, steps={}, totalMs={}, success={}",
             stopReason, steps, totalMs, success);
 
+        if (!"final_answer".equals(stopReason) && finalAnswer != null && !finalAnswer.isBlank()) {
+            emitEvent(sink, ReActEvent.content(steps, finalAnswer));
+        }
         return new ReActResult(success, finalAnswer, memory.steps(), totalMs, stopReason);
     }
 
@@ -348,6 +383,21 @@ public class ReActEngine {
         }
 
         return null;
+    }
+
+    /**
+     * 安全发送 ReAct 事件。
+     *
+     * <p>事件发送失败不能影响主推理流程，因此这里捕获所有异常并仅记录 warn。
+     * 这保证了 SSE 断开、前端刷新等传输层问题不会打断正在执行的诊断逻辑。</p>
+     */
+    private void emitEvent(ReActEventSink sink, ReActEvent event) {
+        try {
+            sink.accept(event);
+        } catch (Exception e) {
+            log.warn("[ReActEngine] ReAct 事件发送失败: type={}, error={}",
+                event != null ? event.type() : "null", e.getMessage());
+        }
     }
 
     /**
