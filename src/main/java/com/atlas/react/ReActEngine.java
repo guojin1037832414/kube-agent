@@ -1,6 +1,7 @@
 package com.atlas.react;
 
 import com.atlas.tool.core.AtlasToolResult;
+import com.atlas.tool.core.ToolParameterNormalizer;
 import com.atlas.tool.core.ToolRegistry;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -8,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -85,6 +87,7 @@ public class ReActEngine {
     private final ObjectMapper objectMapper;
     private final ToolRegistry toolRegistry;
     private final ReActPromptBuilder promptBuilder;
+    private final ToolParameterNormalizer parameterNormalizer;
 
     /** LLM 超时调用专用后台线程池（daemon，避免阻塞 JVM 退出） */
     private final ExecutorService llmExecutor;
@@ -93,10 +96,20 @@ public class ReActEngine {
                        ObjectMapper objectMapper,
                        ToolRegistry toolRegistry,
                        ReActPromptBuilder promptBuilder) {
+        this(chatModel, objectMapper, toolRegistry, promptBuilder, new ToolParameterNormalizer());
+    }
+
+    @Autowired
+    public ReActEngine(ChatModel chatModel,
+                       ObjectMapper objectMapper,
+                       ToolRegistry toolRegistry,
+                       ReActPromptBuilder promptBuilder,
+                       ToolParameterNormalizer parameterNormalizer) {
         this.chatClient = ChatClient.builder(chatModel).build();
         this.objectMapper = objectMapper;
         this.toolRegistry = toolRegistry;
         this.promptBuilder = promptBuilder;
+        this.parameterNormalizer = parameterNormalizer != null ? parameterNormalizer : new ToolParameterNormalizer();
         this.llmExecutor = Executors.newCachedThreadPool(r -> {
             Thread t = new Thread(r);
             t.setDaemon(true);
@@ -190,7 +203,7 @@ public class ReActEngine {
                 }
 
                 String toolName = action.toolName();
-                Map<String, Object> params = mergeInitialAndActionParams(initialParams, action.params());
+                Map<String, Object> params = mergeInitialAndActionParams(toolName, initialParams, action.params());
                 emitEvent(sink, ReActEvent.thinking(steps, thought));
 
                 // 5. 工具可见性检查
@@ -414,19 +427,19 @@ public class ReActEngine {
     }
 
     /**
-     * 合并初始上下文参数与本轮 Action 参数。
+     * 合并初始上下文参数与本轮 Action 参数，并调用统一参数归一化器。
      *
      * <p>规则：初始参数先放入，Action 参数后放入并覆盖同名 key，
      * 这样可以保证 token / orgId / conversationId 等会话级上下文稳定透传，
      * 同时允许 LLM 在某一轮显式指定更细粒度的工具参数。</p>
      *
-     * <p>LLM 在生成 Action JSON 时容易混用 snake_case / camelCase，例如
-     * {@code pod_name}、{@code node_name}。但现有 Tool 多数按前端/Java 习惯读取
-     * {@code podName}、{@code nodeName}。这里在 ReAct 引擎边界做轻量别名归一化，
-     * 避免工具因为参数名不匹配退化成列表查询。</p>
+     * <p>参数别名归一化已经从 ReActEngine 内联逻辑抽离到 {@link ToolParameterNormalizer}。
+     * ReActEngine 只负责传入当前 toolName，让 normalizer 可以按工具处理 {@code name}
+     * 这类高歧义字段，避免全局误映射。</p>
      */
-    private static Map<String, Object> mergeInitialAndActionParams(Map<String, Object> initialParams,
-                                                                    Map<String, Object> actionParams) {
+    private Map<String, Object> mergeInitialAndActionParams(String toolName,
+                                                            Map<String, Object> initialParams,
+                                                            Map<String, Object> actionParams) {
         Map<String, Object> merged = new java.util.HashMap<>();
         if (initialParams != null && !initialParams.isEmpty()) {
             merged.putAll(initialParams);
@@ -434,39 +447,7 @@ public class ReActEngine {
         if (actionParams != null && !actionParams.isEmpty()) {
             merged.putAll(actionParams);
         }
-        normalizeActionParamAliases(merged);
-        return merged;
-    }
-
-    /**
-     * 归一化 LLM Action 参数别名。
-     *
-     * <p>只在目标 camelCase 参数不存在时补充，避免覆盖工具或用户显式传入的精确参数。</p>
-     */
-    private static void normalizeActionParamAliases(Map<String, Object> params) {
-        if (params == null || params.isEmpty()) {
-            return;
-        }
-        copyFirstPresentAlias(params, "podName", "pod_name", "pod", "name", "targetName", "target_name");
-        copyFirstPresentAlias(params, "nodeName", "node_name", "node");
-        copyFirstPresentAlias(params, "deploymentName", "deployment_name", "deployment", "instanceName", "instance_name");
-        copyFirstPresentAlias(params, "namespace", "name_space", "ns");
-    }
-
-    /**
-     * 从一组别名中复制第一个非空值到规范参数名。
-     */
-    private static void copyFirstPresentAlias(Map<String, Object> params, String canonicalKey, String... aliases) {
-        if (params.containsKey(canonicalKey) && params.get(canonicalKey) != null) {
-            return;
-        }
-        for (String alias : aliases) {
-            Object value = params.get(alias);
-            if (value != null && !value.toString().isBlank()) {
-                params.put(canonicalKey, value);
-                return;
-            }
-        }
+        return parameterNormalizer.normalize(toolName, merged);
     }
 
     /**

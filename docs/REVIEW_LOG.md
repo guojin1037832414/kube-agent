@@ -805,3 +805,71 @@ java -jar target/kube-agent-3.1.0-SNAPSHOT.jar   --server.port=8500   --spring.a
 2. 引入工具 schema 参数契约，让 LLM Prompt 明确每个工具的 canonical 参数名。
 3. 将参数别名归一化从 ReActEngine 提升为 `ToolParameterNormalizer`，为全部 Agent/Tool 复用。
 4. 增加真实存在 Pod 的成功诊断 E2E，验证非 target_not_found 路径仍可多步推理。
+
+---
+
+## 2026-05-20 M3.2 ReAct 参数归一化基础设施抽取：ToolParameterNormalizer
+
+### 背景
+上一批次为了修复 ReAct 中 LLM 输出 `pod_name/name` 导致 `diagnose_pod` 无法识别目标 Pod 的问题，先在 `ReActEngine` 内部实现了参数别名归一化。真实 E2E 验证通过后，继续推进架构收敛：将该能力从 ReAct 内联逻辑抽出为可复用基础设施，避免 ReActEngine 职责膨胀，并为未来 Tool Schema 参数契约铺路。
+
+### 专家会诊结论
+- 建议独立 `ToolParameterNormalizer`，但不要一步到位做复杂 Schema 引擎。
+- 当前阶段只做“别名补齐”，不做类型转换、不删除字段、不覆盖 canonical 参数、不处理权限和 required 校验。
+- `name` 是高歧义字段，必须按 toolName 做 tool-aware 归一化，禁止全局把 `name -> podName`。
+- 这轮先由 `ReActEngine` 调用 normalizer，不下沉到 `BaseTool.execute(...)`，降低对普通 Tool 路径的回归风险。
+
+### 主要改动
+- 新增 `src/main/java/com/atlas/tool/core/ToolParameterNormalizer.java`
+  - 作为 Spring `@Component`，提供 `normalize(String toolName, Map<String,Object> params)`。
+  - 全局低歧义规则：`name_space/ns -> namespace`。
+  - Pod 工具规则：`pod_name/pod/target_name/name -> podName`，仅限 `diagnose_pod/pod_status/pod_query/log_query`。
+  - Node 工具规则：`node_name/node/target_name/name -> nodeName`，仅限 Node 相关工具。
+  - Deployment 工具规则：`deployment_name/deployment/instance_name/target_name/name -> deploymentName`，仅限 Deployment/实例相关工具。
+  - 未知工具不处理 `name`，只处理低歧义别名，避免误伤。
+  - 返回新 Map，不修改调用方原始参数。
+- 修改 `ReActEngine.java`
+  - 新增 `ToolParameterNormalizer` 依赖。
+  - 保留 4 参数构造器兼容测试，新增带 `@Autowired` 的 5 参数构造器供 Spring 使用。
+  - `mergeInitialAndActionParams(...)` 改为实例方法，参数增加 `toolName`，合并后委托 normalizer。
+  - 删除 ReActEngine 内部 `normalizeActionParamAliases/copyFirstPresentAlias` 私有实现。
+- 更新 `ReActEngineParamMergeTest.java`
+  - 通过实例反射验证 ReActEngine 合并后会调用 normalizer。
+  - 增加未知工具不把 `name` 映射成 `podName` 的防误伤测试。
+- 新增 `ToolParameterNormalizerTest.java`
+  - 覆盖 Pod alias、Node/Deployment tool-aware name 映射、未知工具 name 不映射、canonical 不被覆盖、falsy/unknown 字段保留、不修改原始 Map。
+
+### 验证结果
+- 小样本测试：`mvn -Dtest=ToolParameterNormalizerTest,ReActEngineParamMergeTest,ReActEnginePolicyTest test`
+  - 14/14 通过，BUILD SUCCESS。
+- 核心回归：`mvn -Dtest=ToolParameterNormalizerTest,ReActEngineParamMergeTest,ReActEnginePolicyTest,ReActMemoryTest,AtlasBrainMockTest,AtlasOrchestratorJsonTest,SupervisorGraphReactRoutingTest test`
+  - 35/35 通过，BUILD SUCCESS。
+- 构建：`mvn package -DskipTests`
+  - BUILD SUCCESS。
+- 服务重启：旧 8500 JVM 已 kill，新服务 PID `72860`，`/actuator/health` 返回 `UP`。
+- 真实 SSE E2E：登录 `zhaotiandi/ninePwd!` 后请求 `/react 诊断 default namespace 的 nginx-1 pod CrashLoopBackOff 原因`。
+  - LLM 实际输出：`Action: {"tool":"diagnose_pod","params":{"namespace":"default","pod_name":"nginx-1"}}`。
+  - `tool_start` metadata 显示 normalizer 已补齐 `podName=nginx-1`，同时保留原始 `pod_name=nginx-1`。
+  - 工具返回：`未找到 Pod nginx-1，返回 Pod 列表`。
+  - ReAct 日志：`stopReason=target_not_found, steps=1, totalMs=5003, success=true`。
+  - SSE 事件统计：`thinking=6`、`tool_start=1`、`tool_done=1`、`observation=1`、`content=1`、`done=1`。
+  - JSON 解析：`BAD=0`。
+
+### 代码 Review
+**优点：**
+- ReActEngine 职责更聚焦，只负责 ReAct 循环和 stop policy，不再内联工具参数契约细节。
+- `ToolParameterNormalizer` 是纯、轻量、可单测的基础设施，为后续 Tool Schema 演进预留入口。
+- tool-aware 处理 `name`，修复上一批全局 `name -> podName` 的潜在误伤风险。
+- 不删除原始 alias 字段，利于日志审计和兼容下游。
+- 返回新 Map，避免副作用。
+
+**风险：**
+- 当前 normalizer 仍是硬编码 toolName 集合，未来工具数量继续扩张后需要迁移到 schema/metadata 驱动。
+- 这轮只接入 ReActEngine，普通单步 Tool 调用路径暂未复用；这是刻意控制风险，后续可在 BaseTool 或 ToolInvocation 层统一接入。
+- Node/Deployment 工具名集合目前只覆盖常见命名，后续新增工具时需要同步扩展，直到 Tool Schema 落地。
+
+### 后续建议
+1. 新增 `ToolParameterSpec` / `ToolSchema`，让每个 Tool 声明 canonical 参数、aliases、type、required、description。
+2. ReActPromptBuilder 使用 Tool Schema 生成参数说明，减少 LLM 输出 alias 的概率。
+3. 将 normalizer 从硬编码集合迁移为 schema 驱动，保留当前硬编码作为 fallback。
+4. 待测试覆盖充分后，再评估是否下沉到 `BaseTool.execute(...)`，让普通 Tool Calling 路径也复用。
