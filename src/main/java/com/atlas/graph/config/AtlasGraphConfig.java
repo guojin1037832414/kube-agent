@@ -16,6 +16,8 @@ import com.atlas.graph.node.DirectAnswerNode;
 import com.atlas.graph.node.SseEmitNode;
 import com.atlas.graph.node.ToolResultMergeNode;
 import com.atlas.orchestrator.StreamingEmitter;
+import com.atlas.react.ReActEngine;
+import com.atlas.react.ReActResult;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -162,6 +164,7 @@ public class AtlasGraphConfig {
             ChatModel chatModel,
             AtlasBrain atlasBrain,
             ToolRegistry toolRegistry,
+            ReActEngine reactEngine,
             ReactAgent queryAgent,
             ReactAgent deployAgent,
             ReactAgent diagAgent,
@@ -226,7 +229,10 @@ public class AtlasGraphConfig {
                 .addNode("storage", storageAgent.getAndCompileGraph())
                 .addNode("network", networkAgent.getAndCompileGraph())
 
-                // 3. 辅助节点
+                // 3. ReAct 节点（手写推理引擎，M3.2 第二批接入）
+                .addNode("react_node", buildReActNode(reactEngine))
+
+                // 4. 辅助节点
                 .addNode("direct_answer", directAnswerNode)
                 .addNode("merge_result", mergeResultNode)
                 .addNode("emit_sse", emitSseNode);
@@ -256,6 +262,10 @@ public class AtlasGraphConfig {
                                     : "direct_answer";
                             return List.of("query", "deploy", "diag", "rbac", "storage", "network")
                                     .contains(agent) ? agent : "direct_answer";
+
+                        case DELEGATE_REACT:
+                            // M3.2: 诊断类查询路由到手写 ReAct 引擎
+                            return "react_node";
 
                         case CALL_TOOL:
                             // 单工具调用 — 通过 ToolRegistry 映射到对应 Agent
@@ -295,6 +305,7 @@ public class AtlasGraphConfig {
                         "rbac", "rbac",
                         "storage", "storage",
                         "network", "network",
+                        "react_node", "react_node",
                         "direct_answer", "direct_answer"
                 )
         );
@@ -306,6 +317,7 @@ public class AtlasGraphConfig {
         graph.addEdge("rbac", "merge_result");
         graph.addEdge("storage", "merge_result");
         graph.addEdge("network", "merge_result");
+        graph.addEdge("react_node", "merge_result");
         graph.addEdge("direct_answer", "merge_result");
 
         // merge_result → emit_sse
@@ -337,6 +349,9 @@ public class AtlasGraphConfig {
             strategies.put("rbac_result", new ReplaceStrategy());
             strategies.put("storage_result", new ReplaceStrategy());
             strategies.put("network_result", new ReplaceStrategy());
+            strategies.put("react_node_result", new ReplaceStrategy()); // ReAct 节点最终答案
+            strategies.put("react_result", new ReplaceStrategy());      // ReAct 完整结果对象
+            strategies.put("react_steps", new ReplaceStrategy());       // ReAct 步骤列表
             strategies.put("final_answer", new ReplaceStrategy());   // 最终 SSE 输出
             strategies.put("conversation_id", new ReplaceStrategy());
             strategies.put("user_id", new ReplaceStrategy());
@@ -346,13 +361,58 @@ public class AtlasGraphConfig {
             return strategies;
         };
     }
+
+    /**
+     * 构建 ReAct 节点异步动作。
+     * <p>从 Graph State 中读取用户查询、token、user_id、orgId，
+     * 构造 initialParams 后调用 {@link ReActEngine#run} 同步执行手写 ReAct 推理循环。
+     * 执行结果写入 State 的 answer、react_node_result、react_result、react_steps 等 key，
+     * 供下游 SSE 节点消费。</p>
+     *
+     * <p>M3.2 批次：同步执行，暂不接入 SSE 流式推送（TODO 第三批）。</p>
+     *
+     * @param engine 手写 ReAct 引擎（由 Spring 容器注入）
+     * @return 异步节点动作
+     */
+    private static com.alibaba.cloud.ai.graph.action.AsyncNodeAction buildReActNode(ReActEngine engine) {
+        return node_async((OverAllState state) -> {
+            // 1. 从 State 读取必要上下文
+            String input = state.value("input").map(Object::toString).orElse("");
+            String token = state.value("token").map(Object::toString).orElse("");
+            String userId = state.value("user_id").map(Object::toString).orElse("anonymous");
+            String orgId = state.value("orgId").map(Object::toString).orElse("");
+
+            // 2. 构造 initialParams，透传身份和租户信息供工具调用使用
+            //    ReActEngine.run 会将 initialParams 透传至工具执行层
+            Map<String, Object> initialParams = new HashMap<>();
+            initialParams.put("userId", userId);
+            initialParams.put("token", token);
+            initialParams.put("organizationId", orgId);
+
+            // 3. 执行同步 ReAct 推理循环（M3.2：阻塞调用，无 SSE 流式）
+            ReActResult result = engine.run(input, initialParams);
+
+            // 4. 组装 State 更新：answer 作为通用最终答案 key，
+            //    react_node_result / react_result / react_steps 供精细化展示和调试
+            String finalAnswer = result.finalAnswer() != null ? result.finalAnswer() : "";
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("answer", finalAnswer);
+            updates.put("react_node_result", finalAnswer);
+            updates.put("react_result", result);
+            if (result.steps() != null) {
+                updates.put("react_steps", result.steps());
+            }
+            return updates;
+        });
+    }
     /**
      * Supervisor 图 — AtlasBrain 决策节点 + 条件路由。
-     * START → supervisor → [conditional] → {direct_answer, ask_clarify, tool_call, delegate} → END
+     * START → supervisor → [conditional] → {direct_answer, ask_clarify, tool_call, delegate, react_node} → END
      */
     @Bean
     public CompiledGraph supervisorGraph(
             AtlasBrain atlasBrain, ToolRegistry toolRegistry,
+            ReActEngine reactEngine,
             com.atlas.http.KubeManagerHttpClient kubeManagerClient,
             ReactAgent queryAgent,
             ReactAgent deployAgent,
@@ -409,7 +469,7 @@ public class AtlasGraphConfig {
                     case ASK_CLARIFY -> "ask_clarify";
                     case CALL_TOOL -> "tool_call";
                     case DELEGATE_AGENT -> "delegate";
-                    case DELEGATE_REACT -> "direct_answer"; // TODO M3.2 MVP: ReAct 入口尚未接入 Graph，暂 fallback 到 direct_answer
+                    case DELEGATE_REACT -> "react_node"; // M3.2 第二批：接入手写 ReAct 引擎
                     case HITL_CONFIRM -> "hitl_confirm";
                 };
             }),
@@ -418,6 +478,7 @@ public class AtlasGraphConfig {
                 "ask_clarify", "ask_clarify",
                 "tool_call", "tool_call",
                 "delegate", "delegate",
+                "react_node", "react_node",
                 "hitl_confirm", "hitl_confirm"
             )
         );
@@ -637,12 +698,17 @@ public class AtlasGraphConfig {
             return java.util.Map.of("answer", "[HITL_CONFIRM] 请人工确认此操作");
         }));
 
+        // 5. ReAct 节点（手写推理引擎）— M3.2 第二批接入
+        //    复用 buildReActNode 工厂方法，保持与 atlasGraph 一致的节点行为
+        graph.addNode("react_node", buildReActNode(reactEngine));
+
         // 4. 连接边
         graph.addEdge(START, "supervisor");
         graph.addEdge("direct_answer", END);
         graph.addEdge("ask_clarify", END);
         graph.addEdge("tool_call", END);
         graph.addEdge("delegate", END);
+        graph.addEdge("react_node", END);
         graph.addEdge("hitl_confirm", END);
 
         return graph.compile();

@@ -583,3 +583,29 @@ Hermes Review 发现高危 query（如“为什么删除 Pod 失败”）不应�
 
 ### 结论
 ReAct MVP 第一批已完成：核心循环、记忆、提示词、结果模型、AtlasBrain 路由守卫均已落地并通过全量测试。系统现在具备把诊断类意图识别为 `DELEGATE_REACT` 的能力，但真正执行 ReAct 还需要第二批 Graph/Orchestrator 接入。
+
+
+---
+
+## M3.2 ReAct MVP 第二批：Graph / Orchestrator 接入（2026-05-20）
+
+### 实施目标
+将已完成的手写 ReAct 核心循环接入当前 live Graph 路径，使诊断类查询真正走 `DELEGATE_REACT -> react_node -> ReActEngine.run()`，并将结果通过 SSE 输出。
+
+### 主要改动
+- `AtlasGraphConfig.java`
+  - `supervisorGraph` 新增 `react_node`。
+  - 条件边新增 `case DELEGATE_REACT -> "react_node"`。
+  - `buildKeyStrategyFactory()` 新增 `react_node_result`、`react_result`、`react_steps`。
+  - 新增 `buildReActNode(ReActEngine engine)`：同步调用 `ReActEngine.run(input, initialParams)`，将结果回写 state。
+  - `atlasGraph` 侧也补充了 `react_node`，避免新枚举导致图构建失配。
+- `AtlasOrchestrator.java`
+  - 在 supervisorGraph SSE 事件流中新增 `react_node` 事件处理：优先输出 `react_node_result`，fallback 到 `answer`。
+
+### 验证结果
+- `mvn clean compile -DskipTests`：BUILD SUCCESS
+- `mvn test -Dtest=ReActMemoryTest,ActionTypeTest,AtlasBrainMockTest`：BUILD SUCCESS
+- `mvn test`：BUILD SUCCESS（99/99）
+
+### 结果说明
+现在诊断类 query 可以从 `AtlasBrain` 识别成 `DELEGATE_REACT`，进入 `react_node` 执行手写 ReAct 循环，并通过 SSE 输出最终答案。下一步的重点从“路由接入”变成“流式 ReAct 输出”和“Observation / 参数合并优化”。

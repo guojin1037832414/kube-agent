@@ -585,6 +585,16 @@ public class AtlasOrchestrator {
                                     }
                                 });
                         }
+
+                        // ── M3.2: ReAct 节点结果推送（手写 ReAct 引擎执行结果）──
+                        if ("react_node".equals(node)) {
+                            String reactAnswer = state.value("react_node_result")
+                                .map(Object::toString)
+                                .orElseGet(() -> state.value("answer")
+                                    .map(Object::toString)
+                                    .orElse("[ReAct] 执行完成，无输出"));
+                            emit(emitter, "content", Map.of("content", reactAnswer));
+                        }
                     },
                     err -> {
                         log.error("[Supervisor] 会话 {} 流式错误", sessionId, err);
