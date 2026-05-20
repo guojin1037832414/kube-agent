@@ -19,6 +19,7 @@ import com.atlas.orchestrator.StreamingEmitter;
 import com.atlas.react.ReActEngine;
 import com.atlas.react.ReActResult;
 import com.atlas.react.ReActEventSink;
+import com.atlas.react.ReActEventSinkRegistry;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -172,7 +173,8 @@ public class AtlasGraphConfig {
             ReactAgent rbacAgent,
             ReactAgent storageAgent,
             ReactAgent networkAgent,
-            StreamingEmitter streamingEmitter
+            StreamingEmitter streamingEmitter,
+            ReActEventSinkRegistry reactEventSinkRegistry
     ) throws GraphStateException {
 
         KeyStrategyFactory keyFactory = buildKeyStrategyFactory();
@@ -231,7 +233,7 @@ public class AtlasGraphConfig {
                 .addNode("network", networkAgent.getAndCompileGraph())
 
                 // 3. ReAct 节点（手写推理引擎，M3.2 第二批接入）
-                .addNode("react_node", buildReActNode(reactEngine))
+                .addNode("react_node", buildReActNode(reactEngine, reactEventSinkRegistry))
 
                 // 4. 辅助节点
                 .addNode("direct_answer", directAnswerNode)
@@ -353,7 +355,7 @@ public class AtlasGraphConfig {
             strategies.put("react_node_result", new ReplaceStrategy()); // ReAct 节点最终答案
             strategies.put("react_result", new ReplaceStrategy());      // ReAct 完整结果对象
             strategies.put("react_steps", new ReplaceStrategy());       // ReAct 步骤列表
-            strategies.put("react_event_sink", new ReplaceStrategy());  // ReAct 过程事件回调（仅运行期对象）
+            strategies.put("react_event_session_id", new ReplaceStrategy()); // ReAct 过程事件会话ID（纯字符串，可序列化）
             strategies.put("final_answer", new ReplaceStrategy());   // 最终 SSE 输出
             strategies.put("conversation_id", new ReplaceStrategy());
             strategies.put("user_id", new ReplaceStrategy());
@@ -374,9 +376,12 @@ public class AtlasGraphConfig {
      * <p>M3.2 批次：同步执行，暂不接入 SSE 流式推送（TODO 第三批）。</p>
      *
      * @param engine 手写 ReAct 引擎（由 Spring 容器注入）
+     * @param sinkRegistry ReAct 过程事件接收器运行期注册表
      * @return 异步节点动作
      */
-    private static com.alibaba.cloud.ai.graph.action.AsyncNodeAction buildReActNode(ReActEngine engine) {
+    private static com.alibaba.cloud.ai.graph.action.AsyncNodeAction buildReActNode(
+            ReActEngine engine,
+            ReActEventSinkRegistry sinkRegistry) {
         return node_async((OverAllState state) -> {
             // 1. 从 State 读取必要上下文
             String input = state.value("input").map(Object::toString).orElse("");
@@ -394,12 +399,14 @@ public class AtlasGraphConfig {
             initialParams.put("conversationId", conversationId);
 
             // 3. 执行同步 ReAct 推理循环。
-            //    若上层 Orchestrator 在 State 中注入了 react_event_sink，则引擎会在每轮 Thought/Action/Observation
-            //    生命周期中实时回调；未注入时自动退化为普通同步 run。
-            ReActEventSink eventSink = state.value("react_event_sink")
-                .filter(ReActEventSink.class::isInstance)
-                .map(ReActEventSink.class::cast)
-                .orElse(ReActEventSink.NOOP);
+            //    Graph State 只允许保存纯数据，不能保存 Lambda/SseEmitter 等运行期对象。
+            //    因此 State 中只读取 react_event_session_id 字符串，再通过运行期 registry 查找 sink。
+            String reactEventSessionId = state.value("react_event_session_id")
+                .map(Object::toString)
+                .orElse("");
+            ReActEventSink eventSink = reactEventSessionId.isBlank()
+                ? ReActEventSink.NOOP
+                : event -> sinkRegistry.publish(reactEventSessionId, event);
             ReActResult result = engine.runWithEvents(input, initialParams, eventSink);
 
             // 4. 组装 State 更新：answer 作为通用最终答案 key，
@@ -423,6 +430,7 @@ public class AtlasGraphConfig {
     public CompiledGraph supervisorGraph(
             AtlasBrain atlasBrain, ToolRegistry toolRegistry,
             ReActEngine reactEngine,
+            ReActEventSinkRegistry reactEventSinkRegistry,
             com.atlas.http.KubeManagerHttpClient kubeManagerClient,
             ReactAgent queryAgent,
             ReactAgent deployAgent,
@@ -710,7 +718,7 @@ public class AtlasGraphConfig {
 
         // 5. ReAct 节点（手写推理引擎）— M3.2 第二批接入
         //    复用 buildReActNode 工厂方法，保持与 atlasGraph 一致的节点行为
-        graph.addNode("react_node", buildReActNode(reactEngine));
+        graph.addNode("react_node", buildReActNode(reactEngine, reactEventSinkRegistry));
 
         // 4. 连接边
         graph.addEdge(START, "supervisor");

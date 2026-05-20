@@ -680,3 +680,63 @@ ReAct 现在不仅能进入 `react_node`，而且会话级上下文已经稳定�
 
 ### 结论
 ReAct 已从“完成后一次性返回最终答案”升级为“执行中持续发送过程事件”。这为后续前端工具卡片、诊断时间线、可观测性审计和更高级的流式推理体验打下基础。
+
+---
+
+## 2026-05-20 M3.2 ReAct E2E 修复：强制触发、SSE JSON 转义、Graph State 运行期对象隔离
+
+### 背景
+真实 SSE E2E 验证发现三类问题：
+1. `/react ... CrashLoopBackOff` 仍可能被普通 `CALL_TOOL` 抢走，没有稳定进入 `DELEGATE_REACT`。
+2. SSE `event:content` 的 JSON payload 中存在真实换行，导致 EventSource/curl 解析时一条 data 被拆成多行，客户端出现 `NONJSON`。
+3. 为了推送 ReAct 过程事件，`react_event_sink` Lambda 被放入 StateGraph State，MemorySaver/Jackson 尝试序列化该 Lambda 时沿引用链进入 Spring/Micrometer/JVM 内部对象，触发 `OperatingSystemImpl` 反射访问异常。
+
+### 根因分析
+- ReActGuard 缺少显式 `/react`、`/deep` 前缀和典型 K8s 故障状态关键词的硬规则。
+- `AtlasOrchestrator.toJson` 是手写 JSON 序列化，只转义了反斜杠和双引号，未转义 `\n`、`\r`、`\t` 和控制字符。
+- Graph State 语义是可序列化、可 checkpoint/replay 的业务状态，不应保存 Lambda、SseEmitter、Spring Bean 等运行期对象。
+- `validateDecision` 原先先做可见 Tool 校验，再做高危识别；当 LLM 给出不可见删除工具时会先抛异常，SafetyGuard 没机会转 HITL。
+
+### 解决方案
+1. `AtlasBrain`
+   - 新增 `REACT_FORCE_PREFIXES`：`/react`、`/deep`。
+   - 扩展 ReAct 关键词：`CrashLoopBackOff`、`ImagePullBackOff`、`ErrImagePull`、`OOMKilled`、`Pending`、`Evicted`、`起不来`、`无法启动`、`启动失败` 等。
+   - 调整安全优先级：高危查询/高危决策先让 SafetyGuard 覆盖为 `HITL_CONFIRM`，再做普通工具可见性校验。
+
+2. `AtlasOrchestrator`
+   - 新增 `escapeJsonString`，按 JSON 标准转义双引号、反斜杠、LF、CR、Tab、Backspace、FormFeed 和 `U+0000-U+001F` 控制字符。
+   - 所有 String 和 fallback `toString()` 输出都经过该方法，保证 SSE data 行是单行合法 JSON。
+
+3. ReAct 事件通道
+   - 新增 `ReActEventSinkRegistry`，用 `ConcurrentHashMap` 保存 `sessionId -> ReActEventSink`。
+   - Graph State 不再放 `react_event_sink`，只放可序列化字符串 `react_event_session_id`。
+   - `react_node` 通过 registry 间接发布事件，sink 不存在/发送失败不影响主流程。
+   - Orchestrator 在 Graph 执行前 register，完成/异常时 unregister，避免内存泄漏。
+
+### 测试结果
+- 定向单测：`mvn -Dtest=AtlasBrainMockTest,AtlasOrchestratorJsonTest test` 通过。
+  - 覆盖 `/react` 前缀强制 ReAct。
+  - 覆盖 `/deep` 和 K8s 故障关键词。
+  - 覆盖高危 `/react 删除...` 仍走 `HITL_CONFIRM`。
+  - 覆盖 SSE JSON 中真实换行/回车/Tab/控制字符的转义和 Jackson 反解析一致性。
+- 构建：`mvn package -DskipTests` 通过。
+- 服务重启：旧 8500 JVM 已 kill，新服务 PID `68640`，`/actuator/health` 返回 `{"status":"UP"}`。
+- 真实 E2E：登录 `zhaotiandi/ninePwd!` 后请求 `/react 诊断 default namespace 的 nginx-1 pod CrashLoopBackOff 原因`。
+  - Brain final decision：`DELEGATE_REACT`。
+  - Graph 进入 `react_node`。
+  - SSE 事件统计：`thinking=9`、`tool_start=2`、`tool_done=2`、`observation=2`、`heartbeat=3`、`error=1`、`content=1`、`done=1`。
+  - JSON 解析：`BAD=0`，未再出现多行 data 造成的 `NONJSON`。
+  - Registry 日志显示 register/unregister 正常。
+
+### 当前运行方式
+```bash
+java -jar target/kube-agent-3.1.0-SNAPSHOT.jar   --server.port=8500   --spring.ai.openai.base-url=http://124.74.245.75:3000   --spring.ai.openai.api-key=sk-***   --spring.ai.openai.chat.options.model=moonshotai/kimi-k2.6
+```
+
+当前验证服务 PID：`68640`，端口：`8500`。
+
+### 风险与后续优化
+- 本次 registry 是单 JVM 内存方案，适合当前开发测试；未来多实例部署时，若需要跨实例恢复 SSE，需要升级为 Redis Pub/Sub、Kafka 或 WebSocket session manager。
+- ReAct 第 3 轮 LLM 调用仍出现超时，但已有兜底摘要，后续可继续优化 LLM timeout、工具观察截断策略和最终总结体验。
+- Graph State 已不包含运行期对象，但仍需保持后续开发纪律：禁止将 `SseEmitter`、Lambda、Spring Bean、Executor、Socket 等对象放入 State。
+

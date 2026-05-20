@@ -29,13 +29,23 @@ import java.util.Set;
 public class AtlasBrain {
     private static final Logger log = LoggerFactory.getLogger(AtlasBrain.class);
 
+    /**
+     * ReAct 强制前缀列表。
+     * <p>用户显式输入这些前缀时，表示主动要求进入多步推理模式；
+     * 除非命中高危操作需要 HITL，否则不允许被普通 CALL_TOOL 抢走。</p>
+     */
+    private static final Set<String> REACT_FORCE_PREFIXES = Set.of(
+        "/react", "/deep"
+    );
+
     /** ReAct 触发关键词列表（中英文），用于前/后校验覆盖 LLM 误判 */
     private static final Set<String> REACT_KEYWORDS = Set.of(
         "为什么", "怎么回事", "报错", "无法访问", "连不上",
         "troubleshoot", "debug", "diagnose", "排查", "分析失败",
         "诊断", "什么问题", "失败原因", "这是什么错误", "怎么排查",
-        "crash", "error", "failed", "unavailable", "not working",
-        "pod 起不来", "服务异常", "状态异常"
+        "crash", "crashloopbackoff", "imagepullbackoff", "errimagepull", "oomkilled",
+        "pending", "evicted", "error", "failed", "unavailable", "not working",
+        "pod 起不来", "起不来", "无法启动", "启动失败", "服务异常", "状态异常"
     );
 
     /** 高危操作关键词（必须是 HITL，不得转 ReAct） */
@@ -135,14 +145,20 @@ public class AtlasBrain {
      * 校验决策基础合法性。
      */
     private void validateDecision(BrainDecision d, ExecutionContext ctx) {
+        // 安全优先：高危意图必须先让 SafetyGuard 有机会覆盖为 HITL_CONFIRM。
+        // 若先做可见 Tool 校验，LLM 误判到不可见删除工具时会直接抛异常，反而绕开人工确认流程。
+        if (isHighRiskQuery(ctx.userQuery()) || isHighRisk(d)) {
+            if (d.actionType() != BrainDecision.ActionType.HITL_CONFIRM) {
+                log.warn("High-risk decision not marked HITL_CONFIRM: {} {}", d.actionType(), d.target());
+            }
+            return;
+        }
+
         if (d.actionType() == BrainDecision.ActionType.CALL_TOOL) {
             List<String> visible = toolRegistry.getVisibleToolNamesForCurrentUser();
             if (!visible.contains(d.target())) {
                 throw new RuntimeException("Brain decision targets invisible tool: " + d.target());
             }
-        }
-        if (isHighRisk(d) && d.actionType() != BrainDecision.ActionType.HITL_CONFIRM) {
-            log.warn("High-risk decision not marked HITL_CONFIRM: {} {}", d.actionType(), d.target());
         }
     }
 
@@ -208,7 +224,15 @@ public class AtlasBrain {
      */
     public static boolean shouldUseReAct(String query) {
         if (query == null || query.isBlank()) return false;
-        String lower = query.toLowerCase();
+        String lower = query.trim().toLowerCase();
+
+        // 用户显式要求深度推理时，优先进入 ReAct；高危 HITL 由 applyReActGuard 的前置安全分支兜底。
+        for (String prefix : REACT_FORCE_PREFIXES) {
+            if (lower.startsWith(prefix)) {
+                return true;
+            }
+        }
+
         for (String kw : REACT_KEYWORDS) {
             if (lower.contains(kw.toLowerCase())) {
                 return true;

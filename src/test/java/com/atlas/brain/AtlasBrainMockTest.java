@@ -120,7 +120,7 @@ class AtlasBrainMockTest {
 
     @Test
     void testDecide_invisibleTool_throwsRuntimeException() {
-        ExecutionContext ctx = buildCtx("删除某个东西");
+        ExecutionContext ctx = buildCtx("查询内部管理员审计报表");
 
         when(toolRegistry.buildSystemPromptForCurrentUser()).thenReturn("node_query: 查询节点");
         when(toolRegistry.getVisibleToolNamesForCurrentUser()).thenReturn(List.of("node_query"));
@@ -128,9 +128,9 @@ class AtlasBrainMockTest {
         // parser 返回了一个当前用户无权访问的 tool
         BrainDecision badDecision = new BrainDecision(
             BrainDecision.ActionType.CALL_TOOL,
-            "admin_delete_all",  // 不在可见列表中
+            "admin_audit_report",  // 不在可见列表中
             Map.of(),
-            "想删除",
+            "用户想查询内部管理员审计报表",
             0.90,
             Collections.emptyList()
         );
@@ -226,6 +226,66 @@ class AtlasBrainMockTest {
         assertEquals("react", result.target());
         assertTrue(result.confidence() >= 0.80, "覆盖后置信度应至少提升到0.80");
         assertTrue(result.reasoning().contains("ReActGuard"), "reasoning 应包含 ReActGuard 标记");
+    }
+
+
+    @Test
+    void testDecide_reactPrefix_overridesCallToolToReact() {
+        // 用户显式使用 /react 前缀时，即使 LLM 误判为普通工具调用，也必须进入 ReAct。
+        ExecutionContext ctx = buildCtx("/react 诊断 default namespace 的 nginx-1 pod CrashLoopBackOff 原因");
+
+        when(toolRegistry.buildSystemPromptForCurrentUser()).thenReturn("pod_query: 查询 Pod");
+        when(toolRegistry.getVisibleToolNamesForCurrentUser()).thenReturn(List.of("pod_query"));
+
+        BrainDecision llmWrong = new BrainDecision(
+            BrainDecision.ActionType.CALL_TOOL,
+            "pod_query",
+            Map.of(),
+            "用户想查询 Pod 列表",
+            0.70,
+            Collections.emptyList()
+        );
+        when(parser.parse(any(), anyString(), eq(BrainDecision.class), any()))
+            .thenReturn(llmWrong);
+
+        BrainDecision result = atlasBrain.decide(ctx);
+
+        assertEquals(BrainDecision.ActionType.DELEGATE_REACT, result.actionType());
+        assertEquals("react", result.target());
+        assertTrue(result.reasoning().contains("ReActGuard"));
+    }
+
+    @Test
+    void testShouldUseReAct_deepPrefixAndKubernetesFailureKeywords() {
+        // 静态守卫直接覆盖显式深度推理前缀和常见 K8s 故障状态。
+        assertTrue(AtlasBrain.shouldUseReAct("/deep 排查 default namespace nginx-1 为什么起不来"));
+        assertTrue(AtlasBrain.shouldUseReAct("帮我看看 nginx-1 为什么 CrashLoopBackOff"));
+        assertTrue(AtlasBrain.shouldUseReAct("Pod ImagePullBackOff 怎么排查"));
+        assertTrue(AtlasBrain.shouldUseReAct("服务启动失败是什么原因"));
+    }
+
+    @Test
+    void testDecide_highRiskReactPrefix_stillHitlFirst() {
+        // 高危 HITL 优先级必须高于 /react，避免用户通过显式前缀绕过确认边界。
+        ExecutionContext ctx = buildCtx("/react 删除 production namespace 下所有 pod");
+
+        when(toolRegistry.buildSystemPromptForCurrentUser()).thenReturn("pod_delete: 删除 Pod");
+
+        BrainDecision llmWrong = new BrainDecision(
+            BrainDecision.ActionType.CALL_TOOL,
+            "pod_delete",
+            Map.of(),
+            "用户要求删除生产命名空间资源",
+            0.80,
+            Collections.emptyList()
+        );
+        when(parser.parse(any(), anyString(), eq(BrainDecision.class), any()))
+            .thenReturn(llmWrong);
+
+        BrainDecision result = atlasBrain.decide(ctx);
+
+        assertEquals(BrainDecision.ActionType.HITL_CONFIRM, result.actionType());
+        assertTrue(result.reasoning().contains("SafetyGuard"));
     }
 
     // ═══════════════════════════════════════════════════════════

@@ -20,6 +20,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.atlas.brain.BrainDecision;
 import com.atlas.react.ReActEventSink;
+import com.atlas.react.ReActEventSinkRegistry;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -53,6 +54,9 @@ public class AtlasOrchestrator {
     private final UserPermissionContext userPermissionContext;
     private final Executor asyncExecutor;
     private final KubeManagerHttpClient kubeManagerClient;
+
+    /** ReAct SSE 过程事件运行期注册表，避免把 Lambda/SseEmitter 放入 Graph State。 */
+    private final ReActEventSinkRegistry reactEventSinkRegistry;
 
     /**
      * (Phase1) Supervisor Graph compiled from AtlasBrain decision + conditional routing.
@@ -95,6 +99,7 @@ public class AtlasOrchestrator {
                              ToolRegistry toolRegistry,
                              UserPermissionContext userPermissionContext,
                              KubeManagerHttpClient kubeManagerClient,
+                             ReActEventSinkRegistry reactEventSinkRegistry,
                              TimedDecisionCache decisionCache,
                              ToolResultPolishingService polishingService,
                              @Qualifier("atlasTaskExecutor") Executor asyncExecutor,
@@ -110,6 +115,7 @@ public class AtlasOrchestrator {
         this.toolRegistry = toolRegistry;
         this.userPermissionContext = userPermissionContext;
         this.kubeManagerClient = kubeManagerClient;
+        this.reactEventSinkRegistry = reactEventSinkRegistry;
         this.decisionCache = decisionCache;
         this.polishingService = polishingService;
         this.asyncExecutor = asyncExecutor;
@@ -505,7 +511,9 @@ public class AtlasOrchestrator {
             inputs.put("user_id", userId);
             inputs.put("token", Optional.ofNullable(token).orElse(""));
             inputs.put("orgId", Optional.ofNullable(orgId).orElse("")); // ← P3.1: 显式传入 orgId
-            inputs.put("react_event_sink", reactEventSink);              // ← M3.2: ReAct 细粒度事件回调
+            // M3.2 修复：Graph State 只能保存可序列化纯数据，真实事件回调放入运行期 registry。
+            inputs.put("react_event_session_id", sessionId);
+            reactEventSinkRegistry.register(sessionId, reactEventSink);
 
             var config = com.alibaba.cloud.ai.graph.RunnableConfig.builder()
                 .threadId(sessionId)
@@ -616,17 +624,20 @@ public class AtlasOrchestrator {
                     err -> {
                         log.error("[Supervisor] 会话 {} 流式错误", sessionId, err);
                         streamingEmitter.error(emitter, err.getMessage());
+                        reactEventSinkRegistry.unregister(sessionId);
                         userConnections.merge(userId, -1, Integer::sum);
                     },
                     () -> {
                         log.info("[Supervisor] 会话 {} 完成", sessionId);
                         streamingEmitter.complete(emitter);
+                        reactEventSinkRegistry.unregister(sessionId);
                         userConnections.merge(userId, -1, Integer::sum);
                     }
                 );
         } catch (Exception e) {
             log.error("[Supervisor] 会话 {} 异常", sessionId, e);
             streamingEmitter.error(emitter, e.getMessage());
+            reactEventSinkRegistry.unregister(sessionId);
             userConnections.merge(userId, -1, Integer::sum);
         }
     }
@@ -711,17 +722,53 @@ public class AtlasOrchestrator {
             if (v == null) {
                 sb.append("null");
             } else if (v instanceof String s) {
-                sb.append("\"").append(s.replace("\\", "\\\\").replace("\"", "\\\"")).append("\"");
+                sb.append("\"").append(escapeJsonString(s)).append("\"");
             } else if (v instanceof Number || v instanceof Boolean) {
                 sb.append(v);
             } else if (v instanceof Map) {
                 sb.append(toJson((Map<String, Object>) v));
             } else {
-                sb.append("\"").append(v.toString().replace("\"", "\\\"")).append("\"");
+                sb.append("\"").append(escapeJsonString(v.toString())).append("\"");
             }
         }
         sb.append("}");
         return sb.toString();
+    }
+
+    /**
+     * JSON 字符串标准转义。
+     * <p>SSE 的 data 行必须保持为单行合法 JSON；如果 content 中包含真实换行、回车、Tab
+     * 或其他控制字符，必须在 JSON 字符串层转义，否则浏览器/EventSource 会把一条 data
+     * 拆成多行，前端 JSON.parse 将失败。</p>
+     *
+     * @param value 原始字符串
+     * @return 可安全放入 JSON 字符串字面量内部的转义结果
+     */
+    private String escapeJsonString(String value) {
+        if (value == null) {
+            return "";
+        }
+        StringBuilder escaped = new StringBuilder(value.length() + 16);
+        for (int i = 0; i < value.length(); i++) {
+            char ch = value.charAt(i);
+            switch (ch) {
+                case '\"' -> escaped.append("\\\"");
+                case '\\' -> escaped.append("\\\\");
+                case '\n' -> escaped.append("\\n");
+                case '\r' -> escaped.append("\\r");
+                case '\t' -> escaped.append("\\t");
+                case '\b' -> escaped.append("\\b");
+                case '\f' -> escaped.append("\\f");
+                default -> {
+                    if (ch < 0x20) {
+                        escaped.append(String.format("\\u%04x", (int) ch));
+                    } else {
+                        escaped.append(ch);
+                    }
+                }
+            }
+        }
+        return escaped.toString();
     }
 
     // ── 请求 DTO ────────────────────────────────────
