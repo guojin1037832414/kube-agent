@@ -873,3 +873,79 @@ java -jar target/kube-agent-3.1.0-SNAPSHOT.jar   --server.port=8500   --spring.a
 2. ReActPromptBuilder 使用 Tool Schema 生成参数说明，减少 LLM 输出 alias 的概率。
 3. 将 normalizer 从硬编码集合迁移为 schema 驱动，保留当前硬编码作为 fallback。
 4. 待测试覆盖充分后，再评估是否下沉到 `BaseTool.execute(...)`，让普通 Tool Calling 路径也复用。
+
+---
+
+## 2026-05-20 M4.1 Tool Schema 小样本实验：diagnose_pod 参数契约
+
+### 背景
+
+上一轮已经抽出 `ToolParameterNormalizer`，解决 LLM 在 ReAct 工具调用中输出 `pod_name` 而工具读取 `podName` 的别名不一致问题。本轮继续按“先实验再铺开”原则，只选刚刚真实 E2E 过的 `diagnose_pod` 做 Tool Schema/参数契约小样本，不一次性改造全部 Tool。
+
+### 实现内容
+
+1. 新增 `ToolParameterSpec`：声明 canonical 参数名、类型、描述、required、aliases。
+2. 新增 `ToolInputSchemaBuilder`：把 `ToolParameterSpec` 转成 Spring AI `ToolDefinition.inputSchema` JSON。
+3. `BaseTool` 新增默认 `getParameterSpecs()`，默认空列表，保证旧 Tool 零改动兼容。
+4. `DiagnosePodTool` 声明第一批参数契约：
+   - `podName`：aliases = `pod_name`、`pod`、`targetName`、`target_name`、`name`
+   - `namespace`：aliases = `name_space`、`ns`
+5. `ToolParameterNormalizer` 升级为 schema-first：
+   - 有 `ToolParameterSpec` 时，优先按 Tool 自身 aliases 补齐 canonical 字段；
+   - 无 schema 时保留原先 hardcoded fallback；
+   - 不覆盖 canonical 值、不删除原始 alias 字段、不做类型转换、不做权限判断。
+6. `com.atlas.graph.bridge.AtlasToolCallback` 接入：
+   - `getToolDefinition()` 使用精确 inputSchema；
+   - `call()` 执行前统一调用 `ToolParameterNormalizer.normalize()`。
+7. `AtlasToolCallbackFactory` 注入统一 normalizer，保证 Graph/ReactAgent 路径也走同一套参数归一化。
+
+### 测试结果
+
+| 测试项 | 命令/方式 | 结果 |
+|--------|-----------|------|
+| 目标单测 | `mvn -Dtest=ToolParameterNormalizerTest,ToolInputSchemaBuilderTest,AtlasToolCallbackTest test` | ✅ 11 tests, 0 failures |
+| 编译打包 | `mvn -DskipTests package` | ✅ BUILD SUCCESS |
+| 服务启动 | `java -jar target/kube-agent-3.1.0-SNAPSHOT.jar ...` | ✅ PID 74924，`/actuator/health=UP` |
+| 登录 | `POST /api/agent/login` zhaotiandi/ninePwd! | ✅ sessionId 返回，orgId=100002 |
+| 真实 SSE E2E | `POST /api/agent/chat/stream` 查询“诊断 pod nginx-not-exist-abc 在 default 命名空间的问题” | ✅ 调用 `diagnose_pod`，done 正常 |
+| 参数归一化链路 | SSE `tool_start.metadata.params` | ✅ 同时包含 `pod_name` 原始 alias 与 `podName` canonical，证明归一化生效 |
+
+### Review：优点
+
+1. **小样本边界清晰**：只改 `diagnose_pod`，没有盲目全量铺开，符合“先实验再铺开”。
+2. **兼容性好**：`BaseTool#getParameterSpecs()` 默认空列表，旧 Tool 不受影响；normalizer fallback 保留。
+3. **Schema 与执行链路打通**：不是只生成 schema 文档，而是 Graph `ToolCallback` 的 inputSchema 和 call 执行前归一化都接入。
+4. **审计友好**：保留原始 alias 参数，如 `pod_name`，同时补齐 canonical `podName`，方便排查 LLM 原始输出。
+5. **风险收敛**：`name` 这类高歧义字段只在 tool-aware/schema-aware 场景映射，避免全局误伤用户、镜像、节点、实例等其它资源名。
+
+### Review：风险与后续改进
+
+1. **Schema 还没有进入手写 ReAct Prompt 工具目录**：当前已进入 Spring AI `ToolDefinition.inputSchema` 和执行归一化；后续可让 `ReActPromptBuilder` 也读取 specs，减少 LLM 生成 alias 的概率。
+2. **ToolRegistry 查找方式仍为 stream 扫描**：schema-first normalizer 每次通过 `getAllTools().stream()` 查找 Tool；当前量级可接受，后续可补 `findByName()`。
+3. **只有 diagnose_pod 一个样本**：本轮是小样本验证，下一步建议按“诊断类 → 查询类 → 操作类”分批铺开。
+4. **inputSchema 仍保留 `additionalProperties=true`**：这是兼容策略，未来等覆盖率提高后可对高危操作改为更严格 schema。
+
+### 经验教训
+
+1. `ToolDefinition.inputSchema` 的描述文本最好使用稳定可断言的关键词（如 `aliases:`），比纯中文提示更方便自动化测试。
+2. Graph bridge 路径和手写 ReAct 路径必须统一参数归一化，否则同一个 Tool 在不同执行链路下行为不一致。
+3. 测试桩必须以当前 `BaseTool` 真实签名为准：构造器是 `(String toolName, String description)`，抽象方法是 `doExecute()`，返回用 `AtlasToolResult.ok()`。
+4. 真实 E2E 的证据应查看 SSE `tool_start.metadata.params`，它能同时证明 LLM 原始参数和归一化后的 canonical 参数。
+
+### 当前运行方式
+
+```bash
+cd /home/guojin/kube-agent
+mvn -DskipTests package
+java -jar target/kube-agent-3.1.0-SNAPSHOT.jar \
+  --server.port=8500 \
+  --spring.ai.openai.base-url=http://124.74.245.75:3000 \
+  --spring.ai.openai.api-key=sk-T5BnkBXiizu15sO3OSq8csiVEFL0Oypjcgiw1lWx21aZBGhw \
+  --spring.ai.openai.chat.options.model=moonshotai/kimi-k2.6
+```
+
+### 下一步建议
+
+- P1：让 `ReActPromptBuilder` 工具目录读取 `ToolParameterSpec`，从 prompt 源头减少 alias 输出。
+- P2：给 `ToolRegistry` 增加 `findByName()`，normalizer 走 O(1) 查找。
+- P3：继续扩展诊断类 Tool schema（如 node/deployment/log），每批 3~5 个，保持 E2E 回归。

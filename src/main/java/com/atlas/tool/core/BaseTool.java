@@ -83,6 +83,17 @@ public abstract class BaseTool implements AtlasTool {
         return Map.of();
     }
 
+    /**
+     * Tool 参数声明元数据（可选重写）。
+     *
+     * <p>第一阶段用于给 LLM 暴露更精确的 inputSchema，并为
+     * {@link ToolParameterNormalizer} 提供 schema-first 的 alias 归一化来源。
+     * 默认返回空列表，保证所有既有 Tool 无需立即改造。</p>
+     */
+    public List<ToolParameterSpec> getParameterSpecs() {
+        return List.of();
+    }
+
     // ═══════════════════════════════════════════
     // Spring AI Tool 入口（ public，被 MethodToolCallback 反射调用）
     // ═══════════════════════════════════════════

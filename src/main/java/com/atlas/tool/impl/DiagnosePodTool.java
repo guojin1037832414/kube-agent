@@ -5,9 +5,11 @@ import com.atlas.tool.annotation.AtlasToolMapping;
 import com.atlas.tool.annotation.ToolPermission;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.tool.core.BaseTool;
+import com.atlas.tool.core.ToolParameterSpec;
 import org.springframework.stereotype.Component;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -38,6 +40,32 @@ public class DiagnosePodTool extends BaseTool {
     @Override
     protected Set<String> getRequiredParams() {
         return Set.of();
+    }
+
+    /**
+     * 声明 diagnose_pod 的参数契约。
+     *
+     * <p>当前 podName 和 namespace 都不设为必填：不传 podName 时，工具仍可返回 Pod 列表，
+     * 供 ReAct 后续判断或 target_not_found 早停使用。aliases 用于 ToolParameterNormalizer
+     * schema-first 归一化，同时也会暴露到 ToolDefinition inputSchema 的描述中，引导 LLM
+     * 优先生成 canonical 参数名。</p>
+     */
+    @Override
+    public List<ToolParameterSpec> getParameterSpecs() {
+        return List.of(
+            ToolParameterSpec.stringParam(
+                "podName",
+                "要诊断的 Pod 名称。如果用户明确提到某个 Pod、实例名或服务名，应填写该字段；未指定具体 Pod 时可不传。",
+                false,
+                List.of("pod_name", "pod", "targetName", "target_name", "name")
+            ),
+            ToolParameterSpec.stringParam(
+                "namespace",
+                "Pod 所在命名空间。如果用户提到 namespace、ns 或命名空间，应填写该字段。",
+                false,
+                List.of("name_space", "ns")
+            )
+        );
     }
 
     @Override

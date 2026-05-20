@@ -1,5 +1,7 @@
 package com.atlas.tool.core;
 
+import com.atlas.auth.UserPermissionContext;
+import com.atlas.tool.impl.DiagnosePodTool;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
@@ -27,6 +29,23 @@ class ToolParameterNormalizerTest {
         assertEquals("nginx-1", result.get("podName"));
         assertEquals("default", result.get("namespace"));
         assertEquals("nginx-1", result.get("pod_name"), "原始 alias 字段应保留，便于审计和兼容");
+    }
+
+    @Test
+    void normalize_schemaFirstShouldUseToolParameterSpecsWhenRegistryAvailable() {
+        DiagnosePodTool diagnosePodTool = new DiagnosePodTool(null);
+        ToolRegistry registry = new ToolRegistry(java.util.List.of(diagnosePodTool), new UserPermissionContext());
+        registry.init();
+        ToolParameterNormalizer schemaFirstNormalizer = new ToolParameterNormalizer(registry);
+
+        Map<String, Object> result = schemaFirstNormalizer.normalize("diagnose_pod", Map.of(
+            "target_name", "nginx-schema",
+            "ns", "default"
+        ));
+
+        assertEquals("nginx-schema", result.get("podName"));
+        assertEquals("default", result.get("namespace"));
+        assertEquals("nginx-schema", result.get("target_name"), "schema-first 也必须保留原始字段，方便审计");
     }
 
     @Test
