@@ -109,7 +109,7 @@ public class ReActEngine {
      * 执行 ReAct 推理循环。
      *
      * @param userQuery    用户原始查询
-     * @param initialParams 初始参数（MVP 暂不深度使用，透传至工具调用）
+     * @param initialParams 初始参数（会与每轮 Action params 合并，并透传至工具调用）
      * @return {@link ReActResult} 包含最终答案或失败信息
      */
     public ReActResult run(String userQuery, Map<String, Object> initialParams) {
@@ -167,7 +167,7 @@ public class ReActEngine {
                 }
 
                 String toolName = action.toolName();
-                Map<String, Object> params = action.params();
+                Map<String, Object> params = mergeInitialAndActionParams(initialParams, action.params());
 
                 // 5. 工具可见性检查
                 if (!toolRegistry.isVisible(toolName)) {
@@ -348,6 +348,25 @@ public class ReActEngine {
         }
 
         return null;
+    }
+
+    /**
+     * 合并初始上下文参数与本轮 Action 参数。
+     *
+     * <p>规则：初始参数先放入，Action 参数后放入并覆盖同名 key，
+     * 这样可以保证 token / orgId / conversationId 等会话级上下文稳定透传，
+     * 同时允许 LLM 在某一轮显式指定更细粒度的工具参数。</p>
+     */
+    private static Map<String, Object> mergeInitialAndActionParams(Map<String, Object> initialParams,
+                                                                    Map<String, Object> actionParams) {
+        Map<String, Object> merged = new java.util.HashMap<>();
+        if (initialParams != null && !initialParams.isEmpty()) {
+            merged.putAll(initialParams);
+        }
+        if (actionParams != null && !actionParams.isEmpty()) {
+            merged.putAll(actionParams);
+        }
+        return merged;
     }
 
     /**

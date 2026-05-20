@@ -381,13 +381,15 @@ public class AtlasGraphConfig {
             String token = state.value("token").map(Object::toString).orElse("");
             String userId = state.value("user_id").map(Object::toString).orElse("anonymous");
             String orgId = state.value("orgId").map(Object::toString).orElse("");
+            String conversationId = state.value("conversation_id").map(Object::toString).orElse("");
 
-            // 2. 构造 initialParams，透传身份和租户信息供工具调用使用
-            //    ReActEngine.run 会将 initialParams 透传至工具执行层
+            // 2. 构造 initialParams，透传身份、租户和会话信息供工具调用使用
+            //    ReActEngine.run 会将 initialParams 与每轮 Action params 合并后透传至工具执行层
             Map<String, Object> initialParams = new HashMap<>();
             initialParams.put("userId", userId);
             initialParams.put("token", token);
             initialParams.put("organizationId", orgId);
+            initialParams.put("conversationId", conversationId);
 
             // 3. 执行同步 ReAct 推理循环（M3.2：阻塞调用，无 SSE 流式）
             ReActResult result = engine.run(input, initialParams);

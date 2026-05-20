@@ -609,3 +609,30 @@ ReAct MVP 第一批已完成：核心循环、记忆、提示词、结果模型�
 
 ### 结果说明
 现在诊断类 query 可以从 `AtlasBrain` 识别成 `DELEGATE_REACT`，进入 `react_node` 执行手写 ReAct 循环，并通过 SSE 输出最终答案。下一步的重点从“路由接入”变成“流式 ReAct 输出”和“Observation / 参数合并优化”。
+
+
+---
+
+## M3.2 ReAct 第三批前置：参数透传与状态契约收紧（2026-05-20）
+
+### 本批次目标
+先收紧 ReAct 的上下文链路，而不是直接继续做 SSE 流式事件。专家会诊结论认为：当前最值得优先修复的是 `orgId/token/conversationId` 的稳定透传，以及 Graph state key 的一致性，这比直接流式化更能降低隐性 bug 风险。
+
+### 主要改动
+- `ReActEngine.java`
+  - 将每轮工具调用参数改为 `mergeInitialAndActionParams(initialParams, action.params())`。
+  - 新增 `mergeInitialAndActionParams(...)`，保证 `token / organizationId / conversationId` 等会话级上下文先注入，再允许本轮 Action 参数覆盖同名字段。
+- `AtlasGraphConfig.java`
+  - `react_node` 读取 `conversation_id` 并写入 `initialParams`。
+  - `ReActEngine.run(...)` 现在会接收到 `userId / token / organizationId / conversationId` 四类上下文。
+- 新增测试 `ReActEngineParamMergeTest.java`
+  - 验证初始上下文参数会透传到工具参数。
+  - 验证同名字段时 Action 参数优先覆盖。
+
+### 验证结果
+- `mvn test -Dtest=ReActEngineParamMergeTest,SupervisorGraphReactRoutingTest,ReActMemoryTest,ActionTypeTest,AtlasBrainMockTest`：30/30 通过
+- `mvn clean compile -DskipTests`：BUILD SUCCESS
+- `mvn test`：BUILD SUCCESS（99/99 通过）
+
+### 结果说明
+ReAct 现在不仅能进入 `react_node`，而且会话级上下文已经稳定灌入到每轮工具参数中。下一步再做流式事件时，基础上下文链路会更稳，不容易出现 `orgId/token` 丢失或工具调用串租户的问题。
