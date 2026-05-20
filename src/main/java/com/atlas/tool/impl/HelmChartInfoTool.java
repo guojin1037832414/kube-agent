@@ -7,6 +7,7 @@ import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.tool.core.BaseTool;
 import org.springframework.stereotype.Component;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -46,11 +47,15 @@ public class HelmChartInfoTool extends BaseTool {
             String orgId = resolveOrganizationId(params);
             String path = "/api/{orgId}/helm/charts/single".replace("{orgId}", orgId);
 
+            Map<String, Object> query = new LinkedHashMap<>();
+            query.put("page", "1");
+            query.put("limit", "100");
+
             Object chartParam = params.get("chart");
             if (chartParam != null && !chartParam.toString().isBlank()) {
-                path += "?chart=" + chartParam;
+                query.put("chart", chartParam.toString());
             }
-            Map<String, Object> response = httpClient.get(path, Map.of("page", "1", "limit", "100"));
+            Map<String, Object> response = httpClient.get(path, query);
             Object data = extractData(response);
             return AtlasToolResult.ok("查询Helm Chart详情完成", data);
         } catch (Exception e) {

@@ -7,6 +7,7 @@ import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.tool.core.BaseTool;
 import org.springframework.stereotype.Component;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -44,11 +45,15 @@ public class ImageDetailByNameTool extends BaseTool {
         try {
             String orgId = resolveOrganizationId(params);
             String path = "/api/{orgId}/image/name".replace("{orgId}", orgId);
+            Map<String, Object> query = new LinkedHashMap<>();
+            query.put("page", "1");
+            query.put("limit", "100");
+
             Object nameParam = params.get("name");
             if (nameParam != null && !nameParam.toString().isBlank()) {
-                path += "?name=" + nameParam;
+                query.put("name", nameParam.toString());
             }
-            Map<String, Object> response = httpClient.get(path, Map.of("page", "1", "limit", "100"));
+            Map<String, Object> response = httpClient.get(path, query);
             Object data = extractData(response);
             return AtlasToolResult.ok("根据名称查询镜像详情完成", data);
         } catch (Exception e) {

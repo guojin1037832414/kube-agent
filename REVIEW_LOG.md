@@ -77,3 +77,68 @@
 2. 后续独立重构 detail 类 Tool 的 canonical 字段：从 `name` 演进为资源类型明确的 `deploymentName/nodeName/podName`，并同步修改执行逻辑。
 3. 增加 URL 参数构造专项扫描，查找所有 `path += "?"` 写法，统一改为 query map。
 4. 补充完整 ReAct 多步链路 E2E，验证工具目录参数契约是否稳定提升 LLM 工具调用准确率。
+
+## 2026-05-20 23:45 - 文档里程碑重对齐 + URL query 拼接专项清理
+
+### 背景
+- 用户要求“更新文档，然后继续推进”。
+- 文档层面：`ROADMAP.md` 仍停留在 M1.5 旧基线，`CHANGELOG.md` 未记录 M3.2 ReAct 与 M4.1 Tool Schema，`docs/会话上下文快照_20260520.md` 仍把 ReAct 核心文件列为待创建。
+- 代码层面：上一轮 E2E 已发现 `path += "?name="` 可能被 URI builder 编码为 `%253F`，扫描后剩余 4 个同类风险点。
+
+### 专家会诊结论
+1. 文档必须对齐到当前真实状态：M3.2 ReAct MVP 已落地，M4.1 Tool Schema 参数契约分批铺开中。
+2. `CHANGELOG.md` 应补 `[M3.2]` 与 `[M4.1]`，不能继续写 M3/M4 待启动。
+3. `docs/会话上下文快照_20260520.md` 应从 `fdd8c42` 更新到 `c296a3c`，并把“新建 ReActEngine”等待办改为已完成归档。
+4. URL query 构造应统一改为 `httpClient.get(path, queryMap)`，禁止手拼 `?xxx=`。
+
+### 本轮代码变更
+修复 4 个剩余 URL query 拼接点：
+
+| 文件 | 原字段 | 修复方式 |
+|------|--------|----------|
+| `HelmChartSearchTool.java` | `?keyword=` | `query.put("keyword", kwParam.toString())` |
+| `HelmChartInfoTool.java` | `?chart=` | `query.put("chart", chartParam.toString())` |
+| `ImageDetailByNameTool.java` | `?name=` | `query.put("name", nameParam.toString())` |
+| `FileSelectStorageTool.java` | `?name=` | `query.put("name", nameParam.toString())` |
+
+所有文件保留原有 `page=1`、`limit=100` 行为，并使用 `LinkedHashMap` 保持参数构造清晰可审计。
+
+### 本轮文档变更
+- 重写 `ROADMAP.md`：对齐当前基线为“M3.2 ReAct MVP 已打通；M4.1 Tool Schema 参数契约分批铺开中”。
+- 重写 `CHANGELOG.md`：新增 M3.2 ReAct 与 M4.1 Tool Schema 章节。
+- 更新 `docs/会话上下文快照_20260520.md`：从旧 `fdd8c42` 快照更新到当前 `c296a3c` 之后的真实状态。
+- 追加当前 `REVIEW_LOG.md` 记录。
+
+### 静态验证
+- 命令：`grep -RIn 'path += "?' src/main/java/com/atlas/tool/impl || true`
+- 结果：无输出。
+- 命令：`grep -RIn '\?name=|\?chart=|\?keyword=' src/main/java/com/atlas/tool/impl || true`
+- 结果：无输出。
+
+### 代码 Review
+#### 优点
+- 修复范围小且明确，只处理 4 个已扫描出的风险点。
+- 不改变业务参数语义，不改变必填参数校验，不改变分页默认行为。
+- 统一消除 URL query injection 和 `%253F` 编码风险。
+- 文档同步反映真实工程进度，避免 ROADMAP/CHANGELOG/会话快照继续误导后续开发。
+
+#### 风险
+- 本轮 URL 修复仍需编译、重启和真实 SSE E2E 验证。
+- Helm 相关接口可能因后端 Helm 服务未连接返回业务失败；本轮验收重点是 path/query 分离，不以 Helm 业务数据是否存在为唯一标准。
+- 里程碑全景图与 `PROJECT_ATLAS_V3.md` 仍建议后续继续做深度重对齐。
+
+### 后续建议
+1. 执行目标测试、package、重启服务、4 条 E2E 查询。
+2. 继续第二批 `ToolParameterSpec`：优先对本轮 4 个 URL 修复 Tool 补参数契约。
+3. 后续单独更新 `docs/v3.1/项目里程碑全景图_20260519.md` 与 `PROJECT_ATLAS_V3.md`，避免总览文档漂移。
+
+### 执行结果更新（2026-05-21 00:00）
+- 目标单测：`ToolParameterNormalizerTest,ToolRegistryPromptContractTest,ToolInputSchemaBuilderTest,AtlasToolCallbackTest` 全部通过，`Tests run: 15, Failures: 0, Errors: 0, Skipped: 0`。
+- 打包：`mvn -DskipTests package`，BUILD SUCCESS。
+- 服务重启：端口 8500，`/actuator/health={"status":"UP"}`。
+- 真实 SSE E2E：4/4 返回 `event:done`。
+  1. `查询名称为 test-storage 的存储详情` → 命中 `file_select_storage`，日志确认 `/api/100002/file/selectStorage 参数={page=1, limit=100, name=test-storage}`。
+  2. `查询镜像 nginx:latest 的详情` → 命中 `image_detail_by_name`，日志确认 `/api/100002/image/name 参数={page=1, limit=100, name=nginx:latest}`。
+  3. `查询 Helm Chart nginx 的详情` → 命中 `helm_chart_info`，日志确认 `/api/100002/helm/charts/single 参数={page=1, limit=100, chart=nginx}`。
+  4. `搜索 Helm Chart 关键字 redis` → SSE `event:done`，Brain target=`helm_chart_search`；业务返回空结果属于可接受状态。
+
