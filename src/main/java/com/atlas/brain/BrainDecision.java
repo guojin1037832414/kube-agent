@@ -17,6 +17,7 @@ public record BrainDecision(
     public enum ActionType {
         CALL_TOOL,
         DELEGATE_AGENT,
+        DELEGATE_REACT,
         DIRECT_ANSWER,
         ASK_CLARIFY,
         HITL_CONFIRM

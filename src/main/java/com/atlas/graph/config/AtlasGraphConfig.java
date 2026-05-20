@@ -409,6 +409,7 @@ public class AtlasGraphConfig {
                     case ASK_CLARIFY -> "ask_clarify";
                     case CALL_TOOL -> "tool_call";
                     case DELEGATE_AGENT -> "delegate";
+                    case DELEGATE_REACT -> "direct_answer"; // TODO M3.2 MVP: ReAct 入口尚未接入 Graph，暂 fallback 到 direct_answer
                     case HITL_CONFIRM -> "hitl_confirm";
                 };
             }),

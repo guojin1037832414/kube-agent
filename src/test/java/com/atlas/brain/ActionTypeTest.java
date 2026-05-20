@@ -11,20 +11,21 @@ import static org.junit.jupiter.api.Assertions.*;
  * <ul>
  *   <li>CALL_TOOL — 调用某个 DomainTool</li>
  *   <li>DELEGATE_AGENT — 委派给某个 Worker Agent</li>
+ *   <li>DELEGATE_REACT — 委派给 ReAct 推理引擎（M3.2 新增）</li>
  *   <li>DIRECT_ANSWER — 直接回复用户（无需工具）</li>
  *   <li>ASK_CLARIFY — 需要用户补充信息</li>
  *   <li>HITL_CONFIRM — 需要人工确认（高危操作）</li>
  * </ul>
  *
- * @version 3.1.0-M2
+ * @version 3.1.0-M3.2
  */
 class ActionTypeTest {
 
     @Test
     void testAllActionTypesExist() {
-        // 验证枚举值的数量和名称
+        // 验证枚举值的数量和名称（M3.2 新增 DELEGATE_REACT，共6个）
         BrainDecision.ActionType[] values = BrainDecision.ActionType.values();
-        assertEquals(5, values.length, "应有5个ActionType");
+        assertEquals(6, values.length, "应有6个ActionType（含M3.2新增的DELEGATE_REACT）");
     }
 
     @Test
@@ -37,6 +38,12 @@ class ActionTypeTest {
     void testDelegateAgent() {
         assertNotNull(BrainDecision.ActionType.DELEGATE_AGENT);
         assertEquals("DELEGATE_AGENT", BrainDecision.ActionType.DELEGATE_AGENT.name());
+    }
+
+    @Test
+    void testDelegateReact() {
+        assertNotNull(BrainDecision.ActionType.DELEGATE_REACT);
+        assertEquals("DELEGATE_REACT", BrainDecision.ActionType.DELEGATE_REACT.name());
     }
 
     @Test
@@ -62,9 +69,10 @@ class ActionTypeTest {
         // 验证ordinal顺序（用于序列化和数据库持久化时很重要）
         assertEquals(0, BrainDecision.ActionType.CALL_TOOL.ordinal());
         assertEquals(1, BrainDecision.ActionType.DELEGATE_AGENT.ordinal());
-        assertEquals(2, BrainDecision.ActionType.DIRECT_ANSWER.ordinal());
-        assertEquals(3, BrainDecision.ActionType.ASK_CLARIFY.ordinal());
-        assertEquals(4, BrainDecision.ActionType.HITL_CONFIRM.ordinal());
+        assertEquals(2, BrainDecision.ActionType.DELEGATE_REACT.ordinal());
+        assertEquals(3, BrainDecision.ActionType.DIRECT_ANSWER.ordinal());
+        assertEquals(4, BrainDecision.ActionType.ASK_CLARIFY.ordinal());
+        assertEquals(5, BrainDecision.ActionType.HITL_CONFIRM.ordinal());
     }
 
     @Test
@@ -74,6 +82,8 @@ class ActionTypeTest {
             BrainDecision.ActionType.valueOf("CALL_TOOL"));
         assertEquals(BrainDecision.ActionType.DELEGATE_AGENT,
             BrainDecision.ActionType.valueOf("DELEGATE_AGENT"));
+        assertEquals(BrainDecision.ActionType.DELEGATE_REACT,
+            BrainDecision.ActionType.valueOf("DELEGATE_REACT"));
         assertEquals(BrainDecision.ActionType.DIRECT_ANSWER,
             BrainDecision.ActionType.valueOf("DIRECT_ANSWER"));
         assertEquals(BrainDecision.ActionType.ASK_CLARIFY,

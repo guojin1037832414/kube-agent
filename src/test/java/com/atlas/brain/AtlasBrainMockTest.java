@@ -28,12 +28,13 @@ import static org.mockito.Mockito.*;
  *   <li>解析异常：parser 抛 BrainParseException → AtlasBrain 抛出（由调用方降级处理）</li>
  *   <li>权限校验：目标 Tool 不可见 → 抛出 RuntimeException</li>
  *   <li>高危检测：delete/scale 操作应触发 HITL_CONFIRM 告警日志</li>
+ *   <li>ReAct 守卫：诊断类查询即使 LLM 返回 CALL_TOOL 也应被覆盖为 DELEGATE_REACT</li>
  * </ol>
  *
  * <p><b>Mock 策略：</b>StructuredOutputParser 完全 Mock，绕过真实 LLM 调用，
- * 专注测试 AtlasBrain 的业务逻辑（prompt 构建、决策校验、风险检测）。</p>
+ * 专注测试 AtlasBrain 的业务逻辑（prompt 构建、决策校验、风险检测、ReAct 守卫）。</p>
  *
- * @version 3.1.0-M2
+ * @version 3.1.0-M3.2
  */
 @ExtendWith(MockitoExtension.class)
 class AtlasBrainMockTest {
@@ -193,6 +194,66 @@ class AtlasBrainMockTest {
 
         assertEquals(BrainDecision.ActionType.ASK_CLARIFY, result.actionType());
         assertFalse(result.requiredContext().isEmpty());
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // TC-BRAIN-06: 诊断类查询（为什么 Pod 起不来）→ ReAct 守卫覆盖为 DELEGATE_REACT
+    // ═══════════════════════════════════════════════════════════
+
+    @Test
+    void testDecide_reactGuard_overridesCallToolToReact() {
+        // LLM 误判为 CALL_TOOL（实际应该 DELEGATE_REACT）
+        ExecutionContext ctx = buildCtx("为什么我的Pod一直起不来，报错CrashLoopBackOff");
+
+        when(toolRegistry.buildSystemPromptForCurrentUser()).thenReturn("node_query: 查询节点");
+        when(toolRegistry.getVisibleToolNamesForCurrentUser()).thenReturn(List.of("node_query"));
+
+        BrainDecision llmWrong = new BrainDecision(
+            BrainDecision.ActionType.CALL_TOOL,
+            "node_query",
+            Map.of(),
+            "用户想查看节点信息",
+            0.65,
+            Collections.emptyList()
+        );
+        when(parser.parse(any(), anyString(), eq(BrainDecision.class), any()))
+            .thenReturn(llmWrong);
+
+        BrainDecision result = atlasBrain.decide(ctx);
+
+        // 被 ReAct 守卫覆盖
+        assertEquals(BrainDecision.ActionType.DELEGATE_REACT, result.actionType());
+        assertEquals("react", result.target());
+        assertTrue(result.confidence() >= 0.80, "覆盖后置信度应至少提升到0.80");
+        assertTrue(result.reasoning().contains("ReActGuard"), "reasoning 应包含 ReActGuard 标记");
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // TC-BRAIN-07: 高危+诊断混合查询 → 不覆盖为 ReAct（保持原决策）
+    // ═══════════════════════════════════════════════════════════
+
+    @Test
+    void testDecide_highRiskQuery_doesNotOverrideToReact() {
+        ExecutionContext ctx = buildCtx("为什么删除这个 Pod 一直失败");
+
+        when(toolRegistry.buildSystemPromptForCurrentUser()).thenReturn("node_query: 查询节点");
+
+        // LLM 返回 DELEGATE_AGENT
+        BrainDecision llmDecision = new BrainDecision(
+            BrainDecision.ActionType.DELEGATE_AGENT,
+            "deploy_agent",
+            Map.of(),
+            "用户遇到删除 Pod 失败",
+            0.75,
+            Collections.emptyList()
+        );
+        when(parser.parse(any(), anyString(), eq(BrainDecision.class), any()))
+            .thenReturn(llmDecision);
+
+        BrainDecision result = atlasBrain.decide(ctx);
+
+        // 含"删除"关键词，属于高危，应被 SafetyGuard 强制转为 HITL_CONFIRM，而不是 ReAct 或普通 Agent
+        assertEquals(BrainDecision.ActionType.HITL_CONFIRM, result.actionType());
     }
 
     // ═══════════════════════════════════════════════════════════

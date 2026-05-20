@@ -542,3 +542,44 @@ A  src/main/java/com/atlas/orchestrator/polish/PolishNode.java                 (
 ### 提交
 - Commit: `5683a8d`
 - 双推: ✅ GitLab + ✅ GitHub
+
+
+---
+
+## M3.2 ReAct MVP 第一批：核心循环骨架（2026-05-20）
+
+### 背景
+按照《项目里程碑全景图_20260519.md》和会话快照规划，阶段一优先建设 ReAct 多步推理引擎。专家会诊结论：不直接使用 Spring AI Alibaba ReactAgent，原因是框架 `outputKey` 写入 `AssistantMessage`，会混入工具调用痕迹和思考过程，不适合当前条件边结构化解析；本阶段采用手写 ReAct 循环，复用现有 `ToolRegistry` 和权限上下文。
+
+### 实施方式
+本次编码通过 `tmux + Claude Code Print Mode` 执行，遵循《Hermes操作ClaudeCode完整手册_20260513.md》方案 D，避免 Hermes 前台 timeout 和 background stdin 截断问题。Claude Code 完成后，Hermes 重新执行了编译、针对性测试、全量测试和代码审查。
+
+### 新增文件
+- `src/main/java/com/atlas/react/ReActEngine.java`：手写 ReAct while 循环核心，支持 Thought/Action/Final Answer 解析、LLM 30 秒超时、专用 daemon 线程池、工具调用、Observation 截断、重复动作检测。
+- `src/main/java/com/atlas/react/ReActMemory.java`：单次 ReAct 请求的 Thought/Action/Observation 记忆体，支持 canonical JSON actionKey 去重、历史格式化和摘要生成。
+- `src/main/java/com/atlas/react/ReActPromptBuilder.java`：中文 ReAct 系统提示词构建器，注入当前用户可见工具、历史记录和已调用动作列表。
+- `src/main/java/com/atlas/react/ReActResult.java`：ReAct 执行结果 record。
+- `src/test/java/com/atlas/react/ReActMemoryTest.java`：ReActMemory 单元测试。
+
+### 修改文件
+- `BrainDecision.java`：新增 `ActionType.DELEGATE_REACT`。
+- `AtlasBrain.java`：系统提示词新增 ReAct 决策规则；新增 `applyReActGuard()`，诊断/排查类 query 强制转 `DELEGATE_REACT`；高危 query 强制转 `HITL_CONFIRM`，避免危险操作进入 ReAct。
+- `AtlasGraphConfig.java`：switch 补充 `DELEGATE_REACT` 临时 fallback 到 `direct_answer`，防止新枚举导致 Graph 编译/运行失败；下一批正式接入 `react_node`。
+- `ActionTypeTest.java`、`AtlasBrainMockTest.java`：适配新增枚举与守卫逻辑。
+
+### 安全修正
+Hermes Review 发现高危 query（如“为什么删除 Pod 失败”）不应仅避免 ReAct，还应强制进入 HITL。已补充 SafetyGuard：命中 delete/删除/scale/扩缩容/权限变更等关键词时，无论 LLM 返回 CALL_TOOL/DELEGATE_AGENT，最终都转为 `HITL_CONFIRM`。
+
+### 验证结果
+- `mvn clean compile -DskipTests`：BUILD SUCCESS，187 个主源码文件编译通过。
+- `mvn test -Dtest=ReActMemoryTest,ActionTypeTest,AtlasBrainMockTest`：27/27 通过。
+- `mvn test`：97/97 通过。
+
+### 当前限制 / 下一批 TODO
+1. `DELEGATE_REACT` 目前在 `AtlasGraphConfig` 中临时 fallback 到 `direct_answer`，下一批需要新增 `react_node` 并调用 `ReActEngine.run()`。
+2. ReActEngine 目前是同步 `run()`，下一批需要支持 SSE 事件流式输出（thinking/tool_call/tool_result/content）。
+3. `initialParams` 目前未深度合并到每轮 Action params，下一批需透传 token/orgId/session 上下文。
+4. ReActEngine 缺少完整集成测试，后续可用 mock ChatModel/ToolRegistry 或 WireMock 补齐。
+
+### 结论
+ReAct MVP 第一批已完成：核心循环、记忆、提示词、结果模型、AtlasBrain 路由守卫均已落地并通过全量测试。系统现在具备把诊断类意图识别为 `DELEGATE_REACT` 的能力，但真正执行 ReAct 还需要第二批 Graph/Orchestrator 接入。
