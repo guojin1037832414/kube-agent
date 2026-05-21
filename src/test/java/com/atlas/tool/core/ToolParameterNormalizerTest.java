@@ -2,6 +2,7 @@ package com.atlas.tool.core;
 
 import com.atlas.auth.UserPermissionContext;
 import com.atlas.tool.impl.DeploymentDetailTool;
+import com.atlas.tool.impl.DeploymentQueryTool;
 import com.atlas.tool.impl.DiagnosePodTool;
 import com.atlas.tool.impl.FileSelectStorageTool;
 import com.atlas.tool.impl.HelmChartInfoTool;
@@ -9,6 +10,7 @@ import com.atlas.tool.impl.HelmChartSearchTool;
 import com.atlas.tool.impl.ImageDetailByNameTool;
 import com.atlas.tool.impl.LogQueryTool;
 import com.atlas.tool.impl.NodeDetailTool;
+import com.atlas.tool.impl.PodQueryTool;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
@@ -122,6 +124,40 @@ class ToolParameterNormalizerTest {
         ));
         assertEquals("redis", chartSearchResult.get("keyword"), "helm_chart_search 当前执行逻辑读取 keyword，应由 searchText alias 补齐");
         assertFalse(chartSearchResult.containsKey("name"), "模糊搜索词不能被误归一为精确 name");
+    }
+
+    @Test
+    void normalize_schemaFirstShouldNormalizeThirdBatchPodAndDeploymentListTools() {
+        ToolRegistry registry = new ToolRegistry(java.util.List.of(
+            new PodQueryTool(null),
+            new DeploymentQueryTool(null)
+        ), new UserPermissionContext());
+        registry.init();
+        ToolParameterNormalizer schemaFirstNormalizer = new ToolParameterNormalizer(registry);
+
+        Map<String, Object> podResult = schemaFirstNormalizer.normalize("pod_status", Map.of(
+            "pod_name", "nginx-pod-1",
+            "ns", "ns100002",
+            "userName", "zhaotiandi",
+            "phase", "Running"
+        ));
+        assertEquals("nginx-pod-1", podResult.get("podName"));
+        assertEquals("ns100002", podResult.get("namespace"));
+        assertEquals("zhaotiandi", podResult.get("username"));
+        assertEquals("Running", podResult.get("status"));
+        assertEquals("nginx-pod-1", podResult.get("pod_name"), "原始 alias 字段必须保留，方便审计");
+
+        Map<String, Object> deploymentResult = schemaFirstNormalizer.normalize("deployment_status", Map.of(
+            "deploymentName", "aaaa",
+            "ns", "ns100002",
+            "owner", "zhaotiandi",
+            "instanceStatus", "Running"
+        ));
+        assertEquals("aaaa", deploymentResult.get("name"), "deployment_status 当前执行逻辑读取 name，应由 deploymentName alias 补齐");
+        assertEquals("ns100002", deploymentResult.get("namespace"));
+        assertEquals("zhaotiandi", deploymentResult.get("username"));
+        assertEquals("Running", deploymentResult.get("status"));
+        assertFalse(deploymentResult.containsKey("podName"), "实例/Deployment 名称不能误归一为 Pod 名称");
     }
 
     @Test

@@ -225,3 +225,74 @@
 2. 对 `name` canonical 的工具建立迁移计划，逐步转为 `imageName/storageName/deploymentName/nodeName` 等更语义化字段。
 3. 增加 ReAct 多步成功路径 E2E，验证 Prompt 参数契约是否能让 LLM 在多轮 Action 中优先输出 canonical。
 
+
+
+## 2026-05-21 20:35 - ToolParameterSpec 第三批：Pod/Deployment 查询主链路参数契约
+
+### 背景
+- 本轮继续推进 K8s 诊断/查询主链路参数契约建设，目标链路为：查 Pod → 查 Deployment/实例 → 查 Event → 汇总根因。
+- 按专家会诊结论，禁止只声明 `ToolParameterSpec` 而不让 `doExecute` 使用参数，否则会形成“伪参数”并误导 ReAct/LLM。
+- 源码复核确认当前真实已注册 Tool 为：
+  - `pod_status` → `PodQueryTool`
+  - `deployment_status` → `DeploymentQueryTool`
+- `pod_query`、`deployment_query`、`event_query` 当前未定位为独立已注册 Tool，本轮不凭空新增伪 Tool。
+
+### 变更内容
+1. `PodQueryTool`
+   - 新增 `getParameterSpecs()`。
+   - canonical 参数：`namespace`、`podName`、`username`、`status`，全部保持可选，兼容零参数查看 Pod 列表。
+   - aliases 支持 `ns`、`pod_name`、`targetName`、`userName`、`phase` 等历史/LLM 输出字段。
+   - `doExecute` 从固定 `page/limit` 扩展为 `LinkedHashMap` query map，按需透传 `namespace/name/username/status`。
+   - 继续通过 `resolveOrganizationId(params)` 解析组织 ID，未硬编码 orgId。
+
+2. `DeploymentQueryTool`
+   - 新增 `getParameterSpecs()`。
+   - canonical 参数：`name`、`namespace`、`username`、`status`，全部保持可选。
+   - description 明确平台术语：“实例”= Deployment，不是 Pod。
+   - aliases 支持 `deploymentName`、`instanceName`、`deployName`、`ns`、`owner`、`instanceStatus` 等。
+   - `doExecute` 使用 `LinkedHashMap` query map 透传筛选条件，禁止手拼 URL。
+
+3. 测试补充
+   - `ToolRegistryPromptContractTest`
+     - 新增第三批 `pod_status` / `deployment_status` ReAct 工具目录参数契约测试。
+     - 验证 prompt 展示 canonical 参数，不展开 alias。
+   - `ToolParameterNormalizerTest`
+     - 新增第三批 schema-first alias 归一化测试。
+     - 验证 `pod_name/ns/userName/phase` 可归一到 Pod canonical 参数。
+     - 验证 `deploymentName/ns/owner/instanceStatus` 可归一到 Deployment canonical 参数，且不会误归一为 `podName`。
+
+### 重要修正
+- 初次测试暴露 `pod_status` 的 description 中出现了 `pod_name` 字符串，导致 prompt contract 失败。
+- 该问题说明 alias 即使只写在中文描述里，也会诱导 LLM 输出非 canonical 字段。
+- 已修正为：alias 只保留在 `ToolParameterSpec.aliases` 元数据中，不出现在 ReAct prompt 描述文本中。
+
+### 测试结果
+- 定向测试：
+  - 命令：`mvn -q -Dtest=ToolRegistryPromptContractTest,ToolParameterNormalizerTest test`
+  - 结果：通过，`Failures: 0, Errors: 0`。
+- 全量测试：
+  - 命令：`mvn -q test`
+  - 结果：BUILD SUCCESS。
+- 打包验证：
+  - 命令：`mvn -q -DskipTests package`
+  - 结果：BUILD SUCCESS。
+
+### 代码 Review
+#### 优点
+- 遵循“先实验再铺开”：先实现 `pod_status` 小样本并定向测试，再铺到真实存在的 `deployment_status`。
+- Tool schema 与执行逻辑同步修改，避免“声明参数但不生效”的伪参数问题。
+- URL query 使用 map 构造，避免手工拼接带来的编码和注入风险。
+- orgId 继续从上下文/参数解析，未新增硬编码组织 ID。
+- 明确平台术语：“实例”= Deployment，降低 Pod/Deployment 混淆风险。
+- prompt contract 测试覆盖 alias 不外显，防止 ReAct 工具目录诱导 LLM 生成 alias。
+
+#### 风险
+- 后端 `/api/{orgId}/pod` 与 `/api/{orgId}/deployment` 对 `namespace/name/username/status` 的具体筛选支持度仍依赖 kube-manager 实现；本轮保证 query map 真实透传，但未新增真实后端联调 E2E。
+- `deployment_status` 的 canonical `name` 仍存在资源类型歧义；当前为贴合现有执行逻辑的兼容选择，后续可在统一迁移时演进为更强类型的 `deploymentName`。
+- `event_query` 当前没有已注册 Tool，诊断链路中的 Event 查询仍是缺口。
+
+### 后续建议
+1. 继续定位 kube-manager Event API 与前端事件入口，确认是否应新增 `event_query` Tool。
+2. 为 Pod/Deployment 列表接口补真实 SSE E2E，验证后端筛选字段实际命中效果。
+3. 后续批量扩展查询类 Tool 时，继续坚持：先确认接口支持，再 schema + `doExecute` 同步透传。
+4. 可考虑抽取通用 `putIfPresent` 到 BaseTool，减少各 Tool 私有重复代码。

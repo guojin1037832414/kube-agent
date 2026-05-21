@@ -3,6 +3,7 @@ package com.atlas.tool.core;
 import com.atlas.auth.UserPermissionContext;
 import com.atlas.tool.annotation.AtlasToolMapping;
 import com.atlas.tool.impl.DeploymentDetailTool;
+import com.atlas.tool.impl.DeploymentQueryTool;
 import com.atlas.tool.impl.DiagnosePodTool;
 import com.atlas.tool.impl.FileSelectStorageTool;
 import com.atlas.tool.impl.HelmChartInfoTool;
@@ -10,6 +11,7 @@ import com.atlas.tool.impl.HelmChartSearchTool;
 import com.atlas.tool.impl.ImageDetailByNameTool;
 import com.atlas.tool.impl.LogQueryTool;
 import com.atlas.tool.impl.NodeDetailTool;
+import com.atlas.tool.impl.PodQueryTool;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -66,6 +68,32 @@ class ToolRegistryPromptContractTest {
         assertFalse(prompt.contains("deployment_name"), "ReAct prompt 不应展开 deployment alias");
         assertFalse(prompt.contains("node_name"), "ReAct prompt 不应展开 node alias");
         assertFalse(prompt.contains("tailLines"), "ReAct prompt 不应展开日志 alias");
+    }
+
+    @Test
+    void buildSystemPrompt_shouldExposeThirdBatchPodAndDeploymentListContracts() {
+        ToolRegistry registry = new ToolRegistry(List.of(
+            new PodQueryTool(null),
+            new DeploymentQueryTool(null)
+        ), new UserPermissionContext());
+        registry.init();
+
+        String prompt = registry.buildSystemPromptForCurrentUser();
+
+        assertTrue(prompt.contains("pod_status"));
+        assertTrue(prompt.contains("namespace(string,可选,Pod 所在命名空间"));
+        assertTrue(prompt.contains("podName(string,可选,Pod 名称或名称片段"));
+        assertTrue(prompt.contains("username(string,可选,创建或归属用户名称"));
+        assertTrue(prompt.contains("status(string,可选,Pod 状态筛选条件"));
+
+        assertTrue(prompt.contains("deployment_status"));
+        assertTrue(prompt.contains("name(string,可选,Deployment/实例名称或名称片段"));
+        assertTrue(prompt.contains("namespace(string,可选,Deployment 所在命名空间"));
+        assertTrue(prompt.contains("status(string,可选,Deployment/实例状态筛选条件"));
+
+        assertFalse(prompt.contains("pod_name"), "ReAct prompt 不应展开 pod alias");
+        assertFalse(prompt.contains("deployment_name"), "ReAct prompt 不应展开 deployment alias");
+        assertFalse(prompt.contains("instance_name"), "ReAct prompt 不应展开 instance alias");
     }
 
     @Test
