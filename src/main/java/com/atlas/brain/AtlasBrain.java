@@ -45,6 +45,8 @@ public class AtlasBrain {
         "诊断", "什么问题", "失败原因", "这是什么错误", "怎么排查",
         "crash", "crashloopbackoff", "imagepullbackoff", "errimagepull", "oomkilled",
         "pending", "evicted", "error", "failed", "unavailable", "not working",
+        "warning", "event", "事件", "异常事件", "告警", "调度失败", "failedscheduling",
+        "unschedulable", "failedmount", "createcontainerconfigerror", "createcontainererror",
         "pod 起不来", "起不来", "无法启动", "启动失败", "服务异常", "状态异常"
     );
 

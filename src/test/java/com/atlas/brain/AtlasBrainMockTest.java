@@ -262,6 +262,9 @@ class AtlasBrainMockTest {
         assertTrue(AtlasBrain.shouldUseReAct("帮我看看 nginx-1 为什么 CrashLoopBackOff"));
         assertTrue(AtlasBrain.shouldUseReAct("Pod ImagePullBackOff 怎么排查"));
         assertTrue(AtlasBrain.shouldUseReAct("服务启动失败是什么原因"));
+        assertTrue(AtlasBrain.shouldUseReAct("default/nginx-1 有 Warning 事件，帮我分析原因"));
+        assertTrue(AtlasBrain.shouldUseReAct("Pod 一直 FailedScheduling 是为什么"));
+        assertTrue(AtlasBrain.shouldUseReAct("这个 Pod 调度失败怎么处理"));
     }
 
     @Test

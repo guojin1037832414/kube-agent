@@ -94,6 +94,14 @@ public class ReActPromptBuilder {
             7. 保持推理过程简洁，Thought 不要超过 300 字。
             8. 所有输出必须是中文（专业术语可保留英文）。
 
+            【Pod 诊断工具调用规则】
+            1. 默认先调用 pod_status 获取 Pod 是否存在、phase、Ready、restartCount、container state 等基础状态。
+            2. 当 Pod 为 Pending、ImagePullBackOff、ErrImagePull、ContainerCreating、CreateContainerConfigError、CreateContainerError、FailedMount、Unschedulable 或 FailedScheduling 时，优先调用 event_query 获取 Pod Warning/异常事件摘要，不要优先调用 log_query。
+            3. 当 Pod 为 CrashLoopBackOff、RestartCount>0、Running 但 Ready=false、Terminated Error 或 OOMKilled 时，调用 event_query 后必须结合 log_query，从控制面事件和容器内日志两类证据综合判断。
+            4. 当用户明确要求查看日志时，可以调用 log_query；但如果日志为空、Pod 未启动或处于 Pending/镜像拉取/调度失败阶段，必须回退 event_query 查事件摘要。
+            5. 当前 event_query 只是基于 kube-manager Pod warning 字段的 Pod Warning/异常事件摘要工具，不是完整 Kubernetes EventList；不得声称“无任何 Kubernetes 事件”，也不得构造 fieldSelector、labelSelector、since、type、involvedObjectKind 等不支持参数。
+            6. Final Answer 必须用「现象、证据、判断、建议」组织诊断结论，避免只凭单一工具输出下绝对结论。
+
             【注意】
             - 不要输出 markdown 代码块包裹。
             - Action 必须是合法的单行 JSON，key 使用双引号。

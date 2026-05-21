@@ -368,3 +368,59 @@
 2. 结合 ReAct 诊断链路，把 `pod_status -> deployment_status -> event_query -> log_query` 做成可观测多步 E2E。
 3. 若真实后端支持 Pod 精确 name 查询，应将 `podName` 从本地过滤升级为后端透传参数。
 4. 抽取 `putIfPresent` 等 query 构造小工具到 BaseTool，减少各 Tool 重复代码。
+
+## 2026-05-21 22:50 - event_query 接入 ReAct Pod 多步诊断提示词链路
+
+### 背景
+- 上一轮已新增 `event_query`，但它只是独立 Tool；ReAct 多步诊断 Prompt 尚未明确要求在 Pod 故障排查中使用事件摘要。
+- 现有 `AtlasBrain.shouldUseReAct()` 对 `Warning`、`FailedScheduling`、`调度失败` 等事件/调度类故障词召回不足，可能导致复杂诊断没有进入 ReAct 多步链路。
+- 本轮遵循“小样本先验证”和 TDD：先写 Prompt/Brain 契约测试确认缺口，再做最小实现。
+
+### 变更内容
+1. `AtlasBrain`
+   - 扩展 ReAct 静态守卫关键词：`warning`、`event`、`事件`、`异常事件`、`告警`、`调度失败`、`failedscheduling`、`unschedulable`、`failedmount`、`createcontainerconfigerror`、`createcontainererror`。
+   - 目标是将 Pod Warning、调度失败、挂载失败、容器创建失败等诊断类问题召回到 `DELEGATE_REACT`。
+
+2. `ReActPromptBuilder`
+   - 新增“Pod 诊断工具调用规则”。
+   - 规则要求默认先查 `pod_status` 获取基础状态。
+   - 对 Pending、ImagePullBackOff、ErrImagePull、ContainerCreating、CreateContainerConfigError、CreateContainerError、FailedMount、Unschedulable、FailedScheduling 等控制面/调度/镜像/创建阶段问题，优先调用 `event_query`。
+   - 对 CrashLoopBackOff、RestartCount>0、Running 但 Ready=false、Terminated Error、OOMKilled 等运行时问题，要求结合 `event_query` 与 `log_query`。
+   - 明确 `event_query` 只是基于 kube-manager Pod warning 字段的异常事件摘要，不是完整 Kubernetes EventList；禁止构造 `fieldSelector/labelSelector/since/type/involvedObjectKind` 等不支持参数。
+   - 要求最终诊断按“现象、证据、判断、建议”组织，避免单工具绝对结论。
+
+3. 测试补充
+   - 新增 `ReActPromptBuilderPodDiagnosticContractTest`：锁定 ReAct Prompt 中必须包含 `pod_status/event_query/log_query` 证据链、事件能力边界、不支持参数禁止语义、最终诊断结构。
+   - 扩展 `AtlasBrainMockTest`：覆盖 Warning 事件、FailedScheduling、调度失败等输入必须进入 ReAct 守卫。
+
+### 测试结果
+- 红灯验证：新增测试最初失败，失败点为 `AtlasBrain` 未覆盖 Warning/FailedScheduling/调度失败，`ReActPromptBuilder` 未包含 Pod 诊断工具调用规则。
+- 定向测试：
+  - 命令：`mvn -Dtest=ReActPromptBuilderPodDiagnosticContractTest,AtlasBrainMockTest test`
+  - 结果：`Tests run: 11, Failures: 0, Errors: 0, Skipped: 0`，BUILD SUCCESS。
+- 宽测试：
+  - 命令：`mvn -Dtest=ReActPromptBuilderPodDiagnosticContractTest,AtlasBrainMockTest,ToolRegistryPromptContractTest,EventQueryToolTest,ReActEngineParamMergeTest,ReActEnginePolicyTest test`
+  - 结果：`Tests run: 28, Failures: 0, Errors: 0, Skipped: 0`，BUILD SUCCESS。
+- 全量测试：
+  - 命令：`mvn test`
+  - 结果：`Tests run: 135, Failures: 0, Errors: 0, Skipped: 0`，BUILD SUCCESS。
+- 安全扫描：新增 diff 未发现硬编码密钥、危险进程执行、eval/exec 等问题。
+- 独立代码 Review：通过，无阻塞问题；建议后续补行为级 ReAct 多步测试。
+
+### 代码 Review
+#### 优点
+- 变更范围非常小，只修改 Brain 召回关键词与 ReAct Prompt 策略，不改 ReActEngine 执行循环，降低回归风险。
+- Prompt 明确声明 `event_query` 能力边界，避免把 Pod warning 摘要伪装成完整 Kubernetes Event API。
+- TDD 顺序清晰：先红灯确认缺口，再最小实现，再定向/宽/全量测试。
+- Final Answer 结构化要求有助于减少“只凭日志/只凭事件”的单证据误判。
+
+#### 风险
+- `warning/event/failed` 等关键词较宽，可能让部分简单查询进入 ReAct 链路，增加一次 LLM/工具编排成本；当前为了诊断命中率优先可以接受。
+- 新增测试是 Prompt 契约测试，尚未验证真实 LLM 是否严格按 `pod_status -> event_query -> log_query` 顺序执行。
+- `event_query` 仍受 kube-manager Pod warning 字段粒度限制，不等同于原生 Kubernetes EventList。
+
+### 后续建议
+1. 补充 mock LLM 或可控 ReAct loop 行为级测试，验证 Pending/FailedScheduling 优先调用 `event_query`。
+2. 补真实 SSE E2E：构造/选择一个存在 warning 的 Pod，观察 ReAct 是否形成 `pod_status -> event_query -> final/log_query` 证据链。
+3. 若后续发现简单事件查询链路过重，可将 Brain 关键词从宽泛词改为组合判定或交给 IntentArbiter/Embedding 做更细路由。
+
