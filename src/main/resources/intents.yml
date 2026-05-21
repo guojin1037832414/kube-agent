@@ -518,6 +518,44 @@ intents:
       - "有哪些应用"
     parameters: []
 
+  # --- Pod Warning/异常事件摘要 ---
+  event_query:
+    description: "查询Pod Warning/异常事件摘要（基于kube-manager Pod列表warning字段，不是完整Kubernetes EventList）"
+    agent: "diag"
+    level: "p3"
+    keywords: ["event", "事件", "warning", "Warning", "异常事件", "调度失败", "BackOff", "FailedScheduling", "OOMKilled"]
+    examples:
+      - "查看Pod异常事件"
+      - "有哪些Pod有Warning"
+      - "查看nginx-pod-1的事件摘要"
+      - "为什么Pod调度失败"
+      - "查询BackOff事件"
+    parameters:
+      - name: "namespace"
+        type: "string"
+        required: false
+        description: "Pod所在命名空间，会透传给kube-manager Pod查询接口"
+      - name: "podName"
+        type: "string"
+        required: false
+        description: "Pod名称或名称片段，用于本地筛选warning摘要"
+      - name: "username"
+        type: "string"
+        required: false
+        description: "创建或归属用户名称，会透传给kube-manager Pod查询接口"
+      - name: "status"
+        type: "string"
+        required: false
+        description: "Pod状态筛选条件，会透传给kube-manager Pod查询接口"
+      - name: "reason"
+        type: "string"
+        required: false
+        description: "Warning/异常原因关键词，如FailedScheduling、BackOff、OOMKilled"
+      - name: "keyword"
+        type: "string"
+        required: false
+        description: "Warning文本关键词，用于本地匹配warning内容"
+
   # --- Pod 列表 ---
   pod_status:
     description: "查询Pod列表"

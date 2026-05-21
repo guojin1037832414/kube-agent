@@ -5,6 +5,7 @@ import com.atlas.tool.annotation.AtlasToolMapping;
 import com.atlas.tool.impl.DeploymentDetailTool;
 import com.atlas.tool.impl.DeploymentQueryTool;
 import com.atlas.tool.impl.DiagnosePodTool;
+import com.atlas.tool.impl.EventQueryTool;
 import com.atlas.tool.impl.FileSelectStorageTool;
 import com.atlas.tool.impl.HelmChartInfoTool;
 import com.atlas.tool.impl.HelmChartSearchTool;
@@ -74,7 +75,8 @@ class ToolRegistryPromptContractTest {
     void buildSystemPrompt_shouldExposeThirdBatchPodAndDeploymentListContracts() {
         ToolRegistry registry = new ToolRegistry(List.of(
             new PodQueryTool(null),
-            new DeploymentQueryTool(null)
+            new DeploymentQueryTool(null),
+            new EventQueryTool(null)
         ), new UserPermissionContext());
         registry.init();
 
@@ -91,9 +93,15 @@ class ToolRegistryPromptContractTest {
         assertTrue(prompt.contains("namespace(string,可选,Deployment 所在命名空间"));
         assertTrue(prompt.contains("status(string,可选,Deployment/实例状态筛选条件"));
 
+        assertTrue(prompt.contains("event_query"));
+        assertTrue(prompt.contains("podName(string,可选,Pod 名称或名称片段。用于在 kube-agent 本地筛选 warning 摘要所属 Pod"));
+        assertTrue(prompt.contains("reason(string,可选,Warning/异常原因关键词"));
+        assertTrue(prompt.contains("keyword(string,可选,Warning 文本关键词"));
+
         assertFalse(prompt.contains("pod_name"), "ReAct prompt 不应展开 pod alias");
         assertFalse(prompt.contains("deployment_name"), "ReAct prompt 不应展开 deployment alias");
         assertFalse(prompt.contains("instance_name"), "ReAct prompt 不应展开 instance alias");
+        assertFalse(prompt.contains("fieldSelector"), "ReAct prompt 不应暴露 event_query 不支持的 Kubernetes 原生 Event 参数");
     }
 
     @Test

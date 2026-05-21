@@ -4,6 +4,7 @@ import com.atlas.auth.UserPermissionContext;
 import com.atlas.tool.impl.DeploymentDetailTool;
 import com.atlas.tool.impl.DeploymentQueryTool;
 import com.atlas.tool.impl.DiagnosePodTool;
+import com.atlas.tool.impl.EventQueryTool;
 import com.atlas.tool.impl.FileSelectStorageTool;
 import com.atlas.tool.impl.HelmChartInfoTool;
 import com.atlas.tool.impl.HelmChartSearchTool;
@@ -130,7 +131,8 @@ class ToolParameterNormalizerTest {
     void normalize_schemaFirstShouldNormalizeThirdBatchPodAndDeploymentListTools() {
         ToolRegistry registry = new ToolRegistry(java.util.List.of(
             new PodQueryTool(null),
-            new DeploymentQueryTool(null)
+            new DeploymentQueryTool(null),
+            new EventQueryTool(null)
         ), new UserPermissionContext());
         registry.init();
         ToolParameterNormalizer schemaFirstNormalizer = new ToolParameterNormalizer(registry);
@@ -158,6 +160,18 @@ class ToolParameterNormalizerTest {
         assertEquals("zhaotiandi", deploymentResult.get("username"));
         assertEquals("Running", deploymentResult.get("status"));
         assertFalse(deploymentResult.containsKey("podName"), "实例/Deployment 名称不能误归一为 Pod 名称");
+
+        Map<String, Object> eventResult = schemaFirstNormalizer.normalize("event_query", Map.of(
+            "pod_name", "nginx-pod-1",
+            "ns", "ns100002",
+            "warningReason", "BackOff",
+            "message", "pull image failed"
+        ));
+        assertEquals("nginx-pod-1", eventResult.get("podName"));
+        assertEquals("ns100002", eventResult.get("namespace"));
+        assertEquals("BackOff", eventResult.get("reason"));
+        assertEquals("pull image failed", eventResult.get("keyword"));
+        assertFalse(eventResult.containsKey("fieldSelector"), "event_query 不声明 Kubernetes 原生 Event 伪参数");
     }
 
     @Test

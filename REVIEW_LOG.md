@@ -296,3 +296,75 @@
 2. 为 Pod/Deployment 列表接口补真实 SSE E2E，验证后端筛选字段实际命中效果。
 3. 后续批量扩展查询类 Tool 时，继续坚持：先确认接口支持，再 schema + `doExecute` 同步透传。
 4. 可考虑抽取通用 `putIfPresent` 到 BaseTool，减少各 Tool 私有重复代码。
+
+
+## 2026-05-21 21:30 - event_query 小样本落地：基于 kube-manager Pod warning 的异常事件摘要 Tool
+
+### 背景
+- 上一轮第三批 Tool 参数契约扩展后，诊断链路仍缺少 `event_query`。
+- 用户明确要求：暂不在 kube-agent 直接引入 Kubernetes Java Client，优先基于 kube-manager 已有能力实现。
+- 专家会诊结论：当前 kube-manager 暂无独立完整 Event API；可先基于 `GET /api/{orgId}/pod` 返回记录中的 `warning` 字段，实现 Pod Warning/异常事件摘要查询。
+- 本轮遵循“不造伪参数”原则：只声明真实生效参数，不把 Kubernetes 原生 EventList 能力伪装到 Tool schema 中。
+
+### 方案边界
+- 新 Tool 名称：`event_query`。
+- 能力定位：Pod Warning/异常事件摘要查询，不是完整 Kubernetes EventList。
+- 后端调用：`GET /api/{orgId}/pod`。
+- 后端透传参数：`namespace`、`username`、`status`。
+- kube-agent 本地过滤参数：`podName`、`reason`、`keyword`。
+- 明确不声明：`fieldSelector`、`labelSelector`、`since`、`type`、`involvedObjectKind` 等 kube-manager 当前不支持的 Kubernetes 原生 Event 参数。
+- 返回结构：`dataKind=podWarningSummaries`、`podWarningSummaries`、`count`、`source`、`query`、`limitations`。
+
+### 本轮代码变更
+1. 新增 `src/main/java/com/atlas/tool/impl/EventQueryTool.java`
+   - 注册 `@AtlasToolMapping(name = "event_query", agent = "diag", intentId = "event_query")`。
+   - 通过 `resolveOrganizationId(params)` 获取 orgId，未硬编码组织 ID。
+   - 使用 `LinkedHashMap` query map 构造后端查询参数，未手拼 URL query。
+   - 基于 kube-manager Pod 列表 `warning/warnings/eventWarning/message` 字段生成 Warning 摘要。
+   - 空 warning 不输出，避免把正常 Pod 包装成“无事件”。
+   - 失败返回改为泛化提示，详细异常仅写入日志，避免直接暴露后端异常细节。
+
+2. 更新 `src/main/resources/intents.yml`
+   - 新增 `event_query` intent。
+   - description 明确声明该能力“基于 kube-manager Pod 列表 warning 字段，不是完整 Kubernetes EventList”。
+   - 参数列表只包含真实生效的 6 个字段。
+
+3. 更新参数契约测试
+   - `ToolParameterNormalizerTest`：覆盖 `event_query` 的 schema-first alias 归一化，并验证不产生 `fieldSelector` 伪参数。
+   - `ToolRegistryPromptContractTest`：验证 ReAct prompt 暴露 canonical 参数，且不暴露不支持的 Kubernetes 原生 Event 参数。
+
+4. 新增 `src/test/java/com/atlas/tool/impl/EventQueryToolTest.java`
+   - 覆盖主流程：查询 Pod warning、透传 `namespace/status`、本地按 `reason` 过滤。
+   - 覆盖参数契约：只暴露真实支持参数，不暴露 Kubernetes 原生 Event 伪参数。
+   - 覆盖边界：非 List 响应返回空摘要、空白过滤参数安全处理。
+   - 覆盖大小写不敏感的 `podName/keyword` 本地过滤。
+
+### 测试结果
+- 定向测试：
+  - 命令：`mvn -Dtest=EventQueryToolTest,ToolParameterNormalizerTest,ToolRegistryPromptContractTest test`
+  - 结果：`Tests run: 19, Failures: 0, Errors: 0, Skipped: 0`，BUILD SUCCESS。
+- 全量测试：
+  - 命令：`mvn test`
+  - 结果：`Tests run: 134, Failures: 0, Errors: 0, Skipped: 0`，BUILD SUCCESS。
+
+### 代码 Review
+#### 优点
+- 严格遵守用户约束：未引入 Kubernetes Java Client，未新增 `pom.xml` 依赖。
+- Tool schema 与执行逻辑一致：声明的 6 个参数均有真实透传或本地过滤行为。
+- 返回结果显式包含 `limitations`，防止 LLM/ReAct 将本工具误解为完整 EventList。
+- orgId 继续从上下文/参数解析，未出现硬编码组织 ID。
+- URL query 使用 map 构造，避免手拼 query 的编码风险。
+- 单测覆盖正常路径、参数契约、prompt contract、空响应、大小写过滤与伪参数防护。
+- 独立 Reviewer 进行 fail-closed 审查，结论为无阻塞问题；根据建议补强了边界测试和错误信息泛化。
+
+#### 风险
+- 当前能力依赖 kube-manager Pod DTO 中的 `warning` 字段，信息粒度不等同于 Kubernetes 原生 Event。
+- 本轮未做真实后端 SSE E2E；仅通过单测和 Spring 全量测试验证代码路径。
+- `limit=100` 是当前小样本默认值，若集群 Pod 数较大，后续需要分页聚合或按 namespace/podName 更精确查询。
+- `orgId` 参与 path 构造，当前依赖 `resolveOrganizationId` 的可信输出；后续可考虑在 BaseTool 层统一增加 orgId 格式校验。
+
+### 后续建议
+1. 在 kube-manager 暴露真实 Event API 后，可新增 `kubernetes_event_query` 或升级 `event_query`，但必须同步调整 schema 与 limitations。
+2. 结合 ReAct 诊断链路，把 `pod_status -> deployment_status -> event_query -> log_query` 做成可观测多步 E2E。
+3. 若真实后端支持 Pod 精确 name 查询，应将 `podName` 从本地过滤升级为后端透传参数。
+4. 抽取 `putIfPresent` 等 query 构造小工具到 BaseTool，减少各 Tool 重复代码。
