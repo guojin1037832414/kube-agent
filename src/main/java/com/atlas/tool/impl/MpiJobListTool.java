@@ -5,8 +5,10 @@ import com.atlas.tool.annotation.AtlasToolMapping;
 import com.atlas.tool.annotation.ToolPermission;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.tool.core.BaseTool;
+import com.atlas.tool.core.ToolParameterSpec;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -37,6 +39,21 @@ public class MpiJobListTool extends BaseTool {
     @Override
     protected Set<String> getRequiredParams() {
         return Set.of();
+    }
+
+    /**
+     * 声明 MPI 任务列表查询的分页与关键词参数契约。
+     *
+     * <p>这些字段与 kube-manager 列表接口的 query 参数保持一致，供 ReAct 工具目录和
+     * ToolParameterNormalizer 使用，避免 LLM 把 page/limit/keyword 手工拼进 URL。</p>
+     */
+    @Override
+    public List<ToolParameterSpec> getParameterSpecs() {
+        return List.of(
+            ToolParameterSpec.stringParam("page", "页码，默认使用 1。", false, List.of("pageNo", "page_no", "current")),
+            ToolParameterSpec.stringParam("limit", "每页数量，默认使用 100。", false, List.of("pageSize", "page_size", "size")),
+            ToolParameterSpec.stringParam("keyword", "MPI 任务名称或关键词筛选条件。", false, List.of("name", "search", "kw"))
+        );
     }
 
     @Override

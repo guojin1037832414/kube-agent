@@ -1,14 +1,38 @@
 # Atlas Kube-Agent 变更日志
 
-> 按 Milestone 分组，记录所有已实现功能和重大变更。  
-> 格式：基于 [Keep a Changelog](https://keepachangelog.com/)。  
+> 按 Milestone 分组，记录所有已实现功能和重大变更。
+> 格式：基于 [Keep a Changelog](https://keepachangelog.com/)。
 > 里程碑前缀规范：`feat(Mx):`、`fix(Mx):`、`docs(Mx):`。
+
+---
+
+
+## [M4.2] — ReAct 多步成功回归与 URL Query 契约
+
+**周期**: 2026-05-22
+**交付**: ReAct 多步成功路径 E2E、KubeManager GET query 构造契约测试、小批列表 Tool 参数契约扩展。
+
+### Added
+
+- `ReActEngineMultiStepE2ETest`：覆盖 `pod_status -> event_query -> Final Answer` 多步成功链路。
+- `KubeManagerHttpClientUrlContractTest`：锁定 GET path/query 不混淆、不二次编码。
+- `ListToolParameterSpecContractTest`：锁定列表 Tool 的 `page/limit/keyword` 参数契约。
+- `MpiJobListTool`、`PytorchJobListTool`、`FileMaterialListTool`、`GpuDetailListTool` 新增分页/关键词参数契约。
+
+### Fixed
+
+- `KubeManagerHttpClient#get()` 改用 `RestClient.uri(builder -> ...)` 构造 path/query，避免 query 被编码进 path 或发生二次编码。
+
+### Verified
+
+- 目标组合测试：`mvn -Dtest=ReActEngineMultiStepE2ETest,KubeManagerHttpClientUrlContractTest,ListToolParameterSpecContractTest test` → 3 tests, 0 failures。
+- 全量测试：`mvn test` → 138 tests, 0 failures, BUILD SUCCESS。
 
 ---
 
 ## [M4.1] — Tool Schema 与参数契约
 
-**周期**: 2026-05-20  
+**周期**: 2026-05-20
 **交付**: ReAct/LLM 工具调用参数契约化，schema-first 参数归一化，首批 Tool 参数规格扩展。
 
 ### Added
@@ -52,7 +76,7 @@
 
 ## [M3.2] — ReAct 多步诊断引擎 MVP
 
-**周期**: 2026-05-20  
+**周期**: 2026-05-20
 **交付**: 手写 ReAct MVP、Graph/Orchestrator 接入、SSE 事件化、真实 E2E 稳定性修复。
 
 ### Added
@@ -93,7 +117,7 @@
 
 ## [M2] — 查询全覆盖与质量加固
 
-**周期**: 2026-05-14 ~ 2026-05-20  
+**周期**: 2026-05-14 ~ 2026-05-20
 **交付**: 前端 9 大模块 109 个 Tool 覆盖，orgId/token 链路修复，查询类 E2E 基础能力。
 
 ### Added
@@ -113,7 +137,7 @@
 
 ## [M1] — 智能引擎与意图全链路
 
-**周期**: 2026-05-14 ~ 2026-05-18  
+**周期**: 2026-05-14 ~ 2026-05-18
 **交付**: L1-L4 意图路由 + AtlasBrain 决策 + StateGraph 编排 + HITL SSE 后端基础。
 
 ### Added
@@ -137,7 +161,7 @@
 
 ## [M0] — Atlas v2.x 基线（归档）
 
-**周期**: 2026-05-12 ~ 2026-05-14  
+**周期**: 2026-05-12 ~ 2026-05-14
 **交付**: 23 个 DomainPlugin + SSE 流式 + ChatMemory 持久化 + 权限网关。
 
 ### Added

@@ -5,8 +5,10 @@ import com.atlas.tool.annotation.AtlasToolMapping;
 import com.atlas.tool.annotation.ToolPermission;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.tool.core.BaseTool;
+import com.atlas.tool.core.ToolParameterSpec;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -37,6 +39,21 @@ public class PytorchJobListTool extends BaseTool {
     @Override
     protected Set<String> getRequiredParams() {
         return Set.of();
+    }
+
+    /**
+     * 声明 PyTorch 任务列表查询的分页与关键词参数契约。
+     *
+     * <p>这些字段与 kube-manager 列表接口 query 参数保持一致，供 ReAct 优先生成
+     * canonical Action.params，而不是把查询条件拼接到 path 中。</p>
+     */
+    @Override
+    public List<ToolParameterSpec> getParameterSpecs() {
+        return List.of(
+            ToolParameterSpec.stringParam("page", "页码，默认使用 1。", false, List.of("pageNo", "page_no", "current")),
+            ToolParameterSpec.stringParam("limit", "每页数量，默认使用 100。", false, List.of("pageSize", "page_size", "size")),
+            ToolParameterSpec.stringParam("keyword", "PyTorch 任务名称或关键词筛选条件。", false, List.of("name", "search", "kw"))
+        );
     }
 
     @Override

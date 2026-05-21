@@ -415,9 +415,9 @@ Tests: 86, Failures: 0, Errors: 0, Skipped: 0 — BUILD SUCCESS
 
 ### E2E 验证
 
-1. **curl 登录**: `POST /api/agent/login` body=`{"username":"zhaotiandi","password":"ninePwd!"}`
+1. **curl 登录**: `POST /api/agent/login` body=`{"username":"zhaotiandi","password": "***"}`
    - 返回 `"organizationId":"100002"` ✅
-   
+
 2. **curl /me**: `GET /api/agent/me X-Session-Id=ses_xxx`
    - 返回 `"organizationId":"100002", "role":"user"` ✅
 
@@ -940,7 +940,7 @@ mvn -DskipTests package
 java -jar target/kube-agent-3.1.0-SNAPSHOT.jar \
   --server.port=8500 \
   --spring.ai.openai.base-url=http://124.74.245.75:3000 \
-  --spring.ai.openai.api-key=sk-T5BnkBXiizu15sO3OSq8csiVEFL0Oypjcgiw1lWx21aZBGhw \
+  --spring.ai.openai.api-key=[REDACTED] \
   --spring.ai.openai.chat.options.model=moonshotai/kimi-k2.6
 ```
 
@@ -1009,7 +1009,7 @@ mvn -DskipTests package
 java -jar target/kube-agent-3.1.0-SNAPSHOT.jar \
   --server.port=8500 \
   --spring.ai.openai.base-url=http://124.74.245.75:3000 \
-  --spring.ai.openai.api-key=sk-T5BnkBXiizu15sO3OSq8csiVEFL0Oypjcgiw1lWx21aZBGhw \
+  --spring.ai.openai.api-key=[REDACTED] \
   --spring.ai.openai.chat.options.model=moonshotai/kimi-k2.6
 ```
 
@@ -1018,3 +1018,87 @@ java -jar target/kube-agent-3.1.0-SNAPSHOT.jar \
 - P1：继续保持小批量，给诊断类 Tool 补参数契约（node/deployment/log），每批 3~5 个。
 - P2：为 Tool prompt 增加长度预算和按 agent/意图裁剪能力，避免未来工具数扩大后 prompt 膨胀。
 - P3：操作类 Tool schema 可逐步增加 defaultValue/example/enum，确保创建操作继承前端默认值约束。
+
+
+---
+
+## 2026-05-22 M4.2 ReAct 多步成功 E2E + URL Query 契约 + 小批 ToolSchema 加固
+
+### 背景
+
+M3.2 已完成手写 ReAct 多步推理 MVP，但需要补一条稳定、零外部依赖的“多步成功路径”自动化测试；同时前序 Tool Schema 阶段已经暴露过 URL query 被错误编码进 path 的风险，本轮继续按“先实验再铺开”原则，用小批列表查询 Tool 加固参数契约。
+
+### 实现内容
+
+1. 新增 `ReActEngineMultiStepE2ETest`：
+   - 使用测试内存 Tool 和模拟 ChatModel；
+   - 覆盖 `pod_status -> event_query -> Final Answer` 三轮链路；
+   - 验证 ReActResult 成功、stopReason 为 `final_answer`、工具调用顺序正确、初始 `token/orgId/conversationId` 被透传到工具参数。
+2. 修复 `KubeManagerHttpClient#get(path, queryParams)`：
+   - 从预先 `UriComponentsBuilder.toUriString()` 改为 `RestClient.uri(builder -> builder.path(...).queryParam(...).build(...))`；
+   - 防止 `?` 被编码为 path 的 `%253F`；
+   - query 参数由 URI builder 统一处理，禁止业务 Tool 手拼 URL query。
+3. 新增 `KubeManagerHttpClientUrlContractTest`：
+   - 使用 `MockRestServiceServer` 锁定 path 必须是 `/api/100002/mpi-job`；
+   - 验证 `page/limit/keyword` 作为 query 参数出现；
+   - 验证空格只编码一次为 `%20`，禁止二次编码为 `%2520`。
+4. 小批 ToolSchema 参数契约加固：
+   - `MpiJobListTool`
+   - `PytorchJobListTool`
+   - `FileMaterialListTool`
+   - `GpuDetailListTool`
+   - 为上述 4 个列表查询 Tool 增加 `page/limit/keyword` 参数契约与中文注释。
+5. 新增 `ListToolParameterSpecContractTest`：锁定列表 Tool 必须暴露 `page/limit/keyword` 以及分页/关键词常见 alias。
+
+### 测试结果
+
+| 测试项 | 命令/方式 | 结果 |
+|--------|-----------|------|
+| ReAct 多步成功 E2E | `mvn -Dtest=ReActEngineMultiStepE2ETest test` | ✅ 1 test, 0 failures |
+| URL query 契约测试 | `mvn -Dtest=KubeManagerHttpClientUrlContractTest test` | ✅ 1 test, 0 failures |
+| ToolSchema 小批契约测试 | `mvn -Dtest=ListToolParameterSpecContractTest test` | ✅ 1 test, 0 failures |
+| 目标组合回归 | `mvn -Dtest=ReActEngineMultiStepE2ETest,KubeManagerHttpClientUrlContractTest,ListToolParameterSpecContractTest test` | ✅ 3 tests, 0 failures |
+| 全量测试 | `mvn test` | ✅ 138 tests, 0 failures, 0 errors, BUILD SUCCESS |
+| Diff 检查 | `git diff --check` | ✅ 无空白错误 |
+| 敏感信息扫描 | `git diff -- . ':(exclude)target/**' | grep ...` | ✅ 未发现新增密钥/Token/密码 |
+
+### Review：优点
+
+1. **验证链路更完整**：ReAct 不再只测策略/参数合并，而是覆盖真实多步 Thought/Action/Observation/Final Answer 闭环。
+2. **URL 契约前移到单测**：未来任何人把 query 手拼回 path，都会被 `KubeManagerHttpClientUrlContractTest` 及时拦住。
+3. **小批铺开符合风险控制**：只选 4 个高频列表查询 Tool 补 schema，没有盲目批量改 100+ Tool。
+4. **参数契约服务 ReAct Prompt**：新增 specs 会进入工具目录，引导 LLM 使用 canonical `page/limit/keyword`，减少错误 Action.params。
+5. **兼容性保持**：本轮不改变业务返回结构，不新增必填参数；列表 Tool 仍默认 page=1、limit=100。
+
+### Review：风险与后续改进
+
+1. **ToolSchema 仅声明未消费用户参数**：当前 4 个列表 Tool 仍固定向后端传 `page=1, limit=100`，`keyword` 只是先进入 schema；下一步应把可选参数安全透传到 `httpClient.get()`。
+2. **列表 Tool schema 尚未全覆盖**：只完成 4 个样本，后续应按模块继续每批 3~5 个扩展。
+3. **URL query 测试只覆盖 GET path/query**：POST/PUT 表单、路径变量和数组参数还需要后续专项契约测试。
+4. **真实 SSE 未在本轮重启服务验证**：本轮以单元/全量测试为主；如要验证 LLM 真实行为，需要启动服务并跑 `/api/agent/chat/stream`。
+
+### 经验教训
+
+1. `MockRestRequestMatchers.queryParam()` 对已编码空格的断言可能拿到 raw 值，验证编码细节时更稳妥的方式是检查 `request.getURI().getRawQuery()`。
+2. `UriComponentsBuilder.toUriString()` 再交给 `RestClient.uri(String)` 容易形成二次编码风险；GET query 应优先使用 `RestClient.uri(Function<UriBuilder, URI>)`。
+3. ToolSchema 扩展应采用“契约测试先红、实现后绿”的小步 TDD，可以防止无意识漏声明参数。
+4. ReAct 多步测试必须避免真实 LLM/外部服务依赖，模拟模型输出 + 内存 Tool 更适合作为稳定回归基线。
+
+### 当前运行方式
+
+```bash
+cd /home/guojin/kube-agent
+mvn test
+mvn -DskipTests package
+java -jar target/kube-agent-3.1.0-SNAPSHOT.jar \
+  --server.port=8500 \
+  --spring.ai.openai.base-url=http://124.74.245.75:3000 \
+  --spring.ai.openai.api-key=[REDACTED] \
+  --spring.ai.openai.chat.options.model=moonshotai/kimi-k2.6
+```
+
+### 下一步建议
+
+- P1：让 4 个列表 Tool 真正消费可选 `page/limit/keyword`，并用 Mock HTTP 测试锁定透传。
+- P2：继续按模块小批扩展列表/详情类 Tool schema，每批 3~5 个，保持全量测试通过。
+- P3：为 POST 创建类 ToolSchema 增加默认值契约，确保与前端表单默认参数一致。

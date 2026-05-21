@@ -143,20 +143,21 @@ public class KubeManagerHttpClient {
     public Map<String, Object> get(String path, Map<String, Object> queryParams) {
         String token = resolveToken();
 
-        UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromPath(path);
-        if (queryParams != null) {
-            queryParams.forEach((k, v) -> {
-                if (v != null) {
-                    uriBuilder.queryParam(k, v);
-                }
-            });
-        }
-
         log.debug("[HTTP GET] {} 参数={}, tokenSource={}",
             path, queryParams, token.equals(fallbackAuthToken) ? "fallback_sysadmin" : "user_threadlocal");
 
         String responseBody = restClient.get()
-            .uri(uriBuilder.toUriString())
+            .uri(builder -> {
+                builder.path(path);
+                if (queryParams != null) {
+                    queryParams.forEach((k, v) -> {
+                        if (v != null) {
+                            builder.queryParam(k, v);
+                        }
+                    });
+                }
+                return builder.build();
+            })
             .header("X-Token", token)
             .retrieve()
             .onStatus(HttpStatusCode::isError, (req, res) -> {
