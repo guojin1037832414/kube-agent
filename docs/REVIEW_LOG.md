@@ -68,6 +68,43 @@ java -jar target/kube-agent-3.1.0-SNAPSHOT.jar   --server.port=8500   --spring.a
 
 ---
 
+## 2026-05-22 — M5.2 RBAC 管理面列表参数 HOLD 保护
+
+### 背景
+
+M5.1 完成账务域低风险货币列表参数契约后，剩余列表候选进入 RBAC、组织、身份源、注册审核等高敏管理面。若继续机械铺开普通列表的 `page/limit/keyword`，会把管理面列表放大为可翻页、可批量枚举、可搜索探测入口。
+
+### 专家会诊结论
+
+- 后端/API 专家：6 个 RBAC 管理面 Tool 均不应开放 `keyword`；`OrganizationListTool` / `PermissionMenuListTool` 即使未来开放分页也需专门白名单契约。
+- 安全/RBAC 专家：`page/limit` 在敏感列表中同样会放大枚举面，本阶段应保持无结构化列表参数；`PUBLIC` 注解是独立安全债务。
+- 测试架构专家：优先扩展 `SensitiveListToolHoldContractTest`，断言 `page/limit/keyword` 全部不暴露；不新增分散测试类。
+
+### 变更内容
+
+- 仅修改测试文件：`src/test/java/com/atlas/tool/impl/SensitiveListToolHoldContractTest.java`。
+- 将 M5.1 订单/配额审批 HOLD helper 升级为 `assertNoStandardListQueryContract`。
+- 新增 M5.2 覆盖：`LdapConfigListTool`、`OrganizationListTool`、`PermissionMenuListTool`、`RegisterAuditListTool`、`RoleAssignableListTool`、`RoleEditableListTool`。
+- 未修改生产代码，未修改权限注解，未开放任何 RBAC 管理面参数。
+
+### 测试与质量门禁
+
+- 红灯：临时突变 LDAP Tool 暴露标准列表参数，HOLD 测试失败，证明测试能拦住误开放。
+- 绿灯：`/usr/share/maven/bin/mvn -Dtest=SensitiveListToolHoldContractTest test` → 2 tests, 0 failures。
+- 邻近回归：`/usr/share/maven/bin/mvn -Dtest=ListToolParameterSpecContractTest,ListToolParameterPassThroughContractTest,SensitiveListToolHoldContractTest test` → 7 tests, 0 failures。
+- 全量：`/usr/share/maven/bin/mvn test` → 144 tests, 0 failures, BUILD SUCCESS。
+- `git diff --check`：通过。
+- 敏感扫描：`SECRET_SCAN_FINDINGS 0`。
+- 独立 Review：PASS。
+
+### 风险与后续
+
+- 当前 `PUBLIC` 权限注解仍是安全债务；M5.2 有意不混改，避免参数 HOLD 与运行时权限行为变更耦合。
+- 后续应单独推进 RBAC 权限收敛专项：优先评估 LDAP、注册审核、可分配角色、可编辑角色是否改为 `ADMIN_ONLY` 或引入更细粒度 `RBAC_ADMIN`。
+- 下一阶段 M5.3 进入 GLOBAL/PUBLIC/NO_ORG 候选审计，继续先判定 HOLD/开放边界，再小批执行。
+
+---
+
 ## 2026-05-22 M4.8 账务配额候选安全分层与标准列表 Tool 小批铺开
 
 ### 实现内容

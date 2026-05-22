@@ -100,3 +100,33 @@ M5.2 任一小批必须满足：
 ### ❌ FAIL
 
 - 无当前阻断项。
+---
+
+## 七、M5.2 执行结果
+
+### ✅ 最终决策
+
+三路专家会诊后，M5.2 未开放任何 RBAC 管理面 Tool 的 `page/limit/keyword`。本阶段只将 HOLD 决策测试化，防止后续批量扩展误把管理面敏感列表接入普通列表参数契约。
+
+### ✅ 已测试化 HOLD 的 Tool
+
+| Tool | 决策 | 说明 |
+|------|------|------|
+| `LdapConfigListTool` | HOLD | LDAP 身份源配置，禁止暴露翻页/批量/搜索枚举能力 |
+| `OrganizationListTool` | HOLD | 组织/租户结构，禁止未审计前开放枚举面 |
+| `PermissionMenuListTool` | HOLD | 权限菜单/权限树，禁止暴露权限结构探测入口 |
+| `RegisterAuditListTool` | HOLD | 注册审核/审批数据，禁止搜索和翻页枚举 |
+| `RoleAssignableListTool` | HOLD | 可分配角色边界，禁止暴露授权能力枚举 |
+| `RoleEditableListTool` | HOLD | 可编辑角色边界，禁止暴露管理能力枚举 |
+
+### ✅ 质量结果
+
+- TDD 红灯：临时突变 LDAP Tool 后 HOLD 测试失败。
+- 定向绿灯：`SensitiveListToolHoldContractTest` 2 tests, 0 failures。
+- 邻近回归：7 tests, 0 failures。
+- 全量测试：144 tests, 0 failures。
+- 独立 Review：PASS。
+
+### ⚠️ 后续权限债务
+
+`PUBLIC` 权限注解仍需单独专项治理。本阶段不修改生产代码，避免参数 HOLD 与权限可见性行为变更混在同一提交中。
