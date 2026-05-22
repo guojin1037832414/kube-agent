@@ -1102,3 +1102,56 @@ java -jar target/kube-agent-3.1.0-SNAPSHOT.jar \
 - P1：让 4 个列表 Tool 真正消费可选 `page/limit/keyword`，并用 Mock HTTP 测试锁定透传。
 - P2：继续按模块小批扩展列表/详情类 Tool schema，每批 3~5 个，保持全量测试通过。
 - P3：为 POST 创建类 ToolSchema 增加默认值契约，确保与前端表单默认参数一致。
+
+---
+
+## 2026-05-22 M4.3 列表 Tool 参数真实透传
+
+### 实现内容
+
+1. 专家会诊先行：生产代码审计、测试架构、Atlas Tool 架构、安全契约四类视角确认最小安全方案。
+2. 新增 `ListToolParameterPassThroughContractTest`，先以 TDD 红灯证明 `page/limit/keyword` 未真实透传。
+3. `BaseTool#buildListQuery()` 统一封装列表 query 构造：
+   - 默认 `page=1`、`limit=100`；
+   - `keyword` trim 后非空才透传；
+   - `page/limit` 必须为正整数；
+   - 只返回 query map，不拼接 URL，避免二次编码和 query 注入。
+4. `MpiJobListTool`、`PytorchJobListTool`、`FileMaterialListTool`、`GpuDetailListTool` 改为调用 `buildListQuery(params)`。
+
+### 测试结果
+
+- 定向测试：`mvn -Dtest=ListToolParameterPassThroughContractTest,ListToolParameterSpecContractTest,KubeManagerHttpClientUrlContractTest test` → 6 tests, 0 failures。
+- 全量测试：`mvn test` → 142 tests, 0 failures, BUILD SUCCESS。
+- `git diff --check` → 通过。
+
+### Review
+
+**优点：**
+1. 从“schema 声明”推进到“执行层真实消费”，消除 LLM 可见但实际无效的伪参数。
+2. 统一在 BaseTool 中复用列表 query 构造，减少后续每个 Tool 各写一套分页逻辑。
+3. keyword 不进入 path，只进入 query map，继续复用 KubeManagerHttpClient 的编码契约。
+4. TDD 测试覆盖用户参数透传、默认分页、空白 keyword 过滤、非法分页阻断 HTTP 调用。
+
+**风险与后续：**
+1. 当前只铺开 4 个 Tool，后续应按每批 3~5 个继续扩展。
+2. `BaseTool#buildListQuery()` 现在默认 `limit=100`，若前端某些列表默认值不同，后续需按具体 Tool 支持覆盖默认值。
+3. 非正整数分页当前会被具体 Tool 的 catch 捕获为失败结果，用户提示可继续优化为更明确的校验错误。
+
+
+
+### 独立 Review 修复补充
+
+独立 pre-commit reviewer 发现两个阻断项，已完成修复：
+
+1. **校验异常被业务 catch 吞掉**：4 个列表 Tool 现在显式 `catch (AtlasToolValidationException e) { throw e; }`，让 BaseTool.wrapCall 统一返回 `errorCode/suggestions`。
+2. **Number 小数被 intValue 截断**：`buildListQuery()` 改用专用 `strictInt()`，只接受整型 Number 或整数格式字符串，`1.5D` 会返回 `TYPE_MISMATCH`。
+
+补充测试：
+- 4 个 Tool 均覆盖非法分页不触发 HTTP 调用；
+- 覆盖 `VALUE_OUT_OF_RANGE`、`TYPE_MISMATCH`、suggestions 保留；
+- 覆盖 keyword trim 且只进入 query map。
+
+### 经验教训
+
+- ToolSchema 不能只声明不执行；凡是暴露给 LLM 的参数，都必须有契约测试证明它最终进入后端请求。
+- 分页/关键词属于横切能力，应优先沉淀到 BaseTool，避免 100+ Tool 后期重复修正。

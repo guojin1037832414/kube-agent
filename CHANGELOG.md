@@ -7,6 +7,28 @@
 ---
 
 
+## [M4.3] — 列表 Tool 参数真实透传
+
+**周期**: 2026-05-22
+**交付**: M4.2 首批列表 Tool 的 `page/limit/keyword` 从 schema 声明推进到执行层真实消费。
+
+### Added
+
+- `BaseTool#buildListQuery()`：统一构建列表接口 query map，集中处理分页默认值、keyword 空白过滤和严格正整数校验，避免小数 Number 被截断。
+- `ListToolParameterPassThroughContractTest`：锁定 `MpiJobListTool`、`PytorchJobListTool`、`FileMaterialListTool`、`GpuDetailListTool` 的参数透传、非法分页、结构化错误返回契约。
+
+### Changed
+
+- 4 个列表 Tool 对 AtlasToolValidationException 显式 rethrow，保留 BaseTool.wrapCall 的 errorCode/suggestions 语义。
+- `MpiJobListTool`、`PytorchJobListTool`、`FileMaterialListTool`、`GpuDetailListTool` 从固定 `page=1&limit=100` 改为消费用户传入的 `page/limit/keyword`。
+
+### Verified
+
+- 定向测试：`mvn -Dtest=ListToolParameterPassThroughContractTest,ListToolParameterSpecContractTest,KubeManagerHttpClientUrlContractTest test` → 6 tests, 0 failures。
+- 全量测试：`mvn test` → 142 tests, 0 failures, BUILD SUCCESS。
+
+---
+
 ## [M4.2] — ReAct 多步成功回归与 URL Query 契约
 
 **周期**: 2026-05-22

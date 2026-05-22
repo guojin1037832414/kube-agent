@@ -423,6 +423,96 @@ public abstract class BaseTool implements AtlasTool {
         return String.format("查询到 %d 个%s", count, entityName);
     }
 
+    /**
+     * 构建 kube-manager 列表接口 query 参数。
+     *
+     * <p>列表类 Tool 常见参数为 {@code page / limit / keyword}。这些字段已经通过
+     * {@link ToolParameterSpec} 暴露给 ReAct 和 schema-first normalizer，执行层必须真实消费，
+     * 否则会形成“LLM 看到参数可用、HTTP 请求却忽略参数”的伪参数问题。</p>
+     *
+     * <p>安全约束：</p>
+     * <ul>
+     *   <li>只返回 query map，不拼接到 URL path，避免 {@code ?} 被二次编码或 query 注入。</li>
+     *   <li>{@code page/limit} 支持数字和数字字符串；空白值回落默认值。</li>
+     *   <li>{@code keyword} 仅做首尾 trim，非空才透传，保留中间空格和特殊字符给 HTTP 客户端编码。</li>
+     * </ul>
+     */
+    protected Map<String, Object> buildListQuery(Map<String, Object> params) {
+        Map<String, Object> query = new LinkedHashMap<>();
+        query.put("page", positiveIntOrDefault(params.get("page"), "page", 1));
+        query.put("limit", positiveIntOrDefault(params.get("limit"), "limit", 100));
+
+        String keyword = optionalTrimmedString(params.get("keyword"));
+        if (keyword != null) {
+            query.put("keyword", keyword);
+        }
+        return query;
+    }
+
+    /**
+     * 将可选分页参数归一为正整数字符串。
+     *
+     * <p>这里不复用 {@link #getParamTypes()}，因为列表查询允许空白 page/limit 使用默认值，
+     * 而入口类型转换会在业务默认值逻辑前直接失败。特别注意：Number 类型必须严格校验为整数，
+     * 不能使用 {@code intValue()} 截断小数，否则 LLM 传入 1.5 会被误当成 1。</p>
+     */
+    private String positiveIntOrDefault(Object raw, String key, int defaultValue) {
+        if (raw == null) {
+            return String.valueOf(defaultValue);
+        }
+        if (raw instanceof String s && s.isBlank()) {
+            return String.valueOf(defaultValue);
+        }
+        int value = strictInt(raw, key);
+        if (value <= 0) {
+            throw new AtlasToolValidationException(
+                "参数 '" + key + "' 必须大于 0，当前值: " + value,
+                "VALUE_OUT_OF_RANGE",
+                List.of("请将 '" + key + "' 改为正整数"));
+        }
+        return String.valueOf(value);
+    }
+
+    /**
+     * 严格解析整数，不允许小数 Number 被截断。
+     *
+     * <p>该方法专用于列表分页参数。普通 Tool 的 {@link #toInt(Object, String)} 保持原兼容行为，
+     * 避免扩大本次 M4.3 修复范围影响既有 Tool。</p>
+     */
+    private int strictInt(Object raw, String key) {
+        if (raw instanceof Byte || raw instanceof Short || raw instanceof Integer) {
+            return ((Number) raw).intValue();
+        }
+        if (raw instanceof Long value) {
+            if (value < Integer.MIN_VALUE || value > Integer.MAX_VALUE) {
+                throw new AtlasToolValidationException(
+                    "参数 '" + key + "' 超出整数范围: " + raw,
+                    "VALUE_OUT_OF_RANGE",
+                    List.of("请将 '" + key + "' 改为有效的正整数"));
+            }
+            return value.intValue();
+        }
+        try {
+            return Integer.parseInt(raw.toString().trim());
+        } catch (NumberFormatException ex) {
+            throw new AtlasToolValidationException(
+                "参数 '" + key + "' 期望整数，但收到: " + raw,
+                "TYPE_MISMATCH",
+                List.of("请将 '" + key + "' 改为有效的整数值"));
+        }
+    }
+
+    /**
+     * 返回首尾 trim 后的可选字符串；空值或空白字符串返回 null，避免生成无效 query 参数。
+     */
+    private String optionalTrimmedString(Object raw) {
+        if (raw == null) {
+            return null;
+        }
+        String value = raw.toString().trim();
+        return value.isBlank() ? null : value;
+    }
+
     // ═══════════════════════════════════════════
     // 访问器
     // ═══════════════════════════════════════════
