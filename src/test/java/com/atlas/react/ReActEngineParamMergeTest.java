@@ -33,7 +33,7 @@ class ReActEngineParamMergeTest {
     }
 
     @Test
-    void testMergeInitialAndActionParams_prefersActionParams() throws Exception {
+    void m55_mergeInitialAndActionParams_shouldKeepTrustedInitialOrganizationId() throws Exception {
         Method method = ReActEngine.class.getDeclaredMethod(
             "mergeInitialAndActionParams", String.class, Map.class, Map.class);
         method.setAccessible(true);
@@ -47,8 +47,27 @@ class ReActEngineParamMergeTest {
         );
 
         assertEquals("t1", merged.get("token"));
-        assertEquals("200001", merged.get("organizationId"));
+        assertEquals("100002", merged.get("organizationId"));
         assertEquals("c1", merged.get("conversationId"));
+        assertEquals("nginx-1", merged.get("podName"));
+    }
+
+    @Test
+    void m55_mergeInitialAndActionParams_shouldDropActionOrgIdAliasWhenInitialOrganizationIdExists() throws Exception {
+        Method method = ReActEngine.class.getDeclaredMethod(
+            "mergeInitialAndActionParams", String.class, Map.class, Map.class);
+        method.setAccessible(true);
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> merged = (Map<String, Object>) method.invoke(
+            newEngine(),
+            "diagnose_pod",
+            Map.of("token", "t1", "organizationId", "100002", "conversationId", "c1"),
+            Map.of("orgId", "200001", "podName", "nginx-1")
+        );
+
+        assertEquals("100002", merged.get("organizationId"));
+        assertFalse(merged.containsKey("orgId"), "LLM Action 注入的 orgId 别名不应继续向下游传播");
         assertEquals("nginx-1", merged.get("podName"));
     }
 

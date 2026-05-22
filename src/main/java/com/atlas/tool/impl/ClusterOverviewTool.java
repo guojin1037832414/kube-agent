@@ -41,9 +41,8 @@ public class ClusterOverviewTool extends BaseTool {
     @Override
     protected AtlasToolResult doExecute(Map<String, Object> params) {
         try {
-            String orgId = params.get("organizationId") != null
-                ? params.get("organizationId").toString()
-                : "100001";
+            // M5.5 多租户安全治理：orgId 必须来自可信 ThreadLocal，禁止使用 params.organizationId。
+            String orgId = resolveOrganizationId(params);
 
             String path = "/api/" + orgId + "/dashboard/resources";
             Map<String, Object> response = httpClient.get(path);

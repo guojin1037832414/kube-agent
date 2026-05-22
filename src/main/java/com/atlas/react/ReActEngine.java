@@ -12,8 +12,10 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -429,9 +431,9 @@ public class ReActEngine {
     /**
      * 合并初始上下文参数与本轮 Action 参数，并调用统一参数归一化器。
      *
-     * <p>规则：初始参数先放入，Action 参数后放入并覆盖同名 key，
-     * 这样可以保证 token / orgId / conversationId 等会话级上下文稳定透传，
-     * 同时允许 LLM 在某一轮显式指定更细粒度的工具参数。</p>
+     * <p><b>M5.5 多租户安全治理：</b>Action 参数来自 LLM，不可信；initialParams
+     * 来自会话/Graph/认证链路，是 token、organizationId、conversationId、userId 等上下文
+     * 的权威来源。因此合并时只允许 Action 补充业务参数，不允许覆盖或新增受保护上下文字段。</p>
      *
      * <p>参数别名归一化已经从 ReActEngine 内联逻辑抽离到 {@link ToolParameterNormalizer}。
      * ReActEngine 只负责传入当前 toolName，让 normalizer 可以按工具处理 {@code name}
@@ -440,15 +442,42 @@ public class ReActEngine {
     private Map<String, Object> mergeInitialAndActionParams(String toolName,
                                                             Map<String, Object> initialParams,
                                                             Map<String, Object> actionParams) {
-        Map<String, Object> merged = new java.util.HashMap<>();
+        Map<String, Object> merged = new LinkedHashMap<>();
         if (initialParams != null && !initialParams.isEmpty()) {
             merged.putAll(initialParams);
         }
         if (actionParams != null && !actionParams.isEmpty()) {
-            merged.putAll(actionParams);
+            actionParams.forEach((key, value) -> {
+                if (!isProtectedContextParam(key)) {
+                    merged.put(key, value);
+                }
+            });
         }
         return parameterNormalizer.normalize(toolName, merged);
     }
+
+    /**
+     * 判断参数名是否属于会话/认证上下文字段。
+     *
+     * <p>这些字段不是业务查询条件，不能由 LLM Action 或用户自然语言改写。
+     * 尤其 {@code organizationId/orgId} 决定租户 path，必须只来自认证上下文。</p>
+     */
+    private boolean isProtectedContextParam(String key) {
+        if (key == null) {
+            return false;
+        }
+        return PROTECTED_CONTEXT_PARAMS.contains(key);
+    }
+
+    private static final Set<String> PROTECTED_CONTEXT_PARAMS = Set.of(
+        "token",
+        "organizationId",
+        "orgId",
+        "conversationId",
+        "conversation_id",
+        "userId",
+        "user_id"
+    );
 
     /**
      * 将工具返回结果序列化为 JSON 字符串。

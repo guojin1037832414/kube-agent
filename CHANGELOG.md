@@ -6,6 +6,42 @@
 
 ---
 
+
+## [M5.5] — orgId 来源治理与跨租户参数污染防护
+
+**周期**: 2026-05-22
+**交付**: 将 orgScoped Tool 的组织来源从不可信 params 收口到可信 ThreadLocal/session 上下文；治理 ReAct、Graph tool_call、Graph delegate 三条参数合并链路，防止 LLM Action 或 BrainDecision parameters 覆盖 `organizationId/orgId`。
+
+### Added
+
+- 新增 `BaseToolOrganizationIdGovernanceTest`，锁定 `BaseTool#resolveOrganizationId` 不再接受 params 中的 `organizationId/orgId` 作为 path 权威来源。
+- 新增 `OrganizationIdGovernanceRepresentativeToolTest`，覆盖 Dashboard、Deployment、Storage 写操作以及 `GpuQueryTool`、`ClusterOverviewTool`、`ImageQueryTool` 三个 legacy Tool 的跨租户注入防护。
+- 新增 M5.5 orgId 来源治理审计种子文档：`docs/M5_5_ORG_ID_SOURCE_AUDIT_SEED_20260522.md`。
+
+### Changed
+
+- `BaseTool#resolveOrganizationId(params)` 改为只信任 `UserPermissionContext.CURRENT_ORG_ID`。
+- `ReActEngine#mergeInitialAndActionParams` 过滤受保护上下文字段，LLM Action 不得覆盖或新增 `token/organizationId/orgId/conversationId/userId`。
+- `AtlasGraphConfig#tool_call` 对 Brain/LLM parameters 过滤受保护字段，系统上下文字段最后写入，并绑定/清理 token 与 orgId ThreadLocal。
+- `AtlasGraphConfig#delegate` 增加 orgId state strategy、子图输入透传、ThreadLocal 绑定和 finally 清理。
+- `GpuQueryTool`、`ClusterOverviewTool`、`ImageQueryTool` 统一改为 `resolveOrganizationId(params)`。
+- M4/M5 既有契约测试更新为使用 ThreadLocal 可信 orgId，不再通过 params 模拟租户上下文。
+
+### Verified
+
+- M5.5 定向测试：13 tests, 0 failures, BUILD SUCCESS。
+- M5 参数治理回归：28 tests, 0 failures, BUILD SUCCESS。
+- 全量测试：161 tests, 0 failures, BUILD SUCCESS。
+- `git diff --check`：通过。
+- Diff 敏感信息扫描：`NO_NEW_SENSITIVE_IN_DIFF`。
+- 独立 Review 两轮：第一轮 CONCERN 已修复，第二轮 PASS，可提交。
+
+### Deferred
+
+- `fallbackOrgId` 的可信语义、`AtlasAsyncConfig` TaskDecorator orgId 传播、旧 `/chat/graph` 入口上下文治理进入后续 M5.6 专项。
+
+---
+
 ## [M5.3] — GLOBAL/PUBLIC/NO_ORG 首页公共接口 page/limit-only 契约
 
 **周期**: 2026-05-22

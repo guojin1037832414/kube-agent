@@ -355,35 +355,23 @@ public abstract class BaseTool implements AtlasTool {
     // ═══════════════════════════════════════════════════════════
 
     /**
-     * 从 LLM 参数中解析 organizationId，支持多别名 + 自动 ThreadLocal 回退。
+     * 从会话上下文中解析 organizationId。
      *
-     * <p>解析优先级：</p>
-     * <ol>
-     *   <li>params.get("organizationId")</li>
-     *   <li>params.get("orgId")</li>
-     *   <li>{@code UserPermissionContext.getCurrentOrgId()}（ThreadLocal 透传）</li>
-     *   <li>config 文件的 fallbackOrgId</li>
-     * </ol>
+     * <p><b>M5.5 多租户安全治理：</b>organizationId 是权限边界，不是普通业务参数。
+     * 因此这里不再读取 {@code params.organizationId} 或 {@code params.orgId}。
+     * LLM Action、用户自然语言或外部调用方拼出的 params 只能携带业务查询条件，
+     * 不能决定最终租户 path。Tool 执行层必须以 {@link com.atlas.auth.UserPermissionContext}
+     * 中由认证链路绑定的 orgId 为唯一权威来源。</p>
      */
     protected String resolveOrganizationId(Map<String, Object> params) {
-        Object value = params.get("organizationId");
-        if (value == null || value.toString().isBlank()) {
-            value = params.get("orgId");
-        }
-        if (value != null && !value.toString().isBlank()) {
-            return value.toString();
-        }
-        // ThreadLocal 回退
         String orgId = com.atlas.auth.UserPermissionContext.getCurrentOrgId();
         if (orgId != null && !orgId.isBlank()) {
             return orgId;
         }
-        // 兜底 — 由子类通过构造函数注入的 httpClient 提供 fallbackOrgId
-        // 注意：如果 baseUrl 已注入但没有 fallback，抛异常让 LLM 指导用户
         throw new AtlasToolValidationException(
-            "无法确定 organizationId",
-            "MISSING_ORG_ID",
-            List.of("请提供 organizationId 参数", "或确保会话中已正确登录 orgId")
+            "无法确定可信 organizationId",
+            "MISSING_TRUSTED_ORG_ID",
+            List.of("请重新登录以建立可信租户上下文", "不要在工具参数中手工传递 organizationId")
         );
     }
 

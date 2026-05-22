@@ -33,6 +33,7 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import static com.alibaba.cloud.ai.graph.StateGraph.END;
@@ -57,6 +58,22 @@ import static com.alibaba.cloud.ai.graph.action.AsyncNodeAction.node_async;
  */
 @Configuration
 public class AtlasGraphConfig {
+
+    /**
+     * 会话/认证上下文字段白名单。
+     *
+     * <p>M5.5 多租户安全治理：这些字段只能由系统上下文写入，不能由
+     * AtlasBrain/LLM 输出的 parameters 覆盖，避免跨租户 path 污染。</p>
+     */
+    private static final Set<String> PROTECTED_CONTEXT_PARAMS = Set.of(
+        "token",
+        "organizationId",
+        "orgId",
+        "conversationId",
+        "conversation_id",
+        "userId",
+        "user_id"
+    );
 
     // ═══════════════════════════════════════════════════════════
     // 1. ReactAgent 定义（每个专业 Agent）
@@ -339,6 +356,10 @@ public class AtlasGraphConfig {
         return graph.compile(compileConfig);
     }
 
+    private boolean isProtectedContextParam(String key) {
+        return key != null && PROTECTED_CONTEXT_PARAMS.contains(key);
+    }
+
     private KeyStrategyFactory buildKeyStrategyFactory() {
         return () -> {
             HashMap<String, KeyStrategy> strategies = new HashMap<>();
@@ -360,6 +381,8 @@ public class AtlasGraphConfig {
             strategies.put("conversation_id", new ReplaceStrategy());
             strategies.put("user_id", new ReplaceStrategy());
             strategies.put("token", new ReplaceStrategy());          // 透传的 Token
+            strategies.put("orgId", new ReplaceStrategy());          // 可信组织上下文
+            strategies.put("organizationId", new ReplaceStrategy()); // 兼容旧 key，仅系统写入
             strategies.put("answer", new ReplaceStrategy());         // 直接回答 / tool_call 返回
             strategies.put("tool_result", new ReplaceStrategy());      // Tool 结构化结果
             return strategies;
@@ -532,14 +555,26 @@ public class AtlasGraphConfig {
             String intentId = d.target();
             String userId = state.value("user_id").map(Object::toString).orElse("anonymous");
             String token = state.value("token").map(Object::toString).orElse("");
+            String orgId = state.value("orgId").map(Object::toString).orElse("");
+            if (orgId.isBlank()) {
+                orgId = com.atlas.auth.UserPermissionContext.getCurrentOrgId();
+            }
+            if (orgId == null || orgId.isBlank()) {
+                orgId = kubeManagerClient.getFallbackOrgId();
+            }
 
             // ═══════════════════════════════════════════════════════════
-            // Token 透传修复：Graph 异步线程中 ThreadLocal 丢失，需显式设置
+            // Token + OrgId 透传修复：Graph 异步线程中 ThreadLocal 丢失，需显式设置
             // ═══════════════════════════════════════════════════════════
             boolean tokenSet = false;
+            boolean orgIdSet = false;
             if (!token.isBlank()) {
                 com.atlas.auth.UserPermissionContext.CURRENT_TOKEN.set(token);
                 tokenSet = true;
+            }
+            if (orgId != null && !orgId.isBlank()) {
+                com.atlas.auth.UserPermissionContext.CURRENT_ORG_ID.set(orgId);
+                orgIdSet = true;
             }
 
             try {
@@ -558,22 +593,20 @@ public class AtlasGraphConfig {
                         "❌ 权限不足：无权执行 '" + intentId + "'");
                 }
 
-                // 3. 读取 orgId（从 state 透传，不再桶式搜索 + sysadmin 穿透硬编码）
-                String orgId = state.value("orgId").map(Object::toString).orElse("");
-                if (orgId.isBlank()) {
-                    // fallback: 用 ThreadLocal 透传的 orgId（如有）
-                    orgId = com.atlas.auth.UserPermissionContext.getCurrentOrgId();
-                }
-                if (orgId == null || orgId.isBlank()) {
-                    // 最后防线：配置化 fallback
-                    orgId = kubeManagerClient.getFallbackOrgId();
-                }
+                // 3. 使用可信 orgId 构造 Tool 参数。
+                // orgId 已在进入 try 前从 state/ThreadLocal/fallback 中解析并绑定到当前异步线程，
+                // BaseTool#resolveOrganizationId 会以 ThreadLocal 作为最终安全边界。
                 java.util.Map<String, Object> toolParams = new java.util.HashMap<>();
+                if (d.parameters() != null) {
+                    d.parameters().forEach((key, value) -> {
+                        if (!isProtectedContextParam(key)) {
+                            toolParams.put(key, value);
+                        }
+                    });
+                }
+                // M5.5 多租户安全治理：系统上下文字段最后写入，防止 Brain/LLM 参数覆盖租户边界。
                 toolParams.put("userId", userId);
                 toolParams.put("organizationId", orgId);
-                if (d.parameters() != null) {
-                    toolParams.putAll(d.parameters());
-                }
 
                 // 4. 执行 Tool
                 try {
@@ -602,9 +635,12 @@ public class AtlasGraphConfig {
                         "❌ Tool 执行异常: " + e.getMessage());
                 }
             } finally {
-                // 清理 ThreadLocal，防止线程池复用导致 Token 泄漏
+                // 清理 ThreadLocal，防止线程池复用导致 Token/OrgId 泄漏
                 if (tokenSet) {
                     com.atlas.auth.UserPermissionContext.CURRENT_TOKEN.remove();
+                }
+                if (orgIdSet) {
+                    com.atlas.auth.UserPermissionContext.CURRENT_ORG_ID.remove();
                 }
             }
         }));
@@ -629,16 +665,35 @@ public class AtlasGraphConfig {
                 state.value("input").ifPresent(v -> subInputs.put("input", v));
                 state.value("user_id").ifPresent(v -> subInputs.put("user_id", v));
                 state.value("token").ifPresent(v -> subInputs.put("token", v));
+                state.value("orgId").ifPresent(v -> {
+                    subInputs.put("orgId", v);
+                    subInputs.put("organizationId", v);
+                });
+                state.value("organizationId").ifPresent(v -> subInputs.putIfAbsent("organizationId", v));
                 state.value("messages").ifPresent(v -> subInputs.put("messages", v));
 
                 // ==============================
-                // 2. Token 透传：在子图执行前显式设置 ThreadLocal
+                // 2. Token + OrgId 透传：在子图执行前显式设置 ThreadLocal
                 // ==============================
                 String token = state.value("token").map(Object::toString).orElse("");
+                String orgId = state.value("orgId").map(Object::toString).orElse("");
+                if (orgId.isBlank()) {
+                    orgId = state.value("organizationId").map(Object::toString).orElse("");
+                }
+                if (orgId.isBlank()) {
+                    orgId = com.atlas.auth.UserPermissionContext.getCurrentOrgId();
+                }
                 boolean tokenSet = false;
+                boolean orgIdSet = false;
                 if (!token.isBlank()) {
                     com.atlas.auth.UserPermissionContext.CURRENT_TOKEN.set(token);
                     tokenSet = true;
+                }
+                if (orgId != null && !orgId.isBlank()) {
+                    com.atlas.auth.UserPermissionContext.CURRENT_ORG_ID.set(orgId);
+                    subInputs.put("orgId", orgId);
+                    subInputs.put("organizationId", orgId);
+                    orgIdSet = true;
                 }
 
                 // ==============================
@@ -704,6 +759,9 @@ public class AtlasGraphConfig {
                     // 清理 ThreadLocal，防止泄漏
                     if (tokenSet) {
                         com.atlas.auth.UserPermissionContext.CURRENT_TOKEN.remove();
+                    }
+                    if (orgIdSet) {
+                        com.atlas.auth.UserPermissionContext.CURRENT_ORG_ID.remove();
                     }
                 }
             } catch (Exception e) {

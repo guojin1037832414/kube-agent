@@ -1,8 +1,11 @@
 package com.atlas.tool.impl;
 
+import com.atlas.auth.UserPermissionContext;
 import com.atlas.http.KubeManagerHttpClient;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.tool.core.BaseTool;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -29,6 +32,16 @@ import static org.mockito.Mockito.when;
  * 测试不依赖真实 kube-manager，只验证 Tool 到 HTTP 客户端的契约边界。</p>
  */
 class ListToolParameterPassThroughContractTest {
+
+    @BeforeEach
+    void setUpTrustedOrganizationContext() {
+        UserPermissionContext.CURRENT_ORG_ID.set("100002");
+    }
+
+    @AfterEach
+    void tearDownTrustedOrganizationContext() {
+        UserPermissionContext.CURRENT_ORG_ID.remove();
+    }
 
     @Test
     void listTools_shouldPassPageLimitAndKeywordToKubeManagerQueryParams() {

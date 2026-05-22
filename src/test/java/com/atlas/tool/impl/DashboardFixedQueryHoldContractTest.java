@@ -1,9 +1,12 @@
 package com.atlas.tool.impl;
 
+import com.atlas.auth.UserPermissionContext;
 import com.atlas.http.KubeManagerHttpClient;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.tool.core.BaseTool;
 import com.atlas.tool.core.ToolParameterSpec;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -29,6 +32,16 @@ import static org.mockito.Mockito.when;
  * {@code buildPageLimitOnlyQuery(params, 100)}。</p>
  */
 class DashboardFixedQueryHoldContractTest {
+
+    @BeforeEach
+    void setUpTrustedOrganizationContext() {
+        UserPermissionContext.CURRENT_ORG_ID.set("100001");
+    }
+
+    @AfterEach
+    void tearDownTrustedOrganizationContext() {
+        UserPermissionContext.CURRENT_ORG_ID.remove();
+    }
 
     @Test
     void m54_dashboardFixedQueryTools_shouldNotExposeStandardListParameterSpecs() {

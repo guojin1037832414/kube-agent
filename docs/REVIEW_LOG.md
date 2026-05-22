@@ -1680,3 +1680,75 @@ java -jar target/kube-agent-3.1.0-SNAPSHOT.jar   --server.port=8500   --spring.a
 - 对 `GpuGlobalListTool` 与 `SysModelListTool` 做响应字段脱敏与跨组织可见性审计，在证据不足前继续 HOLD。
 
 ---
+
+---
+
+## 2026-05-22 — M5.5 orgId 来源治理专项
+
+### 背景
+
+M5.4 固定分页/HOLD 测试中发现：部分 orgScoped Tool 的 HTTP path 仍可能被调用参数中的 `organizationId/orgId` 改写。由于这些参数可能来自 LLM Action、Graph BrainDecision parameters 或用户输入，若继续把 params 当作租户权威来源，会形成跨租户读写边界风险。
+
+### 专家会诊结论
+
+- 多租户安全专家：租户上下文必须来自认证/session/ThreadLocal，不能来自 LLM 或用户参数。
+- API 语义专家：`organizationId/orgId` 属于系统上下文字段，不应进入普通 Tool 参数覆盖路径。
+- 测试架构专家：应建立 BaseTool、ReAct 参数合并、Graph delegate/tool_call 三层边界测试，而不是逐个 Tool 手工防守。
+
+### 实现内容
+
+1. `BaseTool#resolveOrganizationId(params)` 改为只读取 `UserPermissionContext.CURRENT_ORG_ID`，不再信任 `params.organizationId` 或 `params.orgId`。
+2. `ReActEngine#mergeInitialAndActionParams` 增加受保护上下文字段过滤：`token/organizationId/orgId/conversationId/userId` 等只能由 initial/session 参数提供，LLM Action 不可覆盖或新增。
+3. `AtlasGraphConfig#tool_call` 对 `BrainDecision.parameters()` 过滤受保护字段，系统上下文字段最后写入，并在 Graph 异步线程中显式绑定/清理 `CURRENT_TOKEN` 与 `CURRENT_ORG_ID`。
+4. `AtlasGraphConfig#delegate` 增加 `orgId/organizationId` state strategy、子图输入透传、ThreadLocal 绑定和 finally 清理，修复子 Agent ToolCallback 路径的 orgId 丢失风险。
+5. 修复 `GpuQueryTool`、`ClusterOverviewTool`、`ImageQueryTool` 三个历史 Tool 绕过 BaseTool 直接读取 `params.organizationId` 的漏口，统一改为 `resolveOrganizationId(params)`。
+6. 新增 `BaseToolOrganizationIdGovernanceTest` 与 `OrganizationIdGovernanceRepresentativeToolTest`，覆盖 BaseTool、Dashboard/Deployment/Storage 代表样本和三个 legacy 查询 Tool 的跨租户注入防护。
+7. 更新 `ReActEngineParamMergeTest`、`ListToolParameterPassThroughContractTest`、`DashboardFixedQueryHoldContractTest`，使测试契约符合 M5.5 后“params 不再冒充租户”的新边界。
+
+### 测试结果
+
+| 测试项 | 命令/方式 | 结果 |
+|--------|-----------|------|
+| M5.5 定向 RED | `BaseToolOrganizationIdGovernanceTest,ReActEngineParamMergeTest,OrganizationIdGovernanceRepresentativeToolTest` | ✅ 先有效失败，复现 params orgId 覆盖风险 |
+| M5.5 GREEN 定向 | `/usr/share/maven/bin/mvn -Dtest=BaseToolOrganizationIdGovernanceTest,OrganizationIdGovernanceRepresentativeToolTest,ReActEngineParamMergeTest test` | ✅ 13 tests, 0 failures, BUILD SUCCESS |
+| M5 参数治理回归 | `/usr/share/maven/bin/mvn -Dtest=BaseToolOrganizationIdGovernanceTest,OrganizationIdGovernanceRepresentativeToolTest,ReActEngineParamMergeTest,ListToolParameterSpecContractTest,ListToolParameterPassThroughContractTest,SensitiveListToolHoldContractTest,HomeInfoPublicPageLimitContractTest,DashboardFixedQueryHoldContractTest test` | ✅ 28 tests, 0 failures, BUILD SUCCESS |
+| 全量测试 | `/usr/share/maven/bin/mvn test` | ✅ 161 tests, 0 failures, 0 errors, BUILD SUCCESS |
+| Diff 空白检查 | `git diff --check` | ✅ 通过 |
+| Diff 敏感信息扫描 | Python diff scan | ✅ `NO_NEW_SENSITIVE_IN_DIFF` |
+| 独立 Review #1 | delegate_task | ⚠️ CONCERN：发现 3 个 legacy Tool 和 delegate orgId 透传漏口 |
+| 独立 Review #2 | delegate_task | ✅ PASS，可提交 |
+
+### Review：优点
+
+1. **安全边界从 Tool 参数上移到系统上下文**：`organizationId/orgId` 不再是普通 LLM 可写字段，而是认证链路派生的可信上下文。
+2. **三层防线互相兜底**：ReAct 合并层防污染、Graph tool_call/delegate 防污染、BaseTool 执行层 fail-safe。
+3. **Review 驱动补漏**：第一次独立 Review 发现的 3 个 legacy Tool 与 delegate 子图 orgId 透传问题已全部修复并测试化。
+4. **小样本验证后再回归**：没有机械改 92 个 Tool，而是通过 BaseTool 公共入口和代表性 Tool 测试锁住行为。
+5. **线程池泄漏风险可控**：Graph 异步线程绑定 token/orgId 后在 finally 中清理，避免上下文串租户。
+
+### Review：风险与后续改进
+
+1. **fallbackOrgId 策略仍需专项定义**：Graph/Orchestrator 中仍存在系统 fallback orgId 的历史兼容逻辑，需后续明确它是否属于可信系统上下文。
+2. **Async TaskDecorator 传播 orgId 可单独治理**：本阶段修复 Graph tool_call/delegate 路径；更泛化的 Spring `TaskDecorator` orgId 传播建议进入后续异步上下文专项。
+3. **大小写/下划线别名未开放**：本阶段保护 `organizationId/orgId` 等既有 key；如未来接入外部协议中的 `organization_id`，需先加入 protected list 并补测试。
+
+### 经验教训
+
+- 多租户字段不能和普通业务参数混在同一个 `Map<String,Object>` 信任域中；即使测试里方便，也会诱导生产路径误信 LLM 参数。
+- 独立 Review 必须放在提交前；本次 Review 发现的 legacy Tool 绕过问题证明“只改公共基类”仍需全局搜索验证。
+- 对权限边界问题，应优先用 fail-safe ThreadLocal/session 权威来源，再通过参数合并层做早过滤，而不是把校验压力放到单个 Tool。
+
+### 当前运行方式
+
+```bash
+cd /home/guojin/kube-agent
+/usr/share/maven/bin/mvn test
+/usr/share/maven/bin/mvn -DskipTests package
+java -jar target/kube-agent-3.1.0-SNAPSHOT.jar   --server.port=8500   --spring.ai.openai.base-url=http://124.74.245.75:3000   --spring.ai.openai.api-key=[REDACTED]   --spring.ai.openai.chat.options.model=moonshotai/kimi-k2.6
+```
+
+### 下一步建议
+
+- 启动 M5.6：异步上下文传播与 fallbackOrgId 可信语义专项，统一审计 `AtlasAsyncConfig`、`AsyncContextHolder`、旧 `/chat/graph` 入口和 Orchestrator fallback 行为。
+- 继续保持权限边界治理与列表参数治理分离，避免把 orgId 来源安全问题混入 page/limit/keyword 普通契约。
+
