@@ -52,6 +52,13 @@ class ListToolParameterPassThroughContractTest {
         assertPassThrough(ExternalLinkListTool::new, "/api/100002/external-link");
         assertPassThrough(HelmRepoListTool::new, "/api/100002/helm/repositories");
         assertPassThrough(HelmReleaseListTool::new, "/api/100002/helm/releases");
+        assertPassThrough(CoursewareListTool::new, "/api/100002/courseware/list");
+        assertPassThrough(DownloadTaskListTool::new, "/api/100002/download");
+        assertPassThrough(InboxMessageListTool::new, "/api/100002/message");
+        assertPassThrough(MigConfigListTool::new, "/api/100002/migConfig");
+        assertPassThrough(NamespaceListTool::new, "/api/100002/namespace");
+        assertPassThrough(TableListTool::new, "/api/100002/table");
+        assertPassThrough(SlurmNodeListTool::new, "/api/100002/slurm-node");
     }
 
     @Test
@@ -111,6 +118,8 @@ class ListToolParameterPassThroughContractTest {
         assertInvalidPagination(ModelListTool::new, "/api/100002/model", "limit", 1.5D, "TYPE_MISMATCH");
         assertInvalidPagination(ComposeListTool::new, "/api/100002/compose", "page", "0", "VALUE_OUT_OF_RANGE");
         assertInvalidPagination(HelmRepoListTool::new, "/api/100002/helm/repositories", "limit", 1.5D, "TYPE_MISMATCH");
+        assertInvalidPagination(CoursewareListTool::new, "/api/100002/courseware/list", "page", "0", "VALUE_OUT_OF_RANGE");
+        assertInvalidPagination(DownloadTaskListTool::new, "/api/100002/download", "limit", 1.5D, "TYPE_MISMATCH");
     }
 
     private void assertPassThrough(ToolFactory factory, String expectedPath) {

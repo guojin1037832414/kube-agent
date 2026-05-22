@@ -41,6 +41,13 @@ class ListToolParameterSpecContractTest {
         assertListQueryContract(new ExternalLinkListTool(null), "external_link_list");
         assertListQueryContract(new HelmRepoListTool(null), "helm_repo_list");
         assertListQueryContract(new HelmReleaseListTool(null), "helm_release_list");
+        assertListQueryContract(new CoursewareListTool(null), "courseware_list");
+        assertListQueryContract(new DownloadTaskListTool(null), "download_task_list");
+        assertListQueryContract(new InboxMessageListTool(null), "inbox_message_list");
+        assertListQueryContract(new MigConfigListTool(null), "mig_config_list");
+        assertListQueryContract(new NamespaceListTool(null), "namespace_list");
+        assertListQueryContract(new TableListTool(null), "table_list");
+        assertListQueryContract(new SlurmNodeListTool(null), "slurm_node_list");
     }
 
     /**

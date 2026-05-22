@@ -4,9 +4,12 @@ import com.atlas.http.KubeManagerHttpClient;
 import com.atlas.tool.annotation.AtlasToolMapping;
 import com.atlas.tool.annotation.ToolPermission;
 import com.atlas.tool.core.AtlasToolResult;
+import com.atlas.tool.exception.AtlasToolValidationException;
 import com.atlas.tool.core.BaseTool;
+import com.atlas.tool.core.ToolParameterSpec;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -39,15 +42,25 @@ public class CoursewareListTool extends BaseTool {
         return Set.of();
     }
 
+    /**
+     * 向 ReAct/LLM 暴露标准列表查询参数契约，确保分页和关键词筛选能真实透传到 kube-manager。
+     */
+    @Override
+    public List<ToolParameterSpec> getParameterSpecs() {
+        return listQueryParameterSpecs("课件名称、标题或描述关键词筛选条件。");
+    }
+
     @Override
     protected AtlasToolResult doExecute(Map<String, Object> params) {
         try {
             String orgId = resolveOrganizationId(params);
             String path = "/api/" + orgId + "/courseware/list";
 
-            Map<String, Object> response = httpClient.get(path, Map.of("page", "1", "limit", "100"));
+            Map<String, Object> response = httpClient.get(path, buildListQuery(params));
             Object data = extractData(response);
             return AtlasToolResult.ok("查询课件列表完成", data);
+        } catch (AtlasToolValidationException e) {
+            throw e;
         } catch (Exception e) {
             log.error("[courseware_list] 调用 kube-manager API 失败", e);
             return AtlasToolResult.fail("查询课件列表失败: " + e.getMessage());
