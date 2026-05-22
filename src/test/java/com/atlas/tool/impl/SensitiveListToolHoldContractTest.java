@@ -44,6 +44,11 @@ class SensitiveListToolHoldContractTest {
         assertNoStandardListQueryContract(new SysModelListTool(null), "sys_model_list", "全局模型/系统模型列表");
     }
 
+    @Test
+    void m54_shouldKeepPublicSysInfoMapOnNoParameterHoldUntilPublicConfigSchemaCompletes() {
+        assertNoStandardListQueryContract(new SysInfoMapTool(null), "sys_info_map", "PUBLIC no-org 系统配置 Map");
+    }
+
     /**
      * 敏感列表在专项审计完成前不得暴露标准列表查询参数。
      *
