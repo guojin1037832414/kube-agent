@@ -6,6 +6,34 @@
 
 ---
 
+## [M4.8] — 账务配额候选安全分层与标准列表 Tool 小批铺开
+
+**周期**: 2026-05-22
+**交付**: 在 ACCOUNT/RBAC/GLOBAL 剩余固定分页 Tool 复扫后，按专家会诊结论仅将 2 个低风险组织内列表 Tool 纳入标准 `page/limit/keyword` 契约。
+
+### Changed
+
+- `ResourceUsageListTool`、`QuotaMyListTool` 新增标准 `page/limit/keyword` 参数契约。
+- 上述 2 个 Tool 执行层从固定 `page=1&limit=100` 改为 `buildListQuery(params)`，真实透传用户自然语言指定的分页与关键词。
+- 上述 2 个 Tool 显式 rethrow `AtlasToolValidationException`，保留 BaseTool 统一结构化错误返回。
+
+### Deferred
+
+- 暂缓 `QuotaReceiveListTool`：审批/待办/RBAC 语义，需先确认后端权限过滤与审计边界。
+- 暂缓 `OrderListTool`：订单/账务敏感列表，需先确认租户隔离、可见范围与 keyword 字段语义。
+- 暂缓 `CurrencyQueryListTool`、RBAC 管理类、GLOBAL/PUBLIC/NO_ORG、Dashboard/count 与特殊字段类 Tool，后续按专项治理。
+
+### Verified
+
+- 红灯验证：新增契约测试后，`resource_usage_list` 因未声明 `page`、执行层仍固定分页而失败，符合 TDD 预期。
+- 定向测试：`mvn -Dtest=ListToolParameterSpecContractTest,ListToolParameterPassThroughContractTest test` → 5 tests, 0 failures, BUILD SUCCESS。
+- 全量测试：`mvn test` → 142 tests, 0 failures, BUILD SUCCESS。
+- `git diff --check`：通过。
+- 新增行敏感信息扫描：`SECRET_SCAN_FINDINGS 0`。
+- 独立 pre-commit Review：PASS，无阻断问题。
+
+---
+
 ## [M4.7] — 标准列表 Tool 参数契约第五批铺开
 
 **周期**: 2026-05-22

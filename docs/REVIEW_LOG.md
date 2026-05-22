@@ -1,5 +1,78 @@
 # Atlas v3.1 开发审计日志
 
+## 2026-05-22 M4.8 账务配额候选安全分层与标准列表 Tool 小批铺开
+
+### 实现内容
+
+1. 恢复状态并复扫剩余固定分页候选：将候选分为 `ACCOUNT_BILLING_QUOTA`、`RBAC_ADMIN_ORG_SENSITIVE`、`GLOBAL_PUBLIC_OR_NO_ORG`、`DASHBOARD_SPECIAL`、`OTHER_STANDARD_OR_UNKNOWN` 五类。
+2. 组织三路专家会诊：
+   - 后端/API 专家认为 5 个账务配额 Tool 形态上均可接入，但订单/审批需重点审查；
+   - 安全/RBAC 专家建议暂缓审批、订单与 RBAC/global/dashboard 类，优先选择低风险组织内资源列表；
+   - 测试专家建议只验证 Tool 层 schema 与 query 透传，不把后端 keyword 是否真实过滤作为本批红绿灯。
+3. 采用“安全优先 + 先实验再铺开”方案，本批仅纳入 2 个低风险候选：
+   - `ResourceUsageListTool`
+   - `QuotaMyListTool`
+4. 2 个 Tool 均新增 `getParameterSpecs()`，复用 `BaseTool#listQueryParameterSpecs(...)` 暴露 `page/limit/keyword`。
+5. 2 个 Tool 执行层从固定 `Map.of("page", "1", "limit", "100")` 改为 `buildListQuery(params)`：
+   - 默认 `page=1`、`limit=100`；
+   - 用户传入 `page/limit` 时执行严格正整数校验；
+   - `keyword` trim 后非空透传；
+   - query 参数保持 Map 传递，不手工拼接 URL。
+6. 2 个 Tool 均显式 rethrow `AtlasToolValidationException`，避免参数校验异常被业务 `catch (Exception)` 吞掉。
+7. 扩展契约测试：
+   - `ListToolParameterSpecContractTest` 增加 2 个 Tool 的 schema 覆盖；
+   - `ListToolParameterPassThroughContractTest` 增加 2 个 Tool 的 path + page/limit/keyword 透传覆盖；
+   - 增加 `ResourceUsageListTool`、`QuotaMyListTool` 非法分页样本，验证失败前不触发 HTTP 调用。
+
+### 测试结果
+
+| 测试项 | 命令/方式 | 结果 |
+|--------|-----------|------|
+| TDD 红灯 | 新增测试后先运行定向测试 | ✅ 预期失败：新 Tool 未声明 schema、仍固定分页 |
+| M4.8 定向契约测试 | `mvn -Dtest=ListToolParameterSpecContractTest,ListToolParameterPassThroughContractTest test` | ✅ 5 tests, 0 failures, BUILD SUCCESS |
+| 全量测试 | `mvn test` | ✅ 142 tests, 0 failures, 0 errors, BUILD SUCCESS |
+| Diff 空白检查 | `git diff --check` | ✅ 通过 |
+| 新增行敏感信息扫描 | Python added-lines scan | ✅ `SECRET_SCAN_FINDINGS 0` |
+| 独立 pre-commit Review | delegate_task 独立审查 | ✅ PASS，无阻断问题 |
+
+### Review：优点
+
+1. **严格安全分层**：没有把账务订单、审批、RBAC 管理、global/public、dashboard/count 混入同一批，避免盲目扩大枚举面。
+2. **TDD 证据完整**：先让测试因 schema 缺失、执行层固定分页失败，再实现最小修复并转绿。
+3. **低风险价值明确**：`ResourceUsageListTool` 和 `QuotaMyListTool` 都是组织内只读列表，符合标准列表契约铺开的目标。
+4. **统一横切能力复用**：继续使用 `BaseTool#buildListQuery()` 处理分页默认值、正整数校验、keyword trim/过滤。
+5. **错误语义稳定**：校验异常不被具体 Tool 的业务 catch 吞掉，继续由 BaseTool 返回结构化错误码与 suggestions。
+
+### Review：风险与后续改进
+
+1. **`QuotaMyListTool` 仍依赖后端“我的”语义**：本批不改变权限策略，后续如发现后端未按当前用户过滤，需要单独修复后端或权限层。
+2. **keyword 字段兼容性仍需逐接口确认**：测试只证明 Tool 透传，不证明 kube-manager 一定按 keyword 过滤。
+3. **账务/审批/订单类必须继续暂缓**：`QuotaReceiveListTool` 与 `OrderListTool` 会放大审批/订单枚举能力，需后续专项确认权限、审计与字段语义。
+4. **GLOBAL/PUBLIC/NO_ORG 不能机械套标准三件套**：首页、模型、GPU 全局接口可能需要公共接口专项参数契约。
+
+### 经验教训
+
+- 候选进入敏感域后，“能接入”不等于“本批应该接入”；安全专家的保守意见应优先于批量速度。
+- 对 `keyword` 的测试边界要保持清晰：Tool 层只验证结构化透传，过滤效果属于后端业务能力。
+- WSL 中不要直接用 bash 执行 Windows `.cmd` Maven；当前环境已有 Linux `/usr/bin/mvn`，后续测试直接用 `mvn`。
+
+### 当前运行方式
+
+```bash
+cd /home/guojin/kube-agent
+mvn test
+mvn -DskipTests package
+java -jar target/kube-agent-3.1.0-SNAPSHOT.jar   --server.port=8500   --spring.ai.openai.base-url=http://124.74.245.75:3000   --spring.ai.openai.api-key=[REDACTED]   --spring.ai.openai.chat.options.model=moonshotai/kimi-k2.6
+```
+
+### 下一步建议
+
+- 启动里程碑收口审计：统计 M4.3-M4.8 已纳入标准列表参数契约的 Tool、剩余暂缓清单与下一阶段专项入口。
+- 对 `QuotaReceiveListTool`、`OrderListTool` 建立账务/审批专项会诊，明确权限、审计、keyword 字段语义后再决定是否接入。
+- 对 RBAC/组织/LDAP/权限菜单类 Tool 建立管理面专项，不与普通 query 列表混批。
+
+---
+
 ## 2026-05-22 M4.7 标准列表 Tool 参数契约第五批铺开
 
 ### 实现内容
