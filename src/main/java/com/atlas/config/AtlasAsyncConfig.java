@@ -1,6 +1,7 @@
 package com.atlas.config;
 
 import com.atlas.auth.UserPermissionContext;
+import com.atlas.auth.async.AsyncContextHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
@@ -76,24 +77,16 @@ public class AtlasAsyncConfig implements AsyncConfigurer {
 
         @Override
         public Runnable decorate(Runnable runnable) {
-            // ① 主线程捕获 Token（装饰器在主线程执行）
+            // M5.6：提交任务时捕获完整安全上下文快照（token + orgId）。
+            // orgId 是 Tool 层唯一可信租户边界，不能只传播 token。
             String token = UserPermissionContext.CURRENT_TOKEN.get();
-            if (token == null || token.isBlank()) {
-                log.debug("[TokenPropagatingTaskDecorator] 主线程无 Token，跳过透传");
-                return runnable;
+            String orgId = UserPermissionContext.getCurrentOrgId();
+            if ((token == null || token.isBlank()) && (orgId == null || orgId.isBlank())) {
+                log.debug("[TokenPropagatingTaskDecorator] 主线程无 token/orgId，按空上下文隔离执行");
             }
 
-            // ② 返回包装任务（在异步线程执行）
-            return () -> {
-                UserPermissionContext.CURRENT_TOKEN.set(token);
-                log.debug("[TokenPropagatingTaskDecorator] Token 已透传到异步线程");
-                try {
-                    runnable.run();
-                } finally {
-                    UserPermissionContext.CURRENT_TOKEN.remove();
-                    log.debug("[TokenPropagatingTaskDecorator] Token 已清理");
-                }
-            };
+            // 统一委托给 AsyncContextHolder，复用保存旧值→绑定快照→finally恢复旧值的安全策略。
+            return AsyncContextHolder.wrap(runnable, token, orgId);
         }
     }
 }

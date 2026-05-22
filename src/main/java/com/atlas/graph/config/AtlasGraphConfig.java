@@ -560,21 +560,24 @@ public class AtlasGraphConfig {
                 orgId = com.atlas.auth.UserPermissionContext.getCurrentOrgId();
             }
             if (orgId == null || orgId.isBlank()) {
-                orgId = kubeManagerClient.getFallbackOrgId();
+                return java.util.Map.of("answer",
+                    "❌ 安全上下文缺失：无法确定当前用户所属组织，请重新登录后再试。");
             }
 
             // ═══════════════════════════════════════════════════════════
             // Token + OrgId 透传修复：Graph 异步线程中 ThreadLocal 丢失，需显式设置
             // ═══════════════════════════════════════════════════════════
-            boolean tokenSet = false;
-            boolean orgIdSet = false;
+            String previousToken = com.atlas.auth.UserPermissionContext.CURRENT_TOKEN.get();
+            String previousOrgId = com.atlas.auth.UserPermissionContext.CURRENT_ORG_ID.get();
             if (!token.isBlank()) {
                 com.atlas.auth.UserPermissionContext.CURRENT_TOKEN.set(token);
-                tokenSet = true;
+            } else {
+                com.atlas.auth.UserPermissionContext.CURRENT_TOKEN.remove();
             }
             if (orgId != null && !orgId.isBlank()) {
                 com.atlas.auth.UserPermissionContext.CURRENT_ORG_ID.set(orgId);
-                orgIdSet = true;
+            } else {
+                com.atlas.auth.UserPermissionContext.CURRENT_ORG_ID.remove();
             }
 
             try {
@@ -635,11 +638,15 @@ public class AtlasGraphConfig {
                         "❌ Tool 执行异常: " + e.getMessage());
                 }
             } finally {
-                // 清理 ThreadLocal，防止线程池复用导致 Token/OrgId 泄漏
-                if (tokenSet) {
+                // 恢复 ThreadLocal，防止线程池复用或嵌套 Graph 执行污染外层上下文
+                if (previousToken != null) {
+                    com.atlas.auth.UserPermissionContext.CURRENT_TOKEN.set(previousToken);
+                } else {
                     com.atlas.auth.UserPermissionContext.CURRENT_TOKEN.remove();
                 }
-                if (orgIdSet) {
+                if (previousOrgId != null) {
+                    com.atlas.auth.UserPermissionContext.CURRENT_ORG_ID.set(previousOrgId);
+                } else {
                     com.atlas.auth.UserPermissionContext.CURRENT_ORG_ID.remove();
                 }
             }
@@ -669,7 +676,6 @@ public class AtlasGraphConfig {
                     subInputs.put("orgId", v);
                     subInputs.put("organizationId", v);
                 });
-                state.value("organizationId").ifPresent(v -> subInputs.putIfAbsent("organizationId", v));
                 state.value("messages").ifPresent(v -> subInputs.put("messages", v));
 
                 // ==============================
@@ -678,22 +684,24 @@ public class AtlasGraphConfig {
                 String token = state.value("token").map(Object::toString).orElse("");
                 String orgId = state.value("orgId").map(Object::toString).orElse("");
                 if (orgId.isBlank()) {
-                    orgId = state.value("organizationId").map(Object::toString).orElse("");
-                }
-                if (orgId.isBlank()) {
                     orgId = com.atlas.auth.UserPermissionContext.getCurrentOrgId();
                 }
-                boolean tokenSet = false;
-                boolean orgIdSet = false;
+                if (orgId == null || orgId.isBlank()) {
+                    return Map.of("answer", "❌ 安全上下文缺失：无法确定当前用户所属组织，请重新登录后再试。");
+                }
+                String previousToken = com.atlas.auth.UserPermissionContext.CURRENT_TOKEN.get();
+                String previousOrgId = com.atlas.auth.UserPermissionContext.CURRENT_ORG_ID.get();
                 if (!token.isBlank()) {
                     com.atlas.auth.UserPermissionContext.CURRENT_TOKEN.set(token);
-                    tokenSet = true;
+                } else {
+                    com.atlas.auth.UserPermissionContext.CURRENT_TOKEN.remove();
                 }
                 if (orgId != null && !orgId.isBlank()) {
                     com.atlas.auth.UserPermissionContext.CURRENT_ORG_ID.set(orgId);
                     subInputs.put("orgId", orgId);
                     subInputs.put("organizationId", orgId);
-                    orgIdSet = true;
+                } else {
+                    com.atlas.auth.UserPermissionContext.CURRENT_ORG_ID.remove();
                 }
 
                 // ==============================
@@ -756,11 +764,15 @@ public class AtlasGraphConfig {
                     updates.put("agent_executed", agentName);
                     return updates;
                 } finally {
-                    // 清理 ThreadLocal，防止泄漏
-                    if (tokenSet) {
+                    // 恢复 ThreadLocal，防止泄漏或误删外层上下文
+                    if (previousToken != null) {
+                        com.atlas.auth.UserPermissionContext.CURRENT_TOKEN.set(previousToken);
+                    } else {
                         com.atlas.auth.UserPermissionContext.CURRENT_TOKEN.remove();
                     }
-                    if (orgIdSet) {
+                    if (previousOrgId != null) {
+                        com.atlas.auth.UserPermissionContext.CURRENT_ORG_ID.set(previousOrgId);
+                    } else {
                         com.atlas.auth.UserPermissionContext.CURRENT_ORG_ID.remove();
                     }
                 }

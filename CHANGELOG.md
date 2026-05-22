@@ -7,6 +7,41 @@
 ---
 
 
+## [M5.6] — 异步上下文传播与 fallbackOrgId 可信语义治理
+
+**周期**: 2026-05-22
+**交付**: 将异步执行、旧 `/chat/graph`、Graph delegate、HITL resume 的安全上下文统一升级为 `token + orgId` 原子传播；移除执行链路中 `fallbackOrgId` 作为可信租户来源的兜底语义，缺 orgId 时 fail-safe。
+
+### Added
+
+- 新增 `AsyncContextHolder` token+orgId Runnable/Supplier/Callable/supplyAsync 重载。
+- 新增 `DelegatingExecutorTest`，覆盖代理 Executor 的 token+orgId 传播与恢复。
+- 新增 `TokenPropagatingTaskDecoratorTest`，覆盖 Spring TaskDecorator 捕获提交时安全上下文。
+- 扩展 `AsyncContextHolderTest`，覆盖 orgId 传播、恢复和空上下文隔离。
+
+### Changed
+
+- `AsyncContextHolder` 统一使用“保存旧值 → 绑定快照 → finally 恢复旧值”。
+- `DelegatingExecutor` 新增 token+orgId 构造并委托 `AsyncContextHolder`。
+- `AtlasAsyncConfig.TokenPropagatingTaskDecorator` 同时捕获并传播 token 与 orgId。
+- `AtlasOrchestrator` 旧 `/chat/graph` 入口和异步 graphTask 使用 token+orgId 包装；传统 Tool fallback 缺 orgId 时安全拒绝。
+- `AtlasGraphConfig#tool_call` 缺 orgId 时 fail-safe，不再调用 `getFallbackOrgId()`；`delegate` 只信 `state.orgId` 或 ThreadLocal，不再信孤立 `organizationId` fallback。
+- `HITLController` confirm/clarify resume 从 checkpoint 恢复 token+orgId，并使用 `AsyncContextHolder.wrap` 执行。
+
+### Verified
+
+- M5.6 定向回归：17 tests, 0 failures, BUILD SUCCESS。
+- 全量测试：168 tests, 0 failures, BUILD SUCCESS。
+- `git diff --check`：通过。
+- Diff 敏感信息扫描：`NO_NEW_SENSITIVE_IN_DIFF`。
+- 独立 Review 两轮：第一轮 CONCERN 已修复，第二轮 PASS。
+
+### Deferred
+
+- `KubeManagerHttpClient#getFallbackOrgId()` getter 与配置注释仍保留；后续 M5.7 可单独清理/重命名，避免误导为可信租户来源。
+
+---
+
 ## [M5.5] — orgId 来源治理与跨租户参数污染防护
 
 **周期**: 2026-05-22

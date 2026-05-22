@@ -189,7 +189,7 @@ public class AtlasOrchestrator {
             SseEmitter errEmitter = new SseEmitter(0L);
             CompletableFuture.runAsync(
                 AsyncContextHolder.wrap(() -> streamingEmitter.error(errEmitter,
-                    "超过最大并发连接数: " + MAX_PER_USER), capturedToken),
+                    "超过最大并发连接数: " + MAX_PER_USER), capturedToken, capturedOrgId),
                 asyncExecutor
             );
             return errEmitter;
@@ -248,7 +248,12 @@ public class AtlasOrchestrator {
                                 orgId = UserPermissionContext.getCurrentOrgId(); // 异步 ThreadLocal 透传
                             }
                             if (orgId == null || orgId.isBlank()) {
-                                orgId = kubeManagerClient.getFallbackOrgId(); // 配置文件兜底
+                                log.warn("[Orchestrator] Tool '{}' 缺失可信 orgId，拒绝使用 fallbackOrgId 执行", result.intentId());
+                                emit(emitter, "content", Map.of(
+                                    "content", "❌ 安全上下文缺失：无法确定当前用户所属组织，请重新登录后再试。"
+                                ));
+                                emit(emitter, "done", Map.of());
+                                return;
                             }
                             Map<String, Object> toolParams = new java.util.HashMap<>();
                             toolParams.put("userId", finalUserId);
@@ -364,13 +369,14 @@ public class AtlasOrchestrator {
         String userId = request.userId() != null ? request.userId() : "anonymous";
         String sessionId = userId + "-graph-" + System.currentTimeMillis();
         String capturedToken = userPermissionContext.getCurrentToken();
+        String capturedOrgId = UserPermissionContext.getCurrentOrgId();
 
         // 连接限流
         if (userConnections.getOrDefault(userId, 0) >= MAX_PER_USER) {
             SseEmitter errEmitter = new SseEmitter(0L);
             CompletableFuture.runAsync(
                 AsyncContextHolder.wrap(() -> streamingEmitter.error(errEmitter,
-                    "超过最大并发连接数: " + MAX_PER_USER), capturedToken),
+                    "超过最大并发连接数: " + MAX_PER_USER), capturedToken, capturedOrgId),
                 asyncExecutor
             );
             return errEmitter;
@@ -382,12 +388,13 @@ public class AtlasOrchestrator {
         // 异步执行 Graph stream
         Runnable graphTask = () -> {
             try {
-                Map<String, Object> inputs = Map.of(
-                    "input", Optional.ofNullable(request.userQuery()).orElse(""),
-                    "conversation_id", Optional.ofNullable(request.conversationId()).orElse(""),
-                    "user_id", userId,
-                    "token", Optional.ofNullable(capturedToken).orElse("")
-                );
+                Map<String, Object> inputs = new java.util.HashMap<>();
+                inputs.put("input", Optional.ofNullable(request.userQuery()).orElse(""));
+                inputs.put("conversation_id", Optional.ofNullable(request.conversationId()).orElse(""));
+                inputs.put("user_id", userId);
+                inputs.put("token", Optional.ofNullable(capturedToken).orElse(""));
+                inputs.put("orgId", Optional.ofNullable(capturedOrgId).orElse(""));
+                inputs.put("organizationId", Optional.ofNullable(capturedOrgId).orElse(""));
 
                 var config = com.alibaba.cloud.ai.graph.RunnableConfig.builder()
                     .threadId(sessionId)
@@ -474,7 +481,7 @@ public class AtlasOrchestrator {
         };
 
         CompletableFuture.runAsync(
-            AsyncContextHolder.wrap(graphTask, capturedToken),
+            AsyncContextHolder.wrap(graphTask, capturedToken, capturedOrgId),
             asyncExecutor
         );
 

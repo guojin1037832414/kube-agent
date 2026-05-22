@@ -5,6 +5,8 @@ import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.state.StateSnapshot;
 import com.atlas.brain.BrainDecision;
+import com.atlas.auth.UserPermissionContext;
+import com.atlas.auth.async.AsyncContextHolder;
 import com.atlas.orchestrator.AtlasOrchestrator;
 import com.atlas.orchestrator.StreamingEmitter;
 import com.atlas.orchestrator.SseEvent;
@@ -109,7 +111,7 @@ public class HITLController {
         );
 
         log.info("[HITL] 用户确认执行: threadId={}, target={}", threadId, original.target());
-        CompletableFuture.runAsync(() -> resumeGraph(threadId, confirmed, emitter), asyncExecutor);
+        runResumeWithCheckpointContext(threadId, confirmed, emitter);
         return emitter;
     }
 
@@ -141,8 +143,50 @@ public class HITLController {
         );
 
         log.info("[HITL] 用户澄清: threadId={}, reply={}", threadId, request.reply());
-        CompletableFuture.runAsync(() -> resumeGraph(threadId, clarified, emitter), asyncExecutor);
+        runResumeWithCheckpointContext(threadId, clarified, emitter);
         return emitter;
+    }
+
+    /**
+     * M5.6：HITL 恢复执行前先从 checkpoint 捕获 token + orgId 原子安全上下文。
+     *
+     * <p>HITL confirm/clarify 是 Graph 暂停后的异步恢复入口，如果只恢复 token、不恢复 orgId，
+     * 后续 Tool 层会失去可信租户边界。这里提前读取 checkpoint 并使用 AsyncContextHolder 包装，
+     * 保证异步线程中 ThreadLocal 的 token/orgId 与主流程一致；缺失 orgId 时 fail-safe，不继续执行。</p>
+     */
+    private void runResumeWithCheckpointContext(String threadId, BrainDecision decision, SseEmitter emitter) {
+        CheckpointContext context = loadCheckpointContext(threadId);
+        if (context.orgId().isBlank()) {
+            CompletableFuture.runAsync(
+                () -> streamingEmitter.error(emitter, "安全上下文缺失：无法确定当前用户所属组织，请重新登录后再试。"),
+                asyncExecutor
+            );
+            return;
+        }
+        CompletableFuture.runAsync(
+            AsyncContextHolder.wrap(() -> resumeGraph(threadId, decision, emitter), context.token(), context.orgId()),
+            asyncExecutor
+        );
+    }
+
+    /** 从 checkpoint 中提取恢复执行所需的 token + orgId 原子上下文。 */
+    private CheckpointContext loadCheckpointContext(String threadId) {
+        RunnableConfig config = RunnableConfig.builder().threadId(threadId).build();
+        try {
+            Optional<StateSnapshot> snapshotOpt = compiledGraph.stateOf(config);
+            if (snapshotOpt.isPresent() && snapshotOpt.get().state() != null) {
+                OverAllState oldState = snapshotOpt.get().state();
+                String token = oldState.value("token").map(Object::toString).orElse("");
+                String orgId = oldState.value("orgId")
+                    .or(() -> oldState.value("organizationId"))
+                    .map(Object::toString)
+                    .orElse("");
+                return new CheckpointContext(token, orgId);
+            }
+        } catch (Exception e) {
+            log.warn("[HITL] checkpoint 安全上下文读取失败: {}", e.getMessage());
+        }
+        return new CheckpointContext("", "");
     }
 
     /**
@@ -168,6 +212,11 @@ public class HITLController {
                     OverAllState oldState = snapshotOpt.get().state();
                     oldState.value("user_id").ifPresent(v -> inputs.put("user_id", v));
                     oldState.value("token").ifPresent(v -> inputs.put("token", v));
+                    oldState.value("orgId").ifPresent(v -> {
+                        inputs.put("orgId", v);
+                        inputs.put("organizationId", v);
+                    });
+                    oldState.value("organizationId").ifPresent(v -> inputs.putIfAbsent("organizationId", v));
                     oldState.value("conversation_id").ifPresent(v -> inputs.put("conversation_id", v));
                     oldState.value("messages").ifPresent(v -> inputs.put("messages", v));
                     log.debug("[HITL] 从 checkpoint 恢复上下文: threadId={}", threadId);
@@ -272,6 +321,9 @@ public class HITLController {
         }
         sb.append("]");
         return sb.toString();
+    }
+
+    private record CheckpointContext(String token, String orgId) {
     }
 
     // ── 请求 DTO ────────────────────────────────────

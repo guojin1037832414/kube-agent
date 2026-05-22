@@ -1,5 +1,95 @@
 # Atlas v3.1 开发审计日志
 
+## 2026-05-22 — M5.6 异步上下文传播与 fallbackOrgId 可信语义治理
+
+### 背景
+
+M5.5 已将 orgScoped Tool 的组织来源收口到可信 ThreadLocal/session 上下文，但异步执行链路、旧 `/chat/graph` 入口、Graph delegate 子图、HITL resume 仍存在 token 与 orgId 非原子传播风险。若异步线程只携带 token、不携带 orgId，Tool 层会失去可信租户边界；若继续使用 `fallbackOrgId` 兜底，则可能把默认组织洗白为可信来源。
+
+### 专家会诊结论
+
+- 多租户安全专家：`fallbackOrgId` 只能作为配置默认值，不可作为认证上下文；缺可信 orgId 必须 fail-safe。
+- Java/Spring 异步专家：`token + orgId` 应作为原子安全上下文快照传播，执行前绑定，finally 恢复旧 ThreadLocal，兼容线程池复用、CallerRunsPolicy 和嵌套任务。
+- TDD/契约测试专家：优先用 Mock/契约测试复现 `Supplier/Callable/supplyAsync/TaskDecorator/DelegatingExecutor` 的 orgId 丢失问题，不依赖真实 kube-manager 或 LLM。
+
+### 实现内容
+
+1. `AsyncContextHolder` 升级为 token + orgId 原子传播组件：
+   - 保留旧 token-only API 兼容；
+   - 新增 Runnable/Supplier/Callable/supplyAsync 的 token+orgId 重载；
+   - 空 token/orgId 也会隔离执行，避免线程池残留上下文泄漏；
+   - 统一采用“保存旧值 → 绑定快照 → finally 恢复旧值”。
+2. `DelegatingExecutor` 新增 token+orgId 构造，执行时统一委托 `AsyncContextHolder.wrap(command, token, orgId)`。
+3. `AtlasAsyncConfig.TokenPropagatingTaskDecorator` 从提交线程同时捕获 token 与 orgId，并通过 `AsyncContextHolder` 传播。
+4. `AtlasOrchestrator`：
+   - 旧 `/chat/graph` 入口捕获 `capturedOrgId`；
+   - Graph 输入同时写入 `orgId/organizationId`；
+   - 异步 graphTask 和并发超限错误路径均使用 token+orgId 包装；
+   - 传统 IntentRouter fallback 分支缺可信 orgId 时不再调用 `fallbackOrgId`，直接安全拒绝。
+5. `AtlasGraphConfig`：
+   - `tool_call` 节点不再用 `kubeManagerClient.getFallbackOrgId()` 兜底；缺可信 orgId 返回安全错误；
+   - `delegate` 节点只信 `state.orgId` 或当前 ThreadLocal，不再把孤立 `state.organizationId` 作为可信 fallback；
+   - delegate 缺 orgId 时提前 fail-safe，不进入子图工具链；
+   - Graph 节点 ThreadLocal 清理策略从简单 remove 升级为恢复旧值。
+6. `HITLController`：
+   - confirm/clarify resume 前从 checkpoint 捕获 token+orgId；
+   - 缺 orgId 时 fail-safe；
+   - 异步 resume 使用 `AsyncContextHolder.wrap(..., token, orgId)`；
+   - resume inputs 同步恢复 `orgId/organizationId`。
+7. 新增/扩展测试：
+   - `AsyncContextHolderTest`：覆盖 Runnable/Supplier/Callable/supplyAsync orgId 传播、恢复、空上下文隔离；
+   - `DelegatingExecutorTest`：覆盖代理 Executor 的 token+orgId 传播与恢复；
+   - `TokenPropagatingTaskDecoratorTest`：覆盖 Spring TaskDecorator 捕获提交时安全上下文。
+
+### 测试结果
+
+| 测试项 | 命令/方式 | 结果 |
+|--------|-----------|------|
+| M5.6 RED | `mvn -Dtest=AsyncContextHolderTest,DelegatingExecutorTest,TokenPropagatingTaskDecoratorTest test` | ✅ 预期失败：暴露 Supplier/Callable/supplyAsync 与 DelegatingExecutor 缺 orgId 重载 |
+| M5.6 定向回归 | `mvn -Dtest=AsyncContextHolderTest,DelegatingExecutorTest,TokenPropagatingTaskDecoratorTest,AtlasOrchestratorJsonTest,SupervisorGraphReactRoutingTest test` | ✅ 17 tests, 0 failures, BUILD SUCCESS |
+| 全量测试 | `mvn test` | ✅ 168 tests, 0 failures, 0 errors, BUILD SUCCESS |
+| Diff 空白检查 | `git diff --check` | ✅ 通过 |
+| Diff 敏感信息扫描 | added-lines/diff scan | ✅ `NO_NEW_SENSITIVE_IN_DIFF` |
+| 独立 Review 第一轮 | delegate_task 安全审查 | ⚠️ CONCERN：delegate 缺 orgId 未提前 fail-safe、organizationId fallback、HITL resume 缺 orgId |
+| 独立 Review 第二轮 | delegate_task 二次审查 | ✅ PASS，第一次 CONCERN 全部关闭 |
+
+### Review：优点
+
+1. **租户边界更明确**：orgId 只来自认证/session/ThreadLocal 快照，不再从 LLM/用户参数或默认 fallback 洗白。
+2. **异步上下文统一收口**：Runnable、Supplier、Callable、CompletableFuture、TaskDecorator、DelegatingExecutor 共用同一套绑定/恢复语义。
+3. **fail-safe 前置**：Graph tool_call、delegate、传统 Tool fallback、HITL resume 都在缺 orgId 时安全拒绝，避免进入深层工具链后才失败。
+4. **兼容嵌套执行**：恢复旧 ThreadLocal 而不是无条件 remove，降低 CallerRunsPolicy、嵌套 Graph、线程池复用下的误删/泄漏风险。
+5. **测试覆盖关键横切面**：本批不是只测业务 Tool，而是锁定异步基础设施契约，后续新增入口更容易复用。
+
+### 风险与后续改进
+
+1. `KubeManagerHttpClient#getFallbackOrgId()` getter 仍保留，当前执行链路已不调用；后续可单独清理注释语义，避免误导新开发。
+2. HITL resume 当前通过 checkpoint 恢复 orgId；若未来引入外部持久化 checkpoint，需要保证 checkpoint 写入路径同样只写可信 orgId。
+3. Graph 仍保留 `organizationId` 兼容 key，但只由可信 `orgId` 同步写入；后续可逐步统一内部 key 命名，减少双 key 心智负担。
+
+### 经验教训
+
+- 多租户系统里“默认 orgId”不是权限上下文；缺上下文时应该 fail-safe，而不是选择默认组织继续执行。
+- 异步传播不能只考虑 token，租户边界字段必须与 token 成对传播、成对恢复。
+- Review CONCERN 不应被视为失败，它帮助把隐蔽入口（delegate/HITL）纳入同一安全语义。
+
+### 当前运行方式
+
+```bash
+cd /home/guojin/kube-agent
+mvn test
+mvn -DskipTests package
+java -jar target/kube-agent-3.1.0-SNAPSHOT.jar   --server.port=8500   --spring.ai.openai.base-url=http://124.74.245.75:3000   --spring.ai.openai.api-key=[REDACTED]   --spring.ai.openai.chat.options.model=moonshotai/kimi-k2.6
+```
+
+### 下一步建议
+
+- 进入 M5.7：清理/重命名 `fallbackOrgId` 配置语义或建立禁止调用契约，防止未来误用。
+- 继续审计其他异步入口、Scheduler、SSE retry、HITL checkpoint 写入路径是否都保留 token+orgId 原子上下文。
+- 保持小步闭环：每个入口先补契约测试，再修实现，再独立 Review。
+
+---
+
 ## 2026-05-22 M5.1 账务域低风险货币列表参数契约与敏感 HOLD 保护
 
 ### 实现内容

@@ -38,6 +38,7 @@ class AsyncContextHolderTest {
         executor.shutdownNow();
         // 清理当前线程 ThreadLocal（所有测试必须兜底 remove）
         UserPermissionContext.CURRENT_TOKEN.remove();
+        UserPermissionContext.CURRENT_ORG_ID.remove();
     }
 
     /**
@@ -96,20 +97,22 @@ class AsyncContextHolderTest {
     }
 
     /**
-     * 测试4：null/blank Token — 不做包装，避免不必要的 ThreadLocal 操作。
+     * 测试4：null/blank Token — M5.6 后仍需包装为空安全上下文，避免线程池残留上下文被匿名任务读取。
      */
     @Test
-    void testWrap_nullOrBlankToken_noOp() {
-        Runnable original = () -> {};
+    void testWrap_nullOrBlankToken_isolatedEmptyContext() {
+        UserPermissionContext.CURRENT_TOKEN.set("outer-token");
+        UserPermissionContext.CURRENT_ORG_ID.set("outer-org");
 
-        Runnable r1 = AsyncContextHolder.wrap(original, null);
-        Runnable r2 = AsyncContextHolder.wrap(original, "");
-        Runnable r3 = AsyncContextHolder.wrap(original, "   ");
+        Runnable wrapped = AsyncContextHolder.wrap(() -> {
+            assertNull(UserPermissionContext.CURRENT_TOKEN.get(), "空 token 快照执行期间不应读取到外层 Token");
+            assertNull(UserPermissionContext.getCurrentOrgId(), "空 orgId 快照执行期间不应读取到外层 orgId");
+        }, null, null);
 
-        // null/blank 时返回原始对象（不包装）
-        assertSame(original, r1, "null token 时不应包装");
-        assertSame(original, r2, "空字符串 token 时不应包装");
-        assertSame(original, r3, "空白 token 时不应包装");
+        wrapped.run();
+
+        assertEquals("outer-token", UserPermissionContext.CURRENT_TOKEN.get(), "执行后应恢复外层 Token");
+        assertEquals("outer-org", UserPermissionContext.getCurrentOrgId(), "执行后应恢复外层 orgId");
     }
 
     /**
@@ -164,5 +167,66 @@ class AsyncContextHolderTest {
         AsyncContextHolder.runAsync(() -> {
             assertNull(UserPermissionContext.CURRENT_TOKEN.get(), "异常后 Token 应被清理");
         }, null, executor).join();
+    }
+
+    /**
+     * M5.6 RED：Supplier 包装必须同时透传可信 orgId。
+     * <p>当前生产代码只有 token-only Supplier 重载，本测试应先以编译失败形式暴露契约缺口。</p>
+     */
+    @Test
+    void m56_wrapSupplier_shouldPropagateTrustedOrgIdAndCleanup() throws Exception {
+        CompletableFuture<String> future = CompletableFuture.supplyAsync(
+            AsyncContextHolder.wrap(
+                (java.util.function.Supplier<String>) UserPermissionContext::getCurrentOrgId,
+                TEST_TOKEN,
+                "100002"
+            ),
+            executor
+        );
+
+        assertEquals("100002", future.get(5, TimeUnit.SECONDS));
+
+        CompletableFuture<Void> cleanupProbe = CompletableFuture.runAsync(() -> {
+            assertNull(UserPermissionContext.CURRENT_TOKEN.get(), "Supplier 执行后 Token 不应泄漏到线程池");
+            assertNull(UserPermissionContext.getCurrentOrgId(), "Supplier 执行后 orgId 不应泄漏到线程池");
+        }, executor);
+        cleanupProbe.get(5, TimeUnit.SECONDS);
+    }
+
+    /**
+     * M5.6 RED：Callable 包装必须同时透传可信 orgId。
+     * <p>当前生产代码只有 token-only Callable 重载，本测试应先以编译失败形式暴露契约缺口。</p>
+     */
+    @Test
+    void m56_wrapCallable_shouldPropagateTrustedOrgIdAndCleanup() throws Exception {
+        Callable<String> task = AsyncContextHolder.wrap(
+            (Callable<String>) UserPermissionContext::getCurrentOrgId,
+            TEST_TOKEN,
+            "100002"
+        );
+
+        Future<String> future = executor.submit(task);
+        assertEquals("100002", future.get(5, TimeUnit.SECONDS));
+
+        Future<?> cleanupProbe = executor.submit(() -> {
+            assertNull(UserPermissionContext.CURRENT_TOKEN.get(), "Callable 执行后 Token 不应泄漏到线程池");
+            assertNull(UserPermissionContext.getCurrentOrgId(), "Callable 执行后 orgId 不应泄漏到线程池");
+        });
+        cleanupProbe.get(5, TimeUnit.SECONDS);
+    }
+
+    /**
+     * M5.6 RED：supplyAsync 便捷方法必须提供 token+orgId 原子传播入口。
+     */
+    @Test
+    void m56_supplyAsync_shouldPropagateTrustedOrgId() throws Exception {
+        CompletableFuture<String> future = AsyncContextHolder.supplyAsync(
+            UserPermissionContext::getCurrentOrgId,
+            TEST_TOKEN,
+            "100002",
+            executor
+        );
+
+        assertEquals("100002", future.get(5, TimeUnit.SECONDS));
     }
 }
