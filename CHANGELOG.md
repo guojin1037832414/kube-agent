@@ -6,6 +6,37 @@
 
 ---
 
+## [M5.1] — 账务域低风险货币列表参数契约与敏感列表 HOLD 保护
+
+**周期**: 2026-05-22
+**交付**: 进入 M5 敏感域专项后，按专家会诊结论仅将低风险账务元数据 `CurrencyQueryListTool` 纳入标准 `page/limit/keyword` 参数契约，同时为订单与审批列表建立 HOLD 防误开放测试。
+
+### Added
+
+- 新增 `SensitiveListToolHoldContractTest`，锁定 `OrderListTool` 与 `QuotaReceiveListTool` 在权限、字段脱敏与审计专项完成前不得暴露 `keyword` 搜索能力。
+
+### Changed
+
+- `CurrencyQueryListTool` 新增标准 `page/limit/keyword` 参数契约。
+- `CurrencyQueryListTool` 执行层从固定 `page=1&limit=100` 改为 `buildListQuery(params)`，真实透传调用方分页与关键词。
+- `CurrencyQueryListTool` 显式 rethrow `AtlasToolValidationException`，保留结构化参数错误码与 suggestions。
+
+### Deferred
+
+- `OrderListTool` 继续 HOLD：订单/租赁账务敏感列表，接入前需确认租户隔离、可见范围、字段脱敏、keyword 搜索字段与审计策略。
+- `QuotaReceiveListTool` 继续 HOLD：配额审批/RBAC 语义敏感，接入前需确认审批人可见范围、权限策略与审计记录。
+
+### Verified
+
+- TDD 红灯：新增契约测试后，`currency_query_list` 因未声明 `page`、仍固定分页、非法分页未短路而失败，符合预期。
+- 定向测试：`/usr/share/maven/bin/mvn -Dtest=ListToolParameterSpecContractTest,ListToolParameterPassThroughContractTest,SensitiveListToolHoldContractTest test` → 6 tests, 0 failures, BUILD SUCCESS。
+- 全量测试：`/usr/share/maven/bin/mvn test` → 143 tests, 0 failures, BUILD SUCCESS。
+- `git diff --check`：通过。
+- 新增行敏感信息扫描：`SECRET_SCAN_FINDINGS 0`。
+- 独立 pre-commit Review：PASS，无阻断问题。
+
+---
+
 ## [M4.8] — 账务配额候选安全分层与标准列表 Tool 小批铺开
 
 **周期**: 2026-05-22

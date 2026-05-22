@@ -1,5 +1,73 @@
 # Atlas v3.1 开发审计日志
 
+## 2026-05-22 M5.1 账务域低风险货币列表参数契约与敏感 HOLD 保护
+
+### 实现内容
+
+1. 恢复 M4 收口审计上下文并锁定 M5.1 候选：`CurrencyQueryListTool`、`OrderListTool`、`QuotaReceiveListTool`。
+2. 组织三路专家会诊：
+   - 后端/API 专家建议仅纳入 `CurrencyQueryListTool`，订单与配额审批暂缓；
+   - 安全/RBAC 专家指出 `OrderListTool` 与 `QuotaReceiveListTool` 的 `PUBLIC` 语义证据不足，开放 `page/limit/keyword` 会扩大枚举与搜索面；
+   - 测试专家建议采用最小 TDD：只纳入 Currency，并新增 HOLD 保护测试防批量脚本误开放 keyword。
+3. 按“安全优先 + 先实验再铺开”原则，本批仅纳入 1 个低风险账务元数据 Tool：`CurrencyQueryListTool`。
+4. `CurrencyQueryListTool` 新增 `getParameterSpecs()`，复用 `BaseTool#listQueryParameterSpecs(...)` 暴露 `page/limit/keyword`。
+5. `CurrencyQueryListTool` 执行层从固定 `Map.of("page", "1", "limit", "100")` 改为 `buildListQuery(params)`：
+   - 默认 `page=1`、`limit=100`；
+   - 用户传入 `page/limit` 时执行严格正整数校验；
+   - `keyword` trim 后非空透传；
+   - query 参数保持 Map 传递，不手工拼接 URL。
+6. `CurrencyQueryListTool` 显式 rethrow `AtlasToolValidationException`，避免参数校验异常被业务 `catch (Exception)` 吞掉。
+7. 新增 `SensitiveListToolHoldContractTest`：在订单与配额审批完成权限、字段脱敏和审计专项前，不允许暴露 `keyword` 搜索能力。
+
+### 测试结果
+
+| 测试项 | 命令/方式 | 结果 |
+|--------|-----------|------|
+| TDD 红灯 | 新增测试后先运行定向测试 | ✅ 预期失败：Currency 未声明 schema、仍固定分页、非法分页未短路 |
+| M5.1 定向契约测试 | `/usr/share/maven/bin/mvn -Dtest=ListToolParameterSpecContractTest,ListToolParameterPassThroughContractTest,SensitiveListToolHoldContractTest test` | ✅ 6 tests, 0 failures, BUILD SUCCESS |
+| 全量测试 | `/usr/share/maven/bin/mvn test` | ✅ 143 tests, 0 failures, 0 errors, BUILD SUCCESS |
+| Diff 空白检查 | `git diff --check` | ✅ 通过 |
+| 新增行敏感信息扫描 | Python added-lines scan | ✅ `SECRET_SCAN_FINDINGS 0` |
+| 独立 pre-commit Review | delegate_task 独立审查 | ✅ PASS，无阻断问题 |
+
+### Review：优点
+
+1. **敏感域不机械铺开**：M5.1 没有把订单和审批列表与货币元数据混批，避免扩大敏感历史数据枚举面。
+2. **HOLD 变成可测试约束**：通过 `SensitiveListToolHoldContractTest` 防止后续批量脚本误开放订单/审批 keyword。
+3. **TDD 证据清晰**：红灯准确暴露 schema 缺失、固定分页、非法分页未短路三个问题，绿灯只做最小修复。
+4. **横切能力继续复用**：分页默认值、正整数校验、keyword trim/过滤继续统一由 `BaseTool#buildListQuery()` 处理。
+5. **错误语义稳定**：`AtlasToolValidationException` 不被具体 Tool 吞掉，继续由 BaseTool 包装结构化错误。
+
+### Review：风险与后续改进
+
+1. **Currency 的后端 keyword 字段仍需确认**：本批测试只证明 Tool 层透传，不证明 kube-manager 一定按 keyword 过滤货币名称/编码。
+2. **PUBLIC 权限仍需后续统一审计**：Currency 属低敏元数据，但仍处于账务域，后续应确认响应字段不含组织账务配置、价格策略或内部备注。
+3. **Order 与 QuotaReceive 不得绕过 HOLD**：两者接入前必须完成权限模型、租户隔离、字段脱敏、审计日志与 keyword 字段清单。
+4. **M5.2 应转向 RBAC 管理面**：LDAP、组织、权限菜单、注册审核、角色可分配/可编辑属于更高敏枚举面，需要单独专家会诊。
+
+### 经验教训
+
+- 从 M4 普通列表进入 M5 敏感域后，测试不仅要证明“能开放”，还要证明“哪些暂时不能开放”。
+- `keyword` 是 LLM 工具目录里最容易被自然语言放大的搜索入口，敏感域必须以 HOLD 测试或审计清单显式保护。
+- Hermes 运行环境 PATH 可能被截断导致 `mvn` 不可见；本次确认 Linux Maven 可通过 `/usr/share/maven/bin/mvn` 稳定调用。
+
+### 当前运行方式
+
+```bash
+cd /home/guojin/kube-agent
+/usr/share/maven/bin/mvn test
+/usr/share/maven/bin/mvn -DskipTests package
+java -jar target/kube-agent-3.1.0-SNAPSHOT.jar   --server.port=8500   --spring.ai.openai.base-url=http://124.74.245.75:3000   --spring.ai.openai.api-key=[REDACTED]   --spring.ai.openai.chat.options.model=moonshotai/kimi-k2.6
+```
+
+### 下一步建议
+
+- 启动 **M5.2 RBAC 管理面专项**：优先审计 `LdapConfigListTool`、`OrganizationListTool`、`PermissionMenuListTool`、`RegisterAuditListTool`、`RoleAssignableListTool`、`RoleEditableListTool`。
+- M5.2 前置必须做专家会诊：权限模型、PUBLIC 注解合理性、keyword 搜索字段、审计日志、租户隔离。
+- 继续保持小步策略：不要一次性开放全部 RBAC 管理面，先选择最低风险样本或只建立 HOLD/审计测试。
+
+---
+
 ## 2026-05-22 M4.8 账务配额候选安全分层与标准列表 Tool 小批铺开
 
 ### 实现内容

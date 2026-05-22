@@ -63,6 +63,7 @@ class ListToolParameterPassThroughContractTest {
         assertPassThrough(UploadStatusListTool::new, "/api/100002/download/status");
         assertPassThrough(ResourceUsageListTool::new, "/api/100002/resource");
         assertPassThrough(QuotaMyListTool::new, "/api/100002/quota/my");
+        assertPassThrough(CurrencyQueryListTool::new, "/api/100002/currency");
     }
 
     @Test
@@ -128,6 +129,7 @@ class ListToolParameterPassThroughContractTest {
         assertInvalidPagination(UploadStatusListTool::new, "/api/100002/download/status", "limit", "0", "VALUE_OUT_OF_RANGE");
         assertInvalidPagination(ResourceUsageListTool::new, "/api/100002/resource", "page", "0", "VALUE_OUT_OF_RANGE");
         assertInvalidPagination(QuotaMyListTool::new, "/api/100002/quota/my", "limit", 1.5D, "TYPE_MISMATCH");
+        assertInvalidPagination(CurrencyQueryListTool::new, "/api/100002/currency", "page", "0", "VALUE_OUT_OF_RANGE");
     }
 
     private void assertPassThrough(ToolFactory factory, String expectedPath) {

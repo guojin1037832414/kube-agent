@@ -52,6 +52,7 @@ class ListToolParameterSpecContractTest {
         assertListQueryContract(new UploadStatusListTool(null), "upload_status_list");
         assertListQueryContract(new ResourceUsageListTool(null), "resource_usage_list");
         assertListQueryContract(new QuotaMyListTool(null), "quota_my_list");
+        assertListQueryContract(new CurrencyQueryListTool(null), "currency_query_list");
     }
 
     /**
