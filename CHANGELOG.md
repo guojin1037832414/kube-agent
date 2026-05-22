@@ -6,6 +6,40 @@
 
 ---
 
+## [M5.3] — GLOBAL/PUBLIC/NO_ORG 首页公共接口 page/limit-only 契约
+
+**周期**: 2026-05-22
+**交付**: 按后端/API、安全/RBAC、测试架构三路专家会诊结论，将 5 个 `/api/public/home-info/*` 首页公共展示 Tool 纳入受限 `page/limit-only` 参数契约；`keyword/name/search/kw` 不暴露也不透传；`limit` 最大值锁定为 100。`GpuGlobalListTool` 与 `SysModelListTool` 继续 full HOLD。
+
+### Added
+
+- 新增 `BaseTool#pageLimitOnlyParameterSpecs()`：只声明 `page`、`limit`，不包含 `keyword` 或搜索别名。
+- 新增 `BaseTool#buildPageLimitOnlyQuery(params, maxLimit)`：只构建 `page/limit` query，忽略 `keyword/name/search/kw/orgId/organizationId` 等旁路参数，并对 `limit` 执行上限校验。
+- 新增 `HomeInfoPublicPageLimitContractTest`，覆盖 5 个首页公共 Tool 的参数契约、真实透传、旁路参数不透传、`limit > 100` 拒绝、非法分页拒绝。
+- `SensitiveListToolHoldContractTest` 新增 M5.3 覆盖：`GpuGlobalListTool` 与 `SysModelListTool` 不暴露 `page/limit/keyword`。
+
+### Changed
+
+- `HomeIndustryClassListTool`、`HomeIndustryListTool`、`HomeModelListTool`、`HomeNimListTool`、`HomeRepositoryListTool` 从固定 `page=1&limit=100` 改为受限 `page/limit-only` 查询。
+- 上述 5 个 Tool 显式 rethrow `AtlasToolValidationException`，保留 `VALUE_OUT_OF_RANGE`、`TYPE_MISMATCH` 等结构化错误码。
+
+### Deferred
+
+- `GpuGlobalListTool`（`/api/gpu`）与 `SysModelListTool`（`/api/model`）属于全局/跨组织资源入口，继续 HOLD，不开放 `page/limit/keyword`。
+- 本阶段不修改 `PUBLIC` 权限注解；GLOBAL/PUBLIC 权限收敛后续单独专项处理。
+
+### Verified
+
+- TDD 红灯：新增测试首次运行 4 failures，准确暴露 home-info 无参数契约、未透传 page/limit、未限制 limit 上限。
+- 定向绿灯：`/usr/share/maven/bin/mvn -Dtest=HomeInfoPublicPageLimitContractTest,SensitiveListToolHoldContractTest test` → 7 tests, 0 failures, BUILD SUCCESS。
+- 邻近回归：`/usr/share/maven/bin/mvn -Dtest=HomeInfoPublicPageLimitContractTest,SensitiveListToolHoldContractTest,ListToolParameterSpecContractTest,ListToolParameterPassThroughContractTest test` → 12 tests, 0 failures, BUILD SUCCESS。
+- 全量测试：`/usr/share/maven/bin/mvn test` → 149 tests, 0 failures, BUILD SUCCESS。
+- `git diff --check`：通过。
+- 本次 diff 敏感信息扫描：`DIFF_SECRET_SCAN_FINDINGS 0`。
+- 独立 pre-commit Review：PASS，无阻断项。
+
+---
+
 ## [M5.2] — RBAC 管理面列表参数 HOLD 保护
 
 **周期**: 2026-05-22

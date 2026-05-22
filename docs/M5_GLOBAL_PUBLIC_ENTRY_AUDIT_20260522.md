@@ -89,3 +89,37 @@
 ### ❌ FAIL
 
 - 无当前阻断项。
+---
+
+## 七、M5.3 执行结论（2026-05-22）
+
+### 专家会诊最终分层
+
+| 分组 | Tool | 决策 | 原因 |
+|------|------|------|------|
+| 首页公共展示 | `HomeIndustryClassListTool`、`HomeIndustryListTool`、`HomeModelListTool`、`HomeNimListTool`、`HomeRepositoryListTool` | ✅ 开放 `page/limit-only` | `/api/public/home-info/*` 属公开首页展示语义，可翻页浏览；但禁止搜索探测 |
+| 全局 GPU | `GpuGlobalListTool` | ⚠️ full HOLD | `/api/gpu` 是全局/跨组织资源入口，分页会扩大枚举面 |
+| 全局模型 | `SysModelListTool` | ⚠️ full HOLD | `/api/model` 不等同首页公开模型展示，可能包含系统/全局模型元数据 |
+
+### 已落地安全边界
+
+- home-info 5 个 Tool 只暴露 `page`、`limit`。
+- 不暴露、不透传 `keyword/name/search/kw`。
+- 不透传 `orgId/organizationId`，保持首页 PUBLIC no-org 语义。
+- `limit` 最大值为 100，超过即返回 `VALUE_OUT_OF_RANGE`。
+- `GpuGlobalListTool` 与 `SysModelListTool` 保持不暴露 `page/limit/keyword`。
+
+### 验证结果
+
+- TDD 红灯有效：新增测试初次运行 4 failures。
+- 定向绿灯：7 tests 通过。
+- 邻近回归：12 tests 通过。
+- 全量测试：149 tests, 0 failures, BUILD SUCCESS。
+- `git diff --check`：通过。
+- 本次 diff 敏感扫描：`DIFF_SECRET_SCAN_FINDINGS 0`。
+- 独立 pre-commit Review：PASS。
+
+### 后续 HOLD
+
+- `/api/gpu` 与 `/api/model` 后续若要开放分页，必须先完成跨组织可见性、字段脱敏、限流、审计日志、权限注解合理性确认。
+- 所有 PUBLIC/no-org 接口后续不得机械套用普通 `page/limit/keyword` 标准三件套。

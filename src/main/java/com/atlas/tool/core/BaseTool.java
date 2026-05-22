@@ -468,6 +468,49 @@ public abstract class BaseTool implements AtlasTool {
     }
 
     /**
+     * 构建仅包含 page / limit 的公共展示类参数契约。
+     *
+     * <p>M5.3 专项用于 {@code /api/public/home-info/*} 首页公共展示接口。
+     * 这些接口允许用户翻页浏览公开展示内容，但不能复用 {@link #listQueryParameterSpecs(String)}，
+     * 因为标准三件套会额外暴露 keyword/name/search/kw 搜索能力，导致 PUBLIC 场景从“展示”扩大为
+     * “公共探测”。</p>
+     *
+     * @return 仅包含 page / limit 的参数契约
+     */
+    protected List<ToolParameterSpec> pageLimitOnlyParameterSpecs() {
+        return List.of(
+            ToolParameterSpec.stringParam("page", "页码，默认使用 1。", false, List.of("pageNo", "page_no", "current")),
+            ToolParameterSpec.stringParam("limit", "每页数量，默认使用 100，最大不超过 100。", false, List.of("pageSize", "page_size", "size"))
+        );
+    }
+
+    /**
+     * 构建仅包含 page / limit 的 kube-manager query 参数，并对 limit 设置上限。
+     *
+     * <p>该方法刻意忽略 params 中可能出现的 keyword/name/search/kw，确保首页公共展示 Tool
+     * 不会被 LLM 或用户手工参数升级为公开搜索入口。超过 maxLimit 时直接拒绝，而不是静默截断，
+     * 避免 LLM 误以为大页请求已完整生效。</p>
+     *
+     * @param params   LLM 或调用方传入的参数
+     * @param maxLimit limit 允许的最大值
+     * @return 仅包含 page / limit 的 query map
+     */
+    protected Map<String, Object> buildPageLimitOnlyQuery(Map<String, Object> params, int maxLimit) {
+        Map<String, Object> query = new LinkedHashMap<>();
+        query.put("page", positiveIntOrDefault(params.get("page"), "page", 1));
+
+        int limit = positiveIntValueOrDefault(params.get("limit"), "limit", 100);
+        if (limit > maxLimit) {
+            throw new AtlasToolValidationException(
+                "参数 'limit' 不能超过 " + maxLimit + "，当前值: " + limit,
+                "VALUE_OUT_OF_RANGE",
+                List.of("请将 'limit' 调整为不超过 " + maxLimit + " 的正整数"));
+        }
+        query.put("limit", String.valueOf(limit));
+        return query;
+    }
+
+    /**
      * 将可选分页参数归一为正整数字符串。
      *
      * <p>这里不复用 {@link #getParamTypes()}，因为列表查询允许空白 page/limit 使用默认值，
@@ -475,11 +518,18 @@ public abstract class BaseTool implements AtlasTool {
      * 不能使用 {@code intValue()} 截断小数，否则 LLM 传入 1.5 会被误当成 1。</p>
      */
     private String positiveIntOrDefault(Object raw, String key, int defaultValue) {
+        return String.valueOf(positiveIntValueOrDefault(raw, key, defaultValue));
+    }
+
+    /**
+     * 将可选分页参数归一为正整数，供需要额外上限判断的受限列表复用。
+     */
+    private int positiveIntValueOrDefault(Object raw, String key, int defaultValue) {
         if (raw == null) {
-            return String.valueOf(defaultValue);
+            return defaultValue;
         }
         if (raw instanceof String s && s.isBlank()) {
-            return String.valueOf(defaultValue);
+            return defaultValue;
         }
         int value = strictInt(raw, key);
         if (value <= 0) {
@@ -488,7 +538,7 @@ public abstract class BaseTool implements AtlasTool {
                 "VALUE_OUT_OF_RANGE",
                 List.of("请将 '" + key + "' 改为正整数"));
         }
-        return String.valueOf(value);
+        return value;
     }
 
     /**

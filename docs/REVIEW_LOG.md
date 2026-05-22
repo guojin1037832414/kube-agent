@@ -1608,3 +1608,75 @@ java -jar target/kube-agent-3.1.0-SNAPSHOT.jar \
 
 - ToolSchema 不能只声明不执行；凡是暴露给 LLM 的参数，都必须有契约测试证明它最终进入后端请求。
 - 分页/关键词属于横切能力，应优先沉淀到 BaseTool，避免 100+ Tool 后期重复修正。
+
+## 2026-05-22 — M5.3 GLOBAL/PUBLIC/NO_ORG 首页公共接口 page/limit-only 契约
+
+### 背景
+
+M5.2 完成 RBAC 管理面 HOLD 保护后，剩余固定分页候选进入 GLOBAL/PUBLIC/NO_ORG 风险区。该类接口没有 `{orgId}` 或处于 `PUBLIC` 权限语义下，不能机械复用普通列表 `page/limit/keyword` 三件套，否则会把公开展示或全局资源入口扩大为跨组织枚举与搜索探测能力。
+
+### 专家会诊结论
+
+- 后端/API 专家：5 个 `/api/public/home-info/*` 首页展示接口可考虑只开放 `page/limit`；`keyword` 不应开放。`/api/gpu` 与 `/api/model` 属全局资源，必须 HOLD。
+- 安全/RBAC 专家：同意 home-info 仅开放 `page/limit`，但 `limit` 必须设置上限（本阶段为 100）；`keyword/name/search/kw` 会形成 PUBLIC 探测能力，必须禁止。
+- 测试架构专家：新增 home-info 专项契约测试；将 `GpuGlobalListTool` 与 `SysModelListTool` 加入敏感 HOLD 测试；坚持红灯→绿灯→邻近回归→全量门禁。
+
+### 变更内容
+
+1. `BaseTool` 新增 `pageLimitOnlyParameterSpecs()`：只返回 `page`、`limit` 参数契约。
+2. `BaseTool` 新增 `buildPageLimitOnlyQuery(params, maxLimit)`：
+   - 默认 `page=1`、`limit=100`；
+   - 严格正整数校验；
+   - `limit > 100` 返回 `VALUE_OUT_OF_RANGE`；
+   - 忽略 `keyword/name/search/kw/orgId/organizationId` 等旁路参数。
+3. 5 个首页公共 Tool 接入 page/limit-only：
+   - `HomeIndustryClassListTool`
+   - `HomeIndustryListTool`
+   - `HomeModelListTool`
+   - `HomeNimListTool`
+   - `HomeRepositoryListTool`
+4. 5 个首页公共 Tool 显式 rethrow `AtlasToolValidationException`，避免校验错误码被业务 `catch (Exception)` 吞掉。
+5. 新增 `HomeInfoPublicPageLimitContractTest`，锁定 page/limit-only、禁止 keyword 与搜索别名、禁止 orgId/organizationId 透传、限制 `limit <= 100`。
+6. `SensitiveListToolHoldContractTest` 新增 M5.3 覆盖：`GpuGlobalListTool` 与 `SysModelListTool` 继续 full HOLD。
+
+### 测试与质量门禁
+
+| 测试项 | 命令/方式 | 结果 |
+|--------|-----------|------|
+| TDD 红灯 | 新增测试后先运行定向测试 | ✅ 预期失败：home-info 无 specs、未透传 page/limit、未限制 limit |
+| M5.3 定向绿灯 | `/usr/share/maven/bin/mvn -Dtest=HomeInfoPublicPageLimitContractTest,SensitiveListToolHoldContractTest test` | ✅ 7 tests, 0 failures |
+| 邻近回归 | `/usr/share/maven/bin/mvn -Dtest=HomeInfoPublicPageLimitContractTest,SensitiveListToolHoldContractTest,ListToolParameterSpecContractTest,ListToolParameterPassThroughContractTest test` | ✅ 12 tests, 0 failures |
+| 全量测试 | `/usr/share/maven/bin/mvn test` | ✅ 149 tests, 0 failures, BUILD SUCCESS |
+| Diff 空白检查 | `git diff --check` | ✅ 通过 |
+| 本次 diff 敏感扫描 | Python diff-only scan | ✅ `DIFF_SECRET_SCAN_FINDINGS 0` |
+| 独立 Review | delegate_task pre-commit review | ✅ PASS，无阻断项 |
+
+### Review：优点
+
+1. **PUBLIC 场景安全收敛**：没有复用普通 `listQueryParameterSpecs()`，避免把 `keyword/name/search/kw` 带入公开接口。
+2. **limit 上限明确**：`limit > 100` 直接拒绝，避免公开接口大页拉取或爬取放大。
+3. **全局资源继续 HOLD**：`GpuGlobalListTool` 与 `SysModelListTool` 未被误开放，测试锁定不暴露 `page/limit/keyword`。
+4. **旁路参数防护**：新增测试证明即使用户手工传入 `keyword/name/search/kw/orgId/organizationId`，HTTP query 仍只包含 `page/limit`。
+5. **错误码链路完整**：具体 Tool rethrow `AtlasToolValidationException`，由 `BaseTool.wrapCall` 统一输出结构化错误。
+
+### 风险与后续
+
+1. home-info 仍是 PUBLIC/no-org 分页浏览能力，后端如缺少限流，仍可能被遍历；当前通过 `limit<=100` 降低放大风险。
+2. `PUBLIC` 权限注解是否符合真实产品权限边界，仍需后续 GLOBAL/PUBLIC 权限收敛专项处理。
+3. 如果未来需要支持搜索，应先确认后端字段清单、公开边界、审计策略与限流，而不能直接加入 `keyword`。
+
+### 当前运行方式
+
+```bash
+cd /home/guojin/kube-agent
+/usr/share/maven/bin/mvn test
+/usr/share/maven/bin/mvn -DskipTests package
+java -jar target/kube-agent-3.1.0-SNAPSHOT.jar   --server.port=8500   --spring.ai.openai.base-url=http://124.74.245.75:3000   --spring.ai.openai.api-key=[REDACTED]   --spring.ai.openai.chat.options.model=moonshotai/kimi-k2.6
+```
+
+### 下一步建议
+
+- 启动 GLOBAL/PUBLIC 权限收敛专项：优先复核 `PUBLIC` 注解是否真实符合产品语义。
+- 对 `GpuGlobalListTool` 与 `SysModelListTool` 做响应字段脱敏与跨组织可见性审计，在证据不足前继续 HOLD。
+
+---

@@ -38,6 +38,12 @@ class SensitiveListToolHoldContractTest {
         assertNoStandardListQueryContract(new RoleEditableListTool(null), "role_editable", "可编辑角色边界列表");
     }
 
+    @Test
+    void m53_shouldKeepGlobalGpuAndSysModelOnFullHoldUntilPublicBoundaryAuditCompletes() {
+        assertNoStandardListQueryContract(new GpuGlobalListTool(null), "gpu_global_list", "全局 GPU 跨组织资源列表");
+        assertNoStandardListQueryContract(new SysModelListTool(null), "sys_model_list", "全局模型/系统模型列表");
+    }
+
     /**
      * 敏感列表在专项审计完成前不得暴露标准列表查询参数。
      *
