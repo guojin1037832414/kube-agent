@@ -1,5 +1,57 @@
 # Atlas v3.1 开发审计日志
 
+## 2026-05-22 M4.4 高频列表 Tool 参数契约第二批铺开
+
+### 背景与问题
+
+M4.3 已经验证 `page/limit/keyword` 参数契约不能只停留在 schema 层，执行层也必须真实透传到 kube-manager query map。继续盘点发现大量 `*ListTool` 仍固定使用 `Map.of("page", "1", "limit", "100")`，用户即使在自然语言中指定页码、条数或关键词，也不会影响真实 HTTP 请求。
+
+### 专家会诊结论
+
+会诊建议不要一次性铺满全部 43 个剩余 ListTool，而是先选择高频、语义清晰、与 M4.3 模式最一致的 8 个 P0 资产/模板类列表 Tool：
+
+1. `DataSetListTool`
+2. `ModelListTool`
+3. `FileListTool`
+4. `RegistryListTool`
+5. `TensorBoardListTool`
+6. `JobTemplateListTool`
+7. `TemplateListTool`
+8. `ResourcePresetListTool`
+
+### 实现内容
+
+1. `BaseTool` 新增 `listQueryParameterSpecs(String keywordDescription)`，统一标准列表参数契约。
+2. 第二批 8 个 Tool 新增 `getParameterSpecs()`，暴露 `page/limit/keyword`。
+3. 第二批 8 个 Tool 执行层改为 `httpClient.get(path, buildListQuery(params))`。
+4. 第二批 8 个 Tool 在泛型 `catch (Exception)` 前显式 rethrow `AtlasToolValidationException`，避免结构化校验结果被吞掉。
+5. 扩展 `ListToolParameterSpecContractTest` 和 `ListToolParameterPassThroughContractTest`，总覆盖 12 个列表 Tool。
+
+### 测试结果
+
+```bash
+mvn -Dtest=ListToolParameterSpecContractTest,ListToolParameterPassThroughContractTest test
+```
+
+结果：5 tests, 0 failures, BUILD SUCCESS。
+
+### Review 结论
+
+优点：
+- 复用 M4.3 的 `buildListQuery`，没有新增 URL 拼接风险。
+- 通过 `listQueryParameterSpecs` 降低复制粘贴漂移风险。
+- 只选择高频且语义明确的 8 个 Tool，符合“先实验再铺开”。
+
+风险：
+- 后端是否真实支持 `keyword` 过滤仍取决于 kube-manager 各接口实现；本阶段保证 Agent 层契约与执行层一致，不声称后端一定有模糊搜索能力。
+- RBAC、组织、全局首页等语义敏感列表暂未纳入，后续应按业务字段单独评估。
+
+### 经验教训
+
+列表类 Tool 参数扩展必须按“三件套”闭环：`ToolParameterSpec` 声明、`buildListQuery` 执行透传、契约测试验证。缺任意一环都会重新出现“伪参数”。
+
+---
+
 ## 2026-05-14 P1.4 权限感知
 
 ### 实现内容

@@ -36,6 +36,14 @@ class ListToolParameterPassThroughContractTest {
         assertPassThrough(PytorchJobListTool::new, "/api/100002/pytorch-job");
         assertPassThrough(FileMaterialListTool::new, "/api/100002/file-material");
         assertPassThrough(GpuDetailListTool::new, "/api/100002/gpu-detail");
+        assertPassThrough(DataSetListTool::new, "/api/100002/data-set");
+        assertPassThrough(ModelListTool::new, "/api/100002/model");
+        assertPassThrough(FileListTool::new, "/api/100002/file");
+        assertPassThrough(RegistryListTool::new, "/api/100002/registry");
+        assertPassThrough(TensorBoardListTool::new, "/api/100002/tensorboard");
+        assertPassThrough(JobTemplateListTool::new, "/api/100002/train-job-template");
+        assertPassThrough(TemplateListTool::new, "/api/100002/template");
+        assertPassThrough(ResourcePresetListTool::new, "/api/100002/resource-preset");
     }
 
     @Test
@@ -91,6 +99,8 @@ class ListToolParameterPassThroughContractTest {
         assertInvalidPagination(PytorchJobListTool::new, "/api/100002/pytorch-job", "limit", "-1", "VALUE_OUT_OF_RANGE");
         assertInvalidPagination(FileMaterialListTool::new, "/api/100002/file-material", "page", "abc", "TYPE_MISMATCH");
         assertInvalidPagination(GpuDetailListTool::new, "/api/100002/gpu-detail", "limit", 1.5D, "TYPE_MISMATCH");
+        assertInvalidPagination(DataSetListTool::new, "/api/100002/data-set", "page", "0", "VALUE_OUT_OF_RANGE");
+        assertInvalidPagination(ModelListTool::new, "/api/100002/model", "limit", 1.5D, "TYPE_MISMATCH");
     }
 
     private void assertPassThrough(ToolFactory factory, String expectedPath) {

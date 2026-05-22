@@ -424,6 +424,24 @@ public abstract class BaseTool implements AtlasTool {
     }
 
     /**
+     * 构建标准列表查询参数契约。
+     *
+     * <p>所有接入 {@link #buildListQuery(Map)} 的列表类 Tool 都应复用该方法，
+     * 让 ReAct Prompt、Tool JSON Schema、schema-first normalizer 和执行层保持同一套
+     * page / limit / keyword 语义，避免不同 Tool 复制粘贴后 alias 漂移。</p>
+     *
+     * @param keywordDescription keyword 参数面向用户的业务描述
+     * @return 标准列表查询参数契约
+     */
+    protected List<ToolParameterSpec> listQueryParameterSpecs(String keywordDescription) {
+        return List.of(
+            ToolParameterSpec.stringParam("page", "页码，默认使用 1。", false, List.of("pageNo", "page_no", "current")),
+            ToolParameterSpec.stringParam("limit", "每页数量，默认使用 100。", false, List.of("pageSize", "page_size", "size")),
+            ToolParameterSpec.stringParam("keyword", keywordDescription, false, List.of("name", "search", "kw"))
+        );
+    }
+
+    /**
      * 构建 kube-manager 列表接口 query 参数。
      *
      * <p>列表类 Tool 常见参数为 {@code page / limit / keyword}。这些字段已经通过

@@ -25,6 +25,14 @@ class ListToolParameterSpecContractTest {
         assertListQueryContract(new PytorchJobListTool(null), "pytorch_job_list");
         assertListQueryContract(new FileMaterialListTool(null), "file_material_list");
         assertListQueryContract(new GpuDetailListTool(null), "gpu_detail_list");
+        assertListQueryContract(new DataSetListTool(null), "data_set_list");
+        assertListQueryContract(new ModelListTool(null), "model_list");
+        assertListQueryContract(new FileListTool(null), "file_list");
+        assertListQueryContract(new RegistryListTool(null), "registry_list");
+        assertListQueryContract(new TensorBoardListTool(null), "tensorboard_list");
+        assertListQueryContract(new JobTemplateListTool(null), "job_template_list");
+        assertListQueryContract(new TemplateListTool(null), "template_list");
+        assertListQueryContract(new ResourcePresetListTool(null), "resource_preset_list");
     }
 
     /**
