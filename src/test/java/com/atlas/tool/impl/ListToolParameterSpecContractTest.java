@@ -48,6 +48,8 @@ class ListToolParameterSpecContractTest {
         assertListQueryContract(new NamespaceListTool(null), "namespace_list");
         assertListQueryContract(new TableListTool(null), "table_list");
         assertListQueryContract(new SlurmNodeListTool(null), "slurm_node_list");
+        assertListQueryContract(new SlurmClusterListTool(null), "slurm_cluster_list");
+        assertListQueryContract(new UploadStatusListTool(null), "upload_status_list");
     }
 
     /**

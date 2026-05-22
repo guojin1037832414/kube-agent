@@ -1,5 +1,73 @@
 # Atlas v3.1 开发审计日志
 
+## 2026-05-22 M4.7 标准列表 Tool 参数契约第五批铺开
+
+### 实现内容
+
+1. 完成 M4.7 候选扫描与专家会诊：从剩余固定 `page/limit` 的 `*ListTool` 中，优先选择路径仅依赖 `orgId`、语义最接近标准 GET 列表、非 RBAC/全局公共域的 2 个低风险 Tool。
+2. 本批新增 2 个标准列表 Tool 的 `page/limit/keyword` 参数契约与真实透传：
+   - `SlurmClusterListTool`
+   - `UploadStatusListTool`
+3. 2 个 Tool 均新增 `getParameterSpecs()`，复用 `BaseTool#listQueryParameterSpecs(...)`，让 ReAct 工具目录显式暴露分页与关键词筛选能力。
+4. 2 个 Tool 的执行层从固定 `Map.of("page", "1", "limit", "100")` 改为统一 `buildListQuery(params)`：
+   - 默认 `page=1`、`limit=100`；
+   - 用户传入 `page/limit` 时执行严格正整数校验；
+   - `keyword` trim 后非空透传；
+   - query 参数保持 Map 传递，不手工拼接 URL。
+5. 2 个 Tool 均显式 rethrow `AtlasToolValidationException`，避免参数校验异常被业务 `catch (Exception)` 吞掉，继续交由 `BaseTool` 统一返回结构化 `errorCode/suggestions`。
+6. 扩展契约测试：
+   - `ListToolParameterSpecContractTest` 增加 2 个 Tool 的 schema 覆盖；
+   - `ListToolParameterPassThroughContractTest` 增加 2 个 Tool 的 path + page/limit/keyword 透传覆盖；
+   - 增加 `SlurmClusterListTool`、`UploadStatusListTool` 非法分页样本，验证失败前不触发 HTTP 调用。
+
+### 测试结果
+
+| 测试项 | 命令/方式 | 结果 |
+|--------|-----------|------|
+| M4.7 定向契约测试 | `mvn -Dtest=ListToolParameterSpecContractTest,ListToolParameterPassThroughContractTest test` | ✅ 5 tests, 0 failures, BUILD SUCCESS |
+| 全量测试 | `mvn test` | ✅ 142 tests, 0 failures, 0 errors, BUILD SUCCESS |
+| Diff 空白检查 | `git diff --check` | ✅ 通过 |
+| 新增行敏感信息扫描 | diff added-lines scan | ✅ 未发现新增密钥/Token/密码 |
+| 独立 pre-commit Review | delegate_task 独立审查 | ✅ PASS，无阻断问题 |
+
+### Review：优点
+
+1. **严格遵循小步闭环**：本批仅处理 2 个标准 org-scoped 列表 Tool，没有混入 RBAC/账务配额/global 首页类接口。
+2. **继续消除伪参数风险**：ToolSchema 中暴露的 `page/limit/keyword` 与真实 HTTP query 保持一致，避免 LLM 以为筛选生效但后端固定查第一页。
+3. **复用统一横切能力**：分页默认值、正整数校验、keyword trim/过滤全部复用 `BaseTool#buildListQuery()`，行为与 M4.3-M4.6 已铺开的列表 Tool 保持一致。
+4. **错误语义稳定**：参数校验失败继续由 `BaseTool` 包装为带错误码与建议的结构化结果，不被具体 Tool 的业务异常吞掉。
+5. **路径与权限保持稳定**：2 个 Tool 的 API path、agent、intentId、权限注解均未改变，仅替换 query 构造方式。
+
+### Review：风险与后续改进
+
+1. **keyword 字段兼容性仍需逐接口确认**：本批按标准 `keyword` 字段铺开；如果 kube-manager 个别接口实际使用其它筛选字段，后续需要基于前端源码/API 行为做特殊映射。
+2. **剩余固定分页 Tool 风险分层更明显**：后续候选主要集中在账务配额、RBAC 管理、global/no-org 首页公共接口，应继续单独会诊，不应盲目套标准三件套。
+3. **非法分页测试仍是代表性覆盖**：本批新增 2 个非法分页样本，已能验证异常不被吞；后续可参数化覆盖全部已铺开列表 Tool 的所有非法组合。
+4. **orgId path segment 校验仍是横切专项**：本批没有扩大该风险，但仍建议后续统一治理 `resolveOrganizationId` 到 path 拼接的安全边界。
+
+### 经验教训
+
+- 当剩余候选逐渐进入敏感域时，更要坚持“标准 org 列表优先、RBAC/global/账务配额暂缓”的小步策略。
+- 参数契约铺开必须同时完成 schema、执行层、异常语义、测试四件套；任何一个缺失都会让 ReAct 工具目录和真实调用行为出现偏差。
+- 对已经通过多批验证的横切能力，新增 Tool 应尽量复用 `BaseTool`，避免在各 Tool 中重新实现分页解析。
+
+### 当前运行方式
+
+```bash
+cd /home/guojin/kube-agent
+mvn test
+mvn -DskipTests package
+java -jar target/kube-agent-3.1.0-SNAPSHOT.jar   --server.port=8500   --spring.ai.openai.base-url=http://124.74.245.75:3000   --spring.ai.openai.api-key=[REDACTED]   --spring.ai.openai.chat.options.model=moonshotai/kimi-k2.6
+```
+
+### 下一步建议
+
+- 继续 M4.8：对 `ACCOUNT_BILLING_QUOTA` 分组单独会诊，优先评估 `QuotaMyListTool`、`QuotaReceiveListTool`、`OrderListTool` 是否可按标准列表参数铺开。
+- 对 RBAC/组织/LDAP/权限菜单类 Tool 建立单独审查清单，确认权限、keyword 支持与审计风险后再处理。
+- 补充 alias 到 canonical 参数归一化的集成测试，覆盖 `pageNo/pageSize/name/search/kw` 等自然字段到真实 Tool 执行的完整链路。
+
+---
+
 ## 2026-05-22 M4.6 标准列表 Tool 参数契约第四批铺开
 
 ### 实现内容

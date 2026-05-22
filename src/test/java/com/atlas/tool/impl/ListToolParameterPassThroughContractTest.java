@@ -59,6 +59,8 @@ class ListToolParameterPassThroughContractTest {
         assertPassThrough(NamespaceListTool::new, "/api/100002/namespace");
         assertPassThrough(TableListTool::new, "/api/100002/table");
         assertPassThrough(SlurmNodeListTool::new, "/api/100002/slurm-node");
+        assertPassThrough(SlurmClusterListTool::new, "/api/100002/bcm/slurm-cluster");
+        assertPassThrough(UploadStatusListTool::new, "/api/100002/download/status");
     }
 
     @Test
@@ -120,6 +122,8 @@ class ListToolParameterPassThroughContractTest {
         assertInvalidPagination(HelmRepoListTool::new, "/api/100002/helm/repositories", "limit", 1.5D, "TYPE_MISMATCH");
         assertInvalidPagination(CoursewareListTool::new, "/api/100002/courseware/list", "page", "0", "VALUE_OUT_OF_RANGE");
         assertInvalidPagination(DownloadTaskListTool::new, "/api/100002/download", "limit", 1.5D, "TYPE_MISMATCH");
+        assertInvalidPagination(SlurmClusterListTool::new, "/api/100002/bcm/slurm-cluster", "page", "abc", "TYPE_MISMATCH");
+        assertInvalidPagination(UploadStatusListTool::new, "/api/100002/download/status", "limit", "0", "VALUE_OUT_OF_RANGE");
     }
 
     private void assertPassThrough(ToolFactory factory, String expectedPath) {
