@@ -4,9 +4,12 @@ import com.atlas.http.KubeManagerHttpClient;
 import com.atlas.tool.annotation.AtlasToolMapping;
 import com.atlas.tool.annotation.ToolPermission;
 import com.atlas.tool.core.AtlasToolResult;
+import com.atlas.tool.exception.AtlasToolValidationException;
 import com.atlas.tool.core.BaseTool;
+import com.atlas.tool.core.ToolParameterSpec;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -40,13 +43,20 @@ public class HelmReleaseListTool extends BaseTool {
     }
 
     @Override
+    public List<ToolParameterSpec> getParameterSpecs() {
+        return listQueryParameterSpecs("名称或关键词筛选条件。");
+    }
+
+    @Override
     protected AtlasToolResult doExecute(Map<String, Object> params) {
         try {
             String orgId = resolveOrganizationId(params);
             String path = "/api/{orgId}/helm/releases".replace("{orgId}", orgId);
-            Map<String, Object> response = httpClient.get(path, Map.of("page", "1", "limit", "100"));
+            Map<String, Object> response = httpClient.get(path, buildListQuery(params));
             Object data = extractData(response);
             return AtlasToolResult.ok("查询Helm Release发布列表完成", data);
+        } catch (AtlasToolValidationException e) {
+            throw e;
         } catch (Exception e) {
             log.error("[helm_release_list] 调用 kube-manager API 失败", e);
             return AtlasToolResult.fail("查询Helm Release发布列表失败: " + e.getMessage());

@@ -1,5 +1,83 @@
 # Atlas v3.1 开发审计日志
 
+## 2026-05-22 M4.5 标准列表 Tool 参数契约第三批铺开
+
+### 实现内容
+
+1. 完成 M4.5 候选扫描与专家会诊：优先选择“已有固定 page/limit、路径仅依赖 orgId、语义为标准列表查询”的低风险 Tool，暂缓 RBAC/权限敏感与特殊字段列表。
+2. 本批新增 8 个标准列表 Tool 的 `page/limit/keyword` 参数契约与真实透传：
+   - `BareMetalAppListTool`
+   - `CloudResourceListTool`
+   - `ComposeListTool`
+   - `ExperimentInstanceListTool`
+   - `ExperimentTemplateListTool`
+   - `ExternalLinkListTool`
+   - `HelmRepoListTool`
+   - `HelmReleaseListTool`
+3. 8 个 Tool 均新增 `getParameterSpecs()`，返回 `listQueryParameterSpecs("名称或关键词筛选条件。")`，让 ReAct 工具目录显式暴露分页和关键词筛选契约。
+4. 8 个 Tool 的执行层从固定 `Map.of("page", "1", "limit", "100")` 改为统一 `buildListQuery(params)`：
+   - 默认 `page=1`、`limit=100`；
+   - 用户传入 `page/limit` 时严格正整数校验；
+   - `keyword` trim 后非空透传；
+   - query 参数保持 Map 传递，不拼接 URL。
+5. 8 个 Tool 均显式 rethrow `AtlasToolValidationException`，避免参数校验异常被业务 `catch (Exception)` 吞掉，继续交由 `BaseTool` 统一返回 `errorCode/suggestions`。
+6. 扩展契约测试：
+   - `ListToolParameterSpecContractTest` 增加 8 个 Tool 的 schema 覆盖；
+   - `ListToolParameterPassThroughContractTest` 增加 8 个 Tool 的 path + page/limit/keyword 透传覆盖；
+   - 增加 `ComposeListTool`、`HelmRepoListTool` 非法分页样本，验证失败前不触发 HTTP 调用。
+
+### 测试结果
+
+| 测试项 | 命令/方式 | 结果 |
+|--------|-----------|------|
+| M4.5 定向契约测试 | `mvn -Dtest=ListToolParameterSpecContractTest,ListToolParameterPassThroughContractTest test` | ✅ 5 tests, 0 failures, BUILD SUCCESS |
+| 全量测试 | `mvn test` | ✅ 142 tests, 0 failures, 0 errors, BUILD SUCCESS |
+| Diff 空白检查 | `git diff --check` | ✅ 通过 |
+| 新增行敏感信息扫描 | `git diff -- . ':(exclude)target/**' \| grep '^+' \| grep -iE ...` | ✅ 未发现新增密钥/Token/密码 |
+| 独立 pre-commit Review | delegate_task 独立审查 | ✅ 通过，无阻断问题 |
+
+### Review：优点
+
+1. **继续保持“小批安全铺开”节奏**：本批只选择 8 个已确认具备固定分页参数的标准列表 Tool，避免一次性盲改权限敏感或特殊查询字段 Tool。
+2. **消除伪参数风险**：参数不仅进入 ToolSchema，也真实进入 `httpClient.get(path, queryMap)`，LLM 看到的能力与后端请求保持一致。
+3. **复用统一横切能力**：分页默认值、正整数校验、keyword trim/过滤全部复用 `BaseTool#buildListQuery()`，后续扩展成本更低。
+4. **异常语义一致**：校验失败不再被业务异常吞掉，统一由 `BaseTool` 包装为带错误码和建议的 ToolResult。
+5. **query 安全边界清晰**：keyword 不进入 path，不手拼 URL query，继续由 `KubeManagerHttpClient` 的 URI builder 统一编码。
+
+### Review：风险与后续改进
+
+1. **organizationId path 拼接仍是既有横切风险**：本批没有扩大该风险，但后续应统一在 `resolveOrganizationId` 或 HTTP path 构造层增加数字/安全字符校验。
+2. **keyword 字段兼容性仍需逐接口确认**：如果个别 kube-manager 接口实际筛选字段不是 `keyword`，后续应根据前端源码/API 行为补充特殊字段映射。
+3. **alias 链路可继续增强**：当前 spec 测试验证 alias 声明，pass-through 测试验证 canonical 字段透传；后续可增加 normalizer 集成测试，覆盖 `name/search/kw/pageNo/pageSize` 到 canonical 参数的完整链路。
+4. **剩余固定 page/limit Tool 仍需分组推进**：RBAC/权限敏感、全局 path、特殊字段列表应继续通过专家会诊逐批处理。
+
+### 经验教训
+
+- 已经存在固定 `page/limit` 的 Tool 是列表参数契约铺开的最佳候选，因为后端分页能力已被旧代码隐式证明。
+- 任何参数契约铺开都必须同时满足“Schema 可见 + 执行层消费 + 测试锁定”三个条件，否则容易形成 LLM 可见但实际无效的伪能力。
+- 参数校验异常在具体 Tool 中必须 rethrow，不能被宽泛 `catch (Exception)` 吞掉，否则错误码与建议会丢失。
+
+### 当前运行方式
+
+```bash
+cd /home/guojin/kube-agent
+mvn test
+mvn -DskipTests package
+java -jar target/kube-agent-3.1.0-SNAPSHOT.jar \
+  --server.port=8500 \
+  --spring.ai.openai.base-url=http://124.74.245.75:3000 \
+  --spring.ai.openai.api-key=[REDACTED] \
+  --spring.ai.openai.chat.options.model=moonshotai/kimi-k2.6
+```
+
+### 下一步建议
+
+- 继续 M4.6：从剩余固定 `page/limit` Tool 中筛选下一批标准列表，优先避开权限敏感和特殊字段接口。
+- 增加 `ToolParameterNormalizer` 到 Tool 执行的 alias 集成测试。
+- 启动 orgId path segment 统一校验专项，降低多租户 path 拼接风险。
+
+---
+
 ## 2026-05-22 M4.4 高频列表 Tool 参数契约第二批铺开
 
 ### 背景与问题

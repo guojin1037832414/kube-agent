@@ -33,6 +33,14 @@ class ListToolParameterSpecContractTest {
         assertListQueryContract(new JobTemplateListTool(null), "job_template_list");
         assertListQueryContract(new TemplateListTool(null), "template_list");
         assertListQueryContract(new ResourcePresetListTool(null), "resource_preset_list");
+        assertListQueryContract(new BareMetalAppListTool(null), "bare_metal_app_list");
+        assertListQueryContract(new CloudResourceListTool(null), "cloud_resource_list");
+        assertListQueryContract(new ComposeListTool(null), "compose_list");
+        assertListQueryContract(new ExperimentInstanceListTool(null), "experiment_instance_list");
+        assertListQueryContract(new ExperimentTemplateListTool(null), "experiment_template_list");
+        assertListQueryContract(new ExternalLinkListTool(null), "external_link_list");
+        assertListQueryContract(new HelmRepoListTool(null), "helm_repo_list");
+        assertListQueryContract(new HelmReleaseListTool(null), "helm_release_list");
     }
 
     /**

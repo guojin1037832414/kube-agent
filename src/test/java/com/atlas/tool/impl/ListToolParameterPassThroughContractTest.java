@@ -44,6 +44,14 @@ class ListToolParameterPassThroughContractTest {
         assertPassThrough(JobTemplateListTool::new, "/api/100002/train-job-template");
         assertPassThrough(TemplateListTool::new, "/api/100002/template");
         assertPassThrough(ResourcePresetListTool::new, "/api/100002/resource-preset");
+        assertPassThrough(BareMetalAppListTool::new, "/api/100002/bare-metal-application");
+        assertPassThrough(CloudResourceListTool::new, "/api/100002/cloud");
+        assertPassThrough(ComposeListTool::new, "/api/100002/compose");
+        assertPassThrough(ExperimentInstanceListTool::new, "/api/100002/experiment/instance");
+        assertPassThrough(ExperimentTemplateListTool::new, "/api/100002/experiment/template");
+        assertPassThrough(ExternalLinkListTool::new, "/api/100002/external-link");
+        assertPassThrough(HelmRepoListTool::new, "/api/100002/helm/repositories");
+        assertPassThrough(HelmReleaseListTool::new, "/api/100002/helm/releases");
     }
 
     @Test
@@ -101,6 +109,8 @@ class ListToolParameterPassThroughContractTest {
         assertInvalidPagination(GpuDetailListTool::new, "/api/100002/gpu-detail", "limit", 1.5D, "TYPE_MISMATCH");
         assertInvalidPagination(DataSetListTool::new, "/api/100002/data-set", "page", "0", "VALUE_OUT_OF_RANGE");
         assertInvalidPagination(ModelListTool::new, "/api/100002/model", "limit", 1.5D, "TYPE_MISMATCH");
+        assertInvalidPagination(ComposeListTool::new, "/api/100002/compose", "page", "0", "VALUE_OUT_OF_RANGE");
+        assertInvalidPagination(HelmRepoListTool::new, "/api/100002/helm/repositories", "limit", 1.5D, "TYPE_MISMATCH");
     }
 
     private void assertPassThrough(ToolFactory factory, String expectedPath) {

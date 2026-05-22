@@ -6,6 +6,25 @@
 
 ---
 
+## [M4.5] — 标准列表 Tool 参数契约第三批铺开
+
+**周期**: 2026-05-22
+**交付**: 将标准列表参数真实透传模式继续扩展到 8 个 deploy/实验/Helm/外链类列表 Tool。
+
+### Changed
+
+- `BareMetalAppListTool`、`CloudResourceListTool`、`ComposeListTool`、`ExperimentInstanceListTool`、`ExperimentTemplateListTool`、`ExternalLinkListTool`、`HelmRepoListTool`、`HelmReleaseListTool` 新增标准 `page/limit/keyword` 参数契约。
+- 上述 8 个 Tool 执行层从固定 `page=1&limit=100` 改为 `buildListQuery(params)`，真实透传用户自然语言指定的分页与关键词。
+- 上述 8 个 Tool 显式 rethrow `AtlasToolValidationException`，保留 BaseTool 统一结构化错误返回。
+
+### Verified
+
+- 定向测试：`mvn -Dtest=ListToolParameterSpecContractTest,ListToolParameterPassThroughContractTest test` → 5 tests, 0 failures, BUILD SUCCESS。
+- 全量测试：`mvn test` → 142 tests, 0 failures, BUILD SUCCESS。
+- 独立 pre-commit Review：通过，无阻断问题。
+
+---
+
 
 ## [M4.4] — 高频列表 Tool 参数契约第二批铺开
 
