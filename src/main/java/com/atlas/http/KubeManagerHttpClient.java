@@ -24,7 +24,6 @@ import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * kube-manager 后端 HTTP 客户端 — 所有 Tool 共用。
@@ -82,24 +81,13 @@ public class KubeManagerHttpClient {
     @Value("${atlas.backend.login-password:}")
     private String loginPassword;
 
-    /** 旧版统一 Token 缓存（降级时使用） */
+    /** 旧版统一 Token 缓存（仅用于无用户上下文的兼容 HTTP 调用，不得用于 orgId 可信解析） */
     private volatile String fallbackAuthToken = null;
     private volatile long fallbackTokenExpiry = 0L;
-    private static final long TOKEN_TTL_MS = 25 * 60 * 1000; // 25分钟
-
-    @Value("${atlas.backend.fallback-org-id:100001}")
-    private String fallbackOrgId;
+    private static final long TOKEN_TTL_MS=25 * 60 * 1000; // 25分钟
 
     public KubeManagerHttpClient(UserPermissionContext userPermissionContext) {
         this.userPermissionContext = userPermissionContext;
-    }
-
-    /**
-     * 获取配置的 fallback orgId（P3.1 配置化修复）。
-     * <p>当 ThreadLocal 无 orgId 且 Tool 参数未提供时，使用此默认值。</p>
-     */
-    public String getFallbackOrgId() {
-        return fallbackOrgId;
     }
 
     /**
@@ -364,42 +352,6 @@ public class KubeManagerHttpClient {
     // ═══════════════════════════════════════════════════════════════
 
     /**
-     * 用户名 → 组织ID 内存缓存（P1.4修复）。
-     *
-     * <p><b>为什么需要这个机制？</b></p>
-     * <ul>
-     *   <li>kube-manager 的 JWT Token payload 不包含 organizationId</li>
-     *   <li>前端登录只传用户名密码，用户不知道自己的 orgId</li>
-     *   <li>所有查询 API 路径都需要 orgId（如 /api/{orgId}/deployment）</li>
-     * </ul>
-     *
-     * <p><b>实现方式：</b></p>
-     * <ol>
-     *   <li>懒加载：首次遇到该用户名时，调 kube-manager 查询</li>
-     *   <li>缓存：查过一次后 5分钟内复用，避免重复请求</li>
-     *   <li>回退：查不到时统一返回 100001（系统专用组织），确保功能不中断</li>
-     *   <li>超管穿透：当 username=sysadmin 时，返回 "sysadmin" 标记，Tool 可据此选择无 orgId 过滤的全局模式</li>
-     * </ol>
-     *
-     * <p><b>容器外调用：</b>仅 AtlasOrchestrator 在 SSE 流处理前调用一次。</p>
-     *
-     * @param username 前端传入的用户名（如 sysadmin、zhaotiandi）
-     * @return 组织ID字符串（如 "100001"），超管返回 "sysadmin" 标记
-     */
-    static final class OrgIdEntry {
-        final String orgId;
-        final long expiry;
-        OrgIdEntry(String orgId, long ttlMillis) {
-            this.orgId = orgId;
-            this.expiry = System.currentTimeMillis() + ttlMillis;
-        }
-        boolean isExpired() { return System.currentTimeMillis() > expiry; }
-    }
-
-    /** 用户名 → 组织ID 缓存，TTL=5分钟 */
-    private final Map<String, OrgIdEntry> orgIdCache = new ConcurrentHashMap<>();
-
-    /**
      * 后端已知的可能组织ID列表（按频率排序）。
      * 用于 resolveOrgId 在首次查找用户时的桶式搜索。
      * 实际项目可通过配置动态注入更多 orgIds。
@@ -421,48 +373,40 @@ public class KubeManagerHttpClient {
      * <p><b>解决方案（桶式搜索）：</b></p>
      * <ol>
      *   <li>先用用户 Token 尝试查询各组织用户列表</li>
-     *   <li>找到匹配用户后缓存 orgId</li>
+     *   <li>找到匹配用户后直接返回 kube-manager 响应中的可信 orgId</li>
      *   <li>超管直接返回 sysadmin 标记（绕过搜索）</li>
      * </ol>
      *
      * <p><b>未来替代方案：</b>kube-agent 自建 /api/v1/login，代理 kube-manager
      * 登录并显式返回 organizationId，前端传入 ChatRequest 中。</p>
      *
-     * @param username  用户名（不可为空，空值回退 "100001"）
-     * @param authToken 当前用户 Token（优先使用）
+     * @param username  用户名（不可为空）
+     * @param authToken 当前用户 Token（必须来自本次登录响应）
+     * @throws OrgIdResolutionException 无法解析可信组织 ID 时抛出，调用方必须 fail-safe
      */
     public String resolveOrgId(String username, String authToken) {
         if (username == null || username.isBlank()) {
-            log.warn("[resolveOrgId] username为空，回退到默认组织 {}", fallbackOrgId);
-            return fallbackOrgId;
+            throw new OrgIdResolutionException(
+                OrgIdResolutionException.Reason.USERNAME_EMPTY,
+                "username 为空，无法解析可信组织 ID"
+            );
         }
 
-        // 超管标记穿透（sysadmin 用特殊标记，让 Tool 决定是否全局模式）
+        if (authToken == null || authToken.isBlank()) {
+            throw new OrgIdResolutionException(
+                OrgIdResolutionException.Reason.TOKEN_UNAVAILABLE,
+                "缺少当前用户 Token，无法解析可信组织 ID"
+            );
+        }
+
+        // 超管标记穿透（sysadmin 用特殊标记，让上层按全局身份单独授权，不能降级成普通租户 ID）
         if ("sysadmin".equals(username) || "sysadmin02".equals(username)) {
             return "sysadmin";
         }
 
-        // 命中缓存？
-        OrgIdEntry entry = orgIdCache.get(username);
-        if (entry != null && !entry.isExpired()) {
-            return entry.orgId;
-        }
+        // M5.7：不再使用 username-only orgId 缓存，避免跨 session / 跨租户复用旧组织上下文。
 
-        // 懒加载：调 kube-manager 查询用户列表
-        String effectiveToken = authToken;
-        if (effectiveToken == null || effectiveToken.isBlank()) {
-            // 使用降级 Token（sysadmin 预登录）代为查询用户-组织映射
-            ensureFallbackAuthenticated();
-            if (fallbackAuthToken != null && !fallbackAuthToken.isBlank()) {
-                effectiveToken = fallbackAuthToken;
-                log.debug("[resolveOrgId] 使用降级 Token 查询 username={}", username);
-            } else {
-                log.warn("[resolveOrgId] username={} 但无有效Token，无法查组织ID，回退{}", username, fallbackOrgId);
-                return fallbackOrgId;
-            }
-        }
-
-        // 桶式搜索：在已知组织列表中逐个查询，找到目标用户即停
+        // 桶式搜索：仅使用当前用户 Token 查询，找到目标用户即停；禁止使用 sysadmin/降级 Token 洗白租户归属。
         String found = null;
         for (String orgId : KNOWN_ORG_IDS) {
             try {
@@ -473,7 +417,7 @@ public class KubeManagerHttpClient {
 
                 String response = restClient.get()
                     .uri(url)
-                    .header("X-Token", effectiveToken)
+                    .header("X-Token", authToken)
                     .retrieve()
                     .body(String.class);
 
@@ -485,12 +429,21 @@ public class KubeManagerHttpClient {
                         String uname = String.valueOf(um.get("username"));
                         if (username.equals(uname)) {
                             found = String.valueOf(um.get("organizationId"));
+                            if (found == null || found.isBlank() || "null".equalsIgnoreCase(found) || "1".equals(found)) {
+                                throw new OrgIdResolutionException(
+                                    OrgIdResolutionException.Reason.INVALID_RESOLVED_ORG_ID,
+                                    "kube-manager 返回的组织 ID 不可信: " + found
+                                );
+                            }
                             break;
                         }
                     }
                 }
                 if (found != null) break; // 找到了，跳出外层循环
 
+            } catch (OrgIdResolutionException e) {
+                // 已经找到目标用户但组织 ID 不可信，这是安全边界异常，必须立即终止，不能继续扫其他桶洗白。
+                throw e;
             } catch (Exception e) {
                 // 该组织可能不存在或查询失败，继续下一个桶
                 log.debug("[resolveOrgId] 组织 {} 查询失败，继续搜索: {}", orgId, e.getMessage());
@@ -498,14 +451,15 @@ public class KubeManagerHttpClient {
         }
 
         if (found != null && !found.isBlank()) {
-            orgIdCache.put(username, new OrgIdEntry(found, 5L * 60 * 1000));
             log.info("[resolveOrgId] username={} → orgId={}", username, found);
             return found;
         }
 
-        log.warn("[resolveOrgId] username={} 在所有已知组织中未找到，回退{}", username, fallbackOrgId);
-        orgIdCache.put(username, new OrgIdEntry(fallbackOrgId, 60L * 1000)); // 短缓存避免反复查
-        return fallbackOrgId;
+        log.warn("[resolveOrgId] username={} 在所有已知组织中未找到，拒绝创建可信组织上下文", username);
+        throw new OrgIdResolutionException(
+            OrgIdResolutionException.Reason.USER_NOT_FOUND,
+            "无法确认用户所属组织: " + username
+        );
     }
 
     /**

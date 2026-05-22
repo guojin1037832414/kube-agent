@@ -248,7 +248,7 @@ public class AtlasOrchestrator {
                                 orgId = UserPermissionContext.getCurrentOrgId(); // 异步 ThreadLocal 透传
                             }
                             if (orgId == null || orgId.isBlank()) {
-                                log.warn("[Orchestrator] Tool '{}' 缺失可信 orgId，拒绝使用 fallbackOrgId 执行", result.intentId());
+                                log.warn("[Orchestrator] Tool '{}' 缺失可信 orgId，拒绝执行", result.intentId());
                                 emit(emitter, "content", Map.of(
                                     "content", "❌ 安全上下文缺失：无法确定当前用户所属组织，请重新登录后再试。"
                                 ));

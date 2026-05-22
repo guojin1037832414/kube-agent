@@ -1,5 +1,87 @@
 # Atlas v3.1 开发审计日志
 
+## 2026-05-22 — M5.7 fallbackOrgId 可信语义彻底收口与登录 fail-safe 治理
+
+### 背景
+
+M5.6 已经把异步执行链路、Graph、HITL 与传统 Tool fallback 的 orgId 来源收口到可信 ThreadLocal/session 上下文，但 `KubeManagerHttpClient` 内仍残留 `fallbackOrgId` 字段/getter 与 `resolveOrgId` 失败后返回默认组织的语义。这会把“登录态无法确认租户”洗白成“默认租户 100001”，与多租户 fail-safe 原则冲突。
+
+### 专家会诊结论
+
+- 多租户安全专家：orgId 是授权边界，不是业务默认值；任何配置推导的默认 orgId 都不能作为可信 session 上下文。
+- Spring/登录链路专家：`resolveOrgId(username, token)` 必须绑定本次登录 token；不得用 sysadmin fallback token 代查普通用户租户。
+- TDD/契约测试专家：应同时建立源码扫描契约、HTTP Client 边界测试和 AuthController 登录 fail-safe 测试，防止 getter/配置/注释语义回流。
+
+### 实现内容
+
+1. 删除 `KubeManagerHttpClient` 中 `atlas.backend.fallback-org-id` 字段与 `getFallbackOrgId()` getter。
+2. 新增 `OrgIdResolutionException` 强类型异常，携带 `Reason`，便于测试和调用方 fail-safe。
+3. `resolveOrgId(username, authToken)` 改为：
+   - username 为空直接 `USERNAME_EMPTY`；
+   - authToken 为空直接 `TOKEN_UNAVAILABLE`；
+   - sysadmin 也必须在 token 非空后才返回 `sysadmin` 标记；
+   - 普通用户只用本次 token 桶式搜索；
+   - 命中用户但 orgId 为空、`null` 或 `1` 时立即 `INVALID_RESOLVED_ORG_ID`，不继续扫桶；
+   - 搜索失败 `USER_NOT_FOUND`；
+   - 移除 username-only orgId cache，避免跨 session / 跨租户串用。
+4. `AuthController#login`：登录响应缺可信 orgId 时用本次 token 反查；反查失败返回 502，不创建 session。
+5. 清理 `AtlasOrchestrator`、`AsyncContextHolder`、`AtlasGraphConfig` 中 fallbackOrgId/fallback 文案残留。
+6. 新增/扩展测试：
+   - `M57FallbackOrgIdSourceContractTest`：生产源码禁止 fallbackOrgId 默认租户语义；
+   - `KubeManagerHttpClientResolveOrgIdSecurityTest`：7 个 resolveOrgId 安全边界；
+   - `AuthControllerLoginFailSafeTest`：反查失败不得创建 session。
+
+### 测试结果
+
+| 测试项 | 命令/方式 | 结果 |
+|--------|-----------|------|
+| M5.7 RED | 新增契约测试后运行定向测试 | ✅ 预期失败：生产代码仍存在 fallbackOrgId/getter/默认组织回退 |
+| M5.7 定向回归 | `mvn -Dtest=M57FallbackOrgIdSourceContractTest,KubeManagerHttpClientResolveOrgIdSecurityTest,AuthControllerLoginFailSafeTest test` | ✅ 9 tests, 0 failures, BUILD SUCCESS |
+| M5.6/M5.7 组合回归 | `mvn -Dtest=TokenPropagatingTaskDecoratorTest,AsyncContextHolderTest,AtlasOrchestratorOrgIdGuardTest,M57FallbackOrgIdSourceContractTest,KubeManagerHttpClientResolveOrgIdSecurityTest,AuthControllerLoginFailSafeTest test` | ✅ 21 tests, 0 failures, BUILD SUCCESS |
+| 全量测试 | `mvn test` | ✅ 177 tests, 0 failures, BUILD SUCCESS |
+| 打包 | `mvn -DskipTests package` | ✅ BUILD SUCCESS |
+| Diff 空白检查 | `git diff --check` | ✅ 通过 |
+| Diff 敏感信息扫描 | Python added-lines scan | ✅ `SECRET_SCAN_FINDINGS 0` |
+| 独立 Review 第一轮 | delegate_task 安全审查 | ❌ BLOCKER：username-only orgId cache、sysadmin token 校验顺序、旧文案/测试不足 |
+| 独立 Review 第二轮 | delegate_task 二次审查 | ✅ PASS，第一轮 blocker 全部关闭 |
+
+### Review：优点
+
+1. **默认租户语义彻底移除**：生产代码已无 `fallbackOrgId/getFallbackOrgId/atlas.backend.fallback-org-id` 可信上下文入口。
+2. **登录链路 fail-safe**：无法确认可信 orgId 时拒绝创建 session，避免把未知租户绑定到默认组织。
+3. **强类型异常便于治理**：不同失败原因可被测试和日志精确识别。
+4. **缓存风险关闭**：取消 username-only orgId cache，避免跨 session、跨 token、同名用户或用户迁移导致旧 orgId 串用。
+5. **契约测试防回流**：源码扫描测试能阻止未来新增代码重新引入 fallback 默认组织语义。
+
+### 风险与后续改进
+
+1. sysadmin 当前仍以 username + 非空 token 返回 `sysadmin` 标记；在当前 AuthController 登录链路中 token 来自 kube-manager 登录成功响应，风险可控。未来若 `resolveOrgId` 被更多入口复用，应增加 token 自省或限制方法可见性。
+2. 桶式搜索仍是临时机制；最优长期方案是推动 kube-manager `/api/login` 或 token introspection 接口直接返回 organizationId。
+3. `fallbackAuthToken` 仍用于无用户上下文的兼容 HTTP 调用，不得用于 orgId 可信解析；后续可单独评估是否彻底移除兼容模式。
+
+### 经验教训
+
+- 多租户安全治理不能只删除调用点，还要清理 public getter、配置字段、注释文案和测试盲区。
+- username-only cache 在认证上下文中是危险结构；可信缓存必须绑定 token/session，安全优先时可直接取消缓存。
+- 独立 Review 的价值很高：第一轮及时发现“看似优化”的缓存其实破坏了“本次登录 token 可信”语义。
+
+### 当前运行方式
+
+```bash
+cd /home/guojin/kube-agent
+mvn test
+mvn -DskipTests package
+java -jar target/kube-agent-3.1.0-SNAPSHOT.jar   --server.port=8500   --spring.ai.openai.base-url=http://124.74.245.75:3000   --spring.ai.openai.api-key=[REDACTED]   --spring.ai.openai.chat.options.model=moonshotai/kimi-k2.6
+```
+
+### 下一步建议
+
+- 优先推动 kube-manager 登录响应返回 `organizationId` 或提供 token 自省接口，最终替代桶式搜索。
+- 单独审计 `fallbackAuthToken` 兼容调用模式，区分“系统兼容 token”与“用户可信上下文”。
+- 继续推进后续 Milestone 时保持 TDD + 独立 Review + 全量测试闭环。
+
+---
+
 ## 2026-05-22 — M5.6 异步上下文传播与 fallbackOrgId 可信语义治理
 
 ### 背景
@@ -84,7 +166,7 @@ java -jar target/kube-agent-3.1.0-SNAPSHOT.jar   --server.port=8500   --spring.a
 
 ### 下一步建议
 
-- 进入 M5.7：清理/重命名 `fallbackOrgId` 配置语义或建立禁止调用契约，防止未来误用。
+- 进入 M5.7 实施：按 `docs/M5_7_FALLBACK_ORG_ID_GOVERNANCE_PROPOSAL_20260522.md` 收口 `fallbackOrgId`：删除 getter，禁止作为可信租户来源，`resolveOrgId` 失败抛强类型异常并阻止创建 session。
 - 继续审计其他异步入口、Scheduler、SSE retry、HITL checkpoint 写入路径是否都保留 token+orgId 原子上下文。
 - 保持小步闭环：每个入口先补契约测试，再修实现，再独立 Review。
 

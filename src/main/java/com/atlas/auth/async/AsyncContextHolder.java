@@ -14,7 +14,7 @@ import java.util.function.Supplier;
  *
  * <p><b>M5.6 治理原则：</b>在多租户场景中，token 与 orgId 必须被视为一个原子的安全上下文快照。
  * token 代表认证身份，orgId 代表 Tool 层唯一可信租户边界；任何异步入口只传播 token、不传播 orgId，
- * 都会造成后续 Tool 无法解析可信租户，甚至诱发 fallbackOrgId 被误用为默认租户。</p>
+ * 都会造成后续 Tool 无法解析可信租户并触发 fail-safe 拒绝执行。</p>
  *
  * <p><b>清理策略：</b>执行任务前保存当前线程旧值，绑定快照后执行业务，finally 中恢复旧值。
  * 这样既能防止线程池复用泄漏，也能避免 CallerRunsPolicy / 嵌套异步包装把外层请求上下文误删。</p>

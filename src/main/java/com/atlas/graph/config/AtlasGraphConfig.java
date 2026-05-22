@@ -597,7 +597,7 @@ public class AtlasGraphConfig {
                 }
 
                 // 3. 使用可信 orgId 构造 Tool 参数。
-                // orgId 已在进入 try 前从 state/ThreadLocal/fallback 中解析并绑定到当前异步线程，
+                // orgId 已在进入 try 前从 state 或 ThreadLocal 中解析并绑定到当前异步线程，
                 // BaseTool#resolveOrganizationId 会以 ThreadLocal 作为最终安全边界。
                 java.util.Map<String, Object> toolParams = new java.util.HashMap<>();
                 if (d.parameters() != null) {

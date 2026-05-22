@@ -6,6 +6,47 @@
 
 ---
 
+## [M5.7] — fallbackOrgId 可信语义彻底收口与登录 fail-safe 治理
+
+**周期**: 2026-05-22
+**交付**: 将 `fallbackOrgId` 从可信租户上下文中彻底移除：删除 getter/config 字段语义，`resolveOrgId` 改为强类型 fail-closed，登录反查失败不创建 session，并用源码扫描契约测试防止默认组织语义回流。
+
+### Added
+
+- 新增 `OrgIdResolutionException`，用 `USERNAME_EMPTY`、`TOKEN_UNAVAILABLE`、`USER_NOT_FOUND`、`INVALID_RESOLVED_ORG_ID` 等 Reason 锁定 orgId 解析失败原因。
+- 新增 `M57FallbackOrgIdSourceContractTest`，扫描生产源码，禁止 `fallbackOrgId/getFallbackOrgId/atlas.backend.fallback-org-id/默认租户` 等可信上下文语义回流。
+- 新增 `KubeManagerHttpClientResolveOrgIdSecurityTest`，覆盖空用户名、缺 token、sysadmin token 前置校验、用户未找到、非法 orgId 立即 fail-safe、可信 orgId 正向返回等 7 个边界。
+- 新增 `AuthControllerLoginFailSafeTest`，验证登录成功但无法解析可信 orgId 时不创建 session。
+- 新增治理方案文档：`docs/M5_7_FALLBACK_ORG_ID_GOVERNANCE_PROPOSAL_20260522.md`。
+
+### Changed
+
+- `KubeManagerHttpClient#resolveOrgId(username, authToken)`：
+  - 必须要求 username 与本次登录 token 非空；
+  - 不再使用 sysadmin/fallback token 代查普通用户租户；
+  - 不再返回或缓存默认组织；
+  - 用户命中但 orgId 为空、`null` 或 `1` 时立即抛异常，不继续扫桶洗白；
+  - 移除 username-only orgId cache，避免跨 session / 跨租户复用旧组织上下文。
+- `AuthController#login`：登录响应缺可信 orgId 时，用本次登录 token 反查；反查失败返回 502 并拒绝创建 session。
+- `AtlasOrchestrator`、`AsyncContextHolder`、`AtlasGraphConfig` 清理 fallbackOrgId/fallback 文案残留，统一表达“缺可信 orgId 则 fail-safe”。
+- `CHANGELOG` 中 M5.6 deferred 项已由本阶段关闭。
+
+### Verified
+
+- M5.7 定向测试：`mvn -Dtest=M57FallbackOrgIdSourceContractTest,KubeManagerHttpClientResolveOrgIdSecurityTest,AuthControllerLoginFailSafeTest test` → ✅ 9 tests, 0 failures。
+- M5.6/M5.7 组合回归：`mvn -Dtest=TokenPropagatingTaskDecoratorTest,AsyncContextHolderTest,AtlasOrchestratorOrgIdGuardTest,M57FallbackOrgIdSourceContractTest,KubeManagerHttpClientResolveOrgIdSecurityTest,AuthControllerLoginFailSafeTest test` → ✅ 21 tests, 0 failures。
+- 全量测试：`mvn test` → ✅ 177 tests, 0 failures, BUILD SUCCESS。
+- 打包：`mvn -DskipTests package` → ✅ BUILD SUCCESS。
+- `git diff --check`：✅ 通过。
+- Diff 敏感信息扫描：✅ `SECRET_SCAN_FINDINGS 0`。
+- 独立 Review 第一轮：❌ 发现 username-only orgId cache 与 sysadmin token 前置校验问题。
+- 独立 Review 第二轮：✅ PASS，第一轮 blocker 全部关闭。
+
+### Closed
+
+- 关闭 M5.6 deferred：`KubeManagerHttpClient#getFallbackOrgId()` 与 `atlas.backend.fallback-org-id` 可信配置语义已清理。
+
+---
 
 ## [M5.6] — 异步上下文传播与 fallbackOrgId 可信语义治理
 
@@ -38,7 +79,7 @@
 
 ### Deferred
 
-- `KubeManagerHttpClient#getFallbackOrgId()` getter 与配置注释仍保留；后续 M5.7 可单独清理/重命名，避免误导为可信租户来源。
+- `KubeManagerHttpClient#getFallbackOrgId()` getter 与配置注释已在 M5.7 关闭。
 
 ---
 

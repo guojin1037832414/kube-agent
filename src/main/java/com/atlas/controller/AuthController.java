@@ -3,6 +3,7 @@ package com.atlas.controller;
 import com.atlas.auth.UserPermissionContext;
 import com.atlas.dto.*;
 import com.atlas.http.KubeManagerHttpClient;
+import com.atlas.http.OrgIdResolutionException;
 import com.atlas.store.SessionStore;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -155,17 +156,34 @@ public class AuthController {
             // 3. 根级别 fallback
             resolvedOrgId = root.path("organizationId").asText(resolvedOrgId);
 
-            // P3.1: 如果响应未包含 orgId，用 token 反查（kube-manager 返回 result 为纯 JWT String）
-            if (resolvedOrgId == null || resolvedOrgId.isBlank() || "1".equals(resolvedOrgId)) {
+            // M5.7: 如果响应未包含可信 orgId，用本次登录 token 反查；反查失败必须 fail-safe，不创建 Session。
+            if (isUntrustedOrgId(resolvedOrgId)) {
                 try {
                     String fetchedOrgId = kubeManagerClient.resolveOrgId(username, token);
-                    if (fetchedOrgId != null && !fetchedOrgId.isBlank() && !"sysadmin".equals(fetchedOrgId)) {
+                    if ("sysadmin".equals(fetchedOrgId)) {
                         resolvedOrgId = fetchedOrgId;
-                        log.info("[Auth] 登录后反查 orgId: user={}, orgId={}", username, resolvedOrgId);
+                        log.info("[Auth] 登录后确认超管身份: user={}", username);
+                    } else if (!isUntrustedOrgId(fetchedOrgId)) {
+                        resolvedOrgId = fetchedOrgId;
+                        log.info("[Auth] 登录后反查可信 orgId: user={}, orgId={}", username, resolvedOrgId);
+                    } else {
+                        throw new OrgIdResolutionException(
+                            OrgIdResolutionException.Reason.INVALID_RESOLVED_ORG_ID,
+                            "反查结果不是可信组织 ID: " + fetchedOrgId
+                        );
                     }
                 } catch (Exception e) {
-                    log.warn("[Auth] 登录后反查 orgId 失败，使用默认值: user={}, error={}", username, e.getMessage());
+                    log.warn("[Auth] 登录成功但无法解析可信组织上下文，拒绝创建Session: user={}, error={}",
+                        username, e.getMessage());
+                    return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                        .body(ApiResponse.fail("登录成功但无法确认所属组织，请稍后重试或联系管理员"));
                 }
+            }
+
+            if (!"sysadmin".equals(resolvedOrgId) && isUntrustedOrgId(resolvedOrgId)) {
+                log.warn("[Auth] 组织上下文不可信，拒绝创建Session: user={}, orgId={}", username, resolvedOrgId);
+                return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                    .body(ApiResponse.fail("登录成功但无法确认所属组织，请稍后重试或联系管理员"));
             }
 
             // ── 缓存到 UserPermissionContext ──
@@ -257,6 +275,17 @@ public class AuthController {
         }
 
         return null;
+    }
+
+    /**
+     * 判断组织 ID 是否不可信。
+     *
+     * <p>M5.7：普通用户的组织 ID 不允许为空或 kube-manager 登录占位值 {@code "1"}。
+     * 真实组织即使等于某个历史默认配置值，也必须来自 kube-manager 响应或本次 token 反查成功，
+     * 不能由本服务配置 fallback 生成。</p>
+     */
+    private boolean isUntrustedOrgId(String orgId) {
+        return orgId == null || orgId.isBlank() || "1".equals(orgId);
     }
 
     private String mask(String sessionId) {
