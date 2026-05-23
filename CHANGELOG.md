@@ -6,6 +6,47 @@
 
 ---
 
+## [M5.12] — Tool 风险元数据透明化前后端同步治理
+
+**周期**: 2026-05-23
+**交付**: 将 M5.11 建立的 Tool HTTP/风险注解元数据接入 ToolRegistry Prompt 与 ReAct SSE metadata，并同步在 kube-agent-vue 前端 ReAct 时间线展示风险标签、确认提示和占位能力提醒。M5.12 明确只做风险透明化，不冒充执行层安全边界；真正 fail-closed HITL 强拦截留到 M5.13。
+
+### Added
+
+- 后端 `ToolRegistry.ToolMetadata` 新增并保留：
+  - `httpMethod`：Tool 声明的 HTTP 方法；
+  - `apiEndpoints`：内部 API 路径模板，仅保存在元数据中，不写入 Prompt/前端展示；
+  - `operationType`：READ/CREATE/UPDATE/DELETE/ACTION/PLACEHOLDER 风险语义；
+  - `requiresConfirmation`：是否建议人工确认。
+- `ToolRegistry.buildSystemPromptForCurrentUser()` 新增紧凑风险标签：
+  - 例：`operationType=ACTION, httpMethod=POST, requiresConfirmation=true`；
+  - 明确提示 M5.12 风险标签只是辅助判断，不是执行层强拦截。
+- `ReActEvent` 新增带 `extraMetadata` 的 `toolStart/toolDone` 重载；旧方法保持兼容。
+- `ReActEngine` 在工具事件中透传非敏感风险摘要：`httpMethod/operationType/requiresConfirmation`。
+- 前端 `kube-agent-vue`：
+  - 新增 `ToolRiskMetadata/ToolOperationType` 类型；
+  - `ChatBubble.vue` ReAct 时间线展示 `READ/GET`、`ACTION/POST`、`DELETE/DELETE` 等风险 chip；
+  - 展示“建议确认”标签；
+  - 对 `DELETE` 与 `PLACEHOLDER` 显示明确风险/占位提示。
+
+### Verified
+
+- 专家会诊：✅ 已收敛为“风险透明化优先，不泄露 endpoint，不把提示冒充安全边界”。
+- 后端定向测试：`mvn -q -Dtest=ToolRegistryPromptContractTest,ReActEventRiskMetadataTest test` → ✅ 通过。
+- 前端类型检查与构建：`npm run build`（内部执行 `vue-tsc && vite build`）→ ✅ 通过；仅出现 Element Plus 依赖 Rollup 注释警告。
+- 后端 `git diff --check`：✅ 通过。
+- 前端 `git diff --check`：✅ 通过。
+- 本阶段未启动服务、未调用真实 kube-manager、未执行真实删除/修改请求。
+
+### Risk / Deferred
+
+- M5.12 不提供 fail-closed 执行强拦截；`requiresConfirmation=true` 在本阶段只作为透明化提示和后续 HITL 输入。
+- 历史未迁移 Tool 仍可能显示 `operationType=UNKNOWN` 或未声明 HTTP；后续需继续按批次铺开 M5.11 元数据。
+- 前端展示依赖后端 SSE metadata，旧服务未重启或旧事件不会显示风险 chip。
+- M5.13 建议接入执行层 Human-in-the-loop 强确认，禁止高危 Tool 仅靠 Prompt/UI 提示执行。
+
+---
+
 ## [M5.11] — Atlas Tool HTTP 元数据契约小样本治理
 
 **周期**: 2026-05-23

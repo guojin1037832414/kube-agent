@@ -10,7 +10,9 @@ import com.atlas.tool.impl.FileSelectStorageTool;
 import com.atlas.tool.impl.HelmChartInfoTool;
 import com.atlas.tool.impl.HelmChartSearchTool;
 import com.atlas.tool.impl.ImageDetailByNameTool;
+import com.atlas.tool.impl.ImageDeleteTool;
 import com.atlas.tool.impl.LogQueryTool;
+import com.atlas.tool.impl.MpiJobSubmitTool;
 import com.atlas.tool.impl.NodeDetailTool;
 import com.atlas.tool.impl.PodQueryTool;
 import org.junit.jupiter.api.Test;
@@ -132,6 +134,32 @@ class ToolRegistryPromptContractTest {
         assertFalse(prompt.contains("image_name"), "ReAct prompt 不应展开 image alias");
         assertFalse(prompt.contains("chart_name"), "ReAct prompt 不应展开 chart alias");
         assertFalse(prompt.contains("searchText"), "ReAct prompt 不应展开 keyword alias");
+    }
+
+    @Test
+    void buildSystemPrompt_shouldExposeRiskMetadataWithoutLeakingApiEndpoints() {
+        UserPermissionContext userPermissionContext = new UserPermissionContext();
+        userPermissionContext.onLogin("token-admin", "admin", "sys_admin", Set.of());
+        userPermissionContext.bind("token-admin");
+        ToolRegistry registry = new ToolRegistry(List.of(
+            new EventQueryTool(null),
+            new MpiJobSubmitTool(null),
+            new ImageDeleteTool(null)
+        ), userPermissionContext);
+        registry.init();
+
+        String prompt = registry.buildSystemPromptForCurrentUser();
+
+        assertTrue(prompt.contains("event_query"));
+        assertTrue(prompt.contains("风险标签: operationType=READ, httpMethod=GET, requiresConfirmation=false"));
+        assertTrue(prompt.contains("mpi_job_submit"));
+        assertTrue(prompt.contains("风险标签: operationType=ACTION, httpMethod=POST, requiresConfirmation=true"));
+        assertTrue(prompt.contains("image_delete"));
+        assertTrue(prompt.contains("风险标签: operationType=DELETE, httpMethod=DELETE, requiresConfirmation=true"));
+        assertTrue(prompt.contains("M5.12 该标签仅为风险提示"));
+
+        assertFalse(prompt.contains("/api/"), "Prompt 不应泄露 kube-manager 内部 API endpoint");
+        assertFalse(prompt.contains("apiEndpoints"), "Prompt 不应暴露注解字段名 apiEndpoints");
     }
 
     @Test

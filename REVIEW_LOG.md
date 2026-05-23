@@ -2,6 +2,57 @@
 
 > 本文件记录阶段性开发闭环：问题背景、解决方案、测试结果、代码 Review、风险与后续计划。
 
+## 2026-05-23 21:06 - M5.12 Tool 风险元数据透明化前后端同步治理
+
+### 背景
+- M5.11 已将 `httpMethod/apiEndpoints/operationType/requiresConfirmation` 写入 `@AtlasToolMapping` 小样本，但风险元数据尚未进入 Prompt、SSE 和前端时间线。
+- 用户要求后续每个功能必须前后端同步推进，因此 M5.12 同时修改 kube-agent 后端与 kube-agent-vue 前端。
+- 本阶段定位为“风险透明化”，不是执行层安全边界；真实 fail-closed HITL 拦截留到 M5.13。
+
+### 专家会诊结论
+1. 风险元数据应进入 ToolRegistry/Prompt，使 LLM 能区分 READ 与 ACTION/DELETE 等高影响操作。
+2. Prompt 和前端不应展示 `apiEndpoints`，避免泄露内部 kube-manager 路径或诱导模型绕过 Tool。
+3. SSE 不新增顶层协议字段，复用已有 `metadata` 扩展位，降低前端兼容风险。
+4. UI 必须明确“建议确认/占位能力/高风险删除”只是透明化提示，不应让用户误以为已有强制拦截。
+
+### 变更内容
+#### 后端 kube-agent
+- `ToolRegistry.ToolMetadata` 增加风险字段并从 `@AtlasToolMapping` 初始化。
+- `buildSystemPromptForCurrentUser()` 增加 `风险标签` 行，并加入 M5.12 非强拦截说明。
+- `ReActEvent` 增加带扩展元数据的 `toolStart/toolDone` 重载。
+- `ReActEngine` 在 `tool_start/tool_done` 中透传 `httpMethod/operationType/requiresConfirmation`。
+- 新增/扩展测试：
+  - `ToolRegistryPromptContractTest#buildSystemPrompt_shouldExposeRiskMetadataWithoutLeakingApiEndpoints`
+  - `ReActEventRiskMetadataTest`
+
+#### 前端 kube-agent-vue
+- `src/types/index.ts` 新增 `ToolRiskMetadata/ToolOperationType`。
+- `src/components/ChatBubble.vue` 在 ReAct 时间线展示风险 chip、建议确认标签与 DELETE/PLACEHOLDER 提示。
+
+### 测试结果
+- 后端定向测试：`mvn -q -Dtest=ToolRegistryPromptContractTest,ReActEventRiskMetadataTest test` → PASS。
+- 前端构建：`npm run build` → PASS（`vue-tsc && vite build`）。
+- 后端 `git diff --check` → PASS。
+- 前端 `git diff --check` → PASS。
+
+### 代码 Review
+#### 优点
+- 前后端同步落地，符合新开发铁律。
+- 复用 metadata，不破坏既有 SSE 协议。
+- Prompt/前端均不展示 endpoint，降低信息泄露面。
+- 测试覆盖了 Prompt 风险标签、endpoint 不泄露、SSE metadata 合并保留 `params/costMs`。
+
+#### 风险
+- M5.12 不是强安全边界，高风险 Tool 仍需 M5.13 在执行层 fail-closed。
+- 当前只基于 M5.11 小样本 Tool 展示准确风险；未迁移 Tool 仍需继续治理。
+- 前端 chip 只展示后端已推送 metadata 的事件；旧服务/旧事件不会补全历史风险信息。
+
+### 后续建议
+1. M5.13 实现真正 HITL 执行层强拦截：`requiresConfirmation=true` 的 Tool 必须收到有效确认 token 后才能执行。
+2. 分批迁移剩余 Tool 的 HTTP/风险注解元数据。
+3. 在状态大盘中增加 Tool 风险覆盖率统计：已声明/未知/高危需确认数量。
+
+
 ## 2026-05-20 23:10 - ReAct Tool 参数契约第一批扩展 + URL 查询参数修复
 
 ### 背景

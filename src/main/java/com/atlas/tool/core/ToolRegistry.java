@@ -98,7 +98,11 @@ public class ToolRegistry {
 
             ToolMetadata meta = new ToolMetadata(
                 name, description, intentId, agent, tool,
-                policy, requiredRoles, adminOnly
+                policy, requiredRoles, adminOnly,
+                mapping != null ? mapping.httpMethod() : "",
+                mapping != null ? mapping.apiEndpoints() : new String[0],
+                mapping != null ? mapping.operationType() : AtlasToolMapping.OperationType.UNKNOWN,
+                mapping != null && mapping.requiresConfirmation()
             );
             agentIndex.computeIfAbsent(agent, k -> new ArrayList<>()).add(meta);
         }
@@ -231,7 +235,13 @@ public class ToolRegistry {
         Set<String> roles = (perm != null && perm.roles().length > 0) ? Set.of(perm.roles()) : Set.of();
         boolean adminOnly = (policy == ToolPermission.Policy.ADMIN_ONLY);
 
-        return new ToolMetadata(name, desc, intentId, agent, tool, policy, roles, adminOnly);
+        return new ToolMetadata(
+            name, desc, intentId, agent, tool, policy, roles, adminOnly,
+            mapping != null ? mapping.httpMethod() : "",
+            mapping != null ? mapping.apiEndpoints() : new String[0],
+            mapping != null ? mapping.operationType() : AtlasToolMapping.OperationType.UNKNOWN,
+            mapping != null && mapping.requiresConfirmation()
+        );
     }
 
     /**
@@ -289,6 +299,10 @@ public class ToolRegistry {
             sb.append("[").append(entry.getKey()).append("]\n");
             for (ToolMetadata t : entry.getValue()) {
                 sb.append(String.format("  • %s: %s\n", t.name(), t.description()));
+                String riskContract = buildRiskContract(t);
+                if (!riskContract.isBlank()) {
+                    sb.append("    风险标签: ").append(riskContract).append("\n");
+                }
                 String parameterContract = buildCompactParameterContract(t.instance());
                 if (!parameterContract.isBlank()) {
                     sb.append("    参数契约: ").append(parameterContract).append("\n");
@@ -302,6 +316,7 @@ public class ToolRegistry {
         sb.append("2. 如果用户请求超出可用工具范围，请礼貌拒绝并说明权限限制\n");
         sb.append("3. 调用工具前确保已收集所有必填参数\n");
         sb.append("4. Action.params 必须优先使用参数契约中的 canonical 参数名；历史 alias 仅用于系统兼容归一化，不要主动输出 alias 字段\n");
+        sb.append("5. 风险标签用于辅助判断操作影响：READ 通常只读；CREATE/UPDATE/DELETE/ACTION 可能改变系统状态；requiresConfirmation=true 表示建议进入人工确认。M5.12 该标签仅为风险提示，真正执行层强制拦截由后续 HITL 策略负责。\n");
 
         return sb.toString();
     }
@@ -328,6 +343,22 @@ public class ToolRegistry {
         return specs.stream()
             .map(this::formatParameterSpec)
             .collect(Collectors.joining("; "));
+    }
+
+    /**
+     * 构建面向 ReAct/LLM 的紧凑风险契约。
+     *
+     * <p>M5.12 只暴露“业务风险语义”，不把 {@code apiEndpoints} 明文写入 Prompt，
+     * 避免 LLM 被内部路径诱导或向普通用户泄露 kube-manager 攻击面。</p>
+     */
+    private String buildRiskContract(ToolMetadata meta) {
+        if (meta == null) {
+            return "";
+        }
+        String operationType = meta.operationType().name();
+        String httpMethod = meta.httpMethod().isBlank() ? "未声明HTTP" : meta.httpMethod();
+        String confirmation = meta.requiresConfirmation() ? "requiresConfirmation=true" : "requiresConfirmation=false";
+        return String.format("operationType=%s, httpMethod=%s, %s", operationType, httpMethod, confirmation);
     }
 
     private String formatParameterSpec(ToolParameterSpec spec) {
@@ -400,11 +431,21 @@ public class ToolRegistry {
         private final Set<String> requiredRoles;
         private final boolean adminOnly;
 
+        // ── M5.12 新增：Tool 风险/HTTP 契约字段。Prompt 只暴露摘要，不暴露 apiEndpoints 明细。 ──
+        private final String httpMethod;
+        private final List<String> apiEndpoints;
+        private final AtlasToolMapping.OperationType operationType;
+        private final boolean requiresConfirmation;
+
         public ToolMetadata(String name, String description, String intentId,
                              String agent, BaseTool instance,
                              ToolPermission.Policy permissionPolicy,
                              Set<String> requiredRoles,
-                             boolean adminOnly) {
+                             boolean adminOnly,
+                             String httpMethod,
+                             String[] apiEndpoints,
+                             AtlasToolMapping.OperationType operationType,
+                             boolean requiresConfirmation) {
             this.name = name;
             this.description = description;
             this.intentId = intentId;
@@ -413,6 +454,10 @@ public class ToolRegistry {
             this.permissionPolicy = permissionPolicy;
             this.requiredRoles = requiredRoles != null ? Set.copyOf(requiredRoles) : Set.of();
             this.adminOnly = adminOnly;
+            this.httpMethod = httpMethod != null ? httpMethod : "";
+            this.apiEndpoints = apiEndpoints != null ? List.of(apiEndpoints) : List.of();
+            this.operationType = operationType != null ? operationType : AtlasToolMapping.OperationType.UNKNOWN;
+            this.requiresConfirmation = requiresConfirmation;
         }
 
         public String name() { return name; }
@@ -425,6 +470,10 @@ public class ToolRegistry {
         public ToolPermission.Policy permissionPolicy() { return permissionPolicy; }
         public Set<String> requiredRoles() { return requiredRoles; }
         public boolean isAdminOnly() { return adminOnly; }
+        public String httpMethod() { return httpMethod; }
+        public List<String> apiEndpoints() { return apiEndpoints; }
+        public AtlasToolMapping.OperationType operationType() { return operationType; }
+        public boolean requiresConfirmation() { return requiresConfirmation; }
 
         /**
          * 判断当前 Tool 是否对指定用户可见。

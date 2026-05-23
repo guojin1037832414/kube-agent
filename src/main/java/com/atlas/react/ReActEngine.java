@@ -233,9 +233,11 @@ public class ReActEngine {
                 long toolStartMs = System.currentTimeMillis();
                 String observation;
                 boolean toolSuccess;
+                Map<String, Object> riskMetadata = Map.of();
                 try {
-                    emitEvent(sink, ReActEvent.toolStart(steps, toolName, params));
                     ToolRegistry.ToolMetadata meta = toolRegistry.resolve(toolName);
+                    riskMetadata = buildToolRiskMetadata(meta);
+                    emitEvent(sink, ReActEvent.toolStart(steps, toolName, params, riskMetadata));
                     Map<String, Object> toolResult = meta.instance().execute(params);
                     observation = serializeToolResult(toolResult);
                     toolSuccess = isToolResultSuccess(toolResult);
@@ -251,7 +253,7 @@ public class ReActEngine {
                 observation = truncateObservation(observation, MAX_OBSERVATION_CHARS);
                 boolean observationTruncated = rawObservation != null && observation != null
                     && rawObservation.length() > observation.length();
-                emitEvent(sink, ReActEvent.toolDone(steps, toolName, toolSuccess, toolCostMs));
+                emitEvent(sink, ReActEvent.toolDone(steps, toolName, toolSuccess, toolCostMs, riskMetadata));
                 emitEvent(sink, ReActEvent.observation(steps, toolName, observation, observationTruncated));
 
                 // 9. 记录记忆
@@ -411,6 +413,23 @@ public class ReActEngine {
         }
 
         return null;
+    }
+
+    /**
+     * 构建前端可展示的 Tool 风险元数据。
+     *
+     * <p>M5.12 只透传非敏感摘要字段：HTTP 方法、业务操作类型、是否建议确认。
+     * 不透传 apiEndpoints，避免把 kube-manager 内部路径暴露到 LLM/前端时间线。</p>
+     */
+    private Map<String, Object> buildToolRiskMetadata(ToolRegistry.ToolMetadata meta) {
+        if (meta == null) {
+            return Map.of();
+        }
+        Map<String, Object> risk = new LinkedHashMap<>();
+        risk.put("httpMethod", meta.httpMethod());
+        risk.put("operationType", meta.operationType().name());
+        risk.put("requiresConfirmation", meta.requiresConfirmation());
+        return risk;
     }
 
     /**

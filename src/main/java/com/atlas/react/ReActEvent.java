@@ -31,15 +31,42 @@ public record ReActEvent(
 
     /** 创建工具开始事件。 */
     public static ReActEvent toolStart(int step, String tool, Map<String, Object> params) {
-        return new ReActEvent("tool_start", step, "正在调用工具: " + tool, tool, true,
-            Map.of("params", params != null ? params : Map.of()));
+        return toolStart(step, tool, params, Map.of());
+    }
+
+    /**
+     * 创建带扩展元数据的工具开始事件。
+     *
+     * <p>M5.12 将 Tool 风险字段放入 metadata，避免新增顶层协议字段破坏前端兼容性。</p>
+     */
+    public static ReActEvent toolStart(int step, String tool, Map<String, Object> params, Map<String, Object> extraMetadata) {
+        Map<String, Object> metadata = new java.util.LinkedHashMap<>();
+        metadata.put("params", params != null ? params : Map.of());
+        if (extraMetadata != null && !extraMetadata.isEmpty()) {
+            metadata.putAll(extraMetadata);
+        }
+        return new ReActEvent("tool_start", step, "正在调用工具: " + tool, tool, true, metadata);
     }
 
     /** 创建工具完成事件。 */
     public static ReActEvent toolDone(int step, String tool, boolean success, long costMs) {
+        return toolDone(step, tool, success, costMs, Map.of());
+    }
+
+    /**
+     * 创建带扩展元数据的工具完成事件。
+     *
+     * <p>保留 costMs，同时透传风险字段给前端时间线用于透明化展示。</p>
+     */
+    public static ReActEvent toolDone(int step, String tool, boolean success, long costMs, Map<String, Object> extraMetadata) {
+        Map<String, Object> metadata = new java.util.LinkedHashMap<>();
+        metadata.put("costMs", costMs);
+        if (extraMetadata != null && !extraMetadata.isEmpty()) {
+            metadata.putAll(extraMetadata);
+        }
         return new ReActEvent("tool_done", step,
             (success ? "工具执行成功" : "工具执行失败") + "，耗时 " + costMs + "ms",
-            tool, success, Map.of("costMs", costMs));
+            tool, success, metadata);
     }
 
     /** 创建 Observation 事件。 */
