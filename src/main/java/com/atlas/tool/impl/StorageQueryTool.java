@@ -21,7 +21,14 @@ import java.util.Set;
     name = "storage_status",
     agent = "storage",
     intentId = "storage_status",
-    description = "查询 Kubernetes 存储卷/PVC 状态"
+    description = "查询 Kubernetes 存储卷/PVC 状态",
+    httpMethod = "GET",
+    apiEndpoints = {
+        "/api/storage/pageList",
+        "/api/pvc/pageList",
+        "/api/{orgId}/file/storage/option"
+    },
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class StorageQueryTool extends BaseTool {

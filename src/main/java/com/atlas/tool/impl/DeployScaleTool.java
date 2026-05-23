@@ -20,7 +20,11 @@ import java.util.*;
     name = "deploy_scale",
     agent = "deploy",
     intentId = "deploy_scale",
-    description = "扩缩容实例"
+    description = "扩缩容实例",
+    httpMethod = "NONE",
+    apiEndpoints = {"/api/{orgId}/deployment/{var}/scale"},
+    operationType = AtlasToolMapping.OperationType.PLACEHOLDER,
+    requiresConfirmation = true
 )
 
 @ToolPermission(ToolPermission.Policy.AUTHENTICATED)

@@ -593,3 +593,56 @@
 1. M5.11 可继续推进“Tool 注解 method 与实际 HTTP 调用一致性契约”，专门防止 Agent 以为是 GET 但代码实际 POST/DELETE 的语义错位。
 2. 后续可逐步增加 ArchUnit layer rules：controller → orchestrator/react → tool/core → http，保护整体依赖方向。
 3. 保持 M5.7-M5.10 安全治理链共同运行，形成多层防线。
+
+## 2026-05-23 19:19 CST - M5.11 Atlas Tool HTTP 元数据契约小样本治理
+
+### 背景
+- M5.9/M5.10 已经分别完成 HTTP 出口源码契约和 ArchUnit 架构边界，但 Tool 注解层仍只有 `name/agent/description/intentId`，缺少机器可判定的 HTTP 方法、API 路径和业务风险语义。
+- 静态恢复现场发现当前 Tool 系统实际使用 `@AtlasToolMapping`，而不是旧记忆中的 `@AgentTool(method=...)`；因此 M5.11 目标调整为“AtlasToolMapping 声明与真实 KubeManagerHttpClient 调用一致性”。
+- 本阶段严格遵守哥哥要求：删除/修改类不做真实破坏性测试，只跑源码/单元/编译逻辑。
+
+### 专家会诊结论
+1. 架构专家：建议新增 `httpMethod/apiEndpoints/operationType`，但先小样本，不要一次性迁移 110 个 Tool。
+2. 测试契约专家：建议新增独立 `M511AtlasToolHttpContractTest`，源码扫描注解和 `KubeManagerHttpClient#get/post/delete` 调用；历史 Tool 可暂时跳过，已声明 Tool 强校验。
+3. 安全生产专家：指出 `POST` 不等于普通写，可能代表 delete/stop/abort/scale；风险语义必须独立建模，DELETE/ACTION/HOLD/PLACEHOLDER 必须走确认。
+
+### 本轮代码变更
+- 扩展 `AtlasToolMapping`：新增 `httpMethod`、`apiEndpoints`、`operationType`、`requiresConfirmation`，并内置 `OperationType` 枚举。
+- 小样本补齐 5 个 Tool 元数据：
+  - `EventQueryTool`：`GET /api/{orgId}/pod`，`READ`。
+  - `StorageQueryTool`：多路径 `GET` fallback，`READ`。
+  - `MpiJobSubmitTool`：`POST /api/{orgId}/mpi-job/submit`，`ACTION`，需确认。
+  - `ImageDeleteTool`：`DELETE /api/{orgId}/image/{var}`，`DELETE`，需确认。
+  - `DeployScaleTool`：`NONE` + `PLACEHOLDER`，标记未来 scale endpoint，需确认。
+- 新增 `M511AtlasToolHttpContractTest`：只校验已声明 `httpMethod` 的 Tool，验证方法一致性、风险元数据、endpoint 元数据和占位 Tool 不得真实调用 HTTP。
+
+### 测试结果
+- 定向测试：`mvn -Dtest=M511AtlasToolHttpContractTest test` → BUILD SUCCESS，1 test passed。
+- 编译打包：`mvn -DskipTests package` → BUILD SUCCESS。
+- 格式检查：`git diff --check` → 通过。
+- 静态 Review 扫描：当前声明 `httpMethod` 的 Tool 共 5 个：
+  - `deploy_scale`：NONE / PLACEHOLDER / requiresConfirmation=true / 无真实 HTTP 调用；
+  - `event_query`：GET / READ / 实际 GET；
+  - `image_delete`：DELETE / DELETE / requiresConfirmation=true / 实际 DELETE；
+  - `mpi_job_submit`：POST / ACTION / requiresConfirmation=true / 实际 POST；
+  - `storage_status`：GET / READ / 实际 GET。
+
+### 代码 Review
+#### 优点
+- 完整遵守“专家会诊 → 小样本验证 → 逻辑测试 → Review/文档”的开发铁律。
+- 新注解字段均有默认值，不破坏历史 110 个 Tool 的编译与注册。
+- 小样本覆盖 GET、POST、DELETE、多路径 GET fallback、NONE/PLACEHOLDER 五种关键形态，代表性足够。
+- 契约测试不启动 Spring、不访问 kube-manager、不执行真实删除/修改，安全边界清晰。
+- 高风险语义从 HTTP Method 中独立出来，避免 `POST delete`、`POST stop` 之类操作被误判为普通写入。
+
+#### 风险
+- 当前只是小样本，不是全量治理；历史 Tool 仍可能缺少元数据，后续需要持续铺开。
+- 契约测试暂未解析 endpoint 表达式是否与源码完全一致，只校验已声明 endpoint 存在；这是 M5.11 有意保守，避免 AST 复杂度过高。
+- `requiresConfirmation` 目前是元数据声明，还没有接入 ToolRegistry Prompt 或执行层强制拦截，后续需继续做 runtime fail-closed。
+- `DeployScaleTool` 被标为 PLACEHOLDER 后，仍需后续专门治理“占位 Tool 不应返回已执行成功”的用户体验与安全语义。
+
+### 后续建议
+1. M5.12：将 `operationType/requiresConfirmation/httpMethod` 注入 ToolRegistry system prompt，让 LLM 看见风险标签。
+2. M5.13：在 Tool 执行网关/BaseTool 层实现 DELETE/ACTION/PLACEHOLDER 的确认状态强制拦截。
+3. 分批迁移剩余 Tool：先 GET 查询类，再 DELETE，再 POST/ACTION，最后处理动态路径和占位 Tool。
+4. 后续升级契约测试 endpoint 解析能力：从“存在性校验”增强到“源码路径模板与注解路径集合一致”。

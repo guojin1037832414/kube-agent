@@ -23,7 +23,11 @@ import java.util.Set;
     name = "mpi_job_submit",
     agent = "deploy",
     intentId = "mpi_job_submit",
-    description = "提交MPI分布式任务，会修改后端状态"
+    description = "提交MPI分布式任务，会修改后端状态",
+    httpMethod = "POST",
+    apiEndpoints = {"/api/{orgId}/mpi-job/submit"},
+    operationType = AtlasToolMapping.OperationType.ACTION,
+    requiresConfirmation = true
 )
 @ToolPermission(ToolPermission.Policy.AUTHENTICATED)
 public class MpiJobSubmitTool extends BaseTool {

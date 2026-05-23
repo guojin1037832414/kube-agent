@@ -21,7 +21,11 @@ import java.util.*;
     name = "image_delete",
     agent = "deploy",
     intentId = "image_delete",
-    description = "删除镜像"
+    description = "删除镜像",
+    httpMethod = "DELETE",
+    apiEndpoints = {"/api/{orgId}/image/{var}"},
+    operationType = AtlasToolMapping.OperationType.DELETE,
+    requiresConfirmation = true
 )
 @ToolPermission(ToolPermission.Policy.ADMIN_ONLY)
 public class ImageDeleteTool extends BaseTool {

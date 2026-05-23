@@ -31,7 +31,10 @@ import java.util.Set;
     name = "event_query",
     agent = "diag",
     intentId = "event_query",
-    description = "查询Pod Warning/异常事件摘要"
+    description = "查询Pod Warning/异常事件摘要",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/pod"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class EventQueryTool extends BaseTool {

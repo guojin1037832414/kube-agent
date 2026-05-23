@@ -6,6 +6,48 @@
 
 ---
 
+## [M5.11] — Atlas Tool HTTP 元数据契约小样本治理
+
+**周期**: 2026-05-23
+**交付**: 建立 Tool 注解元数据与真实 kube-manager HTTP 调用的一致性契约小样本；扩展 `@AtlasToolMapping` 承载 `httpMethod/apiEndpoints/operationType/requiresConfirmation`，并用源码级静态测试保护已迁移 Tool，避免 LLM/ToolRegistry/安全策略误把写删操作当只读操作。
+
+### Added
+
+- `AtlasToolMapping` 新增兼容字段：
+  - `httpMethod`：声明真实 kube-manager HTTP 方法，默认空字符串兼容历史 Tool；
+  - `apiEndpoints`：声明一个或多个 API 路径模板，支持多路径 fallback；
+  - `operationType`：声明 READ/CREATE/UPDATE/DELETE/ACTION/PLACEHOLDER 等业务风险语义；
+  - `requiresConfirmation`：声明高风险 Tool 是否需要 Human-in-the-loop 确认。
+- 小样本迁移 5 类代表性 Tool：
+  - `event_query`：GET + READ；
+  - `storage_status`：多路径 GET fallback + READ；
+  - `mpi_job_submit`：POST + ACTION + requiresConfirmation；
+  - `image_delete`：DELETE + DELETE + requiresConfirmation；
+  - `deploy_scale`：NONE + PLACEHOLDER + requiresConfirmation。
+- 新增 `M511AtlasToolHttpContractTest`：
+  - 只校验已声明 `httpMethod` 的 Tool，避免一次性引爆 110 个历史 Tool；
+  - 静态扫描 `KubeManagerHttpClient` 字段变量名与 `get/post/delete/put/patch` 调用；
+  - 校验声明方法与真实调用一致；
+  - 校验写删/占位风险语义不能伪装成 READ；
+  - 校验 DELETE/ACTION/PLACEHOLDER 必须 `requiresConfirmation=true`；
+  - 校验非 NONE Tool 必须声明 `apiEndpoints`。
+
+### Verified
+
+- 专家会诊：✅ 架构专家、测试契约专家、安全生产就绪专家均建议建立 Tool HTTP 元数据契约；结论为先小样本验证，再分批铺开。
+- 定向契约测试：`mvn -Dtest=M511AtlasToolHttpContractTest test` → ✅ Tests run: 1, Failures: 0, Errors: 0。
+- 编译打包：`mvn -DskipTests package` → ✅ BUILD SUCCESS。
+- `git diff --check`：✅ 通过。
+- 静态 Review 扫描：✅ 当前仅 5 个 Tool 声明 `httpMethod`，方法与真实 `KubeManagerHttpClient` 调用一致；本阶段未调用真实 kube-manager，未执行真实删除/修改请求。
+
+### Risk / Deferred
+
+- M5.11 仍是小样本强契约，历史 105 个左右 Tool 仍保持 `operationType=UNKNOWN`/未声明 HTTP 元数据，后续需按 GET → DELETE → POST/ACTION → 特殊 Tool 分批铺开。
+- `DeployScaleTool` 当前被明确标记为 `PLACEHOLDER`，后续真实接入 PATCH/scale 前必须解除占位并补充真实 HTTP 契约与执行层 HITL 拦截。
+- 本阶段只把元数据写入注解并用源码契约保护，尚未把风险元数据注入 ToolRegistry Prompt 或执行层强制拦截；后续 M5.12/M5.13 可继续推进 prompt 暴露与 runtime fail-closed。
+
+---
+
 ## [M5.10] — ArchUnit 架构级安全边界契约治理
 
 **周期**: 2026-05-23
