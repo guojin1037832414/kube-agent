@@ -6,6 +6,45 @@
 
 ---
 
+## [M5.14] — Tool HTTP/风险元数据首批 GET/READ 扩面治理
+
+**周期**: 2026-05-24
+**交付**: 在 M5.11 小样本契约、M5.12 风险透明化、M5.13 fail-closed HITL 守卫基础上，继续按“先实验再铺开”原则扩展低风险 GET/READ Tool 元数据覆盖，并加固契约测试对未来 BaseTool 继承 HTTP Client 场景的识别能力。
+
+### Added
+
+- 加固 `M511AtlasToolHttpContractTest`：
+  - 新增 `BASE_TOOL_FILE` 与 `EXTENDS_BASE_TOOL_PATTERN`；
+  - 新增 `readVisibleClientFieldNames(...)`，在 Tool 继承 `BaseTool` 时合并基类可见 `KubeManagerHttpClient` 字段；
+  - 保持源码级静态测试边界，不启动 Spring、不调用 kube-manager、不触发真实数据面请求。
+- 首批 10 个低风险 GET/READ Tool 补充 `httpMethod/apiEndpoints/operationType`：
+  - 公共首页展示类：`home_model_list`、`home_industry_list`、`home_nim_list`、`home_industry_class_list`、`home_repository_list`；
+  - 普通只读查询类：`quota_my_list`、`resource_usage_list`、`namespace_list`、`table_list`、`cluster_overview`。
+
+### Verified
+
+- 专家会诊：✅ 已完成 Java 契约测试、安全 HITL、批量迁移三路会诊；结论为“READ 是白名单，不是 GET 同义词，必须小样本推进”。
+- M511 HTTP 元数据契约：`mvn -q -Dtest=M511AtlasToolHttpContractTest test` → ✅ 通过。
+- 定向回归组合：`mvn -q -Dtest=M511AtlasToolHttpContractTest,ToolRegistryPromptContractTest,ReActEventRiskMetadataTest,M513HitlFailClosedContractTest test` → ✅ 通过。
+- 后端编译：`mvn -q -DskipTests compile` → ✅ 通过。
+- 空白检查：`git diff --check` → ✅ 通过。
+- 独立 Review：✅ 未发现 blocker；确认未误标高风险 Tool、endpoint 与源码路径一致、未泄露凭据、未改业务逻辑。
+
+### Coverage
+
+- Tool 总数：110。
+- 已声明 HTTP 元数据：15（由 5 扩展到 15）。
+- 未声明 HTTP 元数据：95。
+- GET/READ 白名单：12（原 `EventQueryTool`、`StorageQueryTool` + 本阶段新增 10 个）。
+
+### Risk / Deferred
+
+- 本阶段只迁移人工确认过的低风险 GET/READ 小样本；POST/DELETE/ACTION/敏感 admin-only/下载导出类 Tool 不在本批范围。
+- 契约测试仍为源码正则扫描，短期足够保护小样本；后续若元数据治理继续扩大，可考虑抽象 JavaParser/AST Analyzer。
+- 大量历史 Tool 仍保持未声明/UNKNOWN，由 M5.13 fail-closed 继续保护，宁可多拦截，不误放行。
+
+---
+
 ## [M5.13] — HITL fail-closed 执行层强拦截前后端同步治理
 
 **周期**: 2026-05-23

@@ -25,7 +25,10 @@ import java.util.Set;
     name = "home_nim_list",
     agent = "query",
     intentId = "home_nim_list",
-    description = "查询首页NIM服务列表"
+    description = "查询首页NIM服务列表",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/public/home-info/nim"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class HomeNimListTool extends BaseTool {

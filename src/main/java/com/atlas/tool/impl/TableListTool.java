@@ -25,7 +25,10 @@ import java.util.Set;
     name = "table_list",
     agent = "query",
     intentId = "table_list",
-    description = "查询数据表列表"
+    description = "查询数据表列表",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/table"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class TableListTool extends BaseTool {

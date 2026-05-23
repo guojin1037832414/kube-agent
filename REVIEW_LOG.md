@@ -3,6 +3,72 @@
 > 本文件记录阶段性开发闭环：问题背景、解决方案、测试结果、代码 Review、风险与后续计划。
 
 
+## 2026-05-24 00:45 - M5.14 Tool HTTP/风险元数据首批 GET/READ 扩面治理
+
+### 背景
+- M5.11 建立了 `@AtlasToolMapping` HTTP/风险元数据契约小样本，但历史 Tool 大量仍未声明 `httpMethod/apiEndpoints/operationType`。
+- M5.12/M5.13 已分别完成风险透明化与 HITL fail-closed 强拦截；未迁移 Tool 会继续被保守拦截，但低风险只读 Tool 也无法精确进入 READ 白名单。
+- 用户要求“先实验再铺开”，且 READ 标注等价于免 HITL 白名单，不能机械地把所有 GET 批量标 READ。
+
+### 专家会诊结论
+1. M5.14 应先加固契约测试，再做首批低风险 GET/READ 小样本迁移。
+2. HTTP GET 只能作为 READ 候选信号，不能作为 READ 判定依据；READ 必须证明无副作用、无敏感泄露、权限边界清楚。
+3. POST/DELETE/ACTION、下载导出、敏感 admin-only、占位 Tool 暂不纳入本批 READ 扩面。
+4. 大量 UNKNOWN Tool 应继续由 M5.13 fail-closed 保护，不能为了覆盖率牺牲安全边界。
+
+### 变更内容
+- `M511AtlasToolHttpContractTest`
+  - 新增 `BASE_TOOL_FILE` 与 `EXTENDS_BASE_TOOL_PATTERN`。
+  - 新增 `readVisibleClientFieldNames(...)`，支持未来 Tool 继承 `BaseTool` 后仍识别基类可见 `KubeManagerHttpClient` 字段。
+  - 保持源码级静态测试，不启动 Spring、不访问真实 kube-manager。
+- 首批补充 10 个 GET/READ Tool 元数据：
+  - `HomeModelListTool` → `/api/public/home-info/model-list`
+  - `HomeIndustryListTool` → `/api/public/home-info/industry-solutions`
+  - `HomeNimListTool` → `/api/public/home-info/nim`
+  - `HomeIndustryClassListTool` → `/api/public/home-info/industry-classification`
+  - `HomeRepositoryListTool` → `/api/public/home-info/repository`
+  - `QuotaMyListTool` → `/api/{orgId}/quota/my`
+  - `ResourceUsageListTool` → `/api/{orgId}/resource`
+  - `NamespaceListTool` → `/api/{orgId}/namespace`
+  - `TableListTool` → `/api/{orgId}/table`
+  - `ClusterOverviewTool` → `/api/{orgId}/dashboard/resources`
+
+### 测试结果
+| 项目 | 命令/方式 | 结果 |
+|------|-----------|------|
+| M511 契约测试 | `mvn -q -Dtest=M511AtlasToolHttpContractTest test` | ✅ PASS |
+| 定向回归组合 | `mvn -q -Dtest=M511AtlasToolHttpContractTest,ToolRegistryPromptContractTest,ReActEventRiskMetadataTest,M513HitlFailClosedContractTest test` | ✅ PASS |
+| 后端编译 | `mvn -q -DskipTests compile` | ✅ PASS |
+| 空白检查 | `git diff --check` | ✅ PASS |
+| 独立 Review | delegate_task | ✅ PASS，无 blocker |
+
+### 覆盖率变化
+- Tool 总数：110。
+- 已声明 HTTP 元数据：15。
+- 未声明 HTTP 元数据：95。
+- GET/READ 白名单：12。
+
+### 代码 Review
+#### 优点
+- 坚持小样本扩面，避免一次性把 80+ GET Tool 误放入免确认白名单。
+- 契约测试先行，保护已迁移 Tool 的 HTTP 方法、endpoint、operationType 一致性。
+- 本阶段仅改注解元数据和测试识别逻辑，不改业务执行路径，回归风险低。
+
+#### 风险
+- `EXTENDS_BASE_TOOL_PATTERN` 是源码正则，未来复杂继承声明可能需要 AST Analyzer。
+- 本阶段未迁移剩余 95 个 Tool，历史 Tool 仍需继续分批治理。
+- 部分 GET Tool 可能涉及敏感数据或管理面信息，后续不能机械迁移。
+
+### 根因与解决方案
+- 根因：M5.11 初始小样本只覆盖 5 个代表 Tool，M5.13 fail-closed 后，未声明 Tool 会被保守拦截；要提升体验与准确性，必须逐步扩大可信 READ 元数据覆盖。
+- 解决：先通过专家会诊确立 READ 白名单边界，再加固契约测试，最后只迁移人工确认过的低风险 GET/READ 小样本。
+
+### 后续建议
+1. 继续按 10～15 个/批推进普通 GET/READ Tool，敏感 admin-only 与下载导出类单独审查。
+2. 为 POST/DELETE/ACTION Tool 建立高风险迁移批次，确保 `requiresConfirmation=true`。
+3. 若迁移规模继续扩大，将源码正则分析器升级为 JavaParser/AST Analyzer。
+
+
 ## 2026-05-23 23:45 - M5.13 HITL fail-closed 执行层强拦截前后端同步治理
 
 ### 背景

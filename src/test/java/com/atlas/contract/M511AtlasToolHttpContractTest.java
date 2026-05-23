@@ -31,6 +31,9 @@ class M511AtlasToolHttpContractTest {
     /** Tool 实现类所在目录。 */
     private static final Path TOOL_IMPL_DIR = Path.of("src/main/java/com/atlas/tool/impl");
 
+    /** Atlas Tool 抽象基类源码路径，用于识别子类可见的继承 HTTP Client 字段。 */
+    private static final Path BASE_TOOL_FILE = Path.of("src/main/java/com/atlas/tool/core/BaseTool.java");
+
     /** 声明为无真实 HTTP 的占位方法。 */
     private static final String NONE_METHOD = "NONE";
 
@@ -51,6 +54,9 @@ class M511AtlasToolHttpContractTest {
 
     /** 匹配 KubeManagerHttpClient 字段名，兼容 httpClient/kubeManagerHttpClient 等变量。 */
     private static final Pattern CLIENT_FIELD_PATTERN = Pattern.compile("KubeManagerHttpClient\\s+(\\w+)\\s*;");
+
+    /** 匹配继承 BaseTool 的 Tool 子类。 */
+    private static final Pattern EXTENDS_BASE_TOOL_PATTERN = Pattern.compile("class\\s+\\w+\\s+extends\\s+BaseTool");
 
     @Test
     void declaredAtlasToolHttpMetadata_shouldMatchActualKubeManagerClientCalls() throws IOException {
@@ -93,7 +99,7 @@ class M511AtlasToolHttpContractTest {
             String operationType = readOperationType(annotation);
             boolean requiresConfirmation = readRequiresConfirmation(annotation);
             Set<String> declaredEndpoints = readApiEndpoints(annotation);
-            Set<String> clientFieldNames = readClientFieldNames(source);
+            Set<String> clientFieldNames = readVisibleClientFieldNames(source);
             Set<String> actualMethods = readActualHttpMethods(source, clientFieldNames);
 
             verifyMethodConsistency(path, toolName, declaredMethod, actualMethods, violations);
@@ -168,6 +174,29 @@ class M511AtlasToolHttpContractTest {
                 "tool=" + toolName + ", declaredMethod=" + declaredMethod
                     + ", suggestion=非 NONE Tool 必须声明 apiEndpoints，支持多路径 fallback"));
         }
+    }
+
+    /**
+     * 读取当前 Tool 可见的 KubeManagerHttpClient 字段变量名。
+     *
+     * <p>M5.14 加固点：当前主干多数 Tool 仍在子类里声明 {@code KubeManagerHttpClient httpClient}，
+     * 但后续如果把 HTTP Client 上收到 {@code BaseTool}，子类源码中就不再出现字段声明。
+     * 本方法会在确认子类继承 {@code BaseTool} 后，额外合并基类中的 KubeManagerHttpClient 字段，
+     * 避免契约测试误判“声明了 GET 但没有真实 HTTP 调用”。</p>
+     */
+    private Set<String> readVisibleClientFieldNames(String source) throws IOException {
+        Set<String> names = new LinkedHashSet<>(readClientFieldNames(source));
+        if (extendsBaseTool(source) && Files.exists(BASE_TOOL_FILE)) {
+            names.addAll(readClientFieldNames(Files.readString(BASE_TOOL_FILE)));
+        }
+        return names;
+    }
+
+    /**
+     * 判断当前源码是否为继承 BaseTool 的 Tool 子类。
+     */
+    private boolean extendsBaseTool(String source) {
+        return EXTENDS_BASE_TOOL_PATTERN.matcher(source).find();
     }
 
     /**

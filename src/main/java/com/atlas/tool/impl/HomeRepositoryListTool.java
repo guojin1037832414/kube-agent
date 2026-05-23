@@ -25,7 +25,10 @@ import java.util.Set;
     name = "home_repository_list",
     agent = "query",
     intentId = "home_repository_list",
-    description = "查询首页AI应用仓库列表"
+    description = "查询首页AI应用仓库列表",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/public/home-info/repository"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class HomeRepositoryListTool extends BaseTool {

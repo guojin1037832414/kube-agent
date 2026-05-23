@@ -25,7 +25,10 @@ import java.util.Set;
     name = "home_industry_class_list",
     agent = "query",
     intentId = "home_industry_class_list",
-    description = "查询行业分类列表"
+    description = "查询行业分类列表",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/public/home-info/industry-classification"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class HomeIndustryClassListTool extends BaseTool {

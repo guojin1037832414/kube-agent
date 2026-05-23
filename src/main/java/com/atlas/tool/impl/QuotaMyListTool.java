@@ -25,7 +25,10 @@ import java.util.Set;
     name = "quota_my_list",
     agent = "query",
     intentId = "quota_my_list",
-    description = "查询我的配额申请列表"
+    description = "查询我的配额申请列表",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/quota/my"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class QuotaMyListTool extends BaseTool {

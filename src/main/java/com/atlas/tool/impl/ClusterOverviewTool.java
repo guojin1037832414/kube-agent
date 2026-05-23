@@ -21,7 +21,10 @@ import java.util.Set;
     name = "cluster_overview",
     agent = "query",
     intentId = "cluster_overview",
-    description = "集群概览/运营看板"
+    description = "集群概览/运营看板",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/dashboard/resources"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class ClusterOverviewTool extends BaseTool {

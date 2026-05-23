@@ -25,7 +25,10 @@ import java.util.Set;
     name = "namespace_list",
     agent = "query",
     intentId = "namespace_list",
-    description = "查询命名空间列表"
+    description = "查询命名空间列表",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/namespace"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class NamespaceListTool extends BaseTool {

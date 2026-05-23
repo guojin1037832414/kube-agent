@@ -25,7 +25,10 @@ import java.util.Set;
     name = "resource_usage_list",
     agent = "query",
     intentId = "resource_usage_list",
-    description = "查询资源使用列表"
+    description = "查询资源使用列表",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/resource"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class ResourceUsageListTool extends BaseTool {
