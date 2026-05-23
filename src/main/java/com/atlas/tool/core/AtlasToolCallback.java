@@ -1,5 +1,6 @@
 package com.atlas.tool.core;
 
+import com.atlas.hitl.HitlGuard;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.ai.tool.ToolCallback;
@@ -32,11 +33,23 @@ public class AtlasToolCallback implements ToolCallback {
         new DefaultToolCallResultConverter();
 
     private final BaseTool tool;
+    private final HitlGuard hitlGuard;
+    private final ToolRegistry.ToolMetadata atlasMetadata;
     private final ToolDefinition toolDefinition;
     private final ToolMetadata toolMetadata;
 
     public AtlasToolCallback(BaseTool tool) {
+        this(tool, new HitlGuard(), null);
+    }
+
+    public AtlasToolCallback(BaseTool tool, HitlGuard hitlGuard) {
+        this(tool, hitlGuard, null);
+    }
+
+    public AtlasToolCallback(BaseTool tool, HitlGuard hitlGuard, ToolRegistry.ToolMetadata atlasMetadata) {
         this.tool = tool;
+        this.hitlGuard = hitlGuard != null ? hitlGuard : new HitlGuard();
+        this.atlasMetadata = atlasMetadata;
         this.toolDefinition = buildToolDefinition(tool);
         this.toolMetadata = ToolMetadata.builder().build();
     }
@@ -56,9 +69,15 @@ public class AtlasToolCallback implements ToolCallback {
         try {
             // 1. JSON → Map（LLM 传的参数）
             Map<String, Object> params = parseInput(toolInput);
-            // 2. 调用 Atlas Tool
+            // 2. HITL fail-closed 守卫：ToolCallback 路径没有 Graph State 中的服务端确认 marker，
+            // 因此遇到高风险 Tool 必须拒绝，防止 Spring AI ReactAgent 绕过主 Graph tool_call 拦截。
+            HitlGuard.Decision hitlDecision = hitlGuard.verify(tool.getToolName(), atlasMetadata, null);
+            if (!hitlDecision.allowed()) {
+                return DEFAULT_CONVERTER.convert(hitlGuard.toBlockedToolResult(hitlDecision), Map.class);
+            }
+            // 3. 调用 Atlas Tool
             Map<String, Object> result = tool.execute(params);
-            // 3. Map → JSON（返回给 LLM）
+            // 4. Map → JSON（返回给 LLM）
             return DEFAULT_CONVERTER.convert(result, Map.class);
         } catch (Exception e) {
             // 任何序列化/调用异常都返回结构化错误，不抛出让 LLM 断线

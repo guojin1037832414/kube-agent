@@ -6,6 +6,53 @@
 
 ---
 
+## [M5.13] — HITL fail-closed 执行层强拦截前后端同步治理
+
+**周期**: 2026-05-23
+**交付**: 在 M5.12 风险透明化基础上，将 HITL 从提示/占位升级为后端执行层 fail-closed 强拦截：高风险 Tool 未经服务端可信人工确认一律拒绝执行；确认后只放行精确目标 Tool；前端同步确认流缺字段 fail-closed 与风险文案。
+
+### Added
+
+- 后端新增 `com.atlas.hitl.HitlConfirmation`：服务端可信确认 marker，仅由 `HITLController.confirmAndResume` 在 `confirmToken` 校验成功后创建。
+- 后端新增 `com.atlas.hitl.HitlGuard`：统一执行层守卫，依据 `ToolRegistry.ToolMetadata` 判断风险：
+  - `requiresConfirmation=true` 必须确认；
+  - `operationType != READ` 必须确认；
+  - metadata 缺失时 fail-closed，避免未知 Tool 被默认为安全。
+- `ToolRegistry` 增加按 intent/tool 名称解析元数据能力，供执行层守卫使用。
+- `AtlasGraphConfig.supervisorGraph` 的 `tool_call` 节点在 `tool.execute(...)` 前读取 `hitl_confirmation` 并调用 `HitlGuard`。
+- `ReActEngine`、`AtlasOrchestrator` legacy fallback、`graph.bridge.AtlasToolCallback`、`tool.core.AtlasToolCallback` 均在直接 execute 前接入 `HitlGuard`，关闭多入口绕过风险。
+- `HITLController` 明确注入 `@Qualifier("supervisorGraph")`，confirm 后恢复进入可读取 `hitl_confirmation` 的 `tool_call` 链路。
+- `supervisorGraph` 的 supervisor 节点优先复用 resume 注入的 `brain_decision`，避免确认后的 `CALL_TOOL` 被重新 LLM/Brain 决策覆盖。
+- 普通新会话与 clarify/resume 非确认路径均显式 `hitl_confirmation=null`，避免 checkpoint/同线程状态继承旧确认。
+- 新增后端源码契约测试 `M513HitlFailClosedContractTest`，锁定多入口 guard、确认 marker、clarify 清理、确认后复用决策等关键结构。
+- 前端 `kube-agent-vue`：
+  - `useChat.ts` 修复/增强 SSE confirm/clarify 解析；
+  - `ChatView.vue` 对缺 `threadId/confirmToken` 的确认流 fail-closed，不继续调用后端确认接口；
+  - `ChatBubble.vue` 将风险提示文案从“建议确认”调整为“执行前确认”，避免误导为软提示。
+- 新增前端源码契约脚本 `scripts/m513-hitl-contract-test.cjs`。
+
+### Verified
+
+- 后端 M5.13 定向契约测试：`mvn -q -Dtest=M513HitlFailClosedContractTest test` → ✅ 通过。
+- 后端编译：`mvn -q -DskipTests compile` → ✅ 通过。
+- 前端契约：`node scripts/m513-hitl-contract-test.cjs` → ✅ 通过。
+- 前端构建：`npm run build`（`vue-tsc && vite build`）→ ✅ 通过；仅有 Element Plus 依赖 Rollup 注释警告。
+- 后端/前端 `git diff --check` → ✅ 通过。
+- 新增行敏感信息扫描：后端/前端 `secret_suspects=0`。
+- 三轮独立 Review：
+  - 第 1 轮发现多 execute 入口绕过与 clarify 旧 marker 继承风险；已修复。
+  - 第 2 轮发现确认后恢复链路可能被重新决策覆盖；已修复。
+  - 第 3 轮结论：未发现高风险绕过、旧确认继承或确认后不可执行等严重问题，M5.13 闭环通过。
+- 本阶段未对真实 kube-manager 执行删除/修改/创建类破坏性请求，仅做源码契约、编译构建与逻辑级验证。
+
+### Risk / Deferred
+
+- 当前 `HitlConfirmation` 主要校验 target 与服务端来源；后续可继续把 threadId 纳入 `HitlGuard.verify` 参数以收紧边界。
+- `com.atlas.graph.bridge.AtlasToolCallback` 与 `com.atlas.tool.core.AtlasToolCallback` 存在同名类，当前均已接入 guard，但后续建议统一命名或合并，降低维护误改概率。
+- 后续可补充非字符串级运行时集成测试，模拟 `HITL_CONFIRM -> confirm -> supervisorGraph tool_call -> HitlGuard 放行 -> tool.execute` 全链路。
+
+---
+
 ## [M5.12] — Tool 风险元数据透明化前后端同步治理
 
 **周期**: 2026-05-23

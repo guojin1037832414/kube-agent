@@ -1,5 +1,74 @@
 # Atlas v3.1 开发审计日志
 
+
+## 2026-05-23 23:45 - M5.13 HITL fail-closed 执行层强拦截前后端同步治理
+
+### 背景
+- M5.12 已完成 Tool 风险元数据透明化，但它不是安全边界，仍可能出现高风险 Tool 仅靠 Prompt/UI 提示执行的问题。
+- 既有 `hitl_confirm` 节点只是返回确认文案，占位意义大于执行层强拦截。
+- 用户要求所有功能前后端同步推进，且删除/修改类操作不做真实破坏性测试，只跑通逻辑和契约。
+
+### 专家会诊 / 独立 Review 结论
+1. HITL 安全边界必须下沉到每个真实 `tool.execute(...)` 前，不能只放在 Brain 决策或前端弹窗。
+2. 只能信任后端 `HITLController` 在 `confirmToken` 校验成功后注入的 `HitlConfirmation`；不信 LLM 参数、前端字段或用户自然语言“已确认”。
+3. `Graph tool_call`、`ReActEngine`、`AtlasOrchestrator` legacy fallback、`ToolCallback` 都是潜在直接执行入口，必须统一接入守卫。
+4. clarify 与普通新会话必须显式清空确认 marker，避免旧确认继承。
+5. confirm 后必须确保恢复链路进入可读取 `hitl_confirmation` 的 `supervisorGraph tool_call`，并复用已确认的 `CALL_TOOL` 决策，避免重新决策覆盖。
+
+### 变更内容
+#### 后端 kube-agent
+- 新增 `HitlConfirmation`：服务端可信人工确认 marker。
+- 新增 `HitlGuard`：基于 Tool 元数据执行 fail-closed 风险判定。
+- `ToolRegistry` 增加元数据解析能力。
+- `AtlasGraphConfig.supervisorGraph/tool_call` 在 `tool.execute` 前校验 `hitl_confirmation + HitlGuard`。
+- `ReActEngine`、`AtlasOrchestrator` legacy fallback、`graph.bridge.AtlasToolCallback`、`tool.core.AtlasToolCallback` 均接入 `HitlGuard`。
+- `HITLController` 改为注入 `@Qualifier("supervisorGraph")`；confirm 成功后注入 `HitlConfirmation`；clarify 路径显式清空 marker。
+- `supervisorGraph` supervisor 节点优先复用 resume 注入的 `brain_decision`，保障确认后 `CALL_TOOL` 不被覆盖。
+- 普通 Graph/Supervisor 新会话显式 `hitl_confirmation=null`。
+- 新增 `M513HitlFailClosedContractTest`，覆盖多入口守卫、确认 marker、clarify 清理、确认后复用决策等契约。
+
+#### 前端 kube-agent-vue
+- `useChat.ts` 增强 confirm/clarify SSE 解析。
+- `ChatView.vue` 对缺 `threadId/confirmToken` 的确认流 fail-closed，不调用确认接口。
+- `ChatBubble.vue` 将风险文案改为“执行前确认”，与后端强拦截语义一致。
+- 新增 `scripts/m513-hitl-contract-test.cjs` 保护前端确认流契约。
+
+### 测试结果
+| 项目 | 命令/方式 | 结果 |
+|------|-----------|------|
+| 后端定向契约 | `mvn -q -Dtest=M513HitlFailClosedContractTest test` | ✅ PASS |
+| 后端编译 | `mvn -q -DskipTests compile` | ✅ PASS |
+| 前端契约 | `node scripts/m513-hitl-contract-test.cjs` | ✅ PASS |
+| 前端构建 | `npm run build` | ✅ PASS（Element Plus 依赖 Rollup 注释 warning，不阻塞） |
+| 后端空白检查 | `git diff --check` | ✅ PASS |
+| 前端空白检查 | `git diff --check` | ✅ PASS |
+| 敏感信息扫描 | Python added-lines scan | ✅ `secret_suspects=0` |
+| 独立 Review 第 1 轮 | delegate_task | ❌ 发现多入口绕过/clarify marker 继承风险，已修复 |
+| 独立 Review 第 2 轮 | delegate_task | ❌ 发现确认后恢复可能重新决策覆盖，已修复 |
+| 独立 Review 第 3 轮 | delegate_task | ✅ PASS |
+
+### 代码 Review
+#### 优点
+- 安全边界从 UI/Prompt 下沉到执行层，符合 fail-closed 原则。
+- 多执行入口统一接入 `HitlGuard`，降低未来绕过风险。
+- 服务端可信 marker 与前端 fail-closed 同步设计，前后端语义一致。
+- 源码契约测试覆盖了本阶段关键架构约束，且不触碰真实删除/修改类后端数据。
+
+#### 风险
+- 当前主要是源码契约/编译构建验证，尚未补运行时 mock 集成测试。
+- 两个同名 `AtlasToolCallback` 类仍增加维护认知成本，后续建议合并或重命名。
+- `HitlConfirmation` 未来可加强 threadId 维度校验，进一步收紧跨 checkpoint 边界。
+
+### 根因与解决方案
+- 根因：M5.12 只做风险透明化，旧 HITL 节点没有在 `tool.execute` 前建立硬边界；同时项目存在 Graph/ReAct/legacy/ToolCallback 多条执行路径。
+- 解决：新增统一 `HitlGuard` 并接入所有已知执行入口；确认 marker 只由服务端 token 校验后注入；普通/clarify 路径显式清空；confirm 恢复链路固定到 `supervisorGraph` 并复用注入决策。
+
+### 后续建议
+1. 补充运行时 mock 集成测试，模拟完整 HITL confirm 放行链路。
+2. 清理两个同名 `AtlasToolCallback` 类，降低维护误改概率。
+3. 将 `threadId` 纳入 `HitlConfirmation`/`HitlGuard` 校验参数，进一步收紧边界。
+4. 继续分批迁移剩余 Tool 的 HTTP/风险元数据，提升 guard 判定准确度。
+
 ## 2026-05-22 — M5.7 fallbackOrgId 可信语义彻底收口与登录 fail-safe 治理
 
 ### 背景

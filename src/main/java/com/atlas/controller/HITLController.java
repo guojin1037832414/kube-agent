@@ -7,6 +7,7 @@ import com.alibaba.cloud.ai.graph.state.StateSnapshot;
 import com.atlas.brain.BrainDecision;
 import com.atlas.auth.UserPermissionContext;
 import com.atlas.auth.async.AsyncContextHolder;
+import com.atlas.hitl.HitlConfirmation;
 import com.atlas.orchestrator.AtlasOrchestrator;
 import com.atlas.orchestrator.StreamingEmitter;
 import com.atlas.orchestrator.SseEvent;
@@ -62,7 +63,7 @@ public class HITLController {
     private final Executor asyncExecutor;
 
     public HITLController(
-            CompiledGraph compiledGraph,
+            @Qualifier("supervisorGraph") CompiledGraph compiledGraph,
             AtlasOrchestrator orchestrator,
             StreamingEmitter streamingEmitter,
             TimedDecisionCache decisionCache,
@@ -110,8 +111,9 @@ public class HITLController {
             original.requiredContext()
         );
 
+        HitlConfirmation confirmation = HitlConfirmation.human(threadId, original.target());
         log.info("[HITL] 用户确认执行: threadId={}, target={}", threadId, original.target());
-        runResumeWithCheckpointContext(threadId, confirmed, emitter);
+        runResumeWithCheckpointContext(threadId, confirmed, confirmation, emitter);
         return emitter;
     }
 
@@ -143,7 +145,7 @@ public class HITLController {
         );
 
         log.info("[HITL] 用户澄清: threadId={}, reply={}", threadId, request.reply());
-        runResumeWithCheckpointContext(threadId, clarified, emitter);
+        runResumeWithCheckpointContext(threadId, clarified, null, emitter);
         return emitter;
     }
 
@@ -154,7 +156,10 @@ public class HITLController {
      * 后续 Tool 层会失去可信租户边界。这里提前读取 checkpoint 并使用 AsyncContextHolder 包装，
      * 保证异步线程中 ThreadLocal 的 token/orgId 与主流程一致；缺失 orgId 时 fail-safe，不继续执行。</p>
      */
-    private void runResumeWithCheckpointContext(String threadId, BrainDecision decision, SseEmitter emitter) {
+    private void runResumeWithCheckpointContext(String threadId,
+                                                BrainDecision decision,
+                                                HitlConfirmation confirmation,
+                                                SseEmitter emitter) {
         CheckpointContext context = loadCheckpointContext(threadId);
         if (context.orgId().isBlank()) {
             CompletableFuture.runAsync(
@@ -164,7 +169,7 @@ public class HITLController {
             return;
         }
         CompletableFuture.runAsync(
-            AsyncContextHolder.wrap(() -> resumeGraph(threadId, decision, emitter), context.token(), context.orgId()),
+            AsyncContextHolder.wrap(() -> resumeGraph(threadId, decision, confirmation, emitter), context.token(), context.orgId()),
             asyncExecutor
         );
     }
@@ -194,13 +199,23 @@ public class HITLController {
      *
      * <p>关键：resume 时必须复用原会话的 Token/上下文，否则后端 Tool 无权限执行。</p>
      */
-    private void resumeGraph(String threadId, BrainDecision newDecision, SseEmitter emitter) {
+    private void resumeGraph(String threadId,
+                             BrainDecision newDecision,
+                             HitlConfirmation confirmation,
+                             SseEmitter emitter) {
         try {
             RunnableConfig config = RunnableConfig.builder().threadId(threadId).build();
 
             // 1. 构建输入：新决策 + 澄清输入
             Map<String, Object> inputs = new HashMap<>();
-            inputs.put("brain_decision", newDecision);
+        inputs.put("brain_decision", newDecision);
+        if (confirmation != null) {
+            inputs.put("hitl_confirmation", confirmation);
+        } else {
+            // M5.13 fail-closed 修复：clarify/resume 不是人工确认，必须显式清空旧确认 marker，
+            // 防止同一 thread/checkpoint 中历史确认被后续恢复流程继承并绕过新的 HITL。
+            inputs.put("hitl_confirmation", null);
+        }
             inputs.put("input", String.valueOf(
                 newDecision.parameters().getOrDefault("clarified_input", "")
             ));

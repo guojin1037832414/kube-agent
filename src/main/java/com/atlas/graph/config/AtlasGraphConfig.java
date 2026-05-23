@@ -28,6 +28,8 @@ import org.springframework.context.annotation.Primary;
 import com.atlas.brain.AtlasBrain;
 import com.atlas.brain.BrainDecision;
 import com.atlas.brain.ExecutionContext;
+import com.atlas.hitl.HitlConfirmation;
+import com.atlas.hitl.HitlGuard;
 import com.atlas.tool.core.ToolRegistry;
 import java.time.Instant;
 import java.util.HashMap;
@@ -360,6 +362,13 @@ public class AtlasGraphConfig {
         return key != null && PROTECTED_CONTEXT_PARAMS.contains(key);
     }
 
+    /**
+     * 判断 Tool 是否必须经过 HITL 人工确认。
+     *
+     * <p>M5.13 采用 fail-closed 策略：只有明确声明为 READ 且未要求确认的 Tool 可以直接执行。
+     * CREATE/UPDATE/DELETE/ACTION/PLACEHOLDER/UNKNOWN 以及元数据缺失，都视为需要确认。
+     * 这样即使某个历史 Tool 尚未补齐风险注解，也不会被默认放行。</p>
+     */
     private KeyStrategyFactory buildKeyStrategyFactory() {
         return () -> {
             HashMap<String, KeyStrategy> strategies = new HashMap<>();
@@ -385,6 +394,7 @@ public class AtlasGraphConfig {
             strategies.put("organizationId", new ReplaceStrategy()); // 兼容旧 key，仅系统写入
             strategies.put("answer", new ReplaceStrategy());         // 直接回答 / tool_call 返回
             strategies.put("tool_result", new ReplaceStrategy());      // Tool 结构化结果
+            strategies.put("hitl_confirmation", new ReplaceStrategy()); // M5.13 服务端确认凭证：只由 HITLController 写入
             return strategies;
         };
     }
@@ -452,6 +462,7 @@ public class AtlasGraphConfig {
     @Bean
     public CompiledGraph supervisorGraph(
             AtlasBrain atlasBrain, ToolRegistry toolRegistry,
+            HitlGuard hitlGuard,
             ReActEngine reactEngine,
             ReActEventSinkRegistry reactEventSinkRegistry,
             com.atlas.http.KubeManagerHttpClient kubeManagerClient,
@@ -488,6 +499,20 @@ public class AtlasGraphConfig {
                 java.util.Map.of("token", token),
                 UUID.randomUUID().toString(), Instant.now()
             );
+
+            BrainDecision existingDecision = state.value("brain_decision")
+                .filter(BrainDecision.class::isInstance)
+                .map(BrainDecision.class::cast)
+                .orElse(null);
+            if (existingDecision != null) {
+                // M5.13 HITL 恢复闭环：confirm/clarify 会通过 Graph resume 显式注入新的 brain_decision。
+                // 其中 confirm 注入的是已通过服务端 token 校验的 CALL_TOOL 决策，必须优先复用，
+                // 否则再次调用 AtlasBrain 会覆盖目标 Tool，导致确认后仍无法进入 tool_call。
+                java.util.Map<String, Object> updates = new java.util.HashMap<>();
+                updates.put("brain_decision", existingDecision);
+                updates.put("reasoning", existingDecision.reasoning());
+                return updates;
+            }
 
             BrainDecision decision = atlasBrain.decide(ctx);
 
@@ -611,7 +636,20 @@ public class AtlasGraphConfig {
                 toolParams.put("userId", userId);
                 toolParams.put("organizationId", orgId);
 
-                // 4. 执行 Tool
+                // 4. 执行层 HITL 强拦截。
+                // M5.13 fail-closed 原则：任何声明 requiresConfirmation=true，或风险语义不是 READ 的 Tool，
+                // 都必须携带后端 HITLController 注入的服务端确认凭证。LLM/前端/用户参数中的 confirmed
+                // 字段一律不可信，前面参数过滤也不会把该类字段作为授权依据。
+                HitlConfirmation confirmation = state.value("hitl_confirmation")
+                    .filter(HitlConfirmation.class::isInstance)
+                    .map(HitlConfirmation.class::cast)
+                    .orElse(null);
+                HitlGuard.Decision hitlDecision = hitlGuard.verifyByIntentId(toolRegistry, intentId, confirmation);
+                if (!hitlDecision.allowed()) {
+                    return java.util.Map.of("answer", hitlDecision.message());
+                }
+
+                // 5. 执行 Tool
                 try {
                     java.util.Map<String, Object> toolResult = tool.execute(toolParams);
                     boolean success = Boolean.TRUE.equals(toolResult.get("success"));

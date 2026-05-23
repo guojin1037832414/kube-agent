@@ -2,6 +2,7 @@ package com.atlas.orchestrator;
 
 import com.atlas.auth.UserPermissionContext;
 import com.atlas.http.KubeManagerHttpClient;
+import com.atlas.hitl.HitlGuard;
 import com.atlas.intent.IntentRouter;
 import com.atlas.orchestrator.polish.ToolResultPolishingService;
 import com.atlas.react.ReActEventSinkRegistry;
@@ -33,6 +34,7 @@ class AtlasOrchestratorJsonTest {
             mock(ToolRegistry.class),
             mock(UserPermissionContext.class),
             mock(KubeManagerHttpClient.class),
+            mock(HitlGuard.class),
             mock(ReActEventSinkRegistry.class),
             mock(TimedDecisionCache.class),
             mock(ToolResultPolishingService.class),

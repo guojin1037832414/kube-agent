@@ -1,6 +1,7 @@
 package com.atlas.graph.bridge;
 
 import com.atlas.tool.core.BaseTool;
+import com.atlas.hitl.HitlGuard;
 import com.atlas.tool.core.ToolParameterNormalizer;
 import com.atlas.tool.core.ToolRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -29,13 +30,16 @@ public class AtlasToolCallbackFactory {
     private final ToolRegistry toolRegistry;
     private final ObjectMapper objectMapper;
     private final ToolParameterNormalizer parameterNormalizer;
+    private final HitlGuard hitlGuard;
 
     public AtlasToolCallbackFactory(ToolRegistry toolRegistry,
                                     ObjectMapper objectMapper,
-                                    ToolParameterNormalizer parameterNormalizer) {
+                                    ToolParameterNormalizer parameterNormalizer,
+                                    HitlGuard hitlGuard) {
         this.toolRegistry = toolRegistry;
         this.objectMapper = objectMapper;
         this.parameterNormalizer = parameterNormalizer;
+        this.hitlGuard = hitlGuard;
     }
 
     /**
@@ -44,7 +48,7 @@ public class AtlasToolCallbackFactory {
     public List<ToolCallback> buildForAgent(String agentCode) {
         return toolRegistry.listByAgent(agentCode).stream()
                 .filter(meta -> meta.instance() instanceof BaseTool)
-                .map(meta -> new AtlasToolCallback((BaseTool) meta.instance(), objectMapper, parameterNormalizer))
+                .map(meta -> new AtlasToolCallback((BaseTool) meta.instance(), objectMapper, parameterNormalizer, hitlGuard, meta))
                 .collect(Collectors.toList());
     }
 
@@ -54,7 +58,7 @@ public class AtlasToolCallbackFactory {
     public List<ToolCallback> buildAllVisible() {
         return toolRegistry.getAllTools().stream()
                 .filter(tool -> toolRegistry.isVisible(tool.getToolName()))
-                .map(tool -> new AtlasToolCallback(tool, objectMapper, parameterNormalizer))
+                .map(tool -> new AtlasToolCallback(tool, objectMapper, parameterNormalizer, hitlGuard, toolRegistry.resolve(tool.getToolName())))
                 .collect(Collectors.toList());
     }
 

@@ -5,6 +5,7 @@ import com.atlas.auth.async.AsyncContextHolder;
 import com.atlas.http.KubeManagerHttpClient;
 import com.atlas.intent.IntentRouter;
 import com.atlas.intent.core.IntentResult;
+import com.atlas.hitl.HitlGuard;
 import com.atlas.store.SessionStore;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.tool.core.BaseTool;
@@ -54,6 +55,7 @@ public class AtlasOrchestrator {
     private final UserPermissionContext userPermissionContext;
     private final Executor asyncExecutor;
     private final KubeManagerHttpClient kubeManagerClient;
+    private final HitlGuard hitlGuard;
 
     /** ReAct SSE 过程事件运行期注册表，避免把 Lambda/SseEmitter 放入 Graph State。 */
     private final ReActEventSinkRegistry reactEventSinkRegistry;
@@ -99,6 +101,7 @@ public class AtlasOrchestrator {
                              ToolRegistry toolRegistry,
                              UserPermissionContext userPermissionContext,
                              KubeManagerHttpClient kubeManagerClient,
+                             HitlGuard hitlGuard,
                              ReActEventSinkRegistry reactEventSinkRegistry,
                              TimedDecisionCache decisionCache,
                              ToolResultPolishingService polishingService,
@@ -115,6 +118,7 @@ public class AtlasOrchestrator {
         this.toolRegistry = toolRegistry;
         this.userPermissionContext = userPermissionContext;
         this.kubeManagerClient = kubeManagerClient;
+        this.hitlGuard = hitlGuard;
         this.reactEventSinkRegistry = reactEventSinkRegistry;
         this.decisionCache = decisionCache;
         this.polishingService = polishingService;
@@ -259,6 +263,14 @@ public class AtlasOrchestrator {
                             toolParams.put("userId", finalUserId);
                             toolParams.put("organizationId", orgId);
 
+                            HitlGuard.Decision hitlDecision = hitlGuard.verifyByIntentId(toolRegistry, result.intentId(), null);
+                            if (!hitlDecision.allowed()) {
+                                log.warn("[Orchestrator] HITL 守卫阻止 legacy fallback 工具执行: intentId={}", result.intentId());
+                                emit(emitter, "content", Map.of("content", hitlDecision.message()));
+                                emit(emitter, "done", Map.of());
+                                return;
+                            }
+
                             Map<String, Object> toolResult = tool.execute(toolParams);
                             boolean success = Boolean.TRUE.equals(toolResult.get("success"));
                             String message = toolResult.get("message") != null
@@ -395,6 +407,8 @@ public class AtlasOrchestrator {
                 inputs.put("token", Optional.ofNullable(capturedToken).orElse(""));
                 inputs.put("orgId", Optional.ofNullable(capturedOrgId).orElse(""));
                 inputs.put("organizationId", Optional.ofNullable(capturedOrgId).orElse(""));
+                // M5.13 fail-closed：新会话不是人工确认恢复，必须显式清空确认 marker，防止 checkpoint/同线程状态继承。
+                inputs.put("hitl_confirmation", null);
 
                 var config = com.alibaba.cloud.ai.graph.RunnableConfig.builder()
                     .threadId(sessionId)
@@ -518,6 +532,9 @@ public class AtlasOrchestrator {
             inputs.put("user_id", userId);
             inputs.put("token", Optional.ofNullable(token).orElse(""));
             inputs.put("orgId", Optional.ofNullable(orgId).orElse("")); // ← P3.1: 显式传入 orgId
+            inputs.put("organizationId", Optional.ofNullable(orgId).orElse(""));
+            // M5.13 fail-closed：普通新请求永远不携带服务端确认 marker；只有 HITLController.confirmAndResume 可注入。
+            inputs.put("hitl_confirmation", null);
             // M3.2 修复：Graph State 只能保存可序列化纯数据，真实事件回调放入运行期 registry。
             inputs.put("react_event_session_id", sessionId);
             reactEventSinkRegistry.register(sessionId, reactEventSink);

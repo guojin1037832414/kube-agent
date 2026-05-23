@@ -137,6 +137,25 @@ public class ToolRegistry {
         return Optional.ofNullable(toolByIntentId.get(intentId));
     }
 
+    /**
+     * 按 intentId 解析 Tool 元数据。
+     *
+     * <p>M5.13 执行层 fail-closed HITL 使用：Graph 的 {@code tool_call} 节点在真正调用
+     * {@link BaseTool#execute(java.util.Map)} 前，必须能根据 BrainDecision.target(intentId)
+     * 查到 Tool 的风险契约（operationType / requiresConfirmation）。该方法复用现有
+     * {@link #resolve(String)} 的权限预检逻辑，避免绕过可见性检查。</p>
+     *
+     * @param intentId AtlasBrain 输出的意图 ID / Tool 绑定 ID
+     * @return 可见且已注册的 ToolMetadata
+     */
+    public Optional<ToolMetadata> resolveByIntentId(String intentId) {
+        BaseTool tool = toolByIntentId.get(intentId);
+        if (tool == null) {
+            return Optional.empty();
+        }
+        return Optional.of(resolve(tool.getToolName()));
+    }
+
     public Set<String> getAllToolNames() {
         return Collections.unmodifiableSet(toolByName.keySet());
     }

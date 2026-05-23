@@ -1,6 +1,7 @@
 package com.atlas.react;
 
 import com.atlas.tool.core.AtlasToolResult;
+import com.atlas.hitl.HitlGuard;
 import com.atlas.tool.core.ToolParameterNormalizer;
 import com.atlas.tool.core.ToolRegistry;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -90,6 +91,7 @@ public class ReActEngine {
     private final ToolRegistry toolRegistry;
     private final ReActPromptBuilder promptBuilder;
     private final ToolParameterNormalizer parameterNormalizer;
+    private final HitlGuard hitlGuard;
 
     /** LLM 超时调用专用后台线程池（daemon，避免阻塞 JVM 退出） */
     private final ExecutorService llmExecutor;
@@ -98,7 +100,7 @@ public class ReActEngine {
                        ObjectMapper objectMapper,
                        ToolRegistry toolRegistry,
                        ReActPromptBuilder promptBuilder) {
-        this(chatModel, objectMapper, toolRegistry, promptBuilder, new ToolParameterNormalizer());
+        this(chatModel, objectMapper, toolRegistry, promptBuilder, new ToolParameterNormalizer(), new HitlGuard());
     }
 
     @Autowired
@@ -106,18 +108,31 @@ public class ReActEngine {
                        ObjectMapper objectMapper,
                        ToolRegistry toolRegistry,
                        ReActPromptBuilder promptBuilder,
-                       ToolParameterNormalizer parameterNormalizer) {
+                       ToolParameterNormalizer parameterNormalizer,
+                       HitlGuard hitlGuard) {
         this.chatClient = ChatClient.builder(chatModel).build();
         this.objectMapper = objectMapper;
         this.toolRegistry = toolRegistry;
         this.promptBuilder = promptBuilder;
         this.parameterNormalizer = parameterNormalizer != null ? parameterNormalizer : new ToolParameterNormalizer();
+        this.hitlGuard = hitlGuard != null ? hitlGuard : new HitlGuard();
         this.llmExecutor = Executors.newCachedThreadPool(r -> {
             Thread t = new Thread(r);
             t.setDaemon(true);
             t.setName("react-llm-" + t.getId());
             return t;
         });
+    }
+
+    /**
+     * 测试/兼容构造器：历史单测会显式传入参数归一化器，生产环境仍使用上方注入 HitlGuard 的构造器。
+     */
+    ReActEngine(ChatModel chatModel,
+                ObjectMapper objectMapper,
+                ToolRegistry toolRegistry,
+                ReActPromptBuilder promptBuilder,
+                ToolParameterNormalizer parameterNormalizer) {
+        this(chatModel, objectMapper, toolRegistry, promptBuilder, parameterNormalizer, new HitlGuard());
     }
 
     /**
@@ -238,6 +253,16 @@ public class ReActEngine {
                     ToolRegistry.ToolMetadata meta = toolRegistry.resolve(toolName);
                     riskMetadata = buildToolRiskMetadata(meta);
                     emitEvent(sink, ReActEvent.toolStart(steps, toolName, params, riskMetadata));
+                    HitlGuard.Decision hitlDecision = hitlGuard.verify(toolName, meta, null);
+                    if (!hitlDecision.allowed()) {
+                        Map<String, Object> blockedResult = hitlGuard.toBlockedToolResult(hitlDecision);
+                        observation = serializeToolResult(blockedResult);
+                        toolSuccess = false;
+                        memory.addStep(thought, toolName, params, observation, false, 0);
+                        emitEvent(sink, ReActEvent.error(steps, hitlDecision.message()));
+                        log.warn("[ReActEngine] HITL 守卫阻止高风险工具执行: tool={}", toolName);
+                        continue;
+                    }
                     Map<String, Object> toolResult = meta.instance().execute(params);
                     observation = serializeToolResult(toolResult);
                     toolSuccess = isToolResultSuccess(toolResult);

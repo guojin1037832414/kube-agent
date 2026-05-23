@@ -1,5 +1,6 @@
 package com.atlas.graph.bridge;
 
+import com.atlas.hitl.HitlGuard;
 import com.atlas.tool.core.BaseTool;
 import com.atlas.tool.core.ToolInputSchemaBuilder;
 import com.atlas.tool.core.ToolParameterNormalizer;
@@ -38,13 +39,25 @@ public class AtlasToolCallback implements ToolCallback {
     private final BaseTool baseTool;
     private final ObjectMapper objectMapper;
     private final ToolParameterNormalizer parameterNormalizer;
+    private final HitlGuard hitlGuard;
+    private final com.atlas.tool.core.ToolRegistry.ToolMetadata atlasMetadata;
 
     public AtlasToolCallback(BaseTool baseTool,
                              ObjectMapper objectMapper,
                              ToolParameterNormalizer parameterNormalizer) {
+        this(baseTool, objectMapper, parameterNormalizer, new HitlGuard(), null);
+    }
+
+    public AtlasToolCallback(BaseTool baseTool,
+                             ObjectMapper objectMapper,
+                             ToolParameterNormalizer parameterNormalizer,
+                             HitlGuard hitlGuard,
+                             com.atlas.tool.core.ToolRegistry.ToolMetadata atlasMetadata) {
         this.baseTool = baseTool;
         this.objectMapper = objectMapper;
         this.parameterNormalizer = parameterNormalizer != null ? parameterNormalizer : new ToolParameterNormalizer();
+        this.hitlGuard = hitlGuard != null ? hitlGuard : new HitlGuard();
+        this.atlasMetadata = atlasMetadata;
     }
 
     /**
@@ -76,10 +89,18 @@ public class AtlasToolCallback implements ToolCallback {
             // 2. 统一参数归一化：只补齐 canonical 字段，不覆盖、不删除原始字段。
             Map<String, Object> normalizedParams = parameterNormalizer.normalize(baseTool.getToolName(), params);
 
-            // 3. 执行业务 Tool
+            // 3. HITL fail-closed 守卫：ReactAgent/ToolCallback 路径没有 Graph State 确认 marker，
+            // 高风险 Tool 必须在这里拒绝，避免绕过主 Graph tool_call 的执行前拦截。
+            HitlGuard.Decision hitlDecision = hitlGuard.verify(baseTool.getToolName(), atlasMetadata, null);
+            if (!hitlDecision.allowed()) {
+                log.warn("[AtlasToolCallback] HITL 守卫阻止高风险工具执行: tool={}", baseTool.getToolName());
+                return objectMapper.writeValueAsString(hitlGuard.toBlockedToolResult(hitlDecision));
+            }
+
+            // 4. 执行业务 Tool
             Map<String, Object> result = baseTool.execute(normalizedParams);
 
-            // 4. Map → JSON
+            // 5. Map → JSON
             String output = objectMapper.writeValueAsString(result);
             log.debug("[AtlasToolCallback] {} 结果: {}", baseTool.getToolName(), output);
             return output;
