@@ -118,6 +118,8 @@ public class KubeManagerHttpClient {
      * 通用 GET 请求 — 带查询参数。
      *
      * <p>P1.4：每次请求自动从 ThreadLocal 读取用户 Token，无需手动传入。</p>
+     * <p><b>M5.8 安全收口：</b>业务请求必须使用真实用户 Token，缺失用户上下文时
+     * 直接 fail-closed，禁止透明降级到 sysadmin 统一 Token，避免后台兼容能力成为权限放大器。</p>
      *
      * @param path       接口路径（如 /api/instances）
      * @param queryParams 查询参数 Map
@@ -129,10 +131,9 @@ public class KubeManagerHttpClient {
         backoff = @Backoff(delay = 500, multiplier = 2)
     )
     public Map<String, Object> get(String path, Map<String, Object> queryParams) {
-        String token = resolveToken();
+        String token = resolveUserTokenRequired("GET", path);
 
-        log.debug("[HTTP GET] {} 参数={}, tokenSource={}",
-            path, queryParams, token.equals(fallbackAuthToken) ? "fallback_sysadmin" : "user_threadlocal");
+        log.debug("[HTTP GET] {} 参数={}, tokenSource=user_threadlocal", path, queryParams);
 
         String responseBody = restClient.get()
             .uri(builder -> {
@@ -172,6 +173,8 @@ public class KubeManagerHttpClient {
      * 通用 POST 请求 — 发送 JSON Body。
      *
      * <p>P1.4：每次请求自动从 ThreadLocal 读取用户 Token。</p>
+     * <p><b>M5.8 安全收口：</b>POST 通常承载创建、提交、变更等业务动作，
+     * 必须由当前用户 Token 发起；缺失用户 Token 时拒绝执行，不允许 sysadmin 降级代跑。</p>
      *
      * @param path 接口路径（如 /api/instance/create）
      * @param body 请求体 Map（会被序列化为 JSON）
@@ -183,10 +186,9 @@ public class KubeManagerHttpClient {
         backoff = @Backoff(delay = 500, multiplier = 2)
     )
     public Map<String, Object> post(String path, Map<String, Object> body) {
-        String token = resolveToken();
+        String token = resolveUserTokenRequired("POST", path);
 
-        log.debug("[HTTP POST] {} body={}, tokenSource={}",
-            path, body, token.equals(fallbackAuthToken) ? "fallback_sysadmin" : "user_threadlocal");
+        log.debug("[HTTP POST] {} body={}, tokenSource=user_threadlocal", path, body);
 
         String responseBody = restClient.post()
             .uri(path)
@@ -208,6 +210,9 @@ public class KubeManagerHttpClient {
 
     /**
      * DELETE 请求（部分旧接口用 POST 模拟 DELETE，这里提供原生 DELETE）。
+     *
+     * <p><b>M5.8 安全收口：</b>删除类请求风险最高，必须绑定真实用户 Token；
+     * 如果当前线程没有可信用户上下文，立即拒绝，禁止使用 sysadmin fallback token。</p>
      */
     @Retryable(
         retryFor = {ResourceAccessException.class},
@@ -215,9 +220,8 @@ public class KubeManagerHttpClient {
         backoff = @Backoff(delay = 500, multiplier = 2)
     )
     public Map<String, Object> delete(String path, Map<String, Object> body) {
-        String token = resolveToken();
-        log.debug("[HTTP DELETE] {} body={}, tokenSource={}",
-            path, body, token.equals(fallbackAuthToken) ? "fallback_sysadmin" : "user_threadlocal");
+        String token = resolveUserTokenRequired("DELETE", path);
+        log.debug("[HTTP DELETE] {} body={}, tokenSource=user_threadlocal", path, body);
 
         String responseBody = restClient.delete()
             .uri(path)
@@ -236,17 +240,47 @@ public class KubeManagerHttpClient {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    //  Token 解析 — P1.4 核心变更
+    //  Token 解析 — P1.4 核心变更 / M5.8 安全收口
     // ═══════════════════════════════════════════════════════════════
 
     /**
-     * 解析当前请求应使用的 Token。
+     * 解析业务请求必须使用的真实用户 Token。
      *
-     * <p><b>优先级：</b></p>
-     * <ol>
-     *   <li>ThreadLocal 中的用户 Token（从当前 HTTP 请求头提取）</li>
-   *   <li>降级：使用 sysadmin 统一 Token（兼容存量 / 后台任务场景）</li>
-     * </ol>
+     * <p><b>M5.8 安全边界：</b>{@link #get(String, Map)}、{@link #post(String, Map)}、
+     * {@link #delete(String, Map)} 都是由 Agent Tool 发起的业务请求，必须继承当前登录用户的
+     * ThreadLocal Token。若缺失用户 Token，说明请求链路没有可信用户上下文，此时必须 fail-closed，
+     * 不能透明降级为 sysadmin fallback token。</p>
+     *
+     * <p>fallback sysadmin 登录能力仅保留给未来显式系统任务，例如健康探测、后台同步等，
+     * 这些系统任务必须使用独立入口并经过审计，不能复用业务 Tool 默认路径。</p>
+     *
+     * @param operation HTTP 操作名，仅用于安全日志与异常排查
+     * @param path      后端 API 路径，仅用于安全日志与异常排查
+     * @return 当前用户真实 Token
+     */
+    private String resolveUserTokenRequired(String operation, String path) {
+        String userToken = userPermissionContext.getCurrentToken();
+        if (userToken != null && !userToken.isBlank()) {
+            log.debug("[Token] {} {} 使用用户真实 Token（ThreadLocal）", operation, path);
+            return userToken;
+        }
+
+        log.warn("[Token] 安全拒绝: {} {} 缺少用户 ThreadLocal Token，拒绝使用 sysadmin 降级 Token", operation, path);
+        throw new IllegalStateException(
+            "业务 kube-manager 请求缺少用户 Token，已拒绝使用 sysadmin 降级 Token。" +
+            "请确认请求携带有效 X-Session-Id，且异步/Graph/ReAct 链路正确透传安全上下文。"
+        );
+    }
+
+    /**
+     * 解析系统任务可用的 Token。
+     *
+     * <p><b>重要：</b>该方法允许在没有用户 ThreadLocal Token 时执行 sysadmin 降级登录，
+     * 因此禁止被业务 Tool 的 get/post/delete 默认路径调用。业务请求必须使用
+     * {@link #resolveUserTokenRequired(String, String)}。</p>
+     *
+     * <p>当前保留该方法是为了兼容未来显式 SYSTEM_CONTEXT_ALLOWED 场景；新增调用方必须先完成
+     * 风险审计、调用场景白名单和日志记录，避免 fallback token 成为权限放大器。</p>
      *
      * @return 可用的 Bearer Token 字符串
      */

@@ -6,6 +6,43 @@
 
 ---
 
+## [M5.8] — 业务 Tool 禁止 sysadmin fallback token 自动降级
+
+**周期**: 2026-05-23
+**交付**: 将 `KubeManagerHttpClient#get/post/delete` 业务请求入口收口为“必须使用用户 ThreadLocal Token”；缺少可信用户上下文时 fail-closed，避免 Agent Tool 在无用户会话时透明降级为 sysadmin token 代跑。
+
+### Added
+
+- 新增 `KubeManagerHttpClientTokenFallbackSecurityTest`，覆盖 5 个安全边界：
+  - GET 缺用户 Token 时拒绝请求且不触发 fallback 登录；
+  - POST 缺用户 Token 时拒绝请求且不触发 fallback 登录；
+  - DELETE 缺用户 Token 时拒绝请求且不触发 fallback 登录；
+  - GET 存在用户 Token 时只使用用户 Token，不触发 fallback；
+  - 保留系统任务 Token 解析入口 `resolveToken()` 的 fallback 能力，作为未来显式系统任务白名单能力。
+
+### Changed
+
+- `KubeManagerHttpClient#get/post/delete`：从 `resolveToken()` 切换为 `resolveUserTokenRequired(operation, path)`。
+- 新增 `resolveUserTokenRequired` 私有方法：业务请求缺用户 Token 时抛出 `IllegalStateException`，并输出安全拒绝日志。
+- 保留 `resolveToken()`，但文档明确限制为未来显式系统任务入口，禁止业务 Tool 默认路径调用。
+
+### Verified
+
+- 定向测试：`mvn test -q -Dtest=KubeManagerHttpClientTokenFallbackSecurityTest` → ✅ 5 tests, 0 failures。
+- M5.7/M5.8 安全组合回归：`mvn test -q -Dtest=KubeManagerHttpClientResolveOrgIdSecurityTest,M57FallbackOrgIdSourceContractTest,BaseToolOrganizationIdGovernanceTest,KubeManagerHttpClientTokenFallbackSecurityTest` → ✅ 17 tests, 0 failures。
+- 全量测试：`mvn test -q` → ✅ 182 tests, 0 failures, 0 errors, 0 skipped。
+- 打包：`mvn -q -DskipTests package` → ✅ BUILD SUCCESS。
+- `git diff --check`：✅ 通过。
+- Diff 敏感信息/危险执行扫描：✅ 未发现新增密钥、PAT、危险进程执行、`eval/exec` 等模式。
+
+### Risk / Deferred
+
+- 本轮先做 HTTP 客户端业务入口 fail-closed，不扩大到所有上层 Tool/HITL/Graph 结构；后续可继续审计是否存在绕过 `get/post/delete` 的独立 HTTP 出口。
+- `resolveToken()` 仍保留 fallback 语义，必须仅用于显式 SYSTEM_CONTEXT_ALLOWED 系统任务；未来若新增调用方，需要白名单、审计日志和测试保护。
+- 当前验证以单元/回归测试为主，未重启本地服务做真实 SSE；原因是本次安全边界位于 HTTP 客户端 token 解析层，MockRestServiceServer 已精确断言请求不会发出或只携带用户 Token。
+
+---
+
 ## [M5.7] — fallbackOrgId 可信语义彻底收口与登录 fail-safe 治理
 
 **周期**: 2026-05-22

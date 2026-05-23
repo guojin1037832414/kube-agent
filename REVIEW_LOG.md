@@ -424,3 +424,61 @@
 2. 补真实 SSE E2E：构造/选择一个存在 warning 的 Pod，观察 ReAct 是否形成 `pod_status -> event_query -> final/log_query` 证据链。
 3. 若后续发现简单事件查询链路过重，可将 Brain 关键词从宽泛词改为组合判定或交给 IntentArbiter/Embedding 做更细路由。
 
+## 2026-05-23 12:50 - M5.8 业务 Tool 禁止 sysadmin fallback token 自动降级
+
+### 背景
+- 专家会诊后，本轮选择最高价值且最小扩散面的安全闭环：`KubeManagerHttpClient#get/post/delete` 业务请求入口。
+- M5.7 已完成 `fallbackOrgId` 可信语义收口，但 HTTP 客户端仍存在一个更底层的风险：业务 Tool 在缺少用户 ThreadLocal Token 时可能通过 `resolveToken()` 透明降级为 sysadmin fallback token。
+- 该行为对开发兼容友好，但对多租户/RBAC 是权限放大器：一旦 Graph/ReAct/异步链路漏传 token，业务请求可能不再以真实用户身份执行。
+
+### 专家会诊结论
+1. 安全与多租户视角：业务请求必须 fail-closed，系统级 fallback 只能作为显式白名单能力，不能出现在 Tool 默认路径。
+2. 架构视角：不要大范围重构上层 Agent 编排，先在 HTTP 客户端出口做最小安全门，后续再抽象 SystemContextPolicy。
+3. 测试视角：必须用 MockRestServiceServer 断言缺 Token 时不发出任何 fallback 登录/业务请求，避免只测异常文案。
+4. 开源对标视角：LangChain/LangGraph、Dapr、K8s controller-runtime 的通用经验是默认用户上下文优先，特权上下文必须显式声明和可审计。
+
+### 变更内容
+1. `KubeManagerHttpClient`
+   - `get/post/delete` 改为调用 `resolveUserTokenRequired(operation, path)`。
+   - 新增 `resolveUserTokenRequired`：ThreadLocal 用户 Token 为空时抛出 `IllegalStateException`，拒绝 sysadmin fallback。
+   - 保留 `resolveToken()`，但文档明确其只允许未来显式系统任务使用，禁止业务 Tool 默认路径调用。
+
+2. `KubeManagerHttpClientTokenFallbackSecurityTest`
+   - 新增 5 个测试覆盖 GET/POST/DELETE 缺用户 Token fail-closed。
+   - 验证用户 Token 存在时 Authorization Header 使用真实用户 Token。
+   - 验证系统任务 fallback 入口仍保留，避免误伤未来健康探测/后台同步场景。
+
+3. 文档
+   - `CHANGELOG.md` 新增 M5.8 条目。
+   - `docs/M5_8_AUDIT_CHECKLIST_20260523.md` 新增阶段审计清单。
+
+### 测试结果
+- 定向测试：`mvn test -q -Dtest=KubeManagerHttpClientTokenFallbackSecurityTest` → ✅ 5 tests, 0 failures。
+- 安全组合回归：`mvn test -q -Dtest=KubeManagerHttpClientResolveOrgIdSecurityTest,M57FallbackOrgIdSourceContractTest,BaseToolOrganizationIdGovernanceTest,KubeManagerHttpClientTokenFallbackSecurityTest` → ✅ 17 tests, 0 failures。
+- 全量测试：`mvn test -q` → ✅ 182 tests, 0 failures, 0 errors, 0 skipped。
+- 打包：`mvn -q -DskipTests package` → ✅ BUILD SUCCESS。
+- `git diff --check`：✅ 通过。
+- 新增 diff 行敏感信息/危险执行扫描：✅ 未发现硬编码密钥、PAT、危险进程执行、`eval/exec` 等模式。
+
+### 代码 Review
+#### 优点
+- 改动点集中在 HTTP 出口，安全收益大、扩散风险小。
+- 业务请求与系统任务 Token 语义被明确拆开，降低后续误用概率。
+- 单测不仅验证异常，还验证不会触发 fallback 登录请求，覆盖了真实安全意图。
+- 保持详细中文注释，方便后续维护者理解为什么不能自动降级。
+
+#### 风险
+- `resolveToken()` 仍然保留 fallback 能力，后续如果新增调用方必须强制 Review 和测试。
+- 本轮未全量扫描是否存在绕过 `KubeManagerHttpClient#get/post/delete` 的独立 HTTP 出口。
+- 本轮没有做真实 SSE E2E；但安全边界位于客户端 Token 解析层，Mock 测试已精确覆盖。
+
+### 后续建议
+1. 下一批做“HTTP 出口契约审计”：扫描所有 `RestClient/WebClient/RestTemplate` 直接调用点，确认业务请求都经过统一安全门。
+2. 引入 `SystemContextPolicy` 或源码契约测试，让系统任务 fallback 必须显式白名单化。
+3. 服务重启后补一次登录 + 只读查询 SSE 冒烟，确认业务链路正确携带用户 Token。
+
+### 持续学习总结
+- 多租户 Agent 系统里，“开发兼容 fallback”很容易变成“生产权限放大器”。
+- 安全治理应优先卡在最底层出口，先让默认路径安全，再逐步给系统任务开显式白名单。
+- 对安全分支的测试不能只断言抛异常，还要断言危险副作用没有发生。
+
