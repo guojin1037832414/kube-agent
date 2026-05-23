@@ -537,3 +537,59 @@
 1. 后续可引入 ArchUnit，将包依赖、类依赖、方法调用约束升级为结构化架构测试。
 2. 后续所有新增外部 HTTP 出口必须明确分类：kube-manager 数据面、认证代理、外部资源下载或第三方服务，并写入契约白名单说明。
 3. 继续保持“专家会诊 → 小样本 → 逻辑验证 → Review → 文档 → 双远端同步”的闭环。
+
+## 2026-05-23 17:36 - M5.10 ArchUnit 架构级安全边界契约治理
+
+### 背景
+- M5.9 已通过源码字符串契约测试锁定 HTTP 出口与 fallback token 方法体语义。
+- 继续推进时，目标是把“源码扫描”进一步升级为“架构级依赖边界测试”，但仍必须避免影响 kube-manager 数据。
+- 本轮选择小样本落地 ArchUnit，只做静态字节码/依赖分析，不启动服务、不访问真实 kube-manager、不执行真实删除/修改。
+
+### 专家会诊与开源调研结论
+- Java 架构专家建议：M5.10 适合最小引入 ArchUnit；ArchUnit 负责结构级、依赖级规则，M5.9 源码契约继续负责方法体语义。
+- 安全专家复核：PASS；要求 ArchUnit 测试不得使用 `@SpringBootTest`，不得注入 Bean，不得调用真实 HTTP 方法。
+- 开源调研：TNG/ArchUnit 是 Java architecture test library，用 plain Java unit testing 检查架构和编码规则，适合作为 CI 中的架构边界防回归机制。
+
+### 变更内容
+1. `pom.xml`
+   - 新增 test scope 依赖：`com.tngtech.archunit:archunit-junit5:1.3.0`。
+   - 该依赖仅用于测试，不进入生产运行时。
+2. 新增 `M510ArchitectureBoundaryTest`
+   - 使用 `@AnalyzeClasses(packages = "com.atlas", importOptions = DoNotIncludeTests.class)`。
+   - 不使用 `@SpringBootTest`，不启动 Spring 容器。
+   - 规则一：白名单外生产代码不得直接依赖底层 HTTP 客户端。
+   - 规则二：`com.atlas.tool..` 不得依赖底层 HTTP 客户端。
+   - 规则三：`com.atlas.controller..` 不得直接依赖 `com.atlas.tool.impl..`。
+3. 底层 HTTP 客户端覆盖范围
+   - `RestClient`
+   - `RestTemplate`
+   - `WebClient`
+   - `java.net.*`
+   - `OkHttp`
+   - `Feign/OpenFeign`
+   - Apache HttpClient 4/5
+
+### 验证结果
+- 定向验证：`mvn test -q -Dtest=M510ArchitectureBoundaryTest` → 通过。
+- 安全组合回归：`mvn test -q -Dtest=M510ArchitectureBoundaryTest,M59HttpSecurityBoundaryContractTest,KubeManagerHttpClientTokenFallbackSecurityTest,M57FallbackOrgIdSourceContractTest` → 通过。
+- 打包：`mvn -q -DskipTests package` → BUILD SUCCESS。
+- 格式检查：`git diff --check` → 通过。
+- Diff 敏感信息/危险执行扫描：通过，未发现新增密钥、PAT、危险进程执行、`eval/exec` 等模式。
+- 数据影响：未启动服务，未访问真实 kube-manager API，未执行真实删除/修改操作。
+
+### 代码 Review
+#### 优点
+- 将 M5.9 的源码级 HTTP 出口治理升级为更稳定的 ArchUnit 架构依赖治理。
+- 保持最小落地，只加三条高价值规则，避免一次性大范围重构历史代码。
+- 测试不启动 Spring，不访问真实服务，完全符合“避免影响 kube-manager 数据”的要求。
+- 明确保留 M5.9 源码契约，避免用 ArchUnit 强行替代其不擅长的方法体语义检查。
+
+#### 风险
+- 当前规则仍是第一批最小架构边界，尚未覆盖 service/orchestrator/react/config 等完整层级。
+- `com.atlas.http..` 作为包级白名单粒度较粗，未来如该包内出现非受控 HTTP 出口，需要继续细化。
+- ArchUnit 规则会增加 CI 对依赖边界的敏感度，未来新增合法例外时必须写清白名单原因。
+
+### 后续建议
+1. M5.11 可继续推进“Tool 注解 method 与实际 HTTP 调用一致性契约”，专门防止 Agent 以为是 GET 但代码实际 POST/DELETE 的语义错位。
+2. 后续可逐步增加 ArchUnit layer rules：controller → orchestrator/react → tool/core → http，保护整体依赖方向。
+3. 保持 M5.7-M5.10 安全治理链共同运行，形成多层防线。

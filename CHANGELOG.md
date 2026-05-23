@@ -6,6 +6,38 @@
 
 ---
 
+## [M5.10] — ArchUnit 架构级安全边界契约治理
+
+**周期**: 2026-05-23
+**交付**: 引入 ArchUnit 作为架构级静态契约测试，补强 M5.9 源码字符串契约；将 HTTP 出口治理从“源码扫描”扩展到“包/类依赖边界”层面，继续保证不访问、不修改 kube-manager 真实数据。
+
+### Added
+
+- 新增 test scope 依赖：`com.tngtech.archunit:archunit-junit5:1.3.0`。
+- 新增 `M510ArchitectureBoundaryTest`，包含 3 条架构规则：
+  - 白名单外生产代码不得直接依赖底层 HTTP 客户端；
+  - `com.atlas.tool..` 不得依赖底层 HTTP 客户端，只能通过受控网关访问 kube-manager；
+  - `com.atlas.controller..` 不得直接依赖 `com.atlas.tool.impl..`，避免绕过 Orchestrator/ReAct/ToolRegistry 编排链路。
+- 底层 HTTP 客户端覆盖范围包括：`RestClient`、`RestTemplate`、`WebClient`、`java.net.*`、`OkHttp`、`Feign/OpenFeign`、Apache HttpClient 4/5。
+
+### Verified
+
+- 专家会诊：✅ Java 架构专家建议小步引入 ArchUnit；安全专家复核 PASS，明确 ArchUnit 只做静态分析，不启动 Spring、不访问 kube-manager。
+- 开源调研：TNG/ArchUnit 是用于 Java architecture rules 的开源架构测试库，官方定位为 plain Java unit testing 下检查架构/编码规则。
+- 定向验证：`mvn test -q -Dtest=M510ArchitectureBoundaryTest` → ✅ 通过。
+- 安全组合回归：`mvn test -q -Dtest=M510ArchitectureBoundaryTest,M59HttpSecurityBoundaryContractTest,KubeManagerHttpClientTokenFallbackSecurityTest,M57FallbackOrgIdSourceContractTest` → ✅ 通过。
+- 打包：`mvn -q -DskipTests package` → ✅ BUILD SUCCESS。
+- `git diff --check`：✅ 通过。
+- Diff 敏感信息/危险执行扫描：✅ 未发现新增密钥、PAT、危险进程执行、`eval/exec` 等模式。
+
+### Risk / Deferred
+
+- M5.10 不替代 M5.9：ArchUnit 负责结构/依赖边界，M5.9 继续负责 `resolveToken()` 与 `resolveUserTokenRequired()` 的方法体语义。
+- 当前先落最小三条规则，避免一次性引入过重分层约束造成历史代码大规模返工；后续可继续扩展到 service/orchestrator/react/config 等层级边界。
+- 本阶段仍严格零数据影响：未启动服务、未调用真实 kube-manager API、未执行真实删除/修改操作。
+
+---
+
 ## [M5.9] — HTTP 出口与 fallback token 源码契约治理
 
 **周期**: 2026-05-23
