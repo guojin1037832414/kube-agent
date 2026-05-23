@@ -482,3 +482,58 @@
 - 安全治理应优先卡在最底层出口，先让默认路径安全，再逐步给系统任务开显式白名单。
 - 对安全分支的测试不能只断言抛异常，还要断言危险副作用没有发生。
 
+
+## 2026-05-23 16:31 - M5.9 HTTP 出口与 fallback token 源码契约治理
+
+### 背景
+- M5.8 已将 `KubeManagerHttpClient#get/post/delete` 收口为必须使用用户 ThreadLocal Token，缺失用户上下文时 fail-closed。
+- 本轮继续推进时，哥哥明确要求：避免影响 kube-manager 的数据；所有删除和修改类不需要真实测试，只需要跑通逻辑。
+- 因此 M5.9 选择低副作用、高收益的小样本落点：新增源码级契约测试，防止未来业务代码绕过统一 HTTP 出口或重新把 sysadmin fallback token 接回业务默认路径。
+
+### 专家 Review 会诊结论
+- 快速专家 Review 会诊结果：PASS with Notes。
+- 结论：当前源码契约测试方向正确，不访问真实 kube-manager，不会影响 kube-manager 数据，可以合入。
+- 专家建议补强：HTTP 出口扫描模式应覆盖 `HttpURLConnection/openConnection/HttpClient.newHttpClient` 等直接 HTTP 路径，并区分 kube-manager 出口与外部下载出口。
+- 已按建议补强，并将 `ModelDownloader` 显式归类为“外部 Embedding 模型下载出口，不访问 kube-manager 数据面”。
+
+### 变更内容
+1. 新增 `M59HttpSecurityBoundaryContractTest`
+   - 扫描 `src/main/java` 生产源码。
+   - 白名单外禁止直接创建/注入 HTTP 客户端，避免业务 Tool 绕过 `KubeManagerHttpClient`。
+   - 直接 HTTP 出口模式覆盖：`RestClient`、`RestTemplate`、`WebClient`、`HttpURLConnection`、`HttpClient`、`openConnection`、`OkHttpClient`、`Feign`、`Apache HttpClient` 等。
+   - 白名单明确限定：
+     - `KubeManagerHttpClient`：统一 kube-manager 数据面 HTTP 出口；
+     - `AuthController`：登录代理入口；
+     - `ModelDownloader`：外部 Embedding 模型下载，不访问 kube-manager 数据面。
+2. 锁定 M5.8 token fallback 边界
+   - `KubeManagerHttpClient#get/post/delete` 必须调用 `resolveUserTokenRequired`。
+   - 业务方法不得调用允许 sysadmin fallback 的 `resolveToken()`。
+   - 生产源码中 `resolveToken()` 调用点数量被锁定为仅方法声明本身。
+3. 文档同步
+   - `CHANGELOG.md` 新增 M5.9 记录。
+   - 新增 `docs/M5_9_AUDIT_CHECKLIST_20260523.md`。
+
+### 验证结果
+- 定向逻辑验证：`mvn test -q -Dtest=M59HttpSecurityBoundaryContractTest` → 通过。
+- 安全组合回归：`mvn test -q -Dtest=M59HttpSecurityBoundaryContractTest,KubeManagerHttpClientTokenFallbackSecurityTest,M57FallbackOrgIdSourceContractTest` → 通过。
+- 打包：`mvn -q -DskipTests package` → BUILD SUCCESS。
+- 格式检查：`git diff --check` → 通过。
+- Diff 敏感信息/危险执行扫描：通过，未发现新增密钥、PAT、危险进程执行、`eval/exec` 等模式。
+- 数据影响：未启动服务，未调用真实 kube-manager API，未执行真实删除/修改操作。
+
+### 代码 Review
+#### 优点
+- 完全符合“避免影响 kube-manager 数据”的要求，只做源码扫描和单元逻辑验证。
+- 把 M5.8 的安全修复升级为 CI 可持续防回归契约，降低未来新增 Tool 绕过统一出口的风险。
+- 显式区分 kube-manager 数据面出口、登录代理出口和外部模型下载出口，避免误把所有 HTTP 行为混为一类。
+- 失败信息会输出具体文件与行号，便于后续新增代码时快速定位违规点。
+
+#### 风险
+- 当前是源码字符串级扫描，不是 AST/ArchUnit 级强约束；如果未来代码通过非常规封装或反射绕过，可能需要更强架构测试。
+- `AuthController` 当前为文件级白名单，未来如果在该类中加入非登录代理的数据面访问，契约可能无法细分识别。
+- HTTP 客户端生态较多，后续新增 Feign/Retrofit/第三方 SDK 时，需要同步扩展契约模式或白名单说明。
+
+### 后续建议
+1. 后续可引入 ArchUnit，将包依赖、类依赖、方法调用约束升级为结构化架构测试。
+2. 后续所有新增外部 HTTP 出口必须明确分类：kube-manager 数据面、认证代理、外部资源下载或第三方服务，并写入契约白名单说明。
+3. 继续保持“专家会诊 → 小样本 → 逻辑验证 → Review → 文档 → 双远端同步”的闭环。

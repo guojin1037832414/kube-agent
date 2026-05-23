@@ -6,6 +6,40 @@
 
 ---
 
+## [M5.9] — HTTP 出口与 fallback token 源码契约治理
+
+**周期**: 2026-05-23
+**交付**: 新增源码级安全契约测试，锁定 kube-manager 统一 HTTP 出口与 M5.8 token fallback 边界；避免未来业务 Tool 绕过 `KubeManagerHttpClient` 或重新把 sysadmin fallback token 接回业务默认路径。
+
+### Added
+
+- 新增 `M59HttpSecurityBoundaryContractTest`，覆盖 3 类源码契约：
+  - 白名单外生产代码不得直接创建/注入 HTTP 客户端访问 kube-manager 数据面；
+  - `KubeManagerHttpClient#get/post/delete` 必须使用 `resolveUserTokenRequired`；
+  - `resolveToken()` 只能作为系统任务 fallback 能力保留，不得被业务路径调用。
+- HTTP 出口白名单显式区分：
+  - `KubeManagerHttpClient`：统一 kube-manager 数据面 HTTP 出口；
+  - `AuthController`：登录代理入口；
+  - `ModelDownloader`：外部 Embedding 模型下载，不访问 kube-manager 数据面。
+
+### Verified
+
+- 快速专家 Review 会诊：✅ PASS with Notes；结论为当前源码契约测试安全、无 kube-manager 数据影响，建议扩展 HTTP 出口模式后合入。
+- 按专家建议补强 HTTP 出口扫描模式：覆盖 `RestClient/RestTemplate/WebClient/HttpURLConnection/HttpClient/openConnection/OkHttp/Feign/Apache HttpClient` 等常见绕过路径。
+- 定向逻辑验证：`mvn test -q -Dtest=M59HttpSecurityBoundaryContractTest` → ✅ 通过。
+- 安全组合回归：`mvn test -q -Dtest=M59HttpSecurityBoundaryContractTest,KubeManagerHttpClientTokenFallbackSecurityTest,M57FallbackOrgIdSourceContractTest` → ✅ 通过。
+- 打包：`mvn -q -DskipTests package` → ✅ BUILD SUCCESS。
+- `git diff --check`：✅ 通过。
+- Diff 敏感信息/危险执行扫描：✅ 未发现新增密钥、PAT、危险进程执行、`eval/exec` 等模式。
+
+### Risk / Deferred
+
+- 本阶段严格遵守“避免影响 kube-manager 数据”：未启动服务、未调用真实 kube-manager API、未执行真实删除/修改操作，只做源码契约与单元逻辑验证。
+- 当前契约为源码字符串级扫描，不是 AST/ArchUnit 级强约束；后续如引入 ArchUnit，可进一步把“包级依赖约束”和“方法调用约束”升级为结构化架构测试。
+- `AuthController` 目前按文件级白名单放行直接 HTTP；后续若该类新增非登录代理的数据面调用，应拆分更细粒度白名单或迁移到统一 client。
+
+---
+
 ## [M5.8] — 业务 Tool 禁止 sysadmin fallback token 自动降级
 
 **周期**: 2026-05-23
