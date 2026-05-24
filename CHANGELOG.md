@@ -6,6 +6,47 @@
 
 ---
 
+## [M5.15] — Tool HTTP/风险元数据第二批 GET/READ 扩面收尾
+
+**周期**: 2026-05-24
+**交付**: 在 M5.14 首批 GET/READ 元数据扩面基础上，继续按“专家会诊前置 + 先实验再铺开”原则，为第二批 13 个低风险 GET/READ Tool 补充 `httpMethod/apiEndpoints/operationType=READ`，并修复测试夹具未声明 READ 元数据导致的 HITL fail-closed 全量测试失败。
+
+### Added
+
+- 第二批 13 个低风险 GET/READ Tool 补充 HTTP/风险元数据：
+  - Dashboard 查询类：`dashboard_deployment_count`、`dashboard_image_count`、`dashboard_easy_flow`；
+  - 系统/模型查询类：`sys_info_map`、`sys_model_list`、`model_list`；
+  - GPU 查询类：`gpu_global_list`、`gpu_map_detail`、`gpu_detail_list`；
+  - 资源/镜像/节点查询类：`namespace_status`、`node_allocation`、`image_repository`；
+  - 裸金属模板查询类：`bare_metal_template`（deploy agent 下的只读模板查询）。
+- `AtlasToolCallbackTest` 增加测试专用安全 READ `ToolMetadata`，使参数归一化测试在不放松生产 fail-closed 的前提下真正执行测试 Tool。
+- `ReActEngineMultiStepE2ETest` 将测试内存 Tool 拆为带 `@AtlasToolMapping(operationType=READ)` 的 `PodStatusRecordingTool` / `EventQueryRecordingTool`，明确多步成功路径中的测试 Tool 为只读查询。
+
+### Verified
+
+- 专家会诊：✅ 已完成低风险 GET/READ 扩面方案与测试失败修复会诊；结论为“补测试夹具 READ 元数据，不修改生产 fail-closed”。
+- 失败用例复跑：`mvn -q -Dtest=AtlasToolCallbackTest,ReActEngineMultiStepE2ETest test` → ✅ 通过。
+- HITL 安全契约：`mvn -q -Dtest=M513HitlFailClosedContractTest test` → ✅ 通过。
+- 元数据/风险定向回归：`mvn -q -Dtest=M511AtlasToolHttpContractTest,ToolRegistryPromptContractTest,ReActEventRiskMetadataTest test` → ✅ 通过。
+- 后端编译：`mvn -q -DskipTests compile` → ✅ 通过。
+- 全量测试：`mvn -q test` → ✅ 通过。
+- 空白检查：`git diff --check` → ✅ 通过。
+
+### Coverage
+
+- Tool 总数：110。
+- 已声明 HTTP 元数据：28（由 M5.14 的 15 扩展到 28）。
+- READ 白名单：25。
+- 仍未迁移 Tool 继续保持 UNKNOWN / fail-closed，不因覆盖率目标放松安全边界。
+
+### Risk / Deferred
+
+- 本阶段仍只覆盖人工确认的低风险 GET/READ Tool；下载/导出、审批、配额变更、写操作、删除操作、敏感 admin-only Tool 暂不纳入免确认 READ。
+- `bare_metal_template` 虽位于 deploy agent，但实际 HTTP 行为是查询模板列表，已按 READ 记录；后续 deploy 域写操作仍需单独高风险治理。
+- 两个测试失败的根因是测试夹具未携带 READ 元数据被 HITL fail-closed 正确拦截，不是本轮 13 个生产 Tool 注解变更引起；已通过补测试元数据闭环。
+
+---
+
 ## [M5.14] — Tool HTTP/风险元数据首批 GET/READ 扩面治理
 
 **周期**: 2026-05-24

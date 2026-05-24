@@ -22,7 +22,10 @@ import java.util.Set;
     name = "sys_model_list",
     agent = "query",
     intentId = "sys_model_list",
-    description = "查询全局模型列表"
+    description = "查询全局模型列表",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/model"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class SysModelListTool extends BaseTool {

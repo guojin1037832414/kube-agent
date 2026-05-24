@@ -22,7 +22,10 @@ import java.util.Set;
     name = "node_allocation",
     agent = "query",
     intentId = "node_allocation",
-    description = "查询节点分配情况"
+    description = "查询节点分配情况",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/node/organization/allocation"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class NodeAllocationTool extends BaseTool {

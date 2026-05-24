@@ -1,9 +1,13 @@
 package com.atlas.graph.bridge;
 
+import com.atlas.hitl.HitlGuard;
+import com.atlas.tool.annotation.AtlasToolMapping;
+import com.atlas.tool.annotation.ToolPermission;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.tool.core.BaseTool;
 import com.atlas.tool.core.ToolParameterNormalizer;
 import com.atlas.tool.core.ToolParameterSpec;
+import com.atlas.tool.core.ToolRegistry;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -43,7 +47,13 @@ class AtlasToolCallbackTest {
     @Test
     void call_shouldNormalizeAliasBeforeExecutingBaseTool() throws Exception {
         RecordingTool tool = new RecordingTool();
-        AtlasToolCallback callback = new AtlasToolCallback(tool, objectMapper, new ToolParameterNormalizer());
+        AtlasToolCallback callback = new AtlasToolCallback(
+            tool,
+            objectMapper,
+            new ToolParameterNormalizer(),
+            new HitlGuard(),
+            safeReadMetadata(tool)
+        );
 
         String output = callback.call("{\"pod_name\":\"nginx-callback\",\"ns\":\"default\"}");
         JsonNode jsonNode = objectMapper.readTree(output);
@@ -52,6 +62,30 @@ class AtlasToolCallbackTest {
         assertEquals("nginx-callback", tool.lastParams.get("podName"));
         assertEquals("default", tool.lastParams.get("namespace"));
         assertEquals("nginx-callback", tool.lastParams.get("pod_name"), "原始 alias 字段应保留");
+    }
+
+    /**
+     * 构造测试专用的安全 READ 元数据。
+     *
+     * <p>M5.13 之后 HITL 守卫采用 fail-closed 策略：缺少风险元数据的 Tool 会被视为高风险并拒绝执行。
+     * 本用例关注的是 ToolCallback 参数归一化是否会真正传入 BaseTool，因此必须显式声明该测试 Tool
+     * 是无确认要求的只读查询，既保留生产 fail-closed 安全边界，又让测试契约表达清楚。</p>
+     */
+    private ToolRegistry.ToolMetadata safeReadMetadata(RecordingTool tool) {
+        return new ToolRegistry.ToolMetadata(
+            tool.getToolName(),
+            tool.getDescription(),
+            tool.getToolName(),
+            "query",
+            tool,
+            ToolPermission.Policy.PUBLIC,
+            Set.of(),
+            false,
+            "GET",
+            new String[]{"/api/test/recording"},
+            AtlasToolMapping.OperationType.READ,
+            false
+        );
     }
 
     /**

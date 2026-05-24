@@ -22,7 +22,10 @@ import java.util.Set;
     name = "dashboard_image_count",
     agent = "query",
     intentId = "dashboard_image_count",
-    description = "查询Dashboard镜像统计信息"
+    description = "查询Dashboard镜像统计信息",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/dashboard/image/count"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class DashboardImageCountTool extends BaseTool {

@@ -23,7 +23,10 @@ import java.util.Set;
     name = "bare_metal_template",
     agent = "deploy",
     intentId = "bare_metal_template",
-    description = "查询裸金属配置模板列表"
+    description = "查询裸金属配置模板列表",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/bare-metal-config-template"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class BareMetalTemplateTool extends BaseTool {

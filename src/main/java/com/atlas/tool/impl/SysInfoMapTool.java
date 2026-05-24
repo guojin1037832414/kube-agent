@@ -22,7 +22,10 @@ import java.util.Set;
     name = "sys_info_map",
     agent = "query",
     intentId = "sys_info_map",
-    description = "查询系统信息配置"
+    description = "查询系统信息配置",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/public/sys-info/all/map"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class SysInfoMapTool extends BaseTool {

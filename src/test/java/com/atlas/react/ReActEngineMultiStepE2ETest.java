@@ -1,6 +1,8 @@
 package com.atlas.react;
 
 import com.atlas.auth.UserPermissionContext;
+import com.atlas.tool.annotation.AtlasToolMapping;
+import com.atlas.tool.annotation.ToolPermission;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.tool.core.BaseTool;
 import com.atlas.tool.core.ToolRegistry;
@@ -46,8 +48,7 @@ class ReActEngineMultiStepE2ETest {
             "Thought: Pod 存在且重启，需要继续查询异常事件。\nAction: {\"tool\":\"event_query\",\"params\":{\"podName\":\"nginx-1\",\"namespace\":\"default\",\"reason\":\"BackOff\"}}",
             "Thought: 已拿到状态和事件，可以给出结论。\nFinal Answer: 现象：nginx-1 发生 CrashLoopBackOff。证据：restartCount=3，事件包含 BackOff。判断：应用进程启动后反复退出。建议：查看容器启动命令和应用日志。"
         ));
-        RecordingTool podTool = new RecordingTool(
-            "pod_status",
+        RecordingTool podTool = new PodStatusRecordingTool(
             "查询 Pod 状态",
             AtlasToolResult.ok("Pod 状态查询完成", Map.of(
                 "podName", "nginx-1",
@@ -57,8 +58,7 @@ class ReActEngineMultiStepE2ETest {
                 "reason", "CrashLoopBackOff"
             ))
         );
-        RecordingTool eventTool = new RecordingTool(
-            "event_query",
+        RecordingTool eventTool = new EventQueryRecordingTool(
             "查询 Pod 异常事件",
             AtlasToolResult.ok("事件查询完成", List.of(Map.of(
                 "reason", "BackOff",
@@ -129,8 +129,12 @@ class ReActEngineMultiStepE2ETest {
 
     /**
      * 内存记录型 Tool：记录每次入参并返回固定 AtlasToolResult。
+     *
+     * <p>基类只承载测试夹具逻辑；真正注册给 {@link ToolRegistry} 的子类需要各自声明
+     * {@link AtlasToolMapping} READ 元数据。这样可以在不放松生产 HITL fail-closed 的前提下，
+     * 明确告诉测试守卫：本 E2E 成功路径中的两个工具都是无需人工确认的只读查询。</p>
      */
-    private static final class RecordingTool extends BaseTool {
+    private abstract static class RecordingTool extends BaseTool {
         private final String runtimeName;
         private final AtlasToolResult result;
         private int callCount;
@@ -165,6 +169,46 @@ class ReActEngineMultiStepE2ETest {
         @Override
         public String getToolName() {
             return runtimeName;
+        }
+    }
+
+    /**
+     * Pod 状态测试 Tool：声明为 READ，避免被 HITL fail-closed 当作 UNKNOWN 高风险拦截。
+     */
+    @AtlasToolMapping(
+        name = "pod_status",
+        agent = "query",
+        intentId = "pod_status",
+        description = "测试用 Pod 状态只读查询工具",
+        httpMethod = "GET",
+        apiEndpoints = {"/api/{orgId}/pod"},
+        operationType = AtlasToolMapping.OperationType.READ
+    )
+    @ToolPermission(ToolPermission.Policy.PUBLIC)
+    private static final class PodStatusRecordingTool extends RecordingTool {
+
+        private PodStatusRecordingTool(String description, AtlasToolResult result) {
+            super("pod_status", description, result);
+        }
+    }
+
+    /**
+     * 事件查询测试 Tool：声明为 READ，保持 ReAct 多步成功路径测试聚焦工具编排本身。
+     */
+    @AtlasToolMapping(
+        name = "event_query",
+        agent = "query",
+        intentId = "event_query",
+        description = "测试用事件只读查询工具",
+        httpMethod = "GET",
+        apiEndpoints = {"/api/{orgId}/event"},
+        operationType = AtlasToolMapping.OperationType.READ
+    )
+    @ToolPermission(ToolPermission.Policy.PUBLIC)
+    private static final class EventQueryRecordingTool extends RecordingTool {
+
+        private EventQueryRecordingTool(String description, AtlasToolResult result) {
+            super("event_query", description, result);
         }
     }
 }

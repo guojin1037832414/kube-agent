@@ -22,7 +22,10 @@ import java.util.Set;
     name = "dashboard_easy_flow",
     agent = "query",
     intentId = "dashboard_easy_flow",
-    description = "查询Dashboard流程列表"
+    description = "查询Dashboard流程列表",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/dashboard/easy-flow"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class DashboardEasyFlowTool extends BaseTool {

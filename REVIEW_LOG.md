@@ -3,6 +3,78 @@
 > 本文件记录阶段性开发闭环：问题背景、解决方案、测试结果、代码 Review、风险与后续计划。
 
 
+## 2026-05-24 11:20 - M5.15 Tool HTTP/风险元数据第二批 GET/READ 扩面收尾
+
+### 背景
+- M5.14 已完成首批 10 个 GET/READ Tool 元数据扩面，但 `ToolRegistry` 中仍有大量历史 Tool 未声明 HTTP/风险元数据。
+- M5.13 HITL fail-closed 已成为执行层安全边界：只有明确 `operationType=READ` 且 `requiresConfirmation=false` 的 Tool 可直接执行。
+- 用户要求继续按“专家会诊前置、先实验再铺开”推进，避免把敏感 GET、下载导出、写操作或 admin-only 能力误标为免确认 READ。
+
+### 专家会诊结论
+1. 第二批只迁移低风险 GET/READ 查询 Tool；READ 是免确认白名单，不能机械等价于 HTTP GET。
+2. 对 dashboard、系统信息、GPU、命名空间、节点分配、镜像仓库、模型列表、裸金属模板查询等只读能力可小批推进。
+3. 全量测试中两个失败并非本轮生产 Tool 注解引入，而是 M5.13 fail-closed 后测试内存 Tool 缺少风险元数据，被守卫按 UNKNOWN 正确拦截。
+4. 修复测试失败的最佳方案是补测试夹具 READ 元数据；禁止修改生产默认构造器让 metadata=null 放行，也不应把成功路径断言改成接受 blocked。
+
+### 变更内容
+- 第二批补充 13 个 GET/READ Tool 元数据：
+  - `DashboardDeploymentCountTool` → `GET /api/{orgId}/dashboard/deployment/count`
+  - `DashboardImageCountTool` → `GET /api/{orgId}/dashboard/image/count`
+  - `DashboardEasyFlowTool` → `GET /api/{orgId}/dashboard/easy-flow`
+  - `SysInfoMapTool` → `GET /api/public/sys-info/all/map`
+  - `SysModelListTool` → `GET /api/model`
+  - `GpuGlobalListTool` → `GET /api/gpu`
+  - `GpuMapDetailTool` → `GET /api/gpu/all/gpu-map`
+  - `GpuDetailListTool` → `GET /api/{orgId}/gpu-detail`
+  - `NamespaceQueryTool` → `GET /api/namespace`
+  - `NodeAllocationTool` → `GET /api/{orgId}/node/organization/allocation`
+  - `ImageRepositoryTool` → `GET /api/{orgId}/image/repository`
+  - `ModelListTool` → `GET /api/{orgId}/model`
+  - `BareMetalTemplateTool` → `GET /api/bare-metal-config-template`
+- `AtlasToolCallbackTest`：为测试专用 `RecordingTool` 构造安全 READ `ToolMetadata`，保留 HITL fail-closed，同时验证 alias 归一化确实进入 `BaseTool.execute`。
+- `ReActEngineMultiStepE2ETest`：新增带 READ 注解的测试子类 `PodStatusRecordingTool`、`EventQueryRecordingTool`，恢复 ReAct 两轮工具 + Final Answer 成功路径。
+
+### 测试结果
+| 项目 | 命令/方式 | 结果 |
+|------|-----------|------|
+| 失败用例复跑 | `mvn -q -Dtest=AtlasToolCallbackTest,ReActEngineMultiStepE2ETest test` | ✅ PASS |
+| HITL fail-closed 契约 | `mvn -q -Dtest=M513HitlFailClosedContractTest test` | ✅ PASS |
+| 元数据/风险定向回归 | `mvn -q -Dtest=M511AtlasToolHttpContractTest,ToolRegistryPromptContractTest,ReActEventRiskMetadataTest test` | ✅ PASS |
+| 后端编译 | `mvn -q -DskipTests compile` | ✅ PASS |
+| 全量测试 | `mvn -q test` | ✅ PASS |
+| 空白检查 | `git diff --check` | ✅ PASS |
+| 覆盖率脚本 | Python 静态统计 | ✅ total=110, declared=28, read=25 |
+
+### 覆盖率变化
+- Tool 总数：110。
+- 已声明 HTTP 元数据：28（M5.14 后为 15，本轮新增 13）。
+- READ 白名单：25。
+- 未迁移 Tool 仍由 UNKNOWN / fail-closed 保护。
+
+### 代码 Review
+#### 优点
+- 生产变更仅限 13 个 Tool 注解元数据，不改业务执行逻辑、不触发真实 kube-manager 数据面请求。
+- endpoint 与源码中 `String path` / `httpClient.get(...)` 的 GET 路径一致，风险语义清晰。
+- 测试修复没有绕过 HITL，而是让测试夹具显式声明 READ 元数据，安全边界保持收紧。
+- 全量测试已从 2 个 fail-closed 相关失败恢复为全绿。
+
+#### 风险
+- `bare_metal_template` 隶属 deploy agent，虽实际为只读模板查询，但后续 deploy 域 Tool 需要继续逐个确认，不能整体放宽。
+- 源码级元数据契约仍依赖正则扫描，随着迁移规模扩大可考虑 JavaParser/AST Analyzer。
+- 剩余未迁移 Tool 数量仍较多，用户体验上可能继续出现安全拦截，需要继续分批治理。
+
+### 根因与解决方案
+- 根因 1：历史 Tool 缺少 `httpMethod/apiEndpoints/operationType`，M5.13 fail-closed 下无法进入 READ 白名单。
+  - 解决：经专家会诊后选取第二批低风险 GET/READ Tool，逐个补充注解元数据。
+- 根因 2：测试内存 Tool 没有生产注解或测试专用 `ToolMetadata`，在 M5.13 后被 HITL 守卫按 UNKNOWN 拦截，导致成功路径单测不再真正执行 Tool。
+  - 解决：为测试夹具显式提供 READ 元数据，恢复测试目标，同时不改变生产 fail-closed。
+
+### 后续建议
+1. 继续按 10～15 个/批推进剩余低风险 READ Tool，优先普通查询和前端高频展示类。
+2. 对导出/下载、审批、配额、写操作、删除操作建立单独高风险批次，默认 `requiresConfirmation=true`。
+3. 若第三批后元数据数量继续扩大，评估将 `M511AtlasToolHttpContractTest` 的源码扫描升级到 AST 级别。
+
+
 ## 2026-05-24 00:45 - M5.14 Tool HTTP/风险元数据首批 GET/READ 扩面治理
 
 ### 背景

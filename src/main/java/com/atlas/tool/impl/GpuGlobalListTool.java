@@ -22,7 +22,10 @@ import java.util.Set;
     name = "gpu_global_list",
     agent = "query",
     intentId = "gpu_global_list",
-    description = "查询全局GPU信息列表"
+    description = "查询全局GPU信息列表",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/gpu"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class GpuGlobalListTool extends BaseTool {

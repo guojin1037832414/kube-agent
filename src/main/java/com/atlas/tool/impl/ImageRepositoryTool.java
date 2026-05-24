@@ -22,7 +22,10 @@ import java.util.Set;
     name = "image_repository",
     agent = "query",
     intentId = "image_repository",
-    description = "查询镜像仓库列表"
+    description = "查询镜像仓库列表",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/image/repository"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class ImageRepositoryTool extends BaseTool {

@@ -18,7 +18,10 @@ import java.util.Set;
     name = "namespace_status",
     agent = "query",
     intentId = "namespace_status",
-    description = "查询Namespace列表"
+    description = "查询Namespace列表",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/namespace"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class NamespaceQueryTool extends BaseTool {

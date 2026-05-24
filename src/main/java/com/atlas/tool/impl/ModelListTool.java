@@ -25,7 +25,10 @@ import java.util.Set;
     name = "model_list",
     agent = "query",
     intentId = "model_list",
-    description = "查询模型列表"
+    description = "查询模型列表",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/model"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class ModelListTool extends BaseTool {

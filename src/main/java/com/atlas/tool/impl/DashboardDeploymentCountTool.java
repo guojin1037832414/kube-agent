@@ -22,7 +22,10 @@ import java.util.Set;
     name = "dashboard_deployment_count",
     agent = "query",
     intentId = "dashboard_deployment_count",
-    description = "查询Dashboard部署统计信息"
+    description = "查询Dashboard部署统计信息",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/dashboard/deployment/count"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class DashboardDeploymentCountTool extends BaseTool {
