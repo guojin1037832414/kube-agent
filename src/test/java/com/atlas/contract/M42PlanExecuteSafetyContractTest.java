@@ -23,6 +23,7 @@ class M42PlanExecuteSafetyContractTest {
     private static final Path PLAN_ENGINE = Path.of("src/main/java/com/atlas/plan/PlanEngine.java");
     private static final Path PLAN_RESULT = Path.of("src/main/java/com/atlas/plan/PlanResult.java");
     private static final Path PLAN_STEP = Path.of("src/main/java/com/atlas/plan/PlanStep.java");
+    private static final Path SAFE_TOOL_EXECUTOR = Path.of("src/main/java/com/atlas/tool/execution/SafeToolExecutor.java");
 
     /**
      * BrainDecision 必须显式支持 PLAN，避免 LLM 输出 PLAN 时反序列化失败。
@@ -48,7 +49,9 @@ class M42PlanExecuteSafetyContractTest {
             .contains("case PLAN -> \"plan_node\"")
             .contains("\"plan_node\", \"plan_node\"")
             .contains("graph.addNode(\"plan_node\", buildPlanNode(planEngine))")
-            .contains("graph.addEdge(\"plan_node\", END)")
+            .contains("graph.addNode(\"execute_node\", buildExecuteNode(safeToolExecutor))")
+            .contains("graph.addEdge(\"plan_node\", \"execute_node\")")
+            .contains("graph.addEdge(\"execute_node\", END)")
             .contains("case DELEGATE_REACT -> \"react_node\"")
             .contains("case HITL_CONFIRM -> \"hitl_confirm\"");
     }
@@ -63,7 +66,10 @@ class M42PlanExecuteSafetyContractTest {
         assertThat(source)
             .contains("strategies.put(\"plan_node_result\", new ReplaceStrategy())")
             .contains("strategies.put(\"plan_result\", new ReplaceStrategy())")
-            .contains("strategies.put(\"plan_steps\", new ReplaceStrategy())");
+            .contains("strategies.put(\"plan_steps\", new ReplaceStrategy())")
+            .contains("strategies.put(\"execute_node_result\", new ReplaceStrategy())")
+            .contains("strategies.put(\"execute_result\", new ReplaceStrategy())")
+            .contains("strategies.put(\"execute_steps\", new ReplaceStrategy())");
     }
 
     /**
@@ -74,7 +80,7 @@ class M42PlanExecuteSafetyContractTest {
         String source = read(GRAPH_CONFIG);
         String planNode = substringBetween(source,
             "private static com.alibaba.cloud.ai.graph.action.AsyncNodeAction buildPlanNode",
-            "private static com.alibaba.cloud.ai.graph.action.AsyncNodeAction buildReActNode");
+            "构建 Execute 节点异步动作");
 
         assertThat(planNode)
             .contains("planEngine.plan(input, decision, context)")
@@ -125,6 +131,53 @@ class M42PlanExecuteSafetyContractTest {
             .contains("String riskLevel")
             .contains("boolean requiresConfirmation")
             .contains("不能作为执行层安全判定依据");
+    }
+
+    /**
+     * execute_node 首版必须默认 fail-closed：读取计划状态但不得自动调用 Tool。
+     */
+    @Test
+    void executeNode_shouldFailClosedAndMustNotDirectlyExecuteTools() throws IOException {
+        String source = read(GRAPH_CONFIG);
+        String executeNode = substringBetween(source,
+            "private static com.alibaba.cloud.ai.graph.action.AsyncNodeAction buildExecuteNode",
+            "private static com.alibaba.cloud.ai.graph.action.AsyncNodeAction buildReActNode");
+
+        assertThat(executeNode)
+            .contains("PlanResult planResult = state.value(\"plan_result\")")
+            .contains("executeResult.put(\"executed\", false)")
+            .contains("PLAN_NOT_EXECUTABLE")
+            .contains("EXECUTE_GATE_NOT_OPEN")
+            .contains("updates.put(\"execute_node_result\", answer)")
+            .contains("updates.put(\"execute_result\", executeResult)")
+            .contains("updates.put(\"execute_steps\", planSteps)")
+            .contains("M4-PX.3 首版也不直接执行")
+            .doesNotContain("new HitlConfirmation")
+            .doesNotContain("HitlConfirmation.human")
+            .doesNotContain("tool_result")
+            .doesNotContain("executeIntent(")
+            .doesNotContain("tool.execute")
+            .doesNotContain("KubeManagerHttpClient")
+            .doesNotContain("RestClient");
+    }
+
+    /**
+     * SafeToolExecutor 必须成为后续 execute_node 与 Graph tool_call 共享的唯一安全执行边界。
+     */
+    @Test
+    void safeToolExecutor_shouldCentralizeProtectedParamHitlAndThreadLocalSafety() throws IOException {
+        String source = read(SAFE_TOOL_EXECUTOR);
+
+        assertThat(source)
+            .contains("public class SafeToolExecutor")
+            .contains("PROTECTED_CONTEXT_PARAMS")
+            .contains("toolRegistry.findByIntentId(intentId)")
+            .contains("toolRegistry.canExecuteIntent(intentId)")
+            .contains("hitlGuard.verifyByIntentId(")
+            .contains("tool.execute(toolParams)")
+            .contains("restoreThreadLocalContext(previousToken, previousOrgId)")
+            .contains("系统上下文字段最后写入")
+            .contains("缺失 orgId、未注册 Tool、权限不足、HITL 未确认均 fail-closed");
     }
 
     private String read(Path path) throws IOException {

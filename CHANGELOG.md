@@ -7,6 +7,53 @@
 ---
 
 
+## [M4-PX.3] — SafeToolExecutor 与 execute_node fail-closed 最小安全闭环
+
+**周期**: 2026-05-25
+**交付**: 在 M4-PX.2 只规划 POC 基础上，先抽取统一安全工具执行层 `SafeToolExecutor`，让既有 Graph `tool_call` 复用且行为兼容；同时新增 `execute_node` 并将 PLAN 路径升级为 `PLAN -> plan_node -> execute_node -> END`。本阶段 `execute_node` 默认 fail-closed，不自动调用 Tool、不写 `tool_result`、不创建 `hitl_confirmation`。
+
+### Added
+
+- 新增 `com.atlas.tool.execution` 包：
+  - `SafeToolExecutor`：统一执行边界，集中处理 Tool 查找、权限校验、受保护参数过滤、HITL 校验、ThreadLocal 绑定/恢复和结果归一化。
+  - `SafeToolExecutionRequest`：承载服务端可信上下文、业务参数、服务端确认 marker 与执行来源。
+  - `SafeToolExecutionResult`：保持与既有 Graph `tool_call` 返回结构兼容。
+  - `SafeToolExecutionSource`：记录 Graph tool_call、后续 execute_node、ReAct、ToolCallback 等执行来源。
+- `AtlasGraphConfig` 新增 `execute_node`、`execute_node_result`、`execute_result`、`execute_steps` State key。
+- PLAN 路由从 `PLAN -> plan_node -> END` 升级为 `PLAN -> plan_node -> execute_node -> END`。
+- 新增 `SafeToolExecutorTest`，覆盖普通 READ、伪造上下文字段过滤、高危无确认拦截、ThreadLocal 快照恢复。
+
+### Changed
+
+- Graph `tool_call` 不再内联 Tool 执行链，改为委托 `SafeToolExecutor.executeIntent(...)`。
+- M5.13 HITL 源码契约更新为：Graph 负责读取服务端确认 marker，真实 `tool.execute(...)` 前的守卫由 `SafeToolExecutor` 统一完成。
+- M4-PX 契约测试更新为锁定 `execute_node` fail-closed：即使 `PlanResult.executable=true`，本阶段也仍返回 `EXECUTE_GATE_NOT_OPEN`，等待后续 READ-only 单步门控。
+
+### Safety
+
+- `SafeToolExecutor` 对 `token/orgId/organizationId/userId/conversationId` 等受保护字段执行过滤，系统上下文字段最后写入，防止 LLM/Plan 参数伪造租户或用户边界。
+- 缺失 orgId、未注册 Tool、权限不足、HITL 未确认、Tool 异常均返回未执行结果，保持 fail-closed。
+- ThreadLocal token/orgId 在执行前保存快照，执行后 `finally` 恢复，避免线程池污染或嵌套执行破坏外层上下文。
+- `execute_node` 当前只读取 `plan_result/plan_steps` 并返回停止原因，不调用 kube-manager、不调用 Tool、不写 `tool_result`、不生成人工确认 marker。
+
+### Verified
+
+- 定向测试：`mvn -q -Dtest=SafeToolExecutorTest,M42PlanExecuteSafetyContractTest,M513HitlFailClosedContractTest,ActionTypeTest,AtlasBrainMockTest,SupervisorGraphReactRoutingTest test` → ✅ 通过。
+- 单测隔离修复后：`mvn -q -Dtest=SafeToolExecutorTest test` → ✅ 通过。
+- 全量测试：`mvn -q test` → ✅ 通过（228 tests）。
+- 空白检查：`git diff --check` → ✅ 通过。
+- 新增行敏感扫描：`ADDED_LINE_SECRET_SUSPECTS 0` → ✅ 通过。
+- 三路 Review：安全架构、测试契约、工程落地均 PASS。
+
+### Risk / Deferred
+
+- `execute_node` 目前是安全占位，不执行真实计划步骤；后续若开放执行，必须先补 READ-only 单步白名单、参数 schema 校验、预算控制、审计日志和 HITL resume 语义。
+- 当前参数过滤是执行参数层面的受保护字段过滤，后续可补嵌套对象/数组递归脱敏与日志/HITL 展示侧脱敏一致性契约。
+- 后续建议新增全局源码契约：扫描所有 `tool.execute(...)` 调用点，逐步强制 Graph/ReAct/ToolCallback 等入口统一收口到 `SafeToolExecutor`。
+- 后续建议补“高危 + 服务端可信确认 marker 成功执行”和“Tool 异常后 ThreadLocal 恢复”的细化单测。
+
+---
+
 ## [M4-PX.2] — Plan-and-Execute + Reflection 最小 POC 闭环
 
 **周期**: 2026-05-24

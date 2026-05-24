@@ -57,7 +57,7 @@ npm run dev
 | M1.5 HITL SSE | ⚠️ 后端完成 | confirm/resume/checkpoint 全通，前端代码写好未浏览器联调 |
 | **M2 查询全覆盖** | **🔵 即将启动** | 35+ 单元测试 + 查询类 E2E ≥ 95% |
 | M3 写操作+HITL联调 | ⏳ | HITL confirm 浏览器验证 + ThreadLocal→State重构 |
-| M4 Plan-Execute | 🟡 最小 POC | PLAN → plan_node → PlanEngine，已具备只规划不执行的 Reflection 自检闭环 |
+| M4 Plan-Execute | 🟡 最小安全闭环 | PLAN → plan_node → PlanEngine → execute_node(fail-closed)，tool_call 已复用 SafeToolExecutor |
 | M5 Memory+MCP | ✅ 最小闭环 | MCP 安全 Manifest + 最近摘要 Memory + Micrometer/Actuator 指标 |
 
 > **测试约束**: M2 只验证查询类 Tool，创建/修改/删除/高危操作留到 M3/M4。
@@ -92,6 +92,7 @@ mvn test
 
 - 后端权限：`@Isolation(SYS_ADMIN_ONLY)` + `@ToolPermission` + ThreadLocal Token 透传
 - 高危操作：命令式 HITL 确认（需输入"确认执行"）
+- Tool 执行：Graph tool_call 统一经过 SafeToolExecutor，执行前过滤受保护参数并调用 HitlGuard，execute_node 当前默认 fail-closed
 - 幂等性：confirmToken + Caffeine TTL 5min + 审计日志
 
 ## 仓库
@@ -101,4 +102,4 @@ mvn test
 
 ---
 
-*最后更新: 2026-05-18 | Atlas v3.1*
+*最后更新: 2026-05-25 | Atlas v3.1 / M4-PX.3*

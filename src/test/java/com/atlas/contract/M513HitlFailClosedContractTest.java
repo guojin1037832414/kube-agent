@@ -24,6 +24,7 @@ class M513HitlFailClosedContractTest {
     private static final Path HITL_CONTROLLER = Path.of("src/main/java/com/atlas/controller/HITLController.java");
     private static final Path HITL_CONFIRMATION = Path.of("src/main/java/com/atlas/hitl/HitlConfirmation.java");
     private static final Path HITL_GUARD = Path.of("src/main/java/com/atlas/hitl/HitlGuard.java");
+    private static final Path SAFE_TOOL_EXECUTOR = Path.of("src/main/java/com/atlas/tool/execution/SafeToolExecutor.java");
     private static final Path REACT_ENGINE = Path.of("src/main/java/com/atlas/react/ReActEngine.java");
     private static final Path ORCHESTRATOR = Path.of("src/main/java/com/atlas/orchestrator/AtlasOrchestrator.java");
     private static final Path BRIDGE_CALLBACK = Path.of("src/main/java/com/atlas/graph/bridge/AtlasToolCallback.java");
@@ -49,26 +50,35 @@ class M513HitlFailClosedContractTest {
     }
 
     /**
-     * Graph tool_call 入口必须在 tool.execute 之前读取服务端确认 marker 并调用 HitlGuard。
+     * Graph tool_call 入口必须读取服务端确认 marker，并委托 SafeToolExecutor 在真正 tool.execute 前调用 HitlGuard。
      */
     @Test
     void graphToolCall_shouldCheckServerHitlConfirmationBeforeToolExecute() throws IOException {
-        String source = read(GRAPH_CONFIG);
+        String graphSource = read(GRAPH_CONFIG);
+        String executorSource = read(SAFE_TOOL_EXECUTOR);
 
-        int confirmationIndex = source.indexOf("state.value(\"hitl_confirmation\")");
-        int guardIndex = source.indexOf("hitlGuard.verifyByIntentId(toolRegistry, intentId, confirmation)");
-        int executeIndex = source.indexOf("tool.execute(toolParams)");
+        int confirmationIndex = graphSource.indexOf("state.value(\"hitl_confirmation\")");
+        int requestIndex = graphSource.indexOf("new SafeToolExecutionRequest(");
+        int executorCallIndex = graphSource.indexOf("safeToolExecutor.executeIntent(request).toGraphUpdates()");
+        int guardIndex = executorSource.indexOf("hitlGuard.verifyByIntentId(");
+        int executeIndex = executorSource.indexOf("tool.execute(toolParams)");
 
         assertThat(confirmationIndex)
             .as("Graph tool_call 必须读取服务端 hitl_confirmation marker")
             .isGreaterThanOrEqualTo(0);
+        assertThat(requestIndex)
+            .as("Graph tool_call 必须把确认 marker 封装进 SafeToolExecutionRequest")
+            .isGreaterThanOrEqualTo(0);
+        assertThat(executorCallIndex)
+            .as("Graph tool_call 必须委托 SafeToolExecutor，而不是内联绕过安全执行器")
+            .isGreaterThanOrEqualTo(0);
         assertThat(guardIndex)
-            .as("Graph tool_call 必须调用统一 HitlGuard")
+            .as("SafeToolExecutor 必须调用统一 HitlGuard")
             .isGreaterThanOrEqualTo(0);
         assertThat(executeIndex)
-            .as("Graph tool_call 必须仍然存在真实 tool.execute 调用")
+            .as("SafeToolExecutor 必须仍然存在真实 tool.execute 调用")
             .isGreaterThanOrEqualTo(0);
-        assertThat(confirmationIndex).isLessThan(executeIndex);
+        assertThat(confirmationIndex).isLessThan(requestIndex);
         assertThat(guardIndex).isLessThan(executeIndex);
     }
 

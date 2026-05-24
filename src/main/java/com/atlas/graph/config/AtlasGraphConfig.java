@@ -33,6 +33,9 @@ import com.atlas.hitl.HitlGuard;
 import com.atlas.plan.PlanEngine;
 import com.atlas.plan.PlanResult;
 import com.atlas.tool.core.ToolRegistry;
+import com.atlas.tool.execution.SafeToolExecutionRequest;
+import com.atlas.tool.execution.SafeToolExecutionSource;
+import com.atlas.tool.execution.SafeToolExecutor;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
@@ -390,6 +393,9 @@ public class AtlasGraphConfig {
             strategies.put("plan_node_result", new ReplaceStrategy());  // Plan 节点最终答案
             strategies.put("plan_result", new ReplaceStrategy());       // PlanEngine 结构化结果对象
             strategies.put("plan_steps", new ReplaceStrategy());        // PlanEngine 结构化步骤列表
+            strategies.put("execute_node_result", new ReplaceStrategy()); // M4-PX execute_node 最终答案
+            strategies.put("execute_result", new ReplaceStrategy());      // M4-PX execute_node 结构化执行结果
+            strategies.put("execute_steps", new ReplaceStrategy());       // M4-PX execute_node 步骤执行状态
             strategies.put("react_event_session_id", new ReplaceStrategy()); // ReAct 过程事件会话ID（纯字符串，可序列化）
             strategies.put("final_answer", new ReplaceStrategy());   // 最终 SSE 输出
             strategies.put("conversation_id", new ReplaceStrategy());
@@ -437,6 +443,59 @@ public class AtlasGraphConfig {
             updates.put("plan_node_result", result.finalAnswer());
             updates.put("plan_result", result);
             updates.put("plan_steps", result.steps() != null ? result.steps() : List.of());
+            return updates;
+        });
+    }
+
+    /**
+     * 构建 Execute 节点异步动作。
+     *
+     * <p>M4-PX.3 最小安全闭环中，execute_node 先作为受限执行入口占位：它会读取
+     * {@code plan_result} 和 {@code plan_steps}，但当前只在 {@link PlanResult#executable()}
+     * 为 true 且后续只读单步门控完善后才允许调用 {@link SafeToolExecutor}。由于 M4-PX.2
+     * 的 {@link PlanEngine} 明确输出 {@code executable=false}，本节点默认 fail-closed，
+     * 不调用 Tool、不写 {@code tool_result}、不创建 {@code hitl_confirmation}。</p>
+     *
+     * @param safeToolExecutor 统一安全工具执行器；当前 POC 仅建立依赖边界，不直接放行执行
+     * @return 异步节点动作
+     */
+    private static com.alibaba.cloud.ai.graph.action.AsyncNodeAction buildExecuteNode(
+            SafeToolExecutor safeToolExecutor) {
+        return node_async((OverAllState state) -> {
+            PlanResult planResult = state.value("plan_result")
+                .filter(PlanResult.class::isInstance)
+                .map(PlanResult.class::cast)
+                .orElse(null);
+            List<?> planSteps = state.value("plan_steps")
+                .filter(List.class::isInstance)
+                .map(List.class::cast)
+                .orElse(List.of());
+
+            Map<String, Object> executeResult = new HashMap<>();
+            executeResult.put("executed", false);
+            executeResult.put("reason", "M4-PX.3 execute_node 当前为 fail-closed 最小闭环：计划已生成，但尚未开放自动执行。");
+            executeResult.put("planExecutable", planResult != null && planResult.executable());
+            executeResult.put("stepCount", planSteps.size());
+
+            String answer;
+            if (planResult == null) {
+                answer = "⛔ execute_node 已停止：未找到 plan_result，无法确认计划来源和风险边界。";
+                executeResult.put("code", "PLAN_RESULT_MISSING");
+            } else if (!planResult.executable()) {
+                answer = "🧭 计划已生成，但当前阶段不会自动执行。原因：PlanResult.executable=false，系统按 fail-closed 策略停止在 execute_node。";
+                executeResult.put("code", "PLAN_NOT_EXECUTABLE");
+            } else {
+                // 即使后续 PlanResult.executable 被打开，M4-PX.3 首版也不直接执行。
+                // 下一阶段必须补齐 READ-only 单步门控、参数白名单和 HITL resume 后才能调用 safeToolExecutor。
+                answer = "⛔ execute_node 已停止：自动执行开关尚未开放，需先完成 READ-only 单步安全门控。";
+                executeResult.put("code", "EXECUTE_GATE_NOT_OPEN");
+            }
+
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("answer", answer);
+            updates.put("execute_node_result", answer);
+            updates.put("execute_result", executeResult);
+            updates.put("execute_steps", planSteps);
             return updates;
         });
     }
@@ -508,6 +567,7 @@ public class AtlasGraphConfig {
             ReActEngine reactEngine,
             ReActEventSinkRegistry reactEventSinkRegistry,
             PlanEngine planEngine,
+            SafeToolExecutor safeToolExecutor,
             com.atlas.http.KubeManagerHttpClient kubeManagerClient,
             ReactAgent queryAgent,
             ReactAgent deployAgent,
@@ -614,6 +674,7 @@ public class AtlasGraphConfig {
         }));
 
         graph.addNode("plan_node", buildPlanNode(planEngine));
+        graph.addNode("execute_node", buildExecuteNode(safeToolExecutor));
 
         graph.addNode("tool_call", node_async((OverAllState state) -> {
             BrainDecision d = state.value("brain_decision")
@@ -624,117 +685,26 @@ public class AtlasGraphConfig {
                 return java.util.Map.of("answer", "[无决策] AtlasBrain 未产生有效决策");
             }
 
-            String intentId = d.target();
-            String userId = state.value("user_id").map(Object::toString).orElse("anonymous");
-            String token = state.value("token").map(Object::toString).orElse("");
             String orgId = state.value("orgId").map(Object::toString).orElse("");
-            if (orgId.isBlank()) {
-                orgId = com.atlas.auth.UserPermissionContext.getCurrentOrgId();
-            }
-            if (orgId == null || orgId.isBlank()) {
-                return java.util.Map.of("answer",
-                    "❌ 安全上下文缺失：无法确定当前用户所属组织，请重新登录后再试。");
-            }
+            HitlConfirmation confirmation = state.value("hitl_confirmation")
+                .filter(HitlConfirmation.class::isInstance)
+                .map(HitlConfirmation.class::cast)
+                .orElse(null);
 
-            // ═══════════════════════════════════════════════════════════
-            // Token + OrgId 透传修复：Graph 异步线程中 ThreadLocal 丢失，需显式设置
-            // ═══════════════════════════════════════════════════════════
-            String previousToken = com.atlas.auth.UserPermissionContext.CURRENT_TOKEN.get();
-            String previousOrgId = com.atlas.auth.UserPermissionContext.CURRENT_ORG_ID.get();
-            if (!token.isBlank()) {
-                com.atlas.auth.UserPermissionContext.CURRENT_TOKEN.set(token);
-            } else {
-                com.atlas.auth.UserPermissionContext.CURRENT_TOKEN.remove();
-            }
-            if (orgId != null && !orgId.isBlank()) {
-                com.atlas.auth.UserPermissionContext.CURRENT_ORG_ID.set(orgId);
-            } else {
-                com.atlas.auth.UserPermissionContext.CURRENT_ORG_ID.remove();
-            }
-
-            try {
-                // 1. 查找 Tool
-                java.util.Optional<com.atlas.tool.core.BaseTool> toolOpt = toolRegistry.findByIntentId(intentId);
-                if (toolOpt.isEmpty()) {
-                    return java.util.Map.of("answer",
-                        "⚠️ 意图 '" + intentId + "' 已识别，暂无对应 Tool 实现。");
-                }
-
-                com.atlas.tool.core.BaseTool tool = toolOpt.get();
-
-                // 2. 权限检查
-                if (!toolRegistry.canExecuteIntent(intentId)) {
-                    return java.util.Map.of("answer",
-                        "❌ 权限不足：无权执行 '" + intentId + "'");
-                }
-
-                // 3. 使用可信 orgId 构造 Tool 参数。
-                // orgId 已在进入 try 前从 state 或 ThreadLocal 中解析并绑定到当前异步线程，
-                // BaseTool#resolveOrganizationId 会以 ThreadLocal 作为最终安全边界。
-                java.util.Map<String, Object> toolParams = new java.util.HashMap<>();
-                if (d.parameters() != null) {
-                    d.parameters().forEach((key, value) -> {
-                        if (!isProtectedContextParam(key)) {
-                            toolParams.put(key, value);
-                        }
-                    });
-                }
-                // M5.5 多租户安全治理：系统上下文字段最后写入，防止 Brain/LLM 参数覆盖租户边界。
-                toolParams.put("userId", userId);
-                toolParams.put("organizationId", orgId);
-
-                // 4. 执行层 HITL 强拦截。
-                // M5.13 fail-closed 原则：任何声明 requiresConfirmation=true，或风险语义不是 READ 的 Tool，
-                // 都必须携带后端 HITLController 注入的服务端确认凭证。LLM/前端/用户参数中的 confirmed
-                // 字段一律不可信，前面参数过滤也不会把该类字段作为授权依据。
-                HitlConfirmation confirmation = state.value("hitl_confirmation")
-                    .filter(HitlConfirmation.class::isInstance)
-                    .map(HitlConfirmation.class::cast)
-                    .orElse(null);
-                HitlGuard.Decision hitlDecision = hitlGuard.verifyByIntentId(toolRegistry, intentId, confirmation);
-                if (!hitlDecision.allowed()) {
-                    return java.util.Map.of("answer", hitlDecision.message());
-                }
-
-                // 5. 执行 Tool
-                try {
-                    java.util.Map<String, Object> toolResult = tool.execute(toolParams);
-                    boolean success = Boolean.TRUE.equals(toolResult.get("success"));
-                    String message = toolResult.get("message") != null
-                        ? toolResult.get("message").toString() : "";
-                    Object data = toolResult.get("data");
-
-                    // 5. 生成简洁回答
-                    String summary = data instanceof java.util.List
-                        ? String.format("✅ %s（共 %d 条数据）", message, ((java.util.List<?>) data).size())
-                        : "✅ " + message;
-
-                    java.util.Map<String, Object> updates = new java.util.HashMap<>();
-                    updates.put("answer", summary);
-                    updates.put("tool_result", java.util.Map.of(
-                        "success", success,
-                        "message", message,
-                        "tool", intentId,
-                        "data", data != null ? data : java.util.Map.of()
-                    ));
-                    return updates;
-                } catch (Exception e) {
-                    return java.util.Map.of("answer",
-                        "❌ Tool 执行异常: " + e.getMessage());
-                }
-            } finally {
-                // 恢复 ThreadLocal，防止线程池复用或嵌套 Graph 执行污染外层上下文
-                if (previousToken != null) {
-                    com.atlas.auth.UserPermissionContext.CURRENT_TOKEN.set(previousToken);
-                } else {
-                    com.atlas.auth.UserPermissionContext.CURRENT_TOKEN.remove();
-                }
-                if (previousOrgId != null) {
-                    com.atlas.auth.UserPermissionContext.CURRENT_ORG_ID.set(previousOrgId);
-                } else {
-                    com.atlas.auth.UserPermissionContext.CURRENT_ORG_ID.remove();
-                }
-            }
+            // M4-PX.3-A：Graph tool_call 不再内联 Tool 执行链，而是统一委托 SafeToolExecutor。
+            // 这样 tool_call 与后续 execute_node 能共享同一套权限、租户上下文、HITL fail-closed、
+            // ThreadLocal 绑定/恢复和受保护参数过滤逻辑，避免多入口安全漂移。
+            SafeToolExecutionRequest request = new SafeToolExecutionRequest(
+                d.target(),
+                d.parameters(),
+                state.value("user_id").map(Object::toString).orElse("anonymous"),
+                state.value("token").map(Object::toString).orElse(""),
+                orgId,
+                state.value("conversation_id").map(Object::toString).orElse(""),
+                confirmation,
+                SafeToolExecutionSource.GRAPH_TOOL_CALL
+            );
+            return safeToolExecutor.executeIntent(request).toGraphUpdates();
         }));
 
         graph.addNode("delegate", node_async((OverAllState state) -> {
@@ -882,7 +852,8 @@ public class AtlasGraphConfig {
         graph.addEdge("tool_call", END);
         graph.addEdge("delegate", END);
         graph.addEdge("react_node", END);
-        graph.addEdge("plan_node", END);
+        graph.addEdge("plan_node", "execute_node");
+        graph.addEdge("execute_node", END);
         graph.addEdge("hitl_confirm", END);
 
         return graph.compile();

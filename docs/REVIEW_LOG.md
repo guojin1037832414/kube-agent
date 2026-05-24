@@ -1,5 +1,55 @@
 # Atlas v3.1 开发审计日志
 
+## 2026-05-25 01:35 - M4-PX.3 SafeToolExecutor + execute_node fail-closed 最小安全闭环
+
+### 背景
+- M4-PX.2 已完成 PLAN/plan_node/PlanEngine 最小 POC，但只规划、不执行。
+- execute_node 涉及真实执行能力，专家会诊结论要求先抽统一安全工具执行层，不能直接开放通用自动执行。
+- OpenAI Agents / LangGraph 等优秀 Agent 架构实践均强调每次 tool invocation 前应经过统一 guardrail / approval gate。
+
+### 专家会诊 / Review 结论
+1. 安全架构专家：`SafeToolExecutor` 作为统一工具执行边界方向正确；`execute_node` 首版必须 fail-closed，不能绕过 M5 HITL。
+2. 开源 Agent 架构专家：guardrail 应放在每次 tool invocation 的统一入口，Graph 节点只做路由和状态编排。
+3. 三路提交前 Review：安全架构 PASS、测试契约 PASS、工程落地 PASS；允许提交，但建议后续补全局 execute 入口扫描、高危确认成功路径、异常路径 ThreadLocal 恢复。
+
+### 变更内容
+- 新增 `com.atlas.tool.execution` 包：`SafeToolExecutor`、`SafeToolExecutionRequest`、`SafeToolExecutionResult`、`SafeToolExecutionSource`。
+- `AtlasGraphConfig.tool_call` 从内联执行链改为委托 `SafeToolExecutor.executeIntent(...)`。
+- `AtlasGraphConfig` 新增 `execute_node`，PLAN 路径改为 `PLAN -> plan_node -> execute_node -> END`。
+- `execute_node` 当前只读取 `plan_result/plan_steps`，默认返回 fail-closed 停止结果，不调用 Tool、不写 `tool_result`、不创建 `hitl_confirmation`。
+- 新增 `SafeToolExecutorTest`；更新 `M42PlanExecuteSafetyContractTest` 与 `M513HitlFailClosedContractTest`。
+
+### 测试结果
+| 测试项 | 命令/方式 | 结果 |
+|--------|-----------|------|
+| M4-PX/M5 定向测试 | `mvn -q -Dtest=SafeToolExecutorTest,M42PlanExecuteSafetyContractTest,M513HitlFailClosedContractTest,ActionTypeTest,AtlasBrainMockTest,SupervisorGraphReactRoutingTest test` | ✅ PASS |
+| SafeToolExecutor 隔离复测 | `mvn -q -Dtest=SafeToolExecutorTest test` | ✅ PASS |
+| 全量测试 | `mvn -q test` | ✅ PASS（228 tests） |
+| 空白检查 | `git diff --check` | ✅ PASS |
+| 敏感信息扫描 | 新增行扫描 | ✅ `ADDED_LINE_SECRET_SUSPECTS 0` |
+
+### 代码 Review
+#### 优点
+- Tool 执行安全边界从 Graph 节点内联逻辑下沉到统一 `SafeToolExecutor`，后续 execute_node/ReAct/ToolCallback 可逐步复用。
+- 受保护上下文字段过滤和系统上下文最后写入，降低 LLM/Plan 参数伪造租户或用户边界的风险。
+- ThreadLocal 保存快照并在 finally 恢复，更适合线程池/嵌套调用场景。
+- execute_node 虽已进入 Graph 路径，但默认 fail-closed，避免 M4-PX.2 的计划结果被误当成可执行授权。
+
+#### 风险
+- 当前 execute_node 只是安全占位，尚未实现 READ-only 单步执行、预算控制、执行审计和 HITL resume 链路。
+- SafeToolExecutor 当前是浅层受保护字段过滤，后续需要考虑嵌套参数、日志、HITL 展示脱敏一致性。
+- 项目仍存在 ReAct/ToolCallback 等历史执行入口，后续需要逐步收口或用源码契约扫描约束。
+
+### 根因与解决方案
+- 根因：旧 `tool_call` 内联了 Tool 查找、权限、参数过滤、HITL、ThreadLocal 和结果归一化；如果 execute_node 另起一套执行链，会产生安全漂移和绕过风险。
+- 解决：先抽 `SafeToolExecutor` 并让旧 `tool_call` 复用，验证行为兼容；再新增 fail-closed `execute_node`，只建立状态与路由边界，不开放真实执行。
+
+### 后续建议
+1. 新增全局源码契约，扫描生产代码中的 `tool.execute(...)`，逐步强制统一经过 `SafeToolExecutor`。
+2. 补“高危 + 服务端可信 confirmation marker”成功路径测试。
+3. 补 Tool 抛异常后的 ThreadLocal 恢复测试。
+4. 在后续 M4-PX.4 中只开放 READ-only、单步、白名单 Tool 的 execute_node 实验执行，并加入预算/审计。
+
 ## 2026-05-24 21:50 - M4-PX.2 Plan-and-Execute + Reflection 最小 POC 闭环
 
 ### 背景
