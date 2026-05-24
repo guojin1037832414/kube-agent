@@ -20,7 +20,11 @@ import java.util.*;
     name = "distributed_create",
     agent = "deploy",
     intentId = "distributed_create",
-    description = "创建分布式计算任务"
+    description = "创建分布式计算任务",
+    httpMethod = "POST",
+    apiEndpoints = {"/api/{orgId}/bcm/slurm-cluster"},
+    operationType = AtlasToolMapping.OperationType.CREATE,
+    requiresConfirmation = true
 )
 
 @ToolPermission(ToolPermission.Policy.AUTHENTICATED)

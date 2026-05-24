@@ -335,7 +335,7 @@ public class ToolRegistry {
         sb.append("2. 如果用户请求超出可用工具范围，请礼貌拒绝并说明权限限制\n");
         sb.append("3. 调用工具前确保已收集所有必填参数\n");
         sb.append("4. Action.params 必须优先使用参数契约中的 canonical 参数名；历史 alias 仅用于系统兼容归一化，不要主动输出 alias 字段\n");
-        sb.append("5. 风险标签用于辅助判断操作影响：READ 通常只读；CREATE/UPDATE/DELETE/ACTION 可能改变系统状态；requiresConfirmation=true 表示建议进入人工确认。M5.12 该标签仅为风险提示，真正执行层强制拦截由后续 HITL 策略负责。\n");
+        sb.append("5. 风险标签用于辅助判断操作影响：READ 为普通只读；SENSITIVE_READ 为敏感读取，虽不改变状态但可能读取日志、用户、权限、订单、配额等敏感数据；CREATE/UPDATE/DELETE/ACTION 可能改变系统状态；requiresConfirmation=true 表示执行前必须人工确认，执行层由 HITL fail-closed 守卫强制拦截。\n");
 
         return sb.toString();
     }
@@ -398,6 +398,18 @@ public class ToolRegistry {
             .flatMap(List::stream)
             .filter(meta -> meta.isVisibleTo(userPermissionContext.current().orElse(null)))
             .map(ToolMetadata::name)
+            .toList();
+    }
+
+    /**
+     * 返回系统审计视角的全部 Tool 元数据。
+     *
+     * <p>M5.20 MCP Manifest / 审计测试使用该方法做全量风险门控统计。该方法不用于普通用户 Prompt，
+     * 因此不会改变权限感知的运行时行为；对外输出时仍必须由调用方过滤敏感字段和不可暴露 Tool。</p>
+     */
+    public List<ToolMetadata> listAllMetadataForSystemAudit() {
+        return agentIndex.values().stream()
+            .flatMap(List::stream)
             .toList();
     }
 

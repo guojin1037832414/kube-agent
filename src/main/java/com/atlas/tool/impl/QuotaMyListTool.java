@@ -28,7 +28,8 @@ import java.util.Set;
     description = "查询我的配额申请列表",
     httpMethod = "GET",
     apiEndpoints = {"/api/{orgId}/quota/my"},
-    operationType = AtlasToolMapping.OperationType.READ
+    operationType = AtlasToolMapping.OperationType.SENSITIVE_READ,
+    requiresConfirmation = true
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class QuotaMyListTool extends BaseTool {

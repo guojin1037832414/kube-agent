@@ -21,7 +21,11 @@ import java.util.*;
     name = "experiment_instance_stop",
     agent = "deploy",
     intentId = "experiment_instance_stop",
-    description = "停止实验实例"
+    description = "停止实验实例",
+    httpMethod = "POST",
+    apiEndpoints = {"/api/{orgId}/experiment/instance/stop/{id}"},
+    operationType = AtlasToolMapping.OperationType.ACTION,
+    requiresConfirmation = true
 )
 @ToolPermission(ToolPermission.Policy.AUTHENTICATED)
 public class ExperimentInstanceStopTool extends BaseTool {

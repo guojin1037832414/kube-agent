@@ -109,6 +109,18 @@ atlas:
     # 读取超时
     read-timeout-seconds: 30
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
 # --- 日志 ---
 logging:
   level:

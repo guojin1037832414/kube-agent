@@ -1993,3 +1993,33 @@ java -jar target/kube-agent-3.1.0-SNAPSHOT.jar   --server.port=8500   --spring.a
 - 启动 M5.6：异步上下文传播与 fallbackOrgId 可信语义专项，统一审计 `AtlasAsyncConfig`、`AsyncContextHolder`、旧 `/chat/graph` 入口和 Orchestrator fallback 行为。
 - 继续保持权限边界治理与列表参数治理分离，避免把 orgId 来源安全问题混入 page/limit/keyword 普通契约。
 
+
+
+---
+
+## 2026-05-24 19:31 — M5.20 MCP/Memory/Observability 最小安全闭环 Review
+
+### 背景
+
+M5.18/M5.19 已完成敏感 GET 与真实高风险 mutation Tool 风险元数据治理。为了避免在安全底座未完备时直接通过 MCP 暴露全部 Tool，本阶段采用“安全 Manifest 先行”的收口方案。
+
+### 方案
+
+1. MCP：新增 `McpToolManifestService`，只导出普通 READ、已声明 endpoint、无需确认的 Tool；敏感读、写/删/ACTION、UNKNOWN 全部 fail-closed。
+2. Memory：新增最近 10 次摘要内存存储，写入时自动脱敏凭证字段。
+3. Observability：新增 `AgentMetricsService`，记录 ReAct run、Tool call、HITL block，接入 `ReActEngine`。
+
+### 测试
+
+- `mvn -q -Dtest=M520McpManifestSafetyContractTest,ConversationSummaryMemoryStoreTest,AgentMetricsServiceTest,M511AtlasToolHttpContractTest,M513HitlFailClosedContractTest test`：✅ PASS。
+- `mvn -q test`：✅ PASS。
+
+### Review 结论
+
+✅ PASS。M5.20 没有绕过 HITL，没有把敏感 GET 或高风险 mutation 暴露给 MCP；Memory 自动脱敏；指标链路异常不会影响主流程，也不会导致高风险操作放行。
+
+### 遗留增强
+
+1. Redis/Chroma 长期记忆与跨重启持久化。
+2. 完整 MCP stdio/sse 可执行 Server。
+3. TraceId 全链路、LLM token 成本、SSE 连接数指标。

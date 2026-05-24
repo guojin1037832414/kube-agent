@@ -22,7 +22,11 @@ import java.util.Set;
     name = "storage_delete",
     agent = "storage",
     intentId = "storage_delete",
-    description = "删除存储卷"
+    description = "删除存储卷",
+    httpMethod = "POST",
+    apiEndpoints = {"/api/{orgId}/file/storage/{target}/delete"},
+    operationType = AtlasToolMapping.OperationType.DELETE,
+    requiresConfirmation = true
 )
 @ToolPermission(ToolPermission.Policy.ADMIN_ONLY)
 public class StorageDeleteTool extends BaseTool {

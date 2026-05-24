@@ -158,15 +158,15 @@
 #### M5 — 长期 Memory + MCP 适配 + 可观测性（目标：4-6 周）
 
 **核心交付物**：
-1. 长期 Memory：Redis/Chroma 向量存储 + 对话摘要生成 + 跨会话检索注入 System Prompt
-2. MCP 协议适配层：`McpServerAdapter` 将 BaseTool 转换为 MCP Tool，对外暴露 109 个 Tool
-3. 可观测性：Micrometer + Prometheus `/actuator/metrics`，链路追踪 traceId 贯穿全 Graph，LLM token 成本统计
-4. Agent 安全层：高危操作 Guardrails（输入/输出校验），OWASP LLM Top 10 的基本防护
+1. ✅ 最小 Memory：最近 10 次对话摘要 + 自动脱敏 + 查询/写入 API（Redis/Chroma 留作 M6 增强）
+2. ✅ MCP 安全 Manifest：只导出已治理普通 READ Tool，禁止直接全量暴露 109/110 个 Tool
+3. ✅ 可观测性最小闭环：Micrometer + `/actuator/metrics`/`prometheus`，覆盖 ReAct run、Tool call、HITL block
+4. ✅ Agent 安全层：`SENSITIVE_READ`、写/删/ACTION `requiresConfirmation=true`、UNKNOWN fail-closed、MCP 导出门
 
 **验收标准**：
-- MCP Server 可用 stdio/sse 模式独立启动，外部 Agent（如 Claude Desktop）可发现并调用 Tool
-- `/actuator/metrics` 暴露 LLM 调用延迟、Token 消耗、Graph 执行耗时、SSE 连接数
-- 可查询用户最近 10 次对话摘要，新对话能引用历史偏好
+- M5 最小闭环验收：MCP Manifest 可发现安全只读 Tool，但不开放高风险执行入口；完整 stdio/sse Server 延后到 HITL/审计/限流全接线后
+- `/actuator/metrics` 暴露 Agent 基础指标；LLM Token、TraceId 全链路、SSE 连接数作为后续增强
+- 可查询用户最近 10 次对话摘要；当前为内存型摘要，不跨重启
 
 ---
 

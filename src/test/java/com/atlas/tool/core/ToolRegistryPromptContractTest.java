@@ -143,6 +143,7 @@ class ToolRegistryPromptContractTest {
         userPermissionContext.bind("token-admin");
         ToolRegistry registry = new ToolRegistry(List.of(
             new EventQueryTool(null),
+            new LogQueryTool(null),
             new MpiJobSubmitTool(null),
             new ImageDeleteTool(null)
         ), userPermissionContext);
@@ -152,11 +153,14 @@ class ToolRegistryPromptContractTest {
 
         assertTrue(prompt.contains("event_query"));
         assertTrue(prompt.contains("风险标签: operationType=READ, httpMethod=GET, requiresConfirmation=false"));
+        assertTrue(prompt.contains("log_query"));
+        assertTrue(prompt.contains("风险标签: operationType=SENSITIVE_READ, httpMethod=GET, requiresConfirmation=true"));
         assertTrue(prompt.contains("mpi_job_submit"));
         assertTrue(prompt.contains("风险标签: operationType=ACTION, httpMethod=POST, requiresConfirmation=true"));
         assertTrue(prompt.contains("image_delete"));
         assertTrue(prompt.contains("风险标签: operationType=DELETE, httpMethod=DELETE, requiresConfirmation=true"));
-        assertTrue(prompt.contains("M5.12 该标签仅为风险提示"));
+        assertTrue(prompt.contains("SENSITIVE_READ 为敏感读取"));
+        assertTrue(prompt.contains("HITL fail-closed 守卫强制拦截"));
 
         assertFalse(prompt.contains("/api/"), "Prompt 不应泄露 kube-manager 内部 API endpoint");
         assertFalse(prompt.contains("apiEndpoints"), "Prompt 不应暴露注解字段名 apiEndpoints");

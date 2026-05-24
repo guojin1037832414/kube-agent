@@ -22,7 +22,11 @@ import java.util.Set;
     name = "order_list",
     agent = "query",
     intentId = "order_list",
-    description = "查询订单列表"
+    description = "查询订单列表",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/lease/order"},
+    operationType = AtlasToolMapping.OperationType.SENSITIVE_READ,
+    requiresConfirmation = true
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class OrderListTool extends BaseTool {

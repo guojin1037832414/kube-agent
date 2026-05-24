@@ -23,7 +23,11 @@ import java.util.Set;
     name = "experiment_start",
     agent = "deploy",
     intentId = "experiment_start",
-    description = "启动实验实例，会修改后端状态"
+    description = "启动实验实例，会修改后端状态",
+    httpMethod = "POST",
+    apiEndpoints = {"/api/{orgId}/experiment/instance/start"},
+    operationType = AtlasToolMapping.OperationType.ACTION,
+    requiresConfirmation = true
 )
 @ToolPermission(ToolPermission.Policy.AUTHENTICATED)
 public class ExperimentStartTool extends BaseTool {

@@ -27,7 +27,8 @@ import java.util.Set;
     description = "查询日志",
     httpMethod = "GET",
     apiEndpoints = {"/api/log"},
-    operationType = AtlasToolMapping.OperationType.READ
+    operationType = AtlasToolMapping.OperationType.SENSITIVE_READ,
+    requiresConfirmation = true
 )
 
 @ToolPermission(ToolPermission.Policy.PUBLIC)

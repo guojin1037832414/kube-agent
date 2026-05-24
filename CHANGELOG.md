@@ -6,6 +6,79 @@
 
 ---
 
+## [M5.20] — MCP / Memory / Observability 最小安全闭环
+
+**周期**: 2026-05-24
+**交付**: 在 M5.18/M5.19 完成 Tool 风险元数据治理后，补齐 M5 最小可验收闭环：MCP 安全 Manifest、最近 10 次对话摘要 Memory、Micrometer Agent 指标与 Actuator 暴露配置。MCP 本阶段不直接开放完整可写调用能力，而是采用安全导出门，避免外部 Agent 绕过 HITL。
+
+### Added
+
+- 新增 `com.atlas.mcp.McpToolManifestService`：生成安全 MCP Manifest，只导出已声明 endpoint、`operationType=READ`、`requiresConfirmation=false` 的普通只读 Tool；`SENSITIVE_READ/CREATE/UPDATE/DELETE/ACTION/UNKNOWN` 默认 fail-closed。
+- 新增 `com.atlas.mcp.McpManifestController`：提供 `/api/agent/mcp/manifest` 只读清单接口，返回策略、导出 Tool 数和脱敏后的 Tool 元数据，不暴露真实后端 endpoint。
+- 新增 `com.atlas.memory.ConversationSummaryMemoryStore` 与 `MemoryController`：支持按已认证会话保存/查询最近 10 次摘要；缺失 X-Session-Id 时 fail-closed，写入时自动脱敏 token/password/apiKey/secret 等敏感字段。
+- 新增 `com.atlas.observability.AgentMetricsService` 与 `AgentMetricsController`：记录 ReAct run、Tool call、HITL block 三类核心指标，并通过 `/api/agent/metrics/snapshot` 提供轻量快照。
+- `ReActEngine` 接入指标记录，推理结束、Tool 执行完成、HITL 阻断均进入 Micrometer 计数/计时。
+- `application.yml` 增加 Actuator 暴露：`health/info/metrics/prometheus`。
+- 新增 M5.20 契约测试：
+  - `M520McpManifestSafetyContractTest`
+  - `ConversationSummaryMemoryStoreTest`
+  - `AgentMetricsServiceTest`
+
+### Changed
+
+- M5 MCP 方向从“立即对外暴露全部 Tool”调整为“安全 Manifest 先行”：先让外部 Agent 可发现安全只读能力，写/删/动作和敏感读能力必须等待 MCP 调用层接入 HITL/审计后再开放。
+- `ToolRegistry` 增加系统级 metadata 列表，供 MCP Manifest 与审计场景使用；不改变用户可见 Tool 的权限判断。
+
+### Verified
+
+- 定向测试：`mvn -q -Dtest=M520McpManifestSafetyContractTest,ConversationSummaryMemoryStoreTest,AgentMetricsServiceTest,M511AtlasToolHttpContractTest,M513HitlFailClosedContractTest test` → ✅ 通过。
+- 全量测试：`mvn -q test` → ✅ 通过。
+- 静态覆盖统计：Tool total=110，declared=81，READ no-confirm=53，SENSITIVE_READ confirmed=7，mutating/action confirmed=20，actual mutating undeclared=0，risky_without_confirmation=0。
+- 安全边界：MCP Manifest 不导出 endpoint、不导出高风险 mutation、不导出敏感 GET、不导出 UNKNOWN。
+
+### Risk / Deferred
+
+- 本阶段的 Memory 是内存型最近摘要存储，不是 Redis/Chroma 长期向量记忆；重启后会丢失，后续再接 Redis/向量检索与 System Prompt 注入。
+- MCP 本阶段只提供安全 Manifest，不提供 stdio/sse 可执行 Server；完整 MCP Tool 调用必须在 HITL、审计、权限上下文、限流和观测全部接线后再开放。
+- Observability 已有 Micrometer 计数/计时与 Actuator 暴露，但 LLM token 成本、TraceId 全链路、SSE 连接数仍是后续增强项。
+
+---
+
+## [M5.19] — 写/删/ACTION 高风险 Tool 元数据治理
+
+**周期**: 2026-05-24
+**交付**: 对真实 POST/DELETE/PUT/PATCH 或动作型 Tool 补齐 `operationType` 与 `requiresConfirmation=true`，并新增高风险 endpoint 精确白名单契约，确保 HITL fail-closed 不被绕过。
+
+### Added
+
+- 18 个真实高风险 mutation/action Tool 补充风险元数据，覆盖创建、删除、重启、停止、提交、拉取、卸载、仓库新增等操作。
+- `M511AtlasToolHttpContractTest` 增加 M5.19 高风险 endpoint 白名单断言，锁定 file/tool/endpoint/operationType/requiresConfirmation。
+
+### Verified
+
+- 定向测试：`M511AtlasToolHttpContractTest`、`M513HitlFailClosedContractTest`、`ToolRegistryPromptContractTest`、`ReActEventRiskMetadataTest` → ✅ 通过。
+- 全量测试：`mvn -q test` → ✅ 通过。
+- 静态扫描：真实 POST/DELETE/PUT/PATCH 未声明数量 = 0，高风险未确认数量 = 0。
+
+---
+
+## [M5.18] — 敏感 GET / SENSITIVE_READ 风险语义治理
+
+**周期**: 2026-05-24
+**交付**: 新增并落地 `SENSITIVE_READ` 风险语义，将日志、用户、权限、LDAP、角色、订单、配额等敏感 GET 从普通 READ 免确认面中剥离出来。
+
+### Added
+
+- `AtlasToolMapping.OperationType` 增加 `SENSITIVE_READ`，明确 HTTP GET 与业务风险语义分离。
+- `HitlGuard` fail-closed 策略覆盖 `SENSITIVE_READ`：除普通 READ 外均需要确认。
+- 多个敏感 GET Tool 迁移为 `SENSITIVE_READ` + `requiresConfirmation=true`。
+- `ToolRegistryPromptContractTest`、`ReActEventRiskMetadataTest` 扩展风险元数据断言。
+
+### Verified
+
+- 定向测试：`mvn -q -Dtest=M511AtlasToolHttpContractTest,M513HitlFailClosedContractTest,ToolRegistryPromptContractTest,ReActEventRiskMetadataTest test` → ✅ 通过。
+- 结论：GET 不再等同于免确认 READ，MCP/外部 Agent 不得默认开放敏感读能力。
+
 ## [M5.17] — Tool HTTP/风险元数据第四批基础设施 GET/READ 扩面
 
 **周期**: 2026-05-24

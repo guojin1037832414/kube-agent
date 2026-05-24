@@ -21,7 +21,11 @@ import java.util.*;
     name = "deploy_delete",
     agent = "deploy",
     intentId = "deploy_delete",
-    description = "删除部署实例"
+    description = "删除部署实例",
+    httpMethod = "POST",
+    apiEndpoints = {"/api/{orgId}/deployment/{target}/delete"},
+    operationType = AtlasToolMapping.OperationType.DELETE,
+    requiresConfirmation = true
 )
 @ToolPermission(ToolPermission.Policy.ADMIN_ONLY)
 public class DeployDeleteTool extends BaseTool {

@@ -21,7 +21,11 @@ import java.util.*;
     name = "user_delete",
     agent = "rbac",
     intentId = "user_delete",
-    description = "删除用户"
+    description = "删除用户",
+    httpMethod = "DELETE",
+    apiEndpoints = {"/api/{orgId}/user/{target}"},
+    operationType = AtlasToolMapping.OperationType.DELETE,
+    requiresConfirmation = true
 )
 @ToolPermission(ToolPermission.Policy.ADMIN_ONLY)
 public class UserDeleteTool extends BaseTool {

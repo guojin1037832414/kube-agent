@@ -1,5 +1,6 @@
 package com.atlas.react;
 
+import com.atlas.observability.AgentMetricsService;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.hitl.HitlGuard;
 import com.atlas.tool.core.ToolParameterNormalizer;
@@ -92,6 +93,7 @@ public class ReActEngine {
     private final ReActPromptBuilder promptBuilder;
     private final ToolParameterNormalizer parameterNormalizer;
     private final HitlGuard hitlGuard;
+    private final AgentMetricsService metricsService;
 
     /** LLM 超时调用专用后台线程池（daemon，避免阻塞 JVM 退出） */
     private final ExecutorService llmExecutor;
@@ -100,7 +102,7 @@ public class ReActEngine {
                        ObjectMapper objectMapper,
                        ToolRegistry toolRegistry,
                        ReActPromptBuilder promptBuilder) {
-        this(chatModel, objectMapper, toolRegistry, promptBuilder, new ToolParameterNormalizer(), new HitlGuard());
+        this(chatModel, objectMapper, toolRegistry, promptBuilder, new ToolParameterNormalizer(), new HitlGuard(), null);
     }
 
     @Autowired
@@ -109,13 +111,15 @@ public class ReActEngine {
                        ToolRegistry toolRegistry,
                        ReActPromptBuilder promptBuilder,
                        ToolParameterNormalizer parameterNormalizer,
-                       HitlGuard hitlGuard) {
+                       HitlGuard hitlGuard,
+                       AgentMetricsService metricsService) {
         this.chatClient = ChatClient.builder(chatModel).build();
         this.objectMapper = objectMapper;
         this.toolRegistry = toolRegistry;
         this.promptBuilder = promptBuilder;
         this.parameterNormalizer = parameterNormalizer != null ? parameterNormalizer : new ToolParameterNormalizer();
         this.hitlGuard = hitlGuard != null ? hitlGuard : new HitlGuard();
+        this.metricsService = metricsService;
         this.llmExecutor = Executors.newCachedThreadPool(r -> {
             Thread t = new Thread(r);
             t.setDaemon(true);
@@ -132,7 +136,7 @@ public class ReActEngine {
                 ToolRegistry toolRegistry,
                 ReActPromptBuilder promptBuilder,
                 ToolParameterNormalizer parameterNormalizer) {
-        this(chatModel, objectMapper, toolRegistry, promptBuilder, parameterNormalizer, new HitlGuard());
+        this(chatModel, objectMapper, toolRegistry, promptBuilder, parameterNormalizer, new HitlGuard(), null);
     }
 
     /**
@@ -260,6 +264,7 @@ public class ReActEngine {
                         toolSuccess = false;
                         memory.addStep(thought, toolName, params, observation, false, 0);
                         emitEvent(sink, ReActEvent.error(steps, hitlDecision.message()));
+                        recordHitlBlockMetric(toolName, hitlDecision.message());
                         log.warn("[ReActEngine] HITL 守卫阻止高风险工具执行: tool={}", toolName);
                         continue;
                     }
@@ -279,6 +284,7 @@ public class ReActEngine {
                 boolean observationTruncated = rawObservation != null && observation != null
                     && rawObservation.length() > observation.length();
                 emitEvent(sink, ReActEvent.toolDone(steps, toolName, toolSuccess, toolCostMs, riskMetadata));
+                recordToolMetric(toolName, toolSuccess, toolCostMs);
                 emitEvent(sink, ReActEvent.observation(steps, toolName, observation, observationTruncated));
 
                 // 9. 记录记忆
@@ -324,6 +330,7 @@ public class ReActEngine {
 
         log.info("[ReActEngine] 推理结束, stopReason={}, steps={}, totalMs={}, success={}",
             stopReason, steps, totalMs, success);
+        recordReActMetric(totalMs);
 
         if (!"final_answer".equals(stopReason) && finalAnswer != null && !finalAnswer.isBlank()) {
             emitEvent(sink, ReActEvent.content(steps, finalAnswer));
@@ -469,6 +476,48 @@ public class ReActEngine {
         } catch (Exception e) {
             log.warn("[ReActEngine] ReAct 事件发送失败: type={}, error={}",
                 event != null ? event.type() : "null", e.getMessage());
+        }
+    }
+
+    /**
+     * 记录 ReAct 总体指标；指标链路异常不得影响主业务。
+     */
+    private void recordReActMetric(long costMs) {
+        if (metricsService == null) {
+            return;
+        }
+        try {
+            metricsService.recordReActRun(costMs);
+        } catch (Exception e) {
+            log.warn("[ReActEngine] ReAct 指标记录失败: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 记录 Tool 调用指标；指标链路异常不得影响 Tool 结果。
+     */
+    private void recordToolMetric(String toolName, boolean success, long costMs) {
+        if (metricsService == null) {
+            return;
+        }
+        try {
+            metricsService.recordToolCall(toolName, success, costMs);
+        } catch (Exception e) {
+            log.warn("[ReActEngine] Tool 指标记录失败: tool={}, error={}", toolName, e.getMessage());
+        }
+    }
+
+    /**
+     * 记录 HITL 阻断指标；指标链路异常不得放行高风险操作。
+     */
+    private void recordHitlBlockMetric(String toolName, String reason) {
+        if (metricsService == null) {
+            return;
+        }
+        try {
+            metricsService.recordHitlBlock(toolName, reason);
+        } catch (Exception e) {
+            log.warn("[ReActEngine] HITL 指标记录失败: tool={}, error={}", toolName, e.getMessage());
         }
     }
 

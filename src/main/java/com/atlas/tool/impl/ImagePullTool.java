@@ -22,7 +22,11 @@ import java.util.Set;
     name = "image_pull",
     agent = "deploy",
     intentId = "image_pull",
-    description = "拉取容器镜像到仓库"
+    description = "拉取容器镜像到仓库",
+    httpMethod = "POST",
+    apiEndpoints = {"/api/{orgId}/image/pull"},
+    operationType = AtlasToolMapping.OperationType.ACTION,
+    requiresConfirmation = true
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class ImagePullTool extends BaseTool {

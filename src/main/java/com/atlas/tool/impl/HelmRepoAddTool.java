@@ -23,7 +23,11 @@ import java.util.Set;
     name = "helm_repo_add",
     agent = "deploy",
     intentId = "helm_repo_add",
-    description = "添加Helm仓库，会修改后端状态"
+    description = "添加Helm仓库，会修改后端状态",
+    httpMethod = "POST",
+    apiEndpoints = {"/api/{orgId}/helm/repositories"},
+    operationType = AtlasToolMapping.OperationType.CREATE,
+    requiresConfirmation = true
 )
 @ToolPermission(ToolPermission.Policy.AUTHENTICATED)
 public class HelmRepoAddTool extends BaseTool {

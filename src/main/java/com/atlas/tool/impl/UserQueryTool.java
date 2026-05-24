@@ -21,7 +21,11 @@ import java.util.Set;
     name = "user_query",
     agent = "rbac",
     intentId = "user_query",
-    description = "查询用户列表"
+    description = "查询用户列表",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/user"},
+    operationType = AtlasToolMapping.OperationType.SENSITIVE_READ,
+    requiresConfirmation = true
 )
 
 @ToolPermission(ToolPermission.Policy.PUBLIC)

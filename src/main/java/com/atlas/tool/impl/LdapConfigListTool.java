@@ -22,7 +22,11 @@ import java.util.Set;
     name = "ldap_config_list",
     agent = "rbac",
     intentId = "ldap_config_list",
-    description = "查询LDAP配置列表"
+    description = "查询LDAP配置列表",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/ldap"},
+    operationType = AtlasToolMapping.OperationType.SENSITIVE_READ,
+    requiresConfirmation = true
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class LdapConfigListTool extends BaseTool {

@@ -19,7 +19,11 @@ import java.util.*;
     name = "storage_create",
     agent = "storage",
     intentId = "storage_create",
-    description = "创建存储卷(PVC)"
+    description = "创建存储卷(PVC)",
+    httpMethod = "POST",
+    apiEndpoints = {"/api/{orgId}/file/storage"},
+    operationType = AtlasToolMapping.OperationType.CREATE,
+    requiresConfirmation = true
 )
 // P1 PVC 创建会占用存储资源；允许已认证用户提交，配额、命名空间等细粒度限制交由 kube-manager 后端校验。
 @ToolPermission(ToolPermission.Policy.AUTHENTICATED)

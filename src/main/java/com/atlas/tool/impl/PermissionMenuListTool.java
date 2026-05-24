@@ -22,7 +22,11 @@ import java.util.Set;
     name = "permission_menu_list",
     agent = "rbac",
     intentId = "permission_menu_list",
-    description = "查询权限菜单列表"
+    description = "查询权限菜单列表",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/permission/menu"},
+    operationType = AtlasToolMapping.OperationType.SENSITIVE_READ,
+    requiresConfirmation = true
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class PermissionMenuListTool extends BaseTool {

@@ -21,7 +21,11 @@ import java.util.*;
     name = "helm_release_delete",
     agent = "deploy",
     intentId = "helm_release_delete",
-    description = "卸载Helm Release"
+    description = "卸载Helm Release",
+    httpMethod = "DELETE",
+    apiEndpoints = {"/api/{orgId}/helm/releases/{releaseName}"},
+    operationType = AtlasToolMapping.OperationType.DELETE,
+    requiresConfirmation = true
 )
 @ToolPermission(ToolPermission.Policy.ADMIN_ONLY)
 public class HelmReleaseDeleteTool extends BaseTool {

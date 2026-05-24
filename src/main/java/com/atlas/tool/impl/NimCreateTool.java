@@ -20,7 +20,11 @@ import java.util.*;
     name = "nim_create",
     agent = "deploy",
     intentId = "nim_create",
-    description = "创建NIM服务"
+    description = "创建NIM服务",
+    httpMethod = "POST",
+    apiEndpoints = {"/api/{orgId}/pod"},
+    operationType = AtlasToolMapping.OperationType.CREATE,
+    requiresConfirmation = true
 )
 
 @ToolPermission(ToolPermission.Policy.AUTHENTICATED)

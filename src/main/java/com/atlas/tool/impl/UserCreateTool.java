@@ -20,7 +20,11 @@ import java.util.*;
     name = "user_create",
     agent = "rbac",
     intentId = "user_create",
-    description = "创建用户"
+    description = "创建用户",
+    httpMethod = "POST",
+    apiEndpoints = {"/api/{orgId}/user"},
+    operationType = AtlasToolMapping.OperationType.CREATE,
+    requiresConfirmation = true
 )
 @ToolPermission(ToolPermission.Policy.ADMIN_ONLY)
 public class UserCreateTool extends BaseTool {

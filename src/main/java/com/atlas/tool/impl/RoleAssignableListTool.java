@@ -23,7 +23,11 @@ import java.util.Set;
     name = "role_assignable",
     agent = "rbac",
     intentId = "role_assignable",
-    description = "查询可分配角色列表"
+    description = "查询可分配角色列表",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/role/assignable"},
+    operationType = AtlasToolMapping.OperationType.SENSITIVE_READ,
+    requiresConfirmation = true
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class RoleAssignableListTool extends BaseTool {

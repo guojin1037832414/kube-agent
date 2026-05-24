@@ -28,8 +28,9 @@ public class HitlGuard {
     /**
      * 判断 Tool 是否必须经过 HITL 人工确认。
      *
-     * <p>fail-closed 策略：只有明确声明为 READ 且未要求确认的 Tool 可以直接执行。
-     * CREATE/UPDATE/DELETE/ACTION/PLACEHOLDER/UNKNOWN 以及元数据缺失，都视为需要确认。</p>
+     * <p>fail-closed 策略：只有明确声明为普通 READ 且未要求确认的 Tool 可以直接执行。
+     * SENSITIVE_READ/CREATE/UPDATE/DELETE/ACTION/PLACEHOLDER/UNKNOWN 以及元数据缺失，
+     * 都视为需要确认。这样新增风险类型时会天然默认拦截，而不是默认放行。</p>
      */
     public boolean requiresConfirmation(ToolRegistry.ToolMetadata metadata) {
         if (metadata == null) {

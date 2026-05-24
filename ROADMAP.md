@@ -1,11 +1,11 @@
 # Atlas Kube-Agent 开发路线图
 
-> **项目**: kube-agent — K8s 训练平台 AI Agent 入口  
-> **目标**: 打造顶级 Agent 系统（K8s 运维只是第一个练兵场）  
-> **当前基线**: M3.2 ReAct MVP 已打通；M4.1 Tool Schema 参数契约分批铺开中  
-> **当前 commit**: `c296a3c` 后继续推进 URL query 专项清理  
-> **版本**: Atlas v3.1 / ReAct + Tool Schema 增量阶段  
-> **最后更新**: 2026-05-20
+> **项目**: kube-agent — K8s 训练平台 AI Agent 入口
+> **目标**: 打造顶级 Agent 系统（K8s 运维只是第一个练兵场）
+> **当前基线**: M5.20 Agent 安全层 + MCP/Memory/Observability 最小闭环已完成
+> **当前 commit**: `f8294db` 后完成 M5.18~M5.20 收口，待提交
+> **版本**: Atlas v3.1 / ReAct + Tool 风险治理 + MCP 安全 Manifest 阶段
+> **最后更新**: 2026-05-24
 
 ---
 
@@ -41,9 +41,9 @@ AtlasBrain -> DELEGATE_REACT -> react_node -> ReActEngine.runWithEvents()
 | M0 地基 | 100% | v2/v3 基线、SSE、Tool 层已归档 |
 | M1 智能引擎 | 100% | L1-L4、AtlasBrain、StateGraph、基础 HITL 后端能力已完成 |
 | M2 查询全覆盖与质量加固 | ~75% | 109 Tool 与 orgId 链路完成，测试/参数契约仍需继续补齐 |
-| M3 写操作 + HITL 安全治理 | ~45% | 后端基础已具备，独立 HITLGuard/RiskClassifier/前端完整闭环仍待补齐 |
-| M4 ReAct / Plan-and-Execute | ~40% | ReAct MVP 已完成，Plan/Execute/Reflect 完整循环未完成 |
-| M5 Memory / MCP / Observability | ~10% | 仅有局部 polish metrics，长期记忆、MCP、Prometheus 尚未正式展开 |
+| M3 写操作 + HITL 安全治理 | ~80% | HITLGuard fail-closed、Tool 风险元数据、高风险确认门已完成；前端完整交互仍可增强 |
+| M4 ReAct / Plan-and-Execute | ~45% | ReAct MVP + 指标接入完成，Plan/Execute/Reflect 完整循环未完成 |
+| M5 Memory / MCP / Observability | ✅ 最小闭环完成 | M5.18~M5.20 完成敏感 READ、高风险 mutation、MCP 安全 Manifest、最近 10 次摘要 Memory、Micrometer/Actuator 指标 |
 
 ---
 
@@ -58,6 +58,7 @@ AtlasBrain -> DELEGATE_REACT -> react_node -> ReActEngine.runWithEvents()
 | M2 主体 Tool 覆盖 | 多批次提交 | 前端 9 大模块 109 个 Tool 注册，真实 API 覆盖，默认参数与 orgId 链路修复 | ✅ 主体完成，质量加固继续 |
 | M3.2 ReAct MVP | `9cde237` ~ `e977b03` | ReActEngine、ReActMemory、ReActPromptBuilder、Graph 接入、SSE 事件化、E2E 稳定性修复 | ✅ MVP 完成 |
 | M4.1 Tool Schema 基础 | `386ea9c` ~ `c296a3c` | ToolParameterSpec、inputSchema、schema-first normalizer、ReAct Prompt 工具参数契约、首批 4 个 Tool schema | 🟡 进行中 |
+| M5.20 安全/Memory/MCP/Observability 最小闭环 | `f8294db` 后 | `SENSITIVE_READ`、高风险 mutation HITL、MCP 安全 Manifest、最近摘要 Memory、Micrometer/Actuator 指标 | ✅ 最小闭环完成 |
 
 ---
 
@@ -125,10 +126,10 @@ ToolParameterSpec -> ToolInputSchemaBuilder -> AtlasToolCallback -> ToolParamete
 
 ### P4 — MCP / Memory / Observability
 
-1. MCP Server 标准暴露 109 Tool。
-2. Redis / 向量记忆 / 对话摘要。
-3. Micrometer + Prometheus + TraceId。
-4. LLM token 成本、Graph 耗时、SSE 连接监控。
+1. ✅ MCP 安全 Manifest 先行：只导出普通 READ 且不需要确认的 Tool；敏感 READ、写/删/ACTION、UNKNOWN 默认不开放。
+2. ✅ 最近 10 次摘要 Memory：内存存储 + 自动脱敏 + 查询 API。
+3. ✅ Micrometer + Actuator 最小指标：ReAct run、Tool call、HITL block 计数/计时。
+4. ⏳ 后续增强：Redis/向量记忆、System Prompt 历史注入、完整 MCP stdio/sse Server、LLM token 成本、TraceId 全链路、SSE 连接监控。
 
 ---
 

@@ -81,7 +81,8 @@ public @interface AtlasToolMapping {
      * Tool 的业务操作类型。
      *
      * <p>注意：HTTP POST 不一定只是普通写入，也可能表示删除、停止、重启等高危动作；
-     * 因此风险语义必须独立于 HTTP 方法显式声明。</p>
+     * HTTP GET 也不一定都是低风险读取，日志、用户、权限、LDAP、订单、配额等接口虽然不改变状态，
+     * 但可能暴露敏感数据。因此风险语义必须独立于 HTTP 方法显式声明。</p>
      */
     OperationType operationType() default OperationType.UNKNOWN;
 
@@ -101,6 +102,8 @@ public @interface AtlasToolMapping {
         UNKNOWN,
         /** 纯查询类操作，不应改变 kube-manager/K8s 状态。 */
         READ,
+        /** 敏感读取类操作，不改变状态但可能读取日志、用户、权限、订单、配额等敏感数据，默认需要确认。 */
+        SENSITIVE_READ,
         /** 创建类操作，会新增后端资源。 */
         CREATE,
         /** 修改类操作，会更新已有资源。 */

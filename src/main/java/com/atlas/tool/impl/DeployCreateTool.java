@@ -31,7 +31,11 @@ import java.util.*;
     name = "deploy_create_instance",
     agent = "deploy",
     intentId = "deploy_create_instance",
-    description = "创建标准实例(Deployment)，含前端表单默认参数"
+    description = "创建标准实例(Deployment)，含前端表单默认参数",
+    httpMethod = "POST",
+    apiEndpoints = {"/api/{orgId}/deployment"},
+    operationType = AtlasToolMapping.OperationType.CREATE,
+    requiresConfirmation = true
 )
 // P1 创建部署会修改集群状态，但不限定管理员；要求调用方已登录，后端继续按用户真实 Token 做细粒度鉴权。
 @ToolPermission(ToolPermission.Policy.AUTHENTICATED)

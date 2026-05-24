@@ -21,7 +21,11 @@ import java.util.*;
     name = "experiment_instance_delete",
     agent = "deploy",
     intentId = "experiment_instance_delete",
-    description = "删除实验实例"
+    description = "删除实验实例",
+    httpMethod = "DELETE",
+    apiEndpoints = {"/api/{orgId}/experiment/instance/{id}"},
+    operationType = AtlasToolMapping.OperationType.DELETE,
+    requiresConfirmation = true
 )
 @ToolPermission(ToolPermission.Policy.ADMIN_ONLY)
 public class ExperimentInstanceDeleteTool extends BaseTool {

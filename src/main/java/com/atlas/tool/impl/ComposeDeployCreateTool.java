@@ -23,7 +23,11 @@ import java.util.Set;
     name = "compose_deploy_create",
     agent = "deploy",
     intentId = "compose_deploy_create",
-    description = "创建Compose部署，会修改后端状态"
+    description = "创建Compose部署，会修改后端状态",
+    httpMethod = "POST",
+    apiEndpoints = {"/api/{orgId}/compose"},
+    operationType = AtlasToolMapping.OperationType.CREATE,
+    requiresConfirmation = true
 )
 @ToolPermission(ToolPermission.Policy.AUTHENTICATED)
 public class ComposeDeployCreateTool extends BaseTool {

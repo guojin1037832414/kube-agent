@@ -20,7 +20,11 @@ import java.util.*;
     name = "deploy_restart",
     agent = "deploy",
     intentId = "deploy_restart",
-    description = "重启实例"
+    description = "重启实例",
+    httpMethod = "POST",
+    apiEndpoints = {"/api/{orgId}/deployment/{target}/restart"},
+    operationType = AtlasToolMapping.OperationType.ACTION,
+    requiresConfirmation = true
 )
 @ToolPermission(ToolPermission.Policy.ADMIN_ONLY)
 public class DeployRestartTool extends BaseTool {

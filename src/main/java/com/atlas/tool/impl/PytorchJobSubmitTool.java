@@ -23,7 +23,11 @@ import java.util.Set;
     name = "pytorch_job_submit",
     agent = "deploy",
     intentId = "pytorch_job_submit",
-    description = "提交PyTorch训练任务，会修改后端状态"
+    description = "提交PyTorch训练任务，会修改后端状态",
+    httpMethod = "POST",
+    apiEndpoints = {"/api/{orgId}/pytorch-job/submit"},
+    operationType = AtlasToolMapping.OperationType.ACTION,
+    requiresConfirmation = true
 )
 @ToolPermission(ToolPermission.Policy.AUTHENTICATED)
 public class PytorchJobSubmitTool extends BaseTool {

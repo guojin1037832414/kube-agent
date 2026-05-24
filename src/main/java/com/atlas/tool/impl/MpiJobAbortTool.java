@@ -21,7 +21,11 @@ import java.util.*;
     name = "mpi_job_abort",
     agent = "deploy",
     intentId = "mpi_job_abort",
-    description = "中止MPI分布式计算任务"
+    description = "中止MPI分布式计算任务",
+    httpMethod = "POST",
+    apiEndpoints = {"/api/{orgId}/mpi-job/abort/{id}"},
+    operationType = AtlasToolMapping.OperationType.ACTION,
+    requiresConfirmation = true
 )
 @ToolPermission(ToolPermission.Policy.AUTHENTICATED)
 public class MpiJobAbortTool extends BaseTool {
