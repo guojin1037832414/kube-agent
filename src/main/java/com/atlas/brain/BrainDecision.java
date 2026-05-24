@@ -18,6 +18,7 @@ public record BrainDecision(
         CALL_TOOL,
         DELEGATE_AGENT,
         DELEGATE_REACT,
+        PLAN,
         DIRECT_ANSWER,
         ASK_CLARIFY,
         HITL_CONFIRM

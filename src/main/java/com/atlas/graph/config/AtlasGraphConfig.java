@@ -30,6 +30,8 @@ import com.atlas.brain.BrainDecision;
 import com.atlas.brain.ExecutionContext;
 import com.atlas.hitl.HitlConfirmation;
 import com.atlas.hitl.HitlGuard;
+import com.atlas.plan.PlanEngine;
+import com.atlas.plan.PlanResult;
 import com.atlas.tool.core.ToolRegistry;
 import java.time.Instant;
 import java.util.HashMap;
@@ -385,6 +387,9 @@ public class AtlasGraphConfig {
             strategies.put("react_node_result", new ReplaceStrategy()); // ReAct 节点最终答案
             strategies.put("react_result", new ReplaceStrategy());      // ReAct 完整结果对象
             strategies.put("react_steps", new ReplaceStrategy());       // ReAct 步骤列表
+            strategies.put("plan_node_result", new ReplaceStrategy());  // Plan 节点最终答案
+            strategies.put("plan_result", new ReplaceStrategy());       // PlanEngine 结构化结果对象
+            strategies.put("plan_steps", new ReplaceStrategy());        // PlanEngine 结构化步骤列表
             strategies.put("react_event_session_id", new ReplaceStrategy()); // ReAct 过程事件会话ID（纯字符串，可序列化）
             strategies.put("final_answer", new ReplaceStrategy());   // 最终 SSE 输出
             strategies.put("conversation_id", new ReplaceStrategy());
@@ -397,6 +402,43 @@ public class AtlasGraphConfig {
             strategies.put("hitl_confirmation", new ReplaceStrategy()); // M5.13 服务端确认凭证：只由 HITLController 写入
             return strategies;
         };
+    }
+
+    /**
+     * 构建 Plan 节点异步动作。
+     *
+     * <p>M4.2 最小 POC 中，plan_node 只调用 {@link PlanEngine} 生成结构化计划和单次
+     * Reflection 自检结果，绝不调用 Tool、绝不写入 hitl_confirmation、绝不创建
+     * HitlConfirmation。所有真实执行仍必须走 tool_call / ReAct / 后续 execute_node，
+     * 并继续受 HitlGuard fail-closed 保护。</p>
+     *
+     * @param planEngine 计划生成引擎
+     * @return 异步节点动作
+     */
+    private static com.alibaba.cloud.ai.graph.action.AsyncNodeAction buildPlanNode(PlanEngine planEngine) {
+        return node_async((OverAllState state) -> {
+            String input = state.value("input").map(Object::toString).orElse("");
+            String userId = state.value("user_id").map(Object::toString).orElse("anonymous");
+            String orgId = state.value("orgId").map(Object::toString).orElse("");
+            String conversationId = state.value("conversation_id").map(Object::toString).orElse("");
+            BrainDecision decision = state.value("brain_decision")
+                .filter(BrainDecision.class::isInstance)
+                .map(BrainDecision.class::cast)
+                .orElse(null);
+
+            Map<String, Object> context = new HashMap<>();
+            context.put("userId", userId);
+            context.put("organizationId", orgId);
+            context.put("conversationId", conversationId);
+
+            PlanResult result = planEngine.plan(input, decision, context);
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("answer", result.finalAnswer());
+            updates.put("plan_node_result", result.finalAnswer());
+            updates.put("plan_result", result);
+            updates.put("plan_steps", result.steps() != null ? result.steps() : List.of());
+            return updates;
+        });
     }
 
     /**
@@ -465,6 +507,7 @@ public class AtlasGraphConfig {
             HitlGuard hitlGuard,
             ReActEngine reactEngine,
             ReActEventSinkRegistry reactEventSinkRegistry,
+            PlanEngine planEngine,
             com.atlas.http.KubeManagerHttpClient kubeManagerClient,
             ReactAgent queryAgent,
             ReactAgent deployAgent,
@@ -536,6 +579,7 @@ public class AtlasGraphConfig {
                     case CALL_TOOL -> "tool_call";
                     case DELEGATE_AGENT -> "delegate";
                     case DELEGATE_REACT -> "react_node"; // M3.2 第二批：接入手写 ReAct 引擎
+                    case PLAN -> "plan_node"; // M4 Plan-and-Execute：进入只规划不执行的 plan_node
                     case HITL_CONFIRM -> "hitl_confirm";
                 };
             }),
@@ -545,6 +589,7 @@ public class AtlasGraphConfig {
                 "tool_call", "tool_call",
                 "delegate", "delegate",
                 "react_node", "react_node",
+                "plan_node", "plan_node",
                 "hitl_confirm", "hitl_confirm"
             )
         );
@@ -567,6 +612,8 @@ public class AtlasGraphConfig {
                 : "请补充更多信息";
             return java.util.Map.of("answer", answer);
         }));
+
+        graph.addNode("plan_node", buildPlanNode(planEngine));
 
         graph.addNode("tool_call", node_async((OverAllState state) -> {
             BrainDecision d = state.value("brain_decision")
@@ -835,6 +882,7 @@ public class AtlasGraphConfig {
         graph.addEdge("tool_call", END);
         graph.addEdge("delegate", END);
         graph.addEdge("react_node", END);
+        graph.addEdge("plan_node", END);
         graph.addEdge("hitl_confirm", END);
 
         return graph.compile();

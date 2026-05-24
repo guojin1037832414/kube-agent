@@ -28,13 +28,14 @@ import static org.mockito.Mockito.*;
  *   <li>解析异常：parser 抛 BrainParseException → AtlasBrain 抛出（由调用方降级处理）</li>
  *   <li>权限校验：目标 Tool 不可见 → 抛出 RuntimeException</li>
  *   <li>高危检测：delete/scale 操作应触发 HITL_CONFIRM 告警日志</li>
+ *   <li>PLAN 守卫：用户显式要求先规划/只出方案时应被覆盖为 PLAN</li>
  *   <li>ReAct 守卫：诊断类查询即使 LLM 返回 CALL_TOOL 也应被覆盖为 DELEGATE_REACT</li>
  * </ol>
  *
  * <p><b>Mock 策略：</b>StructuredOutputParser 完全 Mock，绕过真实 LLM 调用，
- * 专注测试 AtlasBrain 的业务逻辑（prompt 构建、决策校验、风险检测、ReAct 守卫）。</p>
+ * 专注测试 AtlasBrain 的业务逻辑（prompt 构建、决策校验、风险检测、PLAN/ReAct 守卫）。</p>
  *
- * @version 3.1.0-M3.2
+ * @version 3.1.0-M4.2
  */
 @ExtendWith(MockitoExtension.class)
 class AtlasBrainMockTest {
@@ -228,6 +229,68 @@ class AtlasBrainMockTest {
         assertTrue(result.reasoning().contains("ReActGuard"), "reasoning 应包含 ReActGuard 标记");
     }
 
+
+    @Test
+    void testDecide_planGuard_overridesCallToolToPlan() {
+        // 用户显式要求“先规划/不要执行”时，即使 LLM 误判为普通工具调用，也必须进入 PLAN。
+        ExecutionContext ctx = buildCtx("先给我一个分步骤执行计划，不要执行，如何创建 nginx deployment");
+
+        when(toolRegistry.buildSystemPromptForCurrentUser()).thenReturn("deploy_create: 创建 Deployment");
+        when(toolRegistry.getVisibleToolNamesForCurrentUser()).thenReturn(List.of("deploy_create"));
+
+        BrainDecision llmWrong = new BrainDecision(
+            BrainDecision.ActionType.CALL_TOOL,
+            "deploy_create",
+            Map.of(),
+            "用户想创建 Deployment",
+            0.72,
+            Collections.emptyList()
+        );
+        when(parser.parse(any(), anyString(), eq(BrainDecision.class), any()))
+            .thenReturn(llmWrong);
+
+        BrainDecision result = atlasBrain.decide(ctx);
+
+        assertEquals(BrainDecision.ActionType.PLAN, result.actionType());
+        assertEquals("plan", result.target());
+        assertTrue(result.confidence() >= 0.82, "覆盖后置信度应至少提升到0.82");
+        assertTrue(result.reasoning().contains("PlanGuard"), "reasoning 应包含 PlanGuard 标记");
+    }
+
+    @Test
+    void testShouldUsePlan_explicitPlanningKeywords() {
+        // PLAN 只覆盖显式规划类请求，避免普通查询被误导到计划节点。
+        assertTrue(AtlasBrain.shouldUsePlan("/plan 帮我规划创建 Deployment 的步骤"));
+        assertTrue(AtlasBrain.shouldUsePlan("先规划一下扩展前端按钮覆盖的方案"));
+        assertTrue(AtlasBrain.shouldUsePlan("只生成计划，不要执行真实操作"));
+        assertTrue(AtlasBrain.shouldUsePlan("请分步骤说明下一步怎么做"));
+        assertFalse(AtlasBrain.shouldUsePlan("查看所有节点状态"));
+        assertFalse(AtlasBrain.shouldUsePlan("为什么 pod crashloopbackoff"));
+    }
+
+    @Test
+    void testDecide_highRiskPlanPrefix_stillHitlFirst() {
+        // 高危 HITL 优先级必须高于 /plan，避免用户通过“只规划”前缀绕过确认边界。
+        ExecutionContext ctx = buildCtx("/plan 删除 production namespace 下所有 pod 的步骤");
+
+        when(toolRegistry.buildSystemPromptForCurrentUser()).thenReturn("pod_delete: 删除 Pod");
+
+        BrainDecision llmWrong = new BrainDecision(
+            BrainDecision.ActionType.PLAN,
+            "plan",
+            Map.of(),
+            "用户要求规划删除生产命名空间资源",
+            0.88,
+            Collections.emptyList()
+        );
+        when(parser.parse(any(), anyString(), eq(BrainDecision.class), any()))
+            .thenReturn(llmWrong);
+
+        BrainDecision result = atlasBrain.decide(ctx);
+
+        assertEquals(BrainDecision.ActionType.HITL_CONFIRM, result.actionType());
+        assertTrue(result.reasoning().contains("SafetyGuard"));
+    }
 
     @Test
     void testDecide_reactPrefix_overridesCallToolToReact() {

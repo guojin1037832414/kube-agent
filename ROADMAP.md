@@ -2,9 +2,9 @@
 
 > **项目**: kube-agent — K8s 训练平台 AI Agent 入口
 > **目标**: 打造顶级 Agent 系统（K8s 运维只是第一个练兵场）
-> **当前基线**: M5.20 Agent 安全层 + MCP/Memory/Observability 最小闭环已完成
-> **当前 commit**: `f8294db` 后完成 M5.18~M5.20 收口，待提交
-> **版本**: Atlas v3.1 / ReAct + Tool 风险治理 + MCP 安全 Manifest 阶段
+> **当前基线**: M5.20 安全底座已完成；M4-PX.2 Plan-and-Execute 最小 POC 已落地
+> **当前 commit**: `bdf579e` 后继续推进 M4-PX.2，待提交
+> **版本**: Atlas v3.1 / ReAct + PLAN + Tool 风险治理 + MCP 安全 Manifest 阶段
 > **最后更新**: 2026-05-24
 
 ---
@@ -15,6 +15,7 @@
 
 ```text
 AtlasBrain -> DELEGATE_REACT -> react_node -> ReActEngine.runWithEvents()
+AtlasBrain -> PLAN -> plan_node -> PlanEngine.plan()
 ```
 
 当前系统已具备：
@@ -24,6 +25,7 @@ AtlasBrain -> DELEGATE_REACT -> react_node -> ReActEngine.runWithEvents()
 - AtlasBrain 决策、StateGraph 编排、SSE 流式返回。
 - token + orgId 登录后缓存、ThreadLocal 双透传、异步上下文包装。
 - 手写 ReAct 核心循环、事件化输出、目标资源未找到早停、Graph/Orchestrator 接入。
+- M4-PX.2 Plan-and-Execute 最小 POC：PLAN actionType、plan_node、PlanEngine、单次 Reflection 自检。
 - Tool Schema 基础设施：`ToolParameterSpec`、`ToolInputSchemaBuilder`、schema-first `ToolParameterNormalizer`、ReAct Prompt 参数契约展示。
 - 首批参数契约扩展：`diagnose_pod`、`log_query`、`deployment_detail`、`node_detail`。
 
@@ -42,7 +44,7 @@ AtlasBrain -> DELEGATE_REACT -> react_node -> ReActEngine.runWithEvents()
 | M1 智能引擎 | 100% | L1-L4、AtlasBrain、StateGraph、基础 HITL 后端能力已完成 |
 | M2 查询全覆盖与质量加固 | ~75% | 109 Tool 与 orgId 链路完成，测试/参数契约仍需继续补齐 |
 | M3 写操作 + HITL 安全治理 | ~80% | HITLGuard fail-closed、Tool 风险元数据、高风险确认门已完成；前端完整交互仍可增强 |
-| M4 ReAct / Plan-and-Execute | ~45% | ReAct MVP + 指标接入完成，Plan/Execute/Reflect 完整循环未完成 |
+| M4 ReAct / Plan-and-Execute | ~55% | ReAct MVP + 指标接入完成；M4-PX.2 已落地 PLAN/plan_node/PlanEngine 最小 POC，完整 execute/reflect 循环待后续 |
 | M5 Memory / MCP / Observability | ✅ 最小闭环完成 | M5.18~M5.20 完成敏感 READ、高风险 mutation、MCP 安全 Manifest、最近 10 次摘要 Memory、Micrometer/Actuator 指标 |
 
 ---
@@ -58,7 +60,8 @@ AtlasBrain -> DELEGATE_REACT -> react_node -> ReActEngine.runWithEvents()
 | M2 主体 Tool 覆盖 | 多批次提交 | 前端 9 大模块 109 个 Tool 注册，真实 API 覆盖，默认参数与 orgId 链路修复 | ✅ 主体完成，质量加固继续 |
 | M3.2 ReAct MVP | `9cde237` ~ `e977b03` | ReActEngine、ReActMemory、ReActPromptBuilder、Graph 接入、SSE 事件化、E2E 稳定性修复 | ✅ MVP 完成 |
 | M4.1 Tool Schema 基础 | `386ea9c` ~ `c296a3c` | ToolParameterSpec、inputSchema、schema-first normalizer、ReAct Prompt 工具参数契约、首批 4 个 Tool schema | 🟡 进行中 |
-| M5.20 安全/Memory/MCP/Observability 最小闭环 | `f8294db` 后 | `SENSITIVE_READ`、高风险 mutation HITL、MCP 安全 Manifest、最近摘要 Memory、Micrometer/Actuator 指标 | ✅ 最小闭环完成 |
+| M5.20 安全/Memory/MCP/Observability 最小闭环 | `bdf579e` | `SENSITIVE_READ`、高风险 mutation HITL、MCP 安全 Manifest、最近摘要 Memory、Micrometer/Actuator 指标 | ✅ 最小闭环完成 |
+| M4-PX.2 Plan-and-Execute 最小 POC | `bdf579e` 后 | PLAN actionType、plan_node、PlanEngine、单次 Reflection 自检、安全契约测试 | ✅ 最小闭环完成，待提交 |
 
 ---
 
@@ -108,6 +111,15 @@ ToolParameterSpec -> ToolInputSchemaBuilder -> AtlasToolCallback -> ToolParamete
 ### P1 — ReAct 多步成功路径验证
 
 1. 设计真实存在资源的多步诊断 query。
+
+### P1.5 — Plan-and-Execute 完整循环
+
+1. ✅ M4-PX.2 最小 POC：`PLAN -> plan_node -> PlanEngine.plan()`，只规划不执行。
+2. 后续新增 execute_node：统一接入 Tool 执行服务，执行前必须重新读取 ToolMetadata 并经过 HitlGuard。
+3. 后续新增 reflection_node：每步后做成功/失败/重试/重规划判断，但高危重试必须重新 HITL。
+4. 前端读取 `plan_steps` 做 Timeline/确认卡片，避免纯文本计划难以审计。
+
+
 2. 验证 `DELEGATE_REACT -> think -> act -> observe -> final` 完整链路。
 3. 增加 ReAct 预算控制、Observation 截断策略和 Prompt 长度预算。
 

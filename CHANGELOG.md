@@ -6,6 +6,40 @@
 
 ---
 
+
+## [M4-PX.2] — Plan-and-Execute + Reflection 最小 POC 闭环
+
+**周期**: 2026-05-24
+**交付**: 在 M5 安全底座完成后，回到 M4 Plan-and-Execute 专项，按专家会诊结论先落地最小安全 POC：新增 PLAN 决策类型、Graph `plan_node`、`PlanEngine` 结构化计划与单次 Reflection 自检，并通过契约测试锁定“只规划、不执行、不绕过 HITL”的安全边界。
+
+### Added
+
+- `BrainDecision.ActionType` 新增 `PLAN`，支持 AtlasBrain 输出显式规划决策。
+- `AtlasBrain` 新增 PLAN 触发规则与确定性守卫：显式 `/plan`、`/px`、先规划、只出方案、不要执行等请求进入 PLAN；守卫优先级固定为 `HITL_CONFIRM > PLAN > DELEGATE_REACT > CALL_TOOL`。
+- `AtlasGraphConfig` 新增 `plan_node`、`plan_node_result`、`plan_result`、`plan_steps` State key，并增加 `PLAN -> plan_node -> END` 路由。
+- 新增 `com.atlas.plan` 包：`PlanEngine`、`PlanResult`、`PlanStep`、`PlanStepStatus`、`ReflectionResult`。
+- 新增/扩展测试：`M42PlanExecuteSafetyContractTest`、`SupervisorGraphReactRoutingTest`、`ActionTypeTest`、`AtlasBrainMockTest`。
+
+### Safety
+
+- `plan_node` 只调用 `PlanEngine.plan(...)` 生成结构化计划和最终展示文本，不调用 Tool、不访问 kube-manager、不写入 `tool_result`、不创建/写入 `hitl_confirmation`。
+- 高危关键词命中时，即使 LLM 已返回 `PLAN` 或用户使用 `/plan` 前缀，也会被 SafetyGuard 强制提升为 `HITL_CONFIRM`。
+- Reflection 当前只做单次结构自检，不自动重试、不自动 replan、不自动执行，避免绕过 M5 HITL fail-closed 安全边界。
+
+### Verified
+
+- 定向测试：`mvn -q -Dtest=ActionTypeTest,AtlasBrainMockTest,SupervisorGraphReactRoutingTest,M42PlanExecuteSafetyContractTest,M513HitlFailClosedContractTest,ToolRegistryPromptContractTest,ReActEventRiskMetadataTest test` → ✅ 通过。
+- 编译检查：`mvn -q -DskipTests compile` → ✅ 通过。
+- 空白检查：`git diff --check` → ✅ 通过。
+- 全量测试：`mvn -q test` → ✅ 通过。
+
+### Risk / Deferred
+
+- 本阶段是 Plan-and-Execute 最小 POC，只生成计划，不包含 execute_node / reflection_node 的完整多轮循环。
+- `PlanEngine` 当前为规则化计划生成，后续可接入 LLM Planner、ToolRegistry 风险元数据、预算控制和 SSE timeline 事件。
+- 前端计划展示目前复用普通 answer 文本；后续可读取 `plan_steps` 做专用 Timeline/确认卡片。
+
+---
 ## [M5.20] — MCP / Memory / Observability 最小安全闭环
 
 **周期**: 2026-05-24

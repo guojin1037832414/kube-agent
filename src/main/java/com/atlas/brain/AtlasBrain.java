@@ -38,6 +38,22 @@ public class AtlasBrain {
         "/react", "/deep"
     );
 
+    /**
+     * PLAN 强制前缀列表。
+     * <p>用户显式要求“先规划/只出方案/不要执行”时，应进入 plan_node，
+     * 由 PlanEngine 生成计划和 Reflection 自检，绝不直接触发 Tool。</p>
+     */
+    private static final Set<String> PLAN_FORCE_PREFIXES = Set.of(
+        "/plan", "/px"
+    );
+
+    /** PLAN 触发关键词列表，用于识别“先给计划，不要直接执行”的需求。 */
+    private static final Set<String> PLAN_KEYWORDS = Set.of(
+        "先规划", "先给计划", "先出计划", "制定计划", "执行计划", "计划一下",
+        "plan", "planning", "方案", "分步骤", "步骤", "不要执行", "先不要执行",
+        "只生成计划", "只出方案", "先分析步骤", "plan-and-execute"
+    );
+
     /** ReAct 触发关键词列表（中英文），用于前/后校验覆盖 LLM 误判 */
     private static final Set<String> REACT_KEYWORDS = Set.of(
         "为什么", "怎么回事", "报错", "无法访问", "连不上",
@@ -75,10 +91,10 @@ public class AtlasBrain {
      *
      * <p>流程：</p>
      * <ol>
-     *   <li>构建系统提示词（含 ReAct 决策规则）</li>
+     *   <li>构建系统提示词（含 PLAN / ReAct 决策规则）</li>
      *   <li>调用 LLM 解析为 BrainDecision JSON</li>
      *   <li>校验决策合法性（可见性、高危）</li>
-     *   <li>轻量后校验：若用户查询含 ReAct 关键词但 LLM 未返回 DELEGATE_REACT，则覆盖修正</li>
+     *   <li>轻量后校验：高危优先 HITL；显式规划覆盖为 PLAN；诊断类覆盖为 DELEGATE_REACT</li>
      * </ol>
      *
      * @param ctx 执行上下文
@@ -97,10 +113,10 @@ public class AtlasBrain {
         // 合法性校验（可见性、高危）
         validateDecision(decision, ctx);
 
-        // M3.2：轻量确定性守卫 — 关键词命中且非高危时，强制覆盖为 ReAct
-        BrainDecision guarded = applyReActGuard(decision, ctx);
+        // M4.2 / M3.2：轻量确定性守卫 — 安全优先，其次显式 PLAN，最后诊断 ReAct
+        BrainDecision guarded = applyPlanAndReActGuard(decision, ctx);
         if (guarded != decision) {
-            log.info("Brain decision overridden by ReAct guard: {} -> {}",
+            log.info("Brain decision overridden by deterministic guard: {} -> {}",
                 decision.actionType(), guarded.actionType());
         }
 
@@ -128,10 +144,16 @@ public class AtlasBrain {
             1. 简单查询（单 Tool 可完成，如查列表、查详情）→ actionType=CALL_TOOL，target=工具名称
             2. 复杂任务（需多步编排，不适合 ReAct）→ actionType=DELEGATE_AGENT，target=agentName
             3. 复杂诊断/排查/报错分析/为什么/怎么回事/debug/troubleshoot → actionType=DELEGATE_REACT，target="react"
-            4. 闲聊/解释概念 → actionType=DIRECT_ANSWER，target=""
-            5. 信息不足 → actionType=ASK_CLARIFY，target=""
-            6. 高危操作（删除/扩缩容/变更权限）→ actionType=HITL_CONFIRM
+            4. 用户显式要求先规划/先出方案/制定计划/分步骤/不要执行/只生成计划 → actionType=PLAN，target="plan"
+            5. 闲聊/解释概念 → actionType=DIRECT_ANSWER，target=""
+            6. 信息不足 → actionType=ASK_CLARIFY，target=""
+            7. 高危操作（删除/扩缩容/变更权限）→ actionType=HITL_CONFIRM
             confidence < 0.6 时应选择 ASK_CLARIFY。
+
+            优先级：高危 HITL_CONFIRM > 显式规划 PLAN > 诊断 DELEGATE_REACT > 单工具 CALL_TOOL。
+
+            PLAN 示例：
+            {"actionType":"PLAN","target":"plan","confidence":0.90,"reasoning":"用户显式要求先制定计划且不要直接执行真实操作","parameters":{},"requiredContext":[]}
 
             DELEGATE_REACT 示例：
             {"actionType":"DELEGATE_REACT","target":"react","confidence":0.92,"reasoning":"用户遇到 Pod CrashLoopBackOff，需要多步诊断工具逐步排查","parameters":{},"requiredContext":[]}
@@ -165,28 +187,20 @@ public class AtlasBrain {
     }
 
     /**
-     * ReAct 守卫逻辑。
+     * PLAN / ReAct 守卫逻辑。
      *
-     * <p>若用户查询明显属于诊断/排查类，但 LLM 返回了 CALL_TOOL 或 DELEGATE_AGENT，
-     * 则覆盖为 DELEGATE_REACT（提升置信度到至少 0.80）。</p>
-     *
-     * <p>例外：如果查询含高危关键词，绝不做覆盖（保持 LLM 原决策或 HITL）。</p>
+     * <p>守卫优先级严格固定：高危 HITL_CONFIRM > 显式 PLAN > 诊断 ReAct。</p>
+     * <p>这样既能支持用户“先规划、不执行”的 Plan-and-Execute 入口，又不会削弱
+     * M5 已完成的高危操作确认边界。</p>
      *
      * @param raw  LLM 原始决策
      * @param ctx  执行上下文（含用户查询）
      * @return 修正后的决策
      */
-    private BrainDecision applyReActGuard(BrainDecision raw, ExecutionContext ctx) {
+    private BrainDecision applyPlanAndReActGuard(BrainDecision raw, ExecutionContext ctx) {
         String query = ctx.userQuery().toLowerCase();
 
-        // 若已是 ReAct / HITL / ASK_CLARIFY，不做变更
-        if (raw.actionType() == BrainDecision.ActionType.DELEGATE_REACT
-            || raw.actionType() == BrainDecision.ActionType.HITL_CONFIRM
-            || raw.actionType() == BrainDecision.ActionType.ASK_CLARIFY) {
-            return raw;
-        }
-
-        // 高危查询必须进入 HITL_CONFIRM，绝不放行到 ReAct 或普通 Agent。
+        // 高危查询必须进入 HITL_CONFIRM，绝不放行到 PLAN、ReAct 或普通 Agent。
         // 这是 Atlas v3.1 安全边界：删除、扩缩容、权限变更等操作必须由用户显式确认。
         if (isHighRiskQuery(query)) {
             if (raw.actionType() == BrainDecision.ActionType.HITL_CONFIRM) {
@@ -198,6 +212,27 @@ public class AtlasBrain {
                 raw.parameters() != null ? raw.parameters() : java.util.Map.of(),
                 raw.reasoning() + " [SafetyGuard: 用户查询命中高危关键词，强制转为 HITL_CONFIRM]",
                 Math.max(raw.confidence(), 0.90),
+                raw.requiredContext() != null ? raw.requiredContext() : List.of()
+            );
+        }
+
+        // 若已是 ReAct / PLAN / HITL / ASK_CLARIFY，不做变更
+        if (raw.actionType() == BrainDecision.ActionType.DELEGATE_REACT
+            || raw.actionType() == BrainDecision.ActionType.PLAN
+            || raw.actionType() == BrainDecision.ActionType.HITL_CONFIRM
+            || raw.actionType() == BrainDecision.ActionType.ASK_CLARIFY) {
+            return raw;
+        }
+
+        // 显式规划类查询进入 plan_node：只生成计划和 Reflection，不执行真实 Tool。
+        if (shouldUsePlan(query)) {
+            double newConfidence = Math.max(raw.confidence(), 0.82);
+            return new BrainDecision(
+                BrainDecision.ActionType.PLAN,
+                "plan",
+                raw.parameters() != null ? raw.parameters() : java.util.Map.of(),
+                raw.reasoning() + " [PlanGuard: 用户显式要求先规划/只出方案，覆盖为 PLAN]",
+                newConfidence,
                 raw.requiredContext() != null ? raw.requiredContext() : List.of()
             );
         }
@@ -216,6 +251,33 @@ public class AtlasBrain {
         }
 
         return raw;
+    }
+
+    /**
+     * 判断用户查询是否应走 PLAN（基于显式规划关键词匹配）。
+     *
+     * <p>PLAN 只在用户明确要求先规划、分步骤、只出方案或不要执行时触发。
+     * 普通查询不能因为“复杂”二字自动进入 PLAN，避免弱化现有 CALL_TOOL/ReAct 命中率。</p>
+     *
+     * @param query 用户查询
+     * @return true 表示命中 PLAN 触发关键词
+     */
+    public static boolean shouldUsePlan(String query) {
+        if (query == null || query.isBlank()) return false;
+        String lower = query.trim().toLowerCase();
+
+        for (String prefix : PLAN_FORCE_PREFIXES) {
+            if (lower.startsWith(prefix)) {
+                return true;
+            }
+        }
+
+        for (String kw : PLAN_KEYWORDS) {
+            if (lower.contains(kw.toLowerCase())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

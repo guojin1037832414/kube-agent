@@ -6,15 +6,16 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * SupervisorGraph 路由映射单元测试 - ReAct 集成。
+ * SupervisorGraph 路由映射单元测试 - ReAct / Plan 集成。
  *
  * <p>验证 BrainDecision.ActionType 到 Graph 条件边目标名称的正确映射，
- * 确保 DELEGATE_REACT 决策能准确路由到 "react_node" 节点。</p>
+ * 确保 DELEGATE_REACT 决策能准确路由到 "react_node" 节点，PLAN 决策能准确
+ * 路由到 "plan_node" 节点。</p>
  *
  * <p>本测试为轻量级编译期检查：不涉及 Spring 上下文启动和真实 Graph 注入，
  * 仅验证路由键字符串常量与 ActionType 的语义一致性。</p>
  *
- * @version 3.1.0-M3.2
+ * @version 3.1.0-M4.2
  */
 class SupervisorGraphReactRoutingTest {
 
@@ -36,18 +37,29 @@ class SupervisorGraphReactRoutingTest {
             java.util.List.of()
         );
 
-        // 模拟条件边路由逻辑（与 AtlasGraphConfig 中的 switch 保持一致）
-        String routeKey = switch (reactDecision.actionType()) {
-            case DIRECT_ANSWER -> "direct_answer";
-            case ASK_CLARIFY -> "ask_clarify";
-            case CALL_TOOL -> "tool_call";
-            case DELEGATE_AGENT -> "delegate";
-            case DELEGATE_REACT -> "react_node";
-            case HITL_CONFIRM -> "hitl_confirm";
-        };
-
-        assertEquals("react_node", routeKey,
+        assertEquals("react_node", mapActionTypeToRouteKey(reactDecision.actionType()),
             "DELEGATE_REACT 必须路由到 react_node，否则 ReAct 引擎不会被触发");
+    }
+
+    /**
+     * TC-GRAPH-PLAN-01: 验证 PLAN 对应的路由键为 "plan_node"。
+     *
+     * <p>Plan-and-Execute 是图级编排能力，不应被塞进 react_node，也不应落回
+     * direct_answer。该测试锁定 M4.2 的最小 POC 路由约定。</p>
+     */
+    @Test
+    void testPlanMapsToPlanNode() {
+        BrainDecision planDecision = new BrainDecision(
+            BrainDecision.ActionType.PLAN,
+            "plan",
+            java.util.Map.of(),
+            "用户要求先生成执行计划，不直接执行真实操作",
+            0.90,
+            java.util.List.of()
+        );
+
+        assertEquals("plan_node", mapActionTypeToRouteKey(planDecision.actionType()),
+            "PLAN 必须路由到 plan_node，否则 PlanEngine 最小闭环不会被触发");
     }
 
     /**
@@ -79,6 +91,7 @@ class SupervisorGraphReactRoutingTest {
             case CALL_TOOL -> "tool_call";
             case DELEGATE_AGENT -> "delegate";
             case DELEGATE_REACT -> "react_node";
+            case PLAN -> "plan_node";
             case HITL_CONFIRM -> "hitl_confirm";
         };
     }

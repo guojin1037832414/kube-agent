@@ -57,8 +57,8 @@ npm run dev
 | M1.5 HITL SSE | ⚠️ 后端完成 | confirm/resume/checkpoint 全通，前端代码写好未浏览器联调 |
 | **M2 查询全覆盖** | **🔵 即将启动** | 35+ 单元测试 + 查询类 E2E ≥ 95% |
 | M3 写操作+HITL联调 | ⏳ | HITL confirm 浏览器验证 + ThreadLocal→State重构 |
-| M4 Plan-Execute | ⏳ | 多步任务拆解 + Reflection 自我修正 |
-| M5 Memory+MCP | ⏳ | Redis 长期记忆 + MCP Server + 可观测性 |
+| M4 Plan-Execute | 🟡 最小 POC | PLAN → plan_node → PlanEngine，已具备只规划不执行的 Reflection 自检闭环 |
+| M5 Memory+MCP | ✅ 最小闭环 | MCP 安全 Manifest + 最近摘要 Memory + Micrometer/Actuator 指标 |
 
 > **测试约束**: M2 只验证查询类 Tool，创建/修改/删除/高危操作留到 M3/M4。
 
@@ -73,7 +73,7 @@ npm run dev
 ## 测试
 
 ```bash
-# 当前覆盖率极低（3个测试），M2 目标 ≥ 35 个
+# 全量测试
 mvn test
 ```
 

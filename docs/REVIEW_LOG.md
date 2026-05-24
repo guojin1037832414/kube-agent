@@ -1,5 +1,55 @@
 # Atlas v3.1 开发审计日志
 
+## 2026-05-24 21:50 - M4-PX.2 Plan-and-Execute + Reflection 最小 POC 闭环
+
+### 背景
+- M5 安全底座已完成，当前回到 M4 Plan-and-Execute 专项。
+- 用户要求本阶段必须专家会诊前置，且开源项目专家报告必须有效；第一轮开源专家超时后，改为基于已代理抓取证据的无工具评审，最终补齐有效会诊。
+- 专家共识：先落地 `PLAN actionType + plan_node + PlanEngine` 最小闭环，不直接上完整 execute_node/reflection_node，避免绕过 M5 HITL。
+
+### 专家会诊 / Review 结论
+1. 开源项目专家：LangGraph/OpenAI Agents 等优秀项目均支持显式 planning/plan-and-execute 模式；最小 POC 应先有独立计划节点和结构化步骤。
+2. Spring Graph 落地专家：在现有 StateGraph 中新增 `PLAN -> plan_node -> END` 是最低侵入路径，应显式声明 `plan_result/plan_steps` State key。
+3. 安全/测试专家：plan_node 只能规划，不得执行 Tool，不得创建 HITL marker；Reflection 不能自动重试高危操作。
+
+### 变更内容
+- `BrainDecision.ActionType` 新增 `PLAN`。
+- `AtlasBrain` 增加 PLAN prompt 规则、`shouldUsePlan`、确定性守卫；守卫优先级固定为 `HITL_CONFIRM > PLAN > DELEGATE_REACT`。
+- `AtlasGraphConfig` 新增 `plan_node`、`buildPlanNode`、`plan_node_result/plan_result/plan_steps` State key 和 `PLAN -> plan_node -> END` 路由。
+- 新增 `com.atlas.plan` 包：结构化计划、步骤状态、Reflection 自检结果与 `PlanEngine`。
+- 新增 `M42PlanExecuteSafetyContractTest`，扩展 `ActionTypeTest`、`AtlasBrainMockTest`、`SupervisorGraphReactRoutingTest`。
+
+### 测试结果
+| 测试项 | 命令/方式 | 结果 |
+|--------|-----------|------|
+| M4.2 定向测试 | `mvn -q -Dtest=ActionTypeTest,AtlasBrainMockTest,SupervisorGraphReactRoutingTest,M42PlanExecuteSafetyContractTest,M513HitlFailClosedContractTest,ToolRegistryPromptContractTest,ReActEventRiskMetadataTest test` | ✅ PASS |
+| 编译检查 | `mvn -q -DskipTests compile` | ✅ PASS |
+| 空白检查 | `git diff --check` | ✅ PASS |
+| 全量测试 | `mvn -q test` | ✅ PASS |
+
+### 代码 Review
+#### 优点
+- PLAN 入口独立于 ReAct，避免把“先出方案/不要执行”的需求硬塞进诊断循环。
+- plan_node 明确只写入计划结果，不写 `tool_result/hitl_confirmation`，安全边界清晰。
+- 高危 SafetyGuard 放在 PLAN/ReAct 早退之前，测试验证 `/plan 删除...` 仍强制 HITL。
+- 契约测试不触碰真实 kube-manager，符合本阶段安全测试约束。
+
+#### 风险
+- `PlanEngine` 当前是规则化 POC，不是完整 LLM Planner。
+- 还没有专用 SSE plan timeline 事件，前端暂时只能消费 answer 文本。
+- execute_node / reflection_node 未落地，完整 Plan-Execute-Reflect 多轮闭环仍需后续阶段。
+
+### 根因与解决方案
+- 根因：原 AtlasBrain 只有 CALL_TOOL/DELEGATE_REACT/HITL 等路径，用户显式要求“先规划、不执行”时缺少安全的计划态承载节点。
+- 解决：新增 PLAN 决策和 plan_node，只生成结构化计划与自检，不直接执行；真实执行后续仍必须进入受 HitlGuard 保护的统一执行路径。
+
+### 后续建议
+1. 新增 execute_node，并强制执行前重新解析 ToolMetadata + HitlGuard。
+2. 新增 reflection_node，限制自动重试次数，高危重试必须重新 HITL。
+3. 前端基于 `plan_steps` 渲染 Timeline/确认卡片。
+4. 将 PlanEngine 从规则化 POC 升级为 LLM Planner + ToolRegistry 风险元数据驱动。
+
+
 
 ## 2026-05-23 23:45 - M5.13 HITL fail-closed 执行层强拦截前后端同步治理
 
