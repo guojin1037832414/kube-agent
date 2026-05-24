@@ -21,7 +21,10 @@ import java.util.Set;
     name = "resource_monitor",
     agent = "query",
     intentId = "resource_monitor",
-    description = "资源监控查询(CPU/内存/存储)"
+    description = "资源监控查询(CPU/内存/存储)",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/resource"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 // P3 资源监控属于只读查询，不产生集群写操作；允许公开访问，便于匿名看板和健康检查复用。
 @ToolPermission(ToolPermission.Policy.PUBLIC)

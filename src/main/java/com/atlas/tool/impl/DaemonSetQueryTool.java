@@ -18,7 +18,10 @@ import java.util.Set;
     name = "daemonset_status",
     agent = "query",
     intentId = "daemonset_status",
-    description = "查询DaemonSet状态"
+    description = "查询DaemonSet状态",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/dashboard/deployment"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class DaemonSetQueryTool extends BaseTool {

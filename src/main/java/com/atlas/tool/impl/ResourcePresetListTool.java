@@ -25,7 +25,10 @@ import java.util.Set;
     name = "resource_preset_list",
     agent = "query",
     intentId = "resource_preset_list",
-    description = "查询资源预设列表"
+    description = "查询资源预设列表",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/resource-preset"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class ResourcePresetListTool extends BaseTool {

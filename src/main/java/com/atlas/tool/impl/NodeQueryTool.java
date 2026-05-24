@@ -21,7 +21,10 @@ import java.util.Set;
     name = "node_query",
     agent = "query",
     intentId = "node_query",
-    description = "查询 Kubernetes 集群所有节点的状态、资源使用情况"
+    description = "查询 Kubernetes 集群所有节点的状态、资源使用情况",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/node"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class NodeQueryTool extends BaseTool {

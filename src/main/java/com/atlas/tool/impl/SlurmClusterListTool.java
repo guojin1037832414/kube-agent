@@ -25,7 +25,10 @@ import java.util.Set;
     name = "slurm_cluster_list",
     agent = "deploy",
     intentId = "slurm_cluster_list",
-    description = "查询Slurm集群列表"
+    description = "查询Slurm集群列表",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/bcm/slurm-cluster"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class SlurmClusterListTool extends BaseTool {

@@ -97,11 +97,41 @@ class M511AtlasToolHttpContractTest {
         );
 
         for (ExpectedEndpoint expected : expectedEndpoints) {
-            verifyExpectedReadEndpoint(expected, violations);
+            verifyExpectedReadEndpoint(expected, "M5.16", violations);
         }
 
         assertThat(violations)
             .as("M5.16 READ 扩面 endpoint 精确白名单违规:\n%s", String.join("\n", violations))
+            .isEmpty();
+    }
+
+    @Test
+    void m517InfrastructureReadEndpoints_shouldMatchReviewedWhitelist() throws IOException {
+        List<String> violations = new ArrayList<>();
+        List<ExpectedEndpoint> expectedEndpoints = List.of(
+            new ExpectedEndpoint("ClusterQueryTool.java", "cluster_query", "/api/{orgId}/hpc-job/cluster"),
+            new ExpectedEndpoint("NodeQueryTool.java", "node_query", "/api/{orgId}/node"),
+            new ExpectedEndpoint("NodeMetricsTool.java", "node_metrics", "/api/{orgId}/node"),
+            new ExpectedEndpoint("GpuQueryTool.java", "gpu_query", "/api/{orgId}/node/all/gpu-map"),
+            new ExpectedEndpoint("GpuMetricsTool.java", "gpu_metrics", "/api/{orgId}/node/all/gpu-map"),
+            new ExpectedEndpoint("NetworkQueryTool.java", "network_query", "/api/{orgId}/dashboard/deployment"),
+            new ExpectedEndpoint("PodQueryTool.java", "pod_status", "/api/{orgId}/pod"),
+            new ExpectedEndpoint("DaemonSetQueryTool.java", "daemonset_status", "/api/{orgId}/dashboard/deployment"),
+            new ExpectedEndpoint("DeploymentQueryTool.java", "deployment_status", "/api/{orgId}/deployment"),
+            new ExpectedEndpoint("ServiceQueryTool.java", "service_status", "/api/{orgId}/dashboard/resources"),
+            new ExpectedEndpoint("IngressQueryTool.java", "ingress_query", "/api/{orgId}/dashboard/deployment"),
+            new ExpectedEndpoint("ResourceMonitorTool.java", "resource_monitor", "/api/{orgId}/resource"),
+            new ExpectedEndpoint("ResourcePresetListTool.java", "resource_preset_list", "/api/{orgId}/resource-preset"),
+            new ExpectedEndpoint("SlurmClusterListTool.java", "slurm_cluster_list", "/api/{orgId}/bcm/slurm-cluster"),
+            new ExpectedEndpoint("SlurmNodeListTool.java", "slurm_node_list", "/api/{orgId}/slurm-node")
+        );
+
+        for (ExpectedEndpoint expected : expectedEndpoints) {
+            verifyExpectedReadEndpoint(expected, "M5.17", violations);
+        }
+
+        assertThat(violations)
+            .as("M5.17 基础设施 READ 扩面 endpoint 精确白名单违规:\n%s", String.join("\n", violations))
             .isEmpty();
     }
 
@@ -213,7 +243,7 @@ class M511AtlasToolHttpContractTest {
      * 因此这里用人工会诊确认过的白名单，重点防止动态尾段被写漏、detail 查询被臆造成错误路径，
      * 以及 {@code /api/log} 被机械套成 org-scoped 路径。</p>
      */
-    private void verifyExpectedReadEndpoint(ExpectedEndpoint expected, List<String> violations) {
+    private void verifyExpectedReadEndpoint(ExpectedEndpoint expected, String milestone, List<String> violations) {
         Path path = TOOL_IMPL_DIR.resolve(expected.fileName());
         try {
             String source = Files.readString(path);
@@ -234,15 +264,15 @@ class M511AtlasToolHttpContractTest {
                     "expected=" + expected.toolName() + ", actual=" + actualToolName));
             }
             if (!"GET".equals(declaredMethod)) {
-                violations.add(format(path, "M516_METHOD_NOT_GET",
+                violations.add(format(path, milestone + "_METHOD_NOT_GET",
                     "tool=" + expected.toolName() + ", actualMethod=" + declaredMethod));
             }
             if (!"READ".equals(operationType)) {
-                violations.add(format(path, "M516_OPERATION_NOT_READ",
+                violations.add(format(path, milestone + "_OPERATION_NOT_READ",
                     "tool=" + expected.toolName() + ", actualOperationType=" + operationType));
             }
             if (!declaredEndpoints.equals(Set.of(expected.endpoint()))) {
-                violations.add(format(path, "M516_ENDPOINT_MISMATCH",
+                violations.add(format(path, milestone + "_ENDPOINT_MISMATCH",
                     "tool=" + expected.toolName() + ", expected=[" + expected.endpoint()
                         + "], actual=" + declaredEndpoints));
             }

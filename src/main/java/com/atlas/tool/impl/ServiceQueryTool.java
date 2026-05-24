@@ -18,7 +18,10 @@ import java.util.Set;
     name = "service_status",
     agent = "query",
     intentId = "service_status",
-    description = "查询资源看板"
+    description = "查询资源看板",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/dashboard/resources"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class ServiceQueryTool extends BaseTool {

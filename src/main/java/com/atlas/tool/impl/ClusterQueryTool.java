@@ -18,7 +18,10 @@ import java.util.Set;
     name = "cluster_query",
     agent = "query",
     intentId = "cluster_query",
-    description = "查询集群列表"
+    description = "查询集群列表",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/hpc-job/cluster"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class ClusterQueryTool extends BaseTool {

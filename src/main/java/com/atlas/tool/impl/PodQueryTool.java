@@ -25,7 +25,10 @@ import java.util.Set;
     name = "pod_status",
     agent = "query",
     intentId = "pod_status",
-    description = "查询Pod列表"
+    description = "查询Pod列表",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/pod"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class PodQueryTool extends BaseTool {

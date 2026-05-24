@@ -6,6 +6,45 @@
 
 ---
 
+## [M5.17] — Tool HTTP/风险元数据第四批基础设施 GET/READ 扩面
+
+**周期**: 2026-05-24
+**交付**: 在 M5.16 第三批 READ 扩面基础上，继续按“专家会诊前置 + 先实验再铺开”原则，为第四批 15 个基础设施/运行态查询 Tool 补充 `httpMethod/apiEndpoints/operationType=READ`，并新增 M5.17 endpoint 精确白名单契约测试，防止动态路径和 dashboard 近似路径被写错。
+
+### Added
+
+- 第四批 15 个低风险 GET/READ Tool 补充 HTTP/风险元数据：
+  - query 查询类：`cluster_query`、`node_query`、`node_metrics`、`gpu_query`、`gpu_metrics`、`pod_status`、`daemonset_status`、`deployment_status`、`service_status`、`resource_monitor`、`resource_preset_list`；
+  - network 查询类：`network_query`、`ingress_query`；
+  - deploy 查询类：`slurm_cluster_list`、`slurm_node_list`。
+- `M511AtlasToolHttpContractTest` 新增 `m517InfrastructureReadEndpoints_shouldMatchReviewedWhitelist`，对白名单 15 个 Tool 做精确 endpoint 断言。
+- 新增阶段记录：`docs/m5/M5.17_tool_metadata_read_expansion_notes_20260524.md`。
+
+### Verified
+
+- 专家会诊：✅ 安全、源码契约/测试、架构推进三方确认本批只覆盖基础设施纯查询能力，排除 RBAC/LDAP/用户/组织/配额/文件/上传下载/审批/写删动作。
+- M511 HTTP 元数据契约：`mvn -q -Dtest=M511AtlasToolHttpContractTest test` → ✅ 通过。
+- HITL/风险定向回归：`mvn -q -Dtest=M513HitlFailClosedContractTest,ToolRegistryPromptContractTest,ReActEventRiskMetadataTest test` → ✅ 通过。
+- 后端编译：`mvn -q -DskipTests compile` → ✅ 通过。
+- 全量测试：`mvn -q test` → ✅ 通过。
+- 空白检查：`git diff --check` → ✅ 通过。
+- 敏感信息扫描：`secret_suspects=0` → ✅ 通过。
+
+### Coverage
+
+- Tool 总数：110。
+- 已声明 HTTP 元数据：58（由 M5.16 的 43 扩展到 58）。
+- READ 白名单：55（由 M5.16 的 40 扩展到 55）。
+- 未迁移 Tool 继续保持 UNKNOWN / fail-closed，仍不因覆盖率目标放松安全边界。
+
+### Risk / Deferred
+
+- 本批包含节点、Pod、Deployment、GPU、Slurm 等基础设施运行态信息；虽然不改变后端/K8s 状态，但会暴露拓扑与资源状态，必须继续依赖后端 org 隔离、权限校验和审计。
+- `resource_preset_list` 目前按资源规格只读查询处理；若后端未来返回价格策略、账户策略或其他敏感管理信息，应升级为敏感 READ。
+- RBAC、LDAP、用户、组织、配额、文件上传/下载、审批、创建/删除/停止/扩缩容仍不纳入免确认 READ。
+
+---
+
 ## [M5.16] — Tool HTTP/风险元数据第三批 GET/READ 扩面与 endpoint 精确契约
 
 **周期**: 2026-05-24

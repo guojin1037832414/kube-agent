@@ -18,7 +18,10 @@ import java.util.Set;
     name = "gpu_metrics",
     agent = "query",
     intentId = "gpu_metrics",
-    description = "查询GPU配置映射"
+    description = "查询GPU配置映射",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/node/all/gpu-map"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class GpuMetricsTool extends BaseTool {

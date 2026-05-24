@@ -18,7 +18,10 @@ import java.util.Set;
     name = "node_metrics",
     agent = "query",
     intentId = "node_metrics",
-    description = "查询节点列表及资源使用率"
+    description = "查询节点列表及资源使用率",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/node"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class NodeMetricsTool extends BaseTool {

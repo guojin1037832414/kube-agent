@@ -3,6 +3,75 @@
 > 本文件记录阶段性开发闭环：问题背景、解决方案、测试结果、代码 Review、风险与后续计划。
 
 
+## 2026-05-24 17:55 - M5.17 Tool HTTP/风险元数据第四批基础设施 GET/READ 扩面
+
+### 背景
+- M5.16 后 declared=43、READ=40，仍有大量历史 Tool 缺少 `httpMethod/apiEndpoints/operationType`。
+- M5.13 fail-closed 已成为安全底座；UNKNOWN Tool 会被保守拦截，因此低风险只读 Tool 需要继续分批治理。
+- 用户要求继续 M5，本轮按“专家会诊前置 + 先实验再铺开”选择基础设施运行态查询小批次，不直接进入 MCP/Memory/Observability。
+
+### 专家会诊结论
+1. 安全专家：本批仅纳入纯 `httpClient.get(...)`、无写入/删除/审批/下载导出、非 RBAC/LDAP/用户/组织/配额敏感管理域的 Tool；GET 不是 READ 的同义词。
+2. 源码契约/测试专家：必须精确声明 endpoint，并增加 M5.17 白名单测试，尤其 dashboard 近似路径不能按 Tool 名称臆造。
+3. 架构推进专家：MCP 暴露外部协议之前必须先完成 Tool 风险元数据治理，否则会把 UNKNOWN Tool 风险放大。
+
+### 变更内容
+- 第四批补充 15 个 GET/READ Tool 元数据：
+  - `ClusterQueryTool` → `GET /api/{orgId}/hpc-job/cluster`
+  - `NodeQueryTool` → `GET /api/{orgId}/node`
+  - `NodeMetricsTool` → `GET /api/{orgId}/node`
+  - `GpuQueryTool` → `GET /api/{orgId}/node/all/gpu-map`
+  - `GpuMetricsTool` → `GET /api/{orgId}/node/all/gpu-map`
+  - `NetworkQueryTool` → `GET /api/{orgId}/dashboard/deployment`
+  - `PodQueryTool` → `GET /api/{orgId}/pod`
+  - `DaemonSetQueryTool` → `GET /api/{orgId}/dashboard/deployment`
+  - `DeploymentQueryTool` → `GET /api/{orgId}/deployment`
+  - `ServiceQueryTool` → `GET /api/{orgId}/dashboard/resources`
+  - `IngressQueryTool` → `GET /api/{orgId}/dashboard/deployment`
+  - `ResourceMonitorTool` → `GET /api/{orgId}/resource`
+  - `ResourcePresetListTool` → `GET /api/{orgId}/resource-preset`
+  - `SlurmClusterListTool` → `GET /api/{orgId}/bcm/slurm-cluster`
+  - `SlurmNodeListTool` → `GET /api/{orgId}/slurm-node`
+- `M511AtlasToolHttpContractTest`：新增 `m517InfrastructureReadEndpoints_shouldMatchReviewedWhitelist`，复用 `verifyExpectedReadEndpoint(expected, milestone, violations)`，区分 M5.16/M5.17 错误码前缀。
+- 新增 `docs/m5/M5.17_tool_metadata_read_expansion_notes_20260524.md` 记录会诊结论、风险边界和验收标准。
+
+### 测试结果
+| 项目 | 命令/方式 | 结果 |
+|------|-----------|------|
+| M511 HTTP 元数据契约 | `mvn -q -Dtest=M511AtlasToolHttpContractTest test` | ✅ PASS |
+| HITL/风险定向回归 | `mvn -q -Dtest=M513HitlFailClosedContractTest,ToolRegistryPromptContractTest,ReActEventRiskMetadataTest test` | ✅ PASS |
+| 后端编译 | `mvn -q -DskipTests compile` | ✅ PASS |
+| 全量测试 | `mvn -q test` | ✅ PASS |
+| 空白检查 | `git diff --check` | ✅ PASS |
+| 敏感信息扫描 | Python 静态扫描 | ✅ secret_suspects=0 |
+| 覆盖率脚本 | Python 静态统计 | ✅ total=110, declared=58, read=55 |
+
+### 覆盖率变化
+- Tool 总数：110。
+- 已声明 HTTP 元数据：58（M5.16 后为 43，本轮新增 15）。
+- READ 白名单：55（M5.16 后为 40，本轮新增 15）。
+- 未迁移 Tool 仍由 UNKNOWN / fail-closed 保护。
+
+### 代码 Review
+#### 优点
+- 生产代码只补充注解元数据，不改变真实业务执行逻辑。
+- 新增 M5.17 endpoint 精确白名单测试，避免只校验 endpoint 非空导致路径错误漏检。
+- 批次选择遵循安全边界，暂缓敏感管理域与写删动作。
+
+#### 风险
+- 节点、Pod、Deployment、GPU、Slurm 等运行态信息会暴露资源拓扑，仍依赖后端 org 隔离、权限校验与审计。
+- `resource_preset_list` 虽为只读，但可能涉及资源规格策略；后续若返回敏感策略需升级为敏感 READ。
+- `NetworkQueryTool`、`IngressQueryTool`、`DaemonSetQueryTool` 当前使用 dashboard/deployment 近似路径，契约测试锁定的是现状，不代表后端已有专用 API。
+
+### 根因与解决方案
+- 根因：历史 Tool 没有静态 HTTP/风险元数据，MCP/外部协议化前无法形成可靠安全边界。
+- 解决：继续小批次人工会诊，选择路径清晰且无副作用的基础设施 GET Tool，声明 `GET + endpoint + READ`，并用源码契约测试锁定。
+
+### 后续建议
+1. M5.18：治理敏感 GET / SENSITIVE_READ 语义，重点 RBAC、LDAP、用户、组织、配额、文件、日志等域。
+2. M5.19：治理 POST/DELETE/ACTION 高风险 Tool，补 `requiresConfirmation=true` 与命令式确认规则。
+3. M5.20：在 Tool 风险元数据稳定后再启动 MCP Server 第一版。
+
 ## 2026-05-24 14:20 - M5.16 Tool HTTP/风险元数据第三批 GET/READ 扩面与 endpoint 精确契约
 
 ### 背景

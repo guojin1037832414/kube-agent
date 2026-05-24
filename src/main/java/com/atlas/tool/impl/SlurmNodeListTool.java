@@ -25,7 +25,10 @@ import java.util.Set;
     name = "slurm_node_list",
     agent = "deploy",
     intentId = "slurm_node_list",
-    description = "查询Slurm节点列表"
+    description = "查询Slurm节点列表",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/slurm-node"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class SlurmNodeListTool extends BaseTool {

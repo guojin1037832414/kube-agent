@@ -21,7 +21,10 @@ import java.util.Set;
     name = "network_query",
     agent = "network",
     intentId = "network_query",
-    description = "查询网络配置"
+    description = "查询网络配置",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/dashboard/deployment"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 
 @ToolPermission(ToolPermission.Policy.PUBLIC)
