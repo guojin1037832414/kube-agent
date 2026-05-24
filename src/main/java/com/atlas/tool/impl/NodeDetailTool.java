@@ -24,7 +24,10 @@ import java.util.Set;
     name = "node_detail",
     agent = "query",
     intentId = "node_detail",
-    description = "查询节点信息"
+    description = "查询节点信息",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/node"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class NodeDetailTool extends BaseTool {

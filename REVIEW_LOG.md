@@ -3,6 +3,84 @@
 > 本文件记录阶段性开发闭环：问题背景、解决方案、测试结果、代码 Review、风险与后续计划。
 
 
+## 2026-05-24 14:20 - M5.16 Tool HTTP/风险元数据第三批 GET/READ 扩面与 endpoint 精确契约
+
+### 背景
+- M5.14/M5.15 已将低风险 GET/READ Tool 元数据覆盖推进到 declared=28、READ=25，但仍有大量历史 Tool 缺少 `httpMethod/apiEndpoints/operationType`。
+- M5.13 HITL fail-closed 使 UNKNOWN Tool 默认被保守拦截；为了改善只读查询体验，需要继续按“专家会诊前置 + 先实验再铺开”扩面。
+- 本轮脚本初筛发现 15 个路径明确、纯 `httpClient.get(...)`、无写调用、非 RBAC 的候选，同时排除了路径动态不清、file/storage 数据读取、RBAC/user/quota/download/upload 等敏感项。
+
+### 专家会诊结论
+1. 安全专家：15 个候选均可纳入 READ；但 `log_query`、云资源/节点/Deployment 详情、Helm 仓库列表属于“只读但可能敏感的元数据”，需在 Review 中记录依赖后端权限/脱敏/隔离。
+2. 源码契约/测试专家：必须精确声明动态尾段 endpoint，尤其 `helm_release_history` 的 `/{release}/histories` 和 `mpi_job_detail` 的 `/{id}`；不要按 Tool 名称臆造 detail path。
+3. 架构推进专家：M5.16 可一次推进 15 个，但必须同步增加 endpoint 精确白名单契约测试，否则 endpoint 写错会成为隐藏风险。
+4. 旧 `API_ENDPOINTS_PATTERN` 对 `{orgId}` 会提前截断，这次测试先失败后修复，证明契约测试自身也需要随着元数据治理持续加固。
+
+### 变更内容
+- 第三批补充 15 个 GET/READ Tool 元数据：
+  - `BareMetalAppListTool` → `GET /api/{orgId}/bare-metal-application`
+  - `ComposeListTool` → `GET /api/{orgId}/compose`
+  - `HelmChartInfoTool` → `GET /api/{orgId}/helm/charts/single`
+  - `HelmChartSearchTool` → `GET /api/{orgId}/helm/repositories/charts`
+  - `HelmReleaseHistoryTool` → `GET /api/{orgId}/helm/releases/{release}/histories`
+  - `HelmReleaseListTool` → `GET /api/{orgId}/helm/releases`
+  - `HelmRepoListTool` → `GET /api/{orgId}/helm/repositories`
+  - `MpiJobDetailTool` → `GET /api/{orgId}/mpi-job/{id}`
+  - `MpiJobListTool` → `GET /api/{orgId}/mpi-job`
+  - `LogQueryTool` → `GET /api/log`
+  - `CloudResourceListTool` → `GET /api/{orgId}/cloud`
+  - `CurrencyQueryListTool` → `GET /api/{orgId}/currency`
+  - `DeploymentDetailTool` → `GET /api/{orgId}/deployment`
+  - `ImageDetailByNameTool` → `GET /api/{orgId}/image/name`
+  - `NodeDetailTool` → `GET /api/{orgId}/node`
+- `M511AtlasToolHttpContractTest`：
+  - 新增 M5.16 endpoint 精确白名单测试，校验 15 个 Tool 的 `GET + READ + endpoint` 三元组；
+  - 修复 `API_ENDPOINTS_PATTERN`，支持 endpoint 内部占位符，避免 `/api/{orgId}` 被截断为 `/api/{orgId`。
+
+### 测试结果
+| 项目 | 命令/方式 | 结果 |
+|------|-----------|------|
+| M511 HTTP 元数据契约 | `mvn -q -Dtest=M511AtlasToolHttpContractTest test` | ✅ PASS |
+| HITL fail-closed 契约 | `mvn -q -Dtest=M513HitlFailClosedContractTest test` | ✅ PASS |
+| 元数据/风险定向回归 | `mvn -q -Dtest=M511AtlasToolHttpContractTest,ToolRegistryPromptContractTest,ReActEventRiskMetadataTest test` | ✅ PASS |
+| 后端编译 | `mvn -q -DskipTests compile` | ✅ PASS |
+| 全量测试 | `mvn -q test` | ✅ PASS |
+| 空白检查 | `git diff --check` | ✅ PASS |
+| 敏感信息扫描 | Python diff scan | ✅ secret_suspects=0 |
+| 覆盖率脚本 | Python 静态统计 | ✅ total=110, declared=43, read=40 |
+
+### 覆盖率变化
+- Tool 总数：110。
+- 已声明 HTTP 元数据：43（M5.15 后为 28，本轮新增 15）。
+- READ 白名单：40（M5.15 后为 25，本轮新增 15）。
+- 未迁移 Tool 仍由 UNKNOWN / fail-closed 保护。
+
+### 代码 Review
+#### 优点
+- 生产代码只补充注解元数据和两处 JavaDoc endpoint 精确说明，不修改业务执行逻辑。
+- 本轮同步补 endpoint 精确白名单测试，解决了旧契约“只校验 endpoint 非空，不校验是否写对”的盲区。
+- 动态路径 `/{release}/histories`、`/{id}` 已被测试锁住，避免列表/详情路径混淆。
+- `API_ENDPOINTS_PATTERN` 修复后支持 `{orgId}` 等占位符，契约测试更贴合项目实际写法。
+
+#### 风险
+- `LogQueryTool` 读取日志，可能暴露敏感运行数据；当前仍按只读查询处理，但依赖后端权限、脱敏和限流。
+- `CloudResourceListTool`、`NodeDetailTool`、`DeploymentDetailTool` 属于资产/拓扑/运行元数据读取，必须依赖 org 隔离。
+- `HelmRepoListTool` 不得返回仓库凭据；如果后端返回 secret/token，需要后续提高风险等级。
+- 大量 B_REVIEW_PATH Tool 路径仍不够明确，暂不纳入 READ，需要后续逐个源码确认或 AST 提取。
+
+### 根因与解决方案
+- 根因 1：历史低风险 GET Tool 缺少风险元数据，M5.13 fail-closed 下无法进入 READ 白名单。
+  - 解决：经三方专家会诊确认后，第三批选择 15 个路径明确、无写调用、非敏感管理域的 Tool 补 `GET + endpoint + READ`。
+- 根因 2：旧 endpoint 正则无法处理 endpoint 字符串内部的 `{orgId}` 占位符，导致精确测试误判。
+  - 解决：改为匹配 endpoint 数组内的双引号字符串，支持占位符花括号。
+- 根因 3：原有契约测试不校验 endpoint 精确性，动态尾段可能写漏。
+  - 解决：新增 M5.16 endpoint 白名单测试锁定 15 个已审查 endpoint。
+
+### 后续建议
+1. 对 B_REVIEW_PATH 的 31 个路径动态 Tool 做 AST/源码级路径还原，不要依赖简单正则盲猜。
+2. 对 file/storage/download/upload/RBAC/user/quota 等敏感域建立“敏感 READ / ACTION / requiresConfirmation”专门批次。
+3. 若继续扩大覆盖率，建议将 `M511AtlasToolHttpContractTest` 从正则扫描升级为 JavaParser/AST Analyzer。
+
 ## 2026-05-24 11:20 - M5.15 Tool HTTP/风险元数据第二批 GET/READ 扩面收尾
 
 ### 背景

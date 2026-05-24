@@ -24,7 +24,10 @@ import java.util.Set;
     name = "deployment_detail",
     agent = "query",
     intentId = "deployment_detail",
-    description = "查询部署实例详情"
+    description = "查询部署实例详情",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/deployment"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class DeploymentDetailTool extends BaseTool {

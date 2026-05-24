@@ -25,7 +25,10 @@ import java.util.Set;
     name = "bare_metal_app_list",
     agent = "deploy",
     intentId = "bare_metal_app_list",
-    description = "查询裸金属应用列表"
+    description = "查询裸金属应用列表",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/bare-metal-application"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class BareMetalAppListTool extends BaseTool {

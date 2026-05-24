@@ -25,7 +25,10 @@ import java.util.Set;
     name = "helm_release_list",
     agent = "deploy",
     intentId = "helm_release_list",
-    description = "查询Helm Release发布列表"
+    description = "查询Helm Release发布列表",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/helm/releases"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class HelmReleaseListTool extends BaseTool {

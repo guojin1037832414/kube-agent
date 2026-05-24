@@ -26,7 +26,10 @@ import java.util.Set;
     name = "helm_chart_info",
     agent = "deploy",
     intentId = "helm_chart_info",
-    description = "查询Helm Chart详情"
+    description = "查询Helm Chart详情",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/helm/charts/single"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class HelmChartInfoTool extends BaseTool {

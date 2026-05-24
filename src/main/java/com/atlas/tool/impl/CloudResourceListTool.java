@@ -25,7 +25,10 @@ import java.util.Set;
     name = "cloud_resource_list",
     agent = "query",
     intentId = "cloud_resource_list",
-    description = "查询云资源列表"
+    description = "查询云资源列表",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/cloud"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class CloudResourceListTool extends BaseTool {

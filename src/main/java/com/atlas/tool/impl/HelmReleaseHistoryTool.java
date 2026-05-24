@@ -15,14 +15,17 @@ import java.util.Set;
  *
  * <p>意图映射: {@code intentId = "helm_release_history"}</p>
  * <p>Agent归属: deploy | 安全级别: P3</p>
- * <p>API路径: GET /api/{orgId}/helm/releases</p>
+ * <p>API路径: GET /api/{orgId}/helm/releases/{release}/histories</p>
  */
 @Component
 @AtlasToolMapping(
     name = "helm_release_history",
     agent = "deploy",
     intentId = "helm_release_history",
-    description = "查询Helm Release历史记录"
+    description = "查询Helm Release历史记录",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/helm/releases/{release}/histories"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class HelmReleaseHistoryTool extends BaseTool {

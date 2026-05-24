@@ -25,7 +25,10 @@ import java.util.Set;
     name = "compose_list",
     agent = "deploy",
     intentId = "compose_list",
-    description = "查询Compose部署列表"
+    description = "查询Compose部署列表",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/compose"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class ComposeListTool extends BaseTool {

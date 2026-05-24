@@ -6,6 +6,51 @@
 
 ---
 
+## [M5.16] — Tool HTTP/风险元数据第三批 GET/READ 扩面与 endpoint 精确契约
+
+**周期**: 2026-05-24
+**交付**: 在 M5.13 fail-closed 与 M5.14/M5.15 分批扩面基础上，继续经专家会诊确认后，为第三批 15 个低风险 GET/READ Tool 补充 `httpMethod/apiEndpoints/operationType=READ`，并增强 `M511AtlasToolHttpContractTest` 的 endpoint 精确白名单校验，防止动态尾段或非 org-scoped 路径被写错。
+
+### Added
+
+- 第三批 15 个低风险 GET/READ Tool 补充 HTTP/风险元数据：
+  - deploy 查询类：`bare_metal_app_list`、`compose_list`、`helm_chart_info`、`helm_chart_search`、`helm_release_history`、`helm_release_list`、`helm_repo_list`、`mpi_job_detail`、`mpi_job_list`；
+  - diag 查询类：`log_query`；
+  - query 查询类：`cloud_resource_list`、`currency_query_list`、`deployment_detail`、`image_detail_by_name`、`node_detail`。
+- `M511AtlasToolHttpContractTest` 新增 `m516ReadExpansionEndpoints_shouldMatchReviewedWhitelist`，对白名单 15 个 Tool 做精确 endpoint 断言：
+  - `HelmReleaseHistoryTool` 必须声明 `/api/{orgId}/helm/releases/{release}/histories`；
+  - `MpiJobDetailTool` 必须声明 `/api/{orgId}/mpi-job/{id}`；
+  - `LogQueryTool` 必须保持 `/api/log`，不得机械套成 `/api/{orgId}/log`；
+  - `DeploymentDetailTool` / `ImageDetailByNameTool` / `NodeDetailTool` 保持源码真实 query 路径，不臆造 `/{id}` 或 `/{name}`。
+- 加固 `API_ENDPOINTS_PATTERN`，支持 endpoint 字符串内部包含 `{orgId}`、`{id}`、`{release}` 等占位符，修复旧正则在第一个 `}` 提前截断的问题。
+
+### Verified
+
+- 专家会诊：✅ 安全、源码契约/测试、架构推进三方确认 15/15 可纳入 READ；同时要求同步 endpoint 精确契约测试。
+- M511 HTTP 元数据契约：`mvn -q -Dtest=M511AtlasToolHttpContractTest test` → ✅ 通过。
+- HITL fail-closed 契约：`mvn -q -Dtest=M513HitlFailClosedContractTest test` → ✅ 通过。
+- 元数据/风险定向回归：`mvn -q -Dtest=M511AtlasToolHttpContractTest,ToolRegistryPromptContractTest,ReActEventRiskMetadataTest test` → ✅ 通过。
+- 后端编译：`mvn -q -DskipTests compile` → ✅ 通过。
+- 全量测试：`mvn -q test` → ✅ 通过。
+- 空白检查：`git diff --check` → ✅ 通过。
+- 敏感信息扫描：`secret_suspects=0` → ✅ 通过。
+
+### Coverage
+
+- Tool 总数：110。
+- 已声明 HTTP 元数据：43（由 M5.15 的 28 扩展到 43）。
+- READ 白名单：40（由 M5.15 的 25 扩展到 40）。
+- 未迁移 Tool 继续保持 UNKNOWN / fail-closed，仍不因覆盖率目标放松安全边界。
+
+### Risk / Deferred
+
+- `log_query` 是只读日志查询，但日志内容可能包含运行时敏感信息；本阶段按 READ 纳入，前提是依赖后端权限、脱敏、行数限制和审计，不扩展为下载/导出。
+- `cloud_resource_list`、`node_detail`、`deployment_detail` 等会暴露资产、拓扑、镜像、规格等只读元数据；仍属于 READ，但需要依赖 org 级隔离。
+- `helm_repo_list` 只按仓库元数据 READ 处理，不能包含仓库认证凭据；如果后端返回 secret/token，后续应调整为敏感 READ 或 HITL。
+- RBAC、LDAP、用户、组织、配额、下载/上传、文件数据、审批、写操作、删除操作仍不纳入本批免确认 READ。
+
+---
+
 ## [M5.15] — Tool HTTP/风险元数据第二批 GET/READ 扩面收尾
 
 **周期**: 2026-05-24

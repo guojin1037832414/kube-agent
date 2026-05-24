@@ -24,7 +24,10 @@ import java.util.Set;
     name = "log_query",
     agent = "diag",
     intentId = "log_query",
-    description = "查询日志"
+    description = "查询日志",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/log"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 
 @ToolPermission(ToolPermission.Policy.PUBLIC)

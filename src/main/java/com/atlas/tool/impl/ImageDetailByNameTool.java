@@ -25,7 +25,10 @@ import java.util.Set;
     name = "image_detail_by_name",
     agent = "query",
     intentId = "image_detail_by_name",
-    description = "根据名称查询镜像详情"
+    description = "根据名称查询镜像详情",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/image/name"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class ImageDetailByNameTool extends BaseTool {

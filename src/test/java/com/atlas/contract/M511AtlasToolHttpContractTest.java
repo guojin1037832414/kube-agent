@@ -43,8 +43,8 @@ class M511AtlasToolHttpContractTest {
     /** 匹配注解中的字符串属性。 */
     private static final Pattern STRING_ATTRIBUTE_PATTERN_TEMPLATE = Pattern.compile("%s\\s*=\\s*\\\"([^\\\"]*)\\\"");
 
-    /** 匹配注解中的 apiEndpoints 数组。 */
-    private static final Pattern API_ENDPOINTS_PATTERN = Pattern.compile("apiEndpoints\\s*=\\s*\\{(.*?)\\}", Pattern.DOTALL);
+    /** 匹配注解中的 apiEndpoints 数组，支持 endpoint 字符串内部继续包含 {orgId}/{id} 等占位符。 */
+    private static final Pattern API_ENDPOINTS_PATTERN = Pattern.compile("apiEndpoints\\s*=\\s*\\{((?:\\s*\\\"[^\\\"]*\\\"\\s*,?)+)\\}", Pattern.DOTALL);
 
     /** 匹配注解中的 operationType 枚举。 */
     private static final Pattern OPERATION_TYPE_PATTERN = Pattern.compile("operationType\\s*=\\s*AtlasToolMapping\\.OperationType\\.([A-Z_]+)");
@@ -72,6 +72,36 @@ class M511AtlasToolHttpContractTest {
 
         assertThat(violations)
             .as("M5.11 Atlas Tool HTTP 元数据契约违规:\n%s", String.join("\n", violations))
+            .isEmpty();
+    }
+
+    @Test
+    void m516ReadExpansionEndpoints_shouldMatchReviewedWhitelist() throws IOException {
+        List<String> violations = new ArrayList<>();
+        List<ExpectedEndpoint> expectedEndpoints = List.of(
+            new ExpectedEndpoint("BareMetalAppListTool.java", "bare_metal_app_list", "/api/{orgId}/bare-metal-application"),
+            new ExpectedEndpoint("ComposeListTool.java", "compose_list", "/api/{orgId}/compose"),
+            new ExpectedEndpoint("HelmChartInfoTool.java", "helm_chart_info", "/api/{orgId}/helm/charts/single"),
+            new ExpectedEndpoint("HelmChartSearchTool.java", "helm_chart_search", "/api/{orgId}/helm/repositories/charts"),
+            new ExpectedEndpoint("HelmReleaseHistoryTool.java", "helm_release_history", "/api/{orgId}/helm/releases/{release}/histories"),
+            new ExpectedEndpoint("HelmReleaseListTool.java", "helm_release_list", "/api/{orgId}/helm/releases"),
+            new ExpectedEndpoint("HelmRepoListTool.java", "helm_repo_list", "/api/{orgId}/helm/repositories"),
+            new ExpectedEndpoint("MpiJobDetailTool.java", "mpi_job_detail", "/api/{orgId}/mpi-job/{id}"),
+            new ExpectedEndpoint("MpiJobListTool.java", "mpi_job_list", "/api/{orgId}/mpi-job"),
+            new ExpectedEndpoint("LogQueryTool.java", "log_query", "/api/log"),
+            new ExpectedEndpoint("CloudResourceListTool.java", "cloud_resource_list", "/api/{orgId}/cloud"),
+            new ExpectedEndpoint("CurrencyQueryListTool.java", "currency_query_list", "/api/{orgId}/currency"),
+            new ExpectedEndpoint("DeploymentDetailTool.java", "deployment_detail", "/api/{orgId}/deployment"),
+            new ExpectedEndpoint("ImageDetailByNameTool.java", "image_detail_by_name", "/api/{orgId}/image/name"),
+            new ExpectedEndpoint("NodeDetailTool.java", "node_detail", "/api/{orgId}/node")
+        );
+
+        for (ExpectedEndpoint expected : expectedEndpoints) {
+            verifyExpectedReadEndpoint(expected, violations);
+        }
+
+        assertThat(violations)
+            .as("M5.16 READ 扩面 endpoint 精确白名单违规:\n%s", String.join("\n", violations))
             .isEmpty();
     }
 
@@ -174,6 +204,55 @@ class M511AtlasToolHttpContractTest {
                 "tool=" + toolName + ", declaredMethod=" + declaredMethod
                     + ", suggestion=非 NONE Tool 必须声明 apiEndpoints，支持多路径 fallback"));
         }
+    }
+
+    /**
+     * 校验 M5.16 第三批 READ 扩面 Tool 的 endpoint 精确白名单。
+     *
+     * <p>现有 HTTP 契约会校验方法和风险类型，但不会反解字符串拼接后的真实路径。
+     * 因此这里用人工会诊确认过的白名单，重点防止动态尾段被写漏、detail 查询被臆造成错误路径，
+     * 以及 {@code /api/log} 被机械套成 org-scoped 路径。</p>
+     */
+    private void verifyExpectedReadEndpoint(ExpectedEndpoint expected, List<String> violations) {
+        Path path = TOOL_IMPL_DIR.resolve(expected.fileName());
+        try {
+            String source = Files.readString(path);
+            Matcher mappingMatcher = MAPPING_PATTERN.matcher(source);
+            if (!mappingMatcher.find()) {
+                violations.add(format(path, "MISSING_ATLAS_TOOL_MAPPING", "tool=" + expected.toolName()));
+                return;
+            }
+
+            String annotation = mappingMatcher.group(1);
+            String actualToolName = readStringAttribute(annotation, "name");
+            String declaredMethod = readStringAttribute(annotation, "httpMethod").toUpperCase(Locale.ROOT);
+            String operationType = readOperationType(annotation);
+            Set<String> declaredEndpoints = readApiEndpoints(annotation);
+
+            if (!expected.toolName().equals(actualToolName)) {
+                violations.add(format(path, "TOOL_NAME_MISMATCH",
+                    "expected=" + expected.toolName() + ", actual=" + actualToolName));
+            }
+            if (!"GET".equals(declaredMethod)) {
+                violations.add(format(path, "M516_METHOD_NOT_GET",
+                    "tool=" + expected.toolName() + ", actualMethod=" + declaredMethod));
+            }
+            if (!"READ".equals(operationType)) {
+                violations.add(format(path, "M516_OPERATION_NOT_READ",
+                    "tool=" + expected.toolName() + ", actualOperationType=" + operationType));
+            }
+            if (!declaredEndpoints.equals(Set.of(expected.endpoint()))) {
+                violations.add(format(path, "M516_ENDPOINT_MISMATCH",
+                    "tool=" + expected.toolName() + ", expected=[" + expected.endpoint()
+                        + "], actual=" + declaredEndpoints));
+            }
+        } catch (IOException e) {
+            violations.add(format(path, "READ_FILE_FAILED", "读取 M5.16 endpoint 白名单 Tool 失败: " + e.getMessage()));
+        }
+    }
+
+    /** M5.16 endpoint 精确白名单条目。 */
+    private record ExpectedEndpoint(String fileName, String toolName, String endpoint) {
     }
 
     /**

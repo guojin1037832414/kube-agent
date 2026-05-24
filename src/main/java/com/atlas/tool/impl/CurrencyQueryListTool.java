@@ -25,7 +25,10 @@ import java.util.Set;
     name = "currency_query_list",
     agent = "query",
     intentId = "currency_query_list",
-    description = "查询货币列表"
+    description = "查询货币列表",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/currency"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class CurrencyQueryListTool extends BaseTool {

@@ -15,14 +15,17 @@ import java.util.Set;
  *
  * <p>意图映射: {@code intentId = "mpi_job_detail"}</p>
  * <p>Agent归属: deploy | 安全级别: P3</p>
- * <p>API路径: GET /api/{orgId}/mpi-job</p>
+ * <p>API路径: GET /api/{orgId}/mpi-job/{id}</p>
  */
 @Component
 @AtlasToolMapping(
     name = "mpi_job_detail",
     agent = "deploy",
     intentId = "mpi_job_detail",
-    description = "查询MPI分布式计算任务详情"
+    description = "查询MPI分布式计算任务详情",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/mpi-job/{id}"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class MpiJobDetailTool extends BaseTool {

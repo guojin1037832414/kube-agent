@@ -25,7 +25,10 @@ import java.util.Set;
     name = "helm_chart_search",
     agent = "deploy",
     intentId = "helm_chart_search",
-    description = "搜索Helm Chart"
+    description = "搜索Helm Chart",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/helm/repositories/charts"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class HelmChartSearchTool extends BaseTool {
