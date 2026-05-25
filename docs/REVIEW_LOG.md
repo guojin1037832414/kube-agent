@@ -1,5 +1,61 @@
 # Atlas v3.1 开发审计日志
 
+## 2026-05-26 00:00 - M4-PX.4 第七小批 ToolParameterSpec alias 受保护字段契约治理
+
+### 背景
+- 第六小批已让 `PLAN_EXECUTE_NODE` 来源在遇到 Tool schema 未声明的未知业务字段时结构化 fail-closed，不再静默丢弃后继续执行。
+- 但仍有一个 schema 设计层面的潜在风险：如果未来某个 Tool 把 `token/orgId/userId/conversationId` 等受保护上下文字段误声明为 `ToolParameterSpec` alias，第六小批的“已声明 alias 可作为输入兼容”语义会让该字段不再表现为未知业务字段，造成维护者误解和审计混淆。
+- 本小批目标是在不扩大执行能力、不迁移 ReAct/ToolCallback、不开放多步/写操作的前提下，仅新增源码契约：禁止 `ToolParameterSpec.stringParam(..., List.of(...))` 的 alias 使用受保护上下文字段及常见变体。
+
+### 专家会诊 / Review 结论
+1. 测试架构专家结论：该治理适合做快速、确定、无副作用的源码契约测试；不启动 Spring、不调用 kube-manager、不执行真实 Tool。
+2. PM/代码审查专家结论：第七小批边界应严格限定为 alias 契约治理；不得顺手迁移 `ReActEngine`、`AtlasToolCallback`，也不得改变 Graph/ReAct/ToolCallback 的兼容语义。
+3. 第一次独立 Review：判定 FAIL，指出原正则以 `[,;]` 作为 `stringParam` 终止符，会漏扫 `return List.of(...)` 中最后一个 `stringParam`。已改为 `findMatchingParen(...)` 括号深度匹配。
+4. 第二次独立 Review：判定 FAIL，指出 CamelCase 受保护字段大小写归一化不完整，`OrgId/UserId/ConversationId` 可能漏检。已改为保护集合全小写 + `alias.toLowerCase(Locale.ROOT)`。
+5. 第三次独立 Review：判定 PASS，确认最后一个 `stringParam` 漏扫与大小写变体漏检两个阻塞问题均已修复，新增自检有效，未发现新的合入阻塞问题。
+
+### 变更内容
+- `src/test/java/com/atlas/contract/M4Px4ToolParameterAliasContractTest.java`
+  - 新增源码契约测试 `toolParameterSpecAliases_shouldNotUseProtectedContextFields`，扫描 `src/main/java` 中的 `ToolParameterSpec.stringParam(...)` alias 声明。
+  - 禁止 alias 使用 `token/authorization/access_token/auth_token/orgId/organizationId/org_id/organization_id/tenantId/tenant_id/userId/user_id/conversationId/conversation_id` 等受保护上下文字段及大小写变体。
+  - 使用 `STRING_PARAM_START_PATTERN` 定位调用起点，并用 `findMatchingParen(...)` 做括号深度匹配，避免漏扫外层 `List.of(...)` 的最后一个参数。
+  - 保持扫描边界只针对 `ToolParameterSpec.stringParam` 调用体中的 alias `List.of(...)`，避免普通业务代码 `List.of("token")` 被误报。
+  - 新增 `scannerSelfCheck_shouldCatchLastStringParamAndCaseVariants`，用合成源码验证扫描器能抓住最后一个 `stringParam` 中的 `OrgId/USERID/ConversationId`。
+  - 失败信息包含文件、行号、违规 alias 和 `List.of(...)` 片段，便于后续快速定位。
+
+### 测试结果
+| 测试项 | 命令/方式 | 结果 |
+|--------|-----------|------|
+| 契约测试 | `mvn -q -Dtest=M4Px4ToolParameterAliasContractTest test` | ✅ PASS |
+| 组合安全回归 | `mvn -q -Dtest=SafeToolExecutorTest,M42PlanExecuteSafetyContractTest,M4Px4ToolExecuteEntrypointContractTest,M4Px4ToolParameterAliasContractTest test` | ✅ PASS |
+| 编译验证 | `mvn -q -DskipTests compile` | ✅ PASS |
+| 空白检查 | `git diff --check` | ✅ PASS |
+| 敏感信息扫描 | 新增 diff grep `sk-* / password / token-* / api-key / secret / bearer` | ✅ 未发现新增凭证 |
+| 独立 Review | 三轮 delegate 复审 | ✅ 前两轮阻塞均已修复，第三轮 PASS |
+| 全量测试 | `mvn -q test` | ✅ PASS |
+
+### 代码 Review
+#### 优点
+- 把第六小批 REVIEW_LOG 中的后续安全建议落成可执行门禁，阻止 schema 层把上下文字段误当业务 alias。
+- 只新增测试，不改生产执行链路，不扩大任何自动执行能力，风险面很小。
+- 括号深度匹配比单纯 `stringParam(...)[,;]` 正则更稳，能覆盖最后一个参数场景。
+- 保护字段按小写规范集合判断，能覆盖 `OrgId/USERID/ConversationId` 等大小写变体。
+- 自检测试直接覆盖曾被 Review 抓到的两个假阴性风险，降低契约测试自身退化概率。
+
+#### 风险
+- 当前仍只覆盖 `ToolParameterSpec.stringParam(..., List.of(...))` 这种现有 alias 声明模式；如果未来新增 `intParam/boolParam/enumParam` 或 builder 支持 alias，需要同步扩展扫描器。
+- `LIST_OF_PATTERN` 对 alias 列表本身仍是轻量正则；当前项目 alias 均为简单字符串字面量，足以作为小批门禁。若未来 alias 表达式复杂化，可升级 JavaParser 或统一禁止动态 alias。
+- 本小批只治理 alias，不审查 canonical 参数名；如果未来出现受保护字段作为 canonical 业务参数，需要另开小批讨论治理边界。
+
+### 根因与解决方案
+- 根因：Plan 参数治理不仅依赖运行时过滤，也依赖 Tool schema 的语义纯净。如果 schema alias 把上下文字段纳入“已声明输入”，会让运行时 unknown-field 检查难以暴露设计错误，并可能造成后续维护者误信 Plan/LLM/前端提供的上下文字段。
+- 解决：新增源码契约，把受保护上下文字段从 alias 声明层面排除；同时通过括号匹配和自检测试防止扫描器漏扫最后一个 `stringParam` 或大小写变体。
+
+### 后续建议
+1. 如果后续新增更多 `ToolParameterSpec` 工厂方法或 builder alias，第一时间扩展本契约扫描范围。
+2. 可另开小批评估是否禁止 canonical 参数名使用受保护上下文字段，避免 Tool schema 设计层面的进一步混淆。
+3. 后续迁移 `ReActEngine` / `AtlasToolCallback` 到 `SafeToolExecutor` 前，继续先做专家会诊并锁定 SSE、Observation、多步推理不降智基线。
+
 ## 2026-05-25 19:31 - M4-PX.4 第六小批 PLAN_EXECUTE_NODE 未知业务字段结构化拒绝
 
 ### 背景
