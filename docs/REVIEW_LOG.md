@@ -1,5 +1,67 @@
 # Atlas v3.1 开发审计日志
 
+## 2026-05-25 16:35 - M4-PX.4 第五小批 PLAN_EXECUTE_NODE 参数 schema 白名单过滤
+
+### 背景
+- 第四小批已让 `PlanStep.parameters` 能把受控业务参数传入 `execute_node`，并对 `token/orgId/userId/conversationId` 等受保护上下文字段做 fail-closed。
+- 但当时仍存在一个安全缺口：非 protected 的未知业务字段（例如 `fakeParam`）会随 `SafeToolExecutionRequest.parameters` 进入 `SafeToolExecutor`，最终可能透传到 Tool。
+- 本小批目标是在不扩大执行能力、不迁移 ReAct/ToolCallback、不开放多步/写操作的前提下，只对 `SafeToolExecutionSource.PLAN_EXECUTE_NODE` 来源启用 Tool schema 白名单过滤和 alias 归一化。
+
+### 专家会诊 / Review 结论
+1. 安全专家结论：Plan 自动执行路径必须以 `ToolParameterSpec` 作为唯一可信业务参数白名单；无 schema 的旧 Tool 不允许被 Plan 自动执行，必须 fail-closed。
+2. 工程专家结论：不改变 `ToolParameterNormalizer.normalize(...)` 旧语义，避免误伤 ReAct/ToolCallback；在统一执行边界做来源感知净化。
+3. 测试专家结论：红灯优先验证三件事：schema 字段可进入、alias 需归一化为 canonical、未知业务字段不得流入 Tool；无 schema 的 Plan 自动执行必须不调用真实 Tool。
+4. 最终采用保守折中：普通 Graph/ReAct/ToolCallback 路径继续保持兼容语义；仅 `PLAN_EXECUTE_NODE` 来源执行 `ToolParameterSpec` 白名单过滤，无 schema 直接返回 `TOOL_PARAMETER_SPEC_MISSING`。
+
+### 变更内容
+- `src/main/java/com/atlas/tool/execution/SafeToolExecutor.java`
+  - 新增内部 `ToolParameterNormalizer`，复用现有 schema-first alias 归一化能力。
+  - `buildTrustedToolParams(...)` 增加 `BaseTool tool` 参数，在补服务端可信上下文前先执行 `sanitizeBusinessParams(...)`。
+  - 新增 `sanitizeBusinessParams(...)`：
+    - 非 `PLAN_EXECUTE_NODE` 来源保持旧行为，只做 protected 上下文字段过滤。
+    - `PLAN_EXECUTE_NODE` 来源要求 `tool.getParameterSpecs()` 非空，否则结构化返回 `TOOL_PARAMETER_SPEC_MISSING`。
+    - 对 Plan 参数先调用 `toolParameterNormalizer.normalize(tool.getToolName(), rawParams)`，再只保留 `ToolParameterSpec.name()` 声明的 canonical 字段。
+    - `userId/organizationId/conversationId` 仍由 `SafeToolExecutor` 最后写入，Plan 参数不能覆盖。
+- `src/test/java/com/atlas/tool/execution/SafeToolExecutorTest.java`
+  - 新增 `executeIntent_shouldWhitelistAndNormalizePlanParametersByToolSchema`：验证 `q/ns` alias 被归一化为 `keyword/namespace`，原 alias 与 `fakeParam` 不进入 Tool。
+  - 新增 `executeIntent_shouldFailClosedForPlanSourceWhenToolSchemaMissing`：验证无 `ToolParameterSpec` 的旧 Tool 在 Plan 自动执行来源下 fail-closed 且不调用 Tool。
+  - 新增 `SchemaAwareReadTool` 测试夹具，模拟已 schema 化的 READ Tool。
+- `src/test/java/com/atlas/contract/M42PlanExecuteSafetyContractTest.java`
+  - 增加源码契约断言，锁定 `PLAN_EXECUTE_NODE` 来源、`TOOL_PARAMETER_SPEC_MISSING`、`ToolParameterNormalizer`、`allowedParamNames.contains(key)` 等关键安全结构。
+
+### 测试结果
+| 测试项 | 命令/方式 | 结果 |
+|--------|-----------|------|
+| TDD 红灯 | `mvn -q -Dtest=SafeToolExecutorTest test` | ✅ 先失败于 schema alias 未归一化、无 schema Plan 来源仍执行，符合预期 |
+| 定向绿灯 | `mvn -q -Dtest=SafeToolExecutorTest test` | ✅ PASS |
+| 组合安全回归 | `mvn -q -Dtest=SafeToolExecutorTest,M42PlanExecuteSafetyContractTest,M4Px4ToolExecuteEntrypointContractTest test` | ✅ PASS |
+| 全量测试 | `mvn -q test` | ✅ PASS |
+| 编译验证 | `mvn -q -DskipTests compile` | ✅ PASS |
+| 空白检查 | `git diff --check` | ✅ PASS |
+| 敏感信息扫描 | 新增 diff grep `sk-* / password / token / api-key / secret` | ✅ 未发现新增凭证 |
+
+### 代码 Review
+#### 优点
+- 改动点集中在统一安全执行边界，避免在 `execute_node`、具体 Tool 或多个调用路径里复制参数净化逻辑。
+- 只收紧 `PLAN_EXECUTE_NODE`，没有改变普通 Graph/ReAct/ToolCallback 对旧 Tool 的兼容行为，回归风险可控。
+- 使用现有 `ToolParameterSpec` / `ToolParameterNormalizer` 体系，避免新增平行 schema 机制。
+- 无 schema fail-closed，阻止 Plan 自动执行旧 Tool 时携带任意未知业务字段。
+- 结构化返回 `TOOL_PARAMETER_SPEC_MISSING`，便于后续按 Tool 补 schema，而不是让异常穿透。
+
+#### 风险
+- 当前白名单只覆盖顶层 `ToolParameterSpec.name()`，`ToolParameterSpec` 尚未表达嵌套 object/array schema；后续如开放复杂对象参数，需要扩展 schema 模型和递归过滤测试。
+- 对未知业务字段采用静默丢弃而非 fail-closed；本小批为保持最小实现和兼容性选择白名单过滤，后续高危/写操作开放前应评估升级为未知字段拒绝。
+- `SafeToolExecutor` 当前内部 new `ToolParameterNormalizer(toolRegistry)`，对单元测试友好，但后续若 normalizer 需要更多 Spring 依赖，建议改为构造器注入。
+
+### 根因与解决方案
+- 根因：第四小批只解决了 protected 上下文字段覆盖问题，未解决 Plan 对普通业务字段的自由注入问题。
+- 解决：把 Plan 自动执行来源收口到 Tool 自身参数声明：先 schema-first alias 归一化，再按 canonical 参数名白名单过滤，最后由 `SafeToolExecutor` 写入服务端可信上下文并执行原有权限/HITL/ThreadLocal 链路。
+
+### 后续建议
+1. 给真正需要从 Plan 自动执行的 READ Tool 逐步补齐 `getParameterSpecs()`，否则会按 `TOOL_PARAMETER_SPEC_MISSING` fail-closed。
+2. 下一小批可选择把 `execute_node` 的 Plan 参数从“静默丢弃未知字段”升级为“未知字段结构化拒绝”，提升审计可见性。
+3. 后续迁移 ReActEngine/AtlasToolCallback 到 `SafeToolExecutor` 前，必须先补观察值、SSE 事件、HITL 展示和多步智能链路基线，避免智能降级。
+
 ## 2026-05-25 15:05 - M4-PX.4 第四小批 PlanStep 受控参数模型与 execute_node 参数透传
 
 ### 背景

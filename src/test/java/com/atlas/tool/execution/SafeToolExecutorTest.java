@@ -6,6 +6,7 @@ import com.atlas.hitl.HitlGuard;
 import com.atlas.tool.annotation.AtlasToolMapping;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.tool.core.BaseTool;
+import com.atlas.tool.core.ToolParameterSpec;
 import com.atlas.tool.core.ToolRegistry;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -37,6 +38,62 @@ class SafeToolExecutorTest {
     void tearDown() {
         UserPermissionContext.CURRENT_TOKEN.remove();
         UserPermissionContext.CURRENT_ORG_ID.remove();
+    }
+
+    @Test
+    void executeIntent_shouldWhitelistAndNormalizePlanParametersByToolSchema() {
+        // 【M4-PX.4 第五小批契约】execute_node 的 Plan 参数属于不可信输入，
+        // 只有 ToolParameterSpec 声明过的业务字段才能进入真实 Tool；别名字段需要先归一化为 canonical 字段。
+        SchemaAwareReadTool readTool = new SchemaAwareReadTool();
+        SafeToolExecutor executor = newExecutor(readTool);
+
+        SafeToolExecutionResult result = executor.executeIntent(new SafeToolExecutionRequest(
+            "test.schema.read",
+            Map.of(
+                "q", "gpu",
+                "ns", "default",
+                "fakeParam", "should-not-flow"
+            ),
+            "user-A",
+            "token-A",
+            "100002",
+            "conv-plan-A",
+            null,
+            SafeToolExecutionSource.PLAN_EXECUTE_NODE
+        ));
+
+        assertTrue(result.executed(), "带 ToolParameterSpec 的 READ Plan 步骤应允许进入统一安全执行层");
+        assertEquals("gpu", readTool.lastParams.get("keyword"), "Plan alias q 必须按 schema 归一化为 keyword");
+        assertEquals("default", readTool.lastParams.get("namespace"), "Plan alias ns 必须按 schema 归一化为 namespace");
+        assertFalse(readTool.lastParams.containsKey("q"), "原始 alias 字段不得继续透传给 Tool");
+        assertFalse(readTool.lastParams.containsKey("ns"), "原始 alias 字段不得继续透传给 Tool");
+        assertFalse(readTool.lastParams.containsKey("fakeParam"), "未在 ToolParameterSpec 声明的业务字段不得透传给 Tool");
+        assertEquals("user-A", readTool.lastParams.get("userId"), "服务端可信 userId 仍需由 SafeToolExecutor 最后补齐");
+        assertEquals("100002", readTool.lastParams.get("organizationId"), "服务端可信 organizationId 仍需由 SafeToolExecutor 最后补齐");
+    }
+
+    @Test
+    void executeIntent_shouldFailClosedForPlanSourceWhenToolSchemaMissing() {
+        // 【M4-PX.4 第五小批契约】无 schema 的旧 Tool 可以继续服务 Graph/ReAct 兼容路径，
+        // 但不能被 execute_node 的 Plan 自动执行路径携带参数调用，避免 Plan 注入任意业务字段。
+        RecordingReadTool legacyToolWithoutSchema = new RecordingReadTool();
+        SafeToolExecutor executor = newExecutor(legacyToolWithoutSchema);
+
+        SafeToolExecutionResult result = executor.executeIntent(new SafeToolExecutionRequest(
+            "test.read",
+            Map.of("keyword", "gpu"),
+            "user-A",
+            "token-A",
+            "100002",
+            "conv-plan-B",
+            null,
+            SafeToolExecutionSource.PLAN_EXECUTE_NODE
+        ));
+
+        assertFalse(result.executed(), "PLAN_EXECUTE_NODE 来源下无 ToolParameterSpec 必须 fail-closed");
+        assertTrue(result.answer().contains("TOOL_PARAMETER_SPEC_MISSING"),
+            "失败原因应明确提示缺失 ToolParameterSpec，便于后续给旧 Tool 补 schema");
+        assertNull(legacyToolWithoutSchema.lastParams, "缺少 schema 时不得调用真实 Tool.execute");
     }
 
     @Test
@@ -292,6 +349,50 @@ class SafeToolExecutorTest {
         protected AtlasToolResult doExecute(Map<String, Object> params) {
             lastParams = Map.copyOf(params);
             return AtlasToolResult.ok("读取成功", List.of(Map.of("name", "node-a")));
+        }
+    }
+
+    /**
+     * 测试用带 ToolParameterSpec 的只读 Tool。
+     *
+     * <p>该夹具模拟已经完成 schema 化改造的生产 Tool：keyword/namespace 是唯一允许的
+     * 业务参数，q/ns 是 LLM 或 Plan 常见别名。第五小批通过它验证 PLAN_EXECUTE_NODE
+     * 来源不会把 alias 或未知字段原样透传到业务执行体。</p>
+     */
+    @AtlasToolMapping(
+        name = "test_schema_read_tool",
+        intentId = "test.schema.read",
+        agent = "query",
+        description = "测试 schema 化读取工具",
+        httpMethod = "GET",
+        apiEndpoints = {"/api/test/schema-read"},
+        operationType = AtlasToolMapping.OperationType.READ,
+        requiresConfirmation = false
+    )
+    private static class SchemaAwareReadTool extends BaseTool {
+        private Map<String, Object> lastParams;
+
+        private SchemaAwareReadTool() {
+            super("test_schema_read_tool", "测试 schema 化读取工具");
+        }
+
+        @Override
+        public List<ToolParameterSpec> getParameterSpecs() {
+            return List.of(
+                ToolParameterSpec.stringParam("keyword", "查询关键字", false, List.of("q", "query")),
+                ToolParameterSpec.stringParam("namespace", "命名空间", false, List.of("ns", "name_space"))
+            );
+        }
+
+        @Override
+        protected Set<String> getRequiredParams() {
+            return Set.of();
+        }
+
+        @Override
+        protected AtlasToolResult doExecute(Map<String, Object> params) {
+            lastParams = Map.copyOf(params);
+            return AtlasToolResult.ok("schema 读取成功", List.of(Map.of("name", "node-schema")));
         }
     }
 

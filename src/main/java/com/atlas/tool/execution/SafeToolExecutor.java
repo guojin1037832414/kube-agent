@@ -3,13 +3,17 @@ package com.atlas.tool.execution;
 import com.atlas.auth.UserPermissionContext;
 import com.atlas.hitl.HitlGuard;
 import com.atlas.tool.core.BaseTool;
+import com.atlas.tool.core.ToolParameterNormalizer;
+import com.atlas.tool.core.ToolParameterSpec;
 import com.atlas.tool.core.ToolRegistry;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Atlas 统一安全 Tool 执行器。
@@ -51,10 +55,12 @@ public class SafeToolExecutor {
 
     private final ToolRegistry toolRegistry;
     private final HitlGuard hitlGuard;
+    private final ToolParameterNormalizer toolParameterNormalizer;
 
     public SafeToolExecutor(ToolRegistry toolRegistry, HitlGuard hitlGuard) {
         this.toolRegistry = toolRegistry;
         this.hitlGuard = hitlGuard;
+        this.toolParameterNormalizer = new ToolParameterNormalizer(toolRegistry);
     }
 
     /**
@@ -103,7 +109,12 @@ public class SafeToolExecutor {
             }
 
             BaseTool tool = toolOpt.get();
-            Map<String, Object> toolParams = buildTrustedToolParams(request, orgId);
+            Map<String, Object> toolParams;
+            try {
+                toolParams = buildTrustedToolParams(request, orgId, tool);
+            } catch (IllegalStateException ex) {
+                return SafeToolExecutionResult.notExecuted("❌ " + ex.getMessage());
+            }
             try {
                 Map<String, Object> rawResult = tool.execute(toolParams);
                 // BaseTool.wrapCall 将 doExecute 抛出的异常转为 errorCode=TOOL_EXECUTION_ERROR 的 Map，
@@ -156,10 +167,11 @@ public class SafeToolExecutor {
         }
     }
 
-    private Map<String, Object> buildTrustedToolParams(SafeToolExecutionRequest request, String orgId) {
+    private Map<String, Object> buildTrustedToolParams(SafeToolExecutionRequest request, String orgId, BaseTool tool) {
         Map<String, Object> toolParams = new HashMap<>();
-        if (request.parameters() != null) {
-            request.parameters().forEach((key, value) -> {
+        Map<String, Object> businessParams = sanitizeBusinessParams(request, tool);
+        if (businessParams != null) {
+            businessParams.forEach((key, value) -> {
                 if (!isProtectedContextParam(key)) {
                     toolParams.put(key, value);
                 }
@@ -173,6 +185,40 @@ public class SafeToolExecutor {
             toolParams.put("conversationId", request.conversationId());
         }
         return toolParams;
+    }
+
+    /**
+     * 对业务参数执行来源感知的最小净化。
+     *
+     * <p>普通 Graph/ReAct/ToolCallback 兼容路径仍保持旧语义：只由
+     * {@link #buildTrustedToolParams(SafeToolExecutionRequest, String, BaseTool)} 过滤 token/orgId 等受保护
+     * 系统字段，不额外删除未知业务字段。M4-PX.4 第五小批只收紧 execute_node 的
+     * {@link SafeToolExecutionSource#PLAN_EXECUTE_NODE} 来源，因为该来源代表 Plan 自动执行候选，
+     * 必须以 Tool 自身声明的 {@link ToolParameterSpec} 作为唯一可信业务参数白名单。</p>
+     */
+    private Map<String, Object> sanitizeBusinessParams(SafeToolExecutionRequest request, BaseTool tool) {
+        Map<String, Object> rawParams = request.parameters() != null ? request.parameters() : Map.of();
+        if (request.source() != SafeToolExecutionSource.PLAN_EXECUTE_NODE) {
+            return rawParams;
+        }
+
+        List<ToolParameterSpec> specs = tool.getParameterSpecs();
+        if (specs == null || specs.isEmpty()) {
+            throw new IllegalStateException("TOOL_PARAMETER_SPEC_MISSING: PLAN_EXECUTE_NODE 来源要求 Tool 显式声明 ToolParameterSpec");
+        }
+
+        Map<String, Object> normalized = toolParameterNormalizer.normalize(tool.getToolName(), rawParams);
+        Set<String> allowedParamNames = specs.stream()
+            .map(ToolParameterSpec::name)
+            .collect(Collectors.toUnmodifiableSet());
+
+        Map<String, Object> sanitized = new HashMap<>();
+        normalized.forEach((key, value) -> {
+            if (allowedParamNames.contains(key)) {
+                sanitized.put(key, value);
+            }
+        });
+        return sanitized;
     }
 
     private boolean isProtectedContextParam(String key) {
