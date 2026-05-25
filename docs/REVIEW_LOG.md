@@ -1,5 +1,75 @@
 # Atlas v3.1 开发审计日志
 
+## 2026-05-25 12:21 - M4-PX.4 第三小批 execute_node READ-only 单步安全门控
+
+### 背景
+- M4-PX.3 中 `execute_node` 已接入 Graph，但保持完全 fail-closed，只读取计划状态不执行 Tool。
+- M4-PX.4 第一、第二小批已分别补强 `SafeToolExecutor` 契约和生产代码裸 `BaseTool#execute(Map)` 入口扫描。
+- 本小批按“先实验再铺开”原则，只在 `execute_node` 打开一条极窄安全路径：单步、READ、无需确认、有候选工具名，并且必须委托 `SafeToolExecutor`。
+
+### 专家会诊 / Review 结论
+1. 安全架构结论：PlanResult / PlanStep 只能作为调度候选，不能视为授权；真正执行前必须由 `SafeToolExecutor` 重新解析 ToolRegistry、校验权限、HITL、租户上下文和 ThreadLocal。
+2. 测试架构结论：先升级源码契约测试，明确 `execute_node` 只允许委托 `SafeToolExecutor`，禁止直接 `tool.execute` / HTTP client / 创建 `HitlConfirmation`。
+3. Agent 架构结论：当前只开放单步 READ，保留后续多步 Plan-and-Execute / Reflection 扩展点；多步和变更类步骤继续 fail-closed。
+4. 独立 Review：delegate 子代理本轮 600s 超时未形成有效报告；Hermes 基于 diff、契约测试、全量测试失败定位完成保守审查。全量测试暴露的 M513 源码契约误伤已修复。
+
+### 变更内容
+- `src/main/java/com/atlas/graph/config/AtlasGraphConfig.java`
+  - `buildExecuteNode` 从 M4-PX.3 完全 fail-closed 升级为 M4-PX.4 READ-only 单步门控。
+  - 放行条件全部满足才进入执行层：
+    - `plan_result` 存在。
+    - `PlanResult.executable=true`。
+    - `plan_steps` 恰好 1 个结构化 `PlanStep`。
+    - `riskLevel=READ`。
+    - `requiresConfirmation=false`。
+    - `suggestedTool` 非空。
+  - 满足条件后构造 `SafeToolExecutionRequest`，`source=SafeToolExecutionSource.PLAN_EXECUTE_NODE`，业务参数暂为空 `Map.of()`，上下文从 Graph state 读取。
+  - 不满足条件时返回明确 code：`PLAN_RESULT_MISSING`、`PLAN_NOT_EXECUTABLE`、`EXECUTE_STEP_UNSUPPORTED`、`EXECUTE_STEP_NOT_READ_ONLY`、`EXECUTE_STEP_REQUIRES_CONFIRMATION`。
+- `src/test/java/com/atlas/contract/M42PlanExecuteSafetyContractTest.java`
+  - 将旧的 “execute_node 永远 fail-closed” 契约升级为 “只允许 SafeToolExecutor 委托执行单步 READ”。
+  - 继续断言 plan_node 不写 `tool_result` / `hitl_confirmation`，不执行 Tool。
+- `src/test/java/com/atlas/contract/M513HitlFailClosedContractTest.java`
+  - 修复源码契约测试盲区：原测试用全文件 `indexOf("new SafeToolExecutionRequest(")`，被新增的 `execute_node` request 提前命中。
+  - 改为截取 `tool_call` 节点片段后再判断 `hitl_confirmation -> SafeToolExecutionRequest -> SafeToolExecutor` 顺序，避免新安全入口误伤旧合同。
+
+### 测试结果
+| 测试项 | 命令/方式 | 结果 |
+|--------|-----------|------|
+| Claude Code 问好 | `claude -p ...` | ⚠️ 180s 超时，系统提示不要原命令重试；本小批由 Hermes 直接小样本实现 |
+| M4-PX Plan/Execute 定向红灯 | `mvn -q -Dtest=M42PlanExecuteSafetyContractTest test` | ✅ 先失败于缺少 `EXECUTE_STEP_UNSUPPORTED`，符合 TDD 预期 |
+| M4-PX Plan/Execute 定向绿灯 | `mvn -q -Dtest=M42PlanExecuteSafetyContractTest test` | ✅ PASS |
+| 组合安全回归 | `mvn -q -Dtest=M42PlanExecuteSafetyContractTest,M4Px4ToolExecuteEntrypointContractTest,SafeToolExecutorTest test` | ✅ PASS |
+| 全量测试首次运行 | `mvn -q test` | ❌ M513 源码契约误伤：全文件 `indexOf` 命中新 execute_node request |
+| M513 修复后组合回归 | `mvn -q -Dtest=M513HitlFailClosedContractTest,M42PlanExecuteSafetyContractTest,M4Px4ToolExecuteEntrypointContractTest,SafeToolExecutorTest test` | ✅ PASS |
+| 编译验证 | `mvn -q -DskipTests compile` | ✅ PASS |
+| 空白检查 | `git diff --check` | ✅ PASS |
+| 凭证类新增行扫描 | Python 新增行扫描 | ✅ 未发现疑似凭证新增行 |
+| 全量测试最终运行 | `mvn -q test` | ✅ PASS，236 tests |
+
+### 代码 Review
+#### 优点
+- 执行能力开放得非常窄：只允许单步 READ，小样本符合“先实验再铺开”。
+- `execute_node` 不直接调用任何 Tool，不创建确认 marker，不访问 HTTP client，安全边界仍集中在 `SafeToolExecutor`。
+- 所有高危、需确认、多步、非结构化、无工具名计划均 fail-closed，并返回结构化 code，便于前端 Timeline 和审计展示。
+- 修复 M513 源码契约测试后，`tool_call` 与 `execute_node` 两条 SafeToolExecutor 接线路径互不误伤，测试表达更准确。
+
+#### 风险
+- 当前 `PlanStep` 没有参数字段，`execute_node` 只能传 `Map.of()`；后续要支持真实查询参数时，需要新增受控参数模型，不能直接信任 LLM 自由 Map。
+- `riskLevel=READ` 仍来自 PlanStep 展示字段，因此这里只作为第一层门控；真正安全仍依赖 `SafeToolExecutor` 通过 ToolRegistry 元数据二次校验。
+- 当前只支持单步；多步 Plan-and-Execute、Reflection、失败重试还未开放，需要后续单独设计状态机。
+- 独立 Review 子代理超时，缺少外部有效审查报告；本轮用测试和保守人工审查兜底。
+
+### 根因与解决方案
+- 根因：M4-PX.3 execute_node 只有占位 fail-closed，无法验证 Plan-and-Execute 的真实执行接线；但直接开放通用执行又会让 Plan 结果绕过 HITL。
+- 解决：先用源码契约测试定义最小安全执行边界，再让 execute_node 只在“单步 READ 候选”下委托 `SafeToolExecutor`，其余情况全部 fail-closed。
+- 补充修复：M513 旧源码契约使用全文件字符串定位，新增 execute_node 后出现误判；已改为限定 `tool_call` 节点片段，提升契约测试稳定性。
+
+### 后续建议
+1. 等最终全量测试通过后提交本小批，并双远端推送。
+2. 下一小批建议补 `PlanStep` 的受控参数模型或单独 `PlanExecutableStep`，明确哪些参数可以从 Plan 进入 Tool，避免未来直接传自由 Map。
+3. 再下一步迁移 P0 历史入口：`ReActEngine` 接入 `SafeToolExecutor`，但必须先锁定 observation / SSE event 行为基线，确保多步智能不降级。
+4. 每开放一个新 execute_node 能力，都必须新增对应 fail-closed 契约测试，并保持 `M4Px4ToolExecuteEntrypointContractTest` 的裸执行入口清单不增加。
+
 ## 2026-05-25 10:46 - M4-PX.4 第二小批 Tool 执行入口源码契约扫描
 
 ### 背景

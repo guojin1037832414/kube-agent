@@ -32,8 +32,10 @@ import com.atlas.hitl.HitlConfirmation;
 import com.atlas.hitl.HitlGuard;
 import com.atlas.plan.PlanEngine;
 import com.atlas.plan.PlanResult;
+import com.atlas.plan.PlanStep;
 import com.atlas.tool.core.ToolRegistry;
 import com.atlas.tool.execution.SafeToolExecutionRequest;
+import com.atlas.tool.execution.SafeToolExecutionResult;
 import com.atlas.tool.execution.SafeToolExecutionSource;
 import com.atlas.tool.execution.SafeToolExecutor;
 import java.time.Instant;
@@ -450,13 +452,17 @@ public class AtlasGraphConfig {
     /**
      * 构建 Execute 节点异步动作。
      *
-     * <p>M4-PX.3 最小安全闭环中，execute_node 先作为受限执行入口占位：它会读取
-     * {@code plan_result} 和 {@code plan_steps}，但当前只在 {@link PlanResult#executable()}
-     * 为 true 且后续只读单步门控完善后才允许调用 {@link SafeToolExecutor}。由于 M4-PX.2
-     * 的 {@link PlanEngine} 明确输出 {@code executable=false}，本节点默认 fail-closed，
-     * 不调用 Tool、不写 {@code tool_result}、不创建 {@code hitl_confirmation}。</p>
+     * <p>M4-PX.4 将 execute_node 从“完全不执行”的占位节点，收口升级为
+     * “单步 READ 候选执行”节点：它仍然不信任 PlanResult / PlanStep 自带的风险字段，
+     * 只把第一条候选 {@link PlanStep#suggestedTool()} 作为待执行 intentId，再统一委托
+     * {@link SafeToolExecutor} 重新做 ToolRegistry 解析、权限校验、HITL fail-closed、
+     * 可信租户上下文覆盖和 ThreadLocal 恢复。</p>
      *
-     * @param safeToolExecutor 统一安全工具执行器；当前 POC 仅建立依赖边界，不直接放行执行
+     * <p>当前小样本故意只开放“恰好一个步骤、风险展示为 READ、无需确认、suggestedTool 非空”
+     * 的计划；多步计划、非 READ 步骤、声明需要确认的步骤、空工具名都直接 fail-closed。
+     * 这样可以先验证统一执行层接线，不会让 LLM/Plan 输出绕过 HITL 或直接触碰真实 Tool。</p>
+     *
+     * @param safeToolExecutor 统一安全工具执行器；execute_node 不允许直接调用 BaseTool#execute
      * @return 异步节点动作
      */
     private static com.alibaba.cloud.ai.graph.action.AsyncNodeAction buildExecuteNode(
@@ -473,7 +479,6 @@ public class AtlasGraphConfig {
 
             Map<String, Object> executeResult = new HashMap<>();
             executeResult.put("executed", false);
-            executeResult.put("reason", "M4-PX.3 execute_node 当前为 fail-closed 最小闭环：计划已生成，但尚未开放自动执行。");
             executeResult.put("planExecutable", planResult != null && planResult.executable());
             executeResult.put("stepCount", planSteps.size());
 
@@ -481,14 +486,54 @@ public class AtlasGraphConfig {
             if (planResult == null) {
                 answer = "⛔ execute_node 已停止：未找到 plan_result，无法确认计划来源和风险边界。";
                 executeResult.put("code", "PLAN_RESULT_MISSING");
+                executeResult.put("reason", "缺失结构化计划结果，按 fail-closed 策略停止。");
             } else if (!planResult.executable()) {
                 answer = "🧭 计划已生成，但当前阶段不会自动执行。原因：PlanResult.executable=false，系统按 fail-closed 策略停止在 execute_node。";
                 executeResult.put("code", "PLAN_NOT_EXECUTABLE");
+                executeResult.put("reason", "计划未声明可执行，execute_node 不会推测执行意图。");
+            } else if (planSteps.size() != 1 || !(planSteps.get(0) instanceof PlanStep step)) {
+                answer = "⛔ execute_node 已停止：M4-PX.4 仅开放单步 READ 计划执行，多步或非结构化计划暂不自动执行。";
+                executeResult.put("code", "EXECUTE_STEP_UNSUPPORTED");
+                executeResult.put("reason", "当前只允许恰好一个结构化 PlanStep 进入安全执行层。");
+            } else if (!"READ".equalsIgnoreCase(String.valueOf(step.riskLevel()))) {
+                answer = "⛔ execute_node 已停止：计划步骤不是 READ 风险等级，必须走 HITL 或 ReAct/ToolCall 安全链路。";
+                executeResult.put("code", "EXECUTE_STEP_NOT_READ_ONLY");
+                executeResult.put("stepId", step.id());
+                executeResult.put("riskLevel", step.riskLevel());
+            } else if (step.requiresConfirmation()) {
+                answer = "⛔ execute_node 已停止：计划步骤声明需要人工确认，不能由 execute_node 自动执行。";
+                executeResult.put("code", "EXECUTE_STEP_REQUIRES_CONFIRMATION");
+                executeResult.put("stepId", step.id());
+            } else if (step.suggestedTool() == null || step.suggestedTool().isBlank()) {
+                answer = "⛔ execute_node 已停止：READ 步骤缺少 suggestedTool，无法映射到受控 ToolRegistry。";
+                executeResult.put("code", "EXECUTE_STEP_UNSUPPORTED");
+                executeResult.put("reason", "缺少候选 intentId。");
             } else {
-                // 即使后续 PlanResult.executable 被打开，M4-PX.3 首版也不直接执行。
-                // 下一阶段必须补齐 READ-only 单步门控、参数白名单和 HITL resume 后才能调用 safeToolExecutor。
-                answer = "⛔ execute_node 已停止：自动执行开关尚未开放，需先完成 READ-only 单步安全门控。";
-                executeResult.put("code", "EXECUTE_GATE_NOT_OPEN");
+                // 【关键安全边界】execute_node 不直接执行任何 Tool，只构造服务端可信请求，
+                // 然后交给 SafeToolExecutor 统一校验 Tool 元数据、权限、HITL、租户上下文和异常恢复。
+                SafeToolExecutionRequest request = new SafeToolExecutionRequest(
+                    step.suggestedTool(),
+                    Map.of(),
+                    state.value("user_id").map(Object::toString).orElse("anonymous"),
+                    state.value("token").map(Object::toString).orElse(""),
+                    state.value("orgId").map(Object::toString).orElse(""),
+                    state.value("conversation_id").map(Object::toString).orElse(""),
+                    null,
+                    SafeToolExecutionSource.PLAN_EXECUTE_NODE
+                );
+                SafeToolExecutionResult result = safeToolExecutor.executeIntent(request);
+                Map<String, Object> updates = result.toGraphUpdates();
+                Map<String, Object> executedResult = new HashMap<>();
+                executedResult.put("executed", result.executed());
+                executedResult.put("success", result.success());
+                executedResult.put("code", result.executed() ? "EXECUTE_STEP_DELEGATED" : "EXECUTE_STEP_BLOCKED_BY_SAFE_EXECUTOR");
+                executedResult.put("intentId", step.suggestedTool());
+                executedResult.put("source", SafeToolExecutionSource.PLAN_EXECUTE_NODE.name());
+                executedResult.put("stepCount", planSteps.size());
+                updates.put("execute_node_result", result.answer());
+                updates.put("execute_result", executedResult);
+                updates.put("execute_steps", planSteps);
+                return updates;
             }
 
             Map<String, Object> updates = new HashMap<>();

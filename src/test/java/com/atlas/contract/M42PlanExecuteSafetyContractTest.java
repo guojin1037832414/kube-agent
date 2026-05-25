@@ -10,11 +10,12 @@ import java.nio.file.Path;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * M4.2 Plan-and-Execute 最小 POC 安全契约测试。
+ * M4.2 / M4-PX Plan-and-Execute 安全契约测试。
  *
  * <p>本测试只读取源码并验证关键结构，不启动 Spring，不调用 LLM，
- * 不访问 kube-manager，也不会执行任何真实 Tool。目标是把“plan_node 只规划、
- * 不执行、不确认、不绕过 HITL”的边界固化下来。</p>
+ * 不访问 kube-manager，也不会执行任何真实 Tool。目标是把 Plan-and-Execute 的安全边界固化下来：
+ * plan_node 只规划；execute_node 在 M4-PX.4 起只允许通过 SafeToolExecutor 执行单步 READ 候选，
+ * 不得直接执行 Tool、不得创建服务端确认 marker、不得绕过 HITL / 多租户保护。</p>
  */
 class M42PlanExecuteSafetyContractTest {
 
@@ -53,7 +54,7 @@ class M42PlanExecuteSafetyContractTest {
             .contains("graph.addEdge(\"plan_node\", \"execute_node\")")
             .contains("graph.addEdge(\"execute_node\", END)")
             .contains("case DELEGATE_REACT -> \"react_node\"")
-            .contains("case HITL_CONFIRM -> \"hitl_confirm\"");
+            .contains("case HITL_CONFIRM -> \"hitl_confirm");
     }
 
     /**
@@ -134,10 +135,10 @@ class M42PlanExecuteSafetyContractTest {
     }
 
     /**
-     * execute_node 首版必须默认 fail-closed：读取计划状态但不得自动调用 Tool。
+     * M4-PX.4：execute_node 可以从 fail-closed 升级为“单步 READ 候选执行”，但只能委托 SafeToolExecutor。
      */
     @Test
-    void executeNode_shouldFailClosedAndMustNotDirectlyExecuteTools() throws IOException {
+    void executeNode_shouldOnlyDelegateSingleReadStepThroughSafeToolExecutor() throws IOException {
         String source = read(GRAPH_CONFIG);
         String executeNode = substringBetween(source,
             "private static com.alibaba.cloud.ai.graph.action.AsyncNodeAction buildExecuteNode",
@@ -145,24 +146,33 @@ class M42PlanExecuteSafetyContractTest {
 
         assertThat(executeNode)
             .contains("PlanResult planResult = state.value(\"plan_result\")")
-            .contains("executeResult.put(\"executed\", false)")
+            .contains("PLAN_RESULT_MISSING")
             .contains("PLAN_NOT_EXECUTABLE")
-            .contains("EXECUTE_GATE_NOT_OPEN")
+            .contains("EXECUTE_STEP_UNSUPPORTED")
+            .contains("EXECUTE_STEP_NOT_READ_ONLY")
+            .contains("EXECUTE_STEP_REQUIRES_CONFIRMATION")
+            .contains("SafeToolExecutionSource.PLAN_EXECUTE_NODE")
+            .contains("SafeToolExecutionRequest request = new SafeToolExecutionRequest")
+            .contains("SafeToolExecutionResult result = safeToolExecutor.executeIntent(request)")
+            .contains("result.toGraphUpdates()")
+            .contains("state.value(\"user_id\")")
+            .contains("state.value(\"token\")")
+            .contains("state.value(\"orgId\")")
+            .contains("state.value(\"conversation_id\")")
             .contains("updates.put(\"execute_node_result\", answer)")
             .contains("updates.put(\"execute_result\", executeResult)")
             .contains("updates.put(\"execute_steps\", planSteps)")
-            .contains("M4-PX.3 首版也不直接执行")
             .doesNotContain("new HitlConfirmation")
             .doesNotContain("HitlConfirmation.human")
-            .doesNotContain("tool_result")
-            .doesNotContain("executeIntent(")
             .doesNotContain("tool.execute")
+            .doesNotContain("baseTool.execute")
+            .doesNotContain("meta.instance().execute")
             .doesNotContain("KubeManagerHttpClient")
             .doesNotContain("RestClient");
     }
 
     /**
-     * SafeToolExecutor 必须成为后续 execute_node 与 Graph tool_call 共享的唯一安全执行边界。
+     * SafeToolExecutor 必须成为 execute_node 与 Graph tool_call 共享的唯一安全执行边界。
      */
     @Test
     void safeToolExecutor_shouldCentralizeProtectedParamHitlAndThreadLocalSafety() throws IOException {

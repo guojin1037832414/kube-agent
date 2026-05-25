@@ -55,11 +55,14 @@ class M513HitlFailClosedContractTest {
     @Test
     void graphToolCall_shouldCheckServerHitlConfirmationBeforeToolExecute() throws IOException {
         String graphSource = read(GRAPH_CONFIG);
+        String toolCallNode = substringBetween(graphSource,
+            "graph.addNode(\"tool_call\", node_async((OverAllState state) -> {",
+            "graph.addNode(\"delegate\", node_async((OverAllState state) -> {");
         String executorSource = read(SAFE_TOOL_EXECUTOR);
 
-        int confirmationIndex = graphSource.indexOf("state.value(\"hitl_confirmation\")");
-        int requestIndex = graphSource.indexOf("new SafeToolExecutionRequest(");
-        int executorCallIndex = graphSource.indexOf("safeToolExecutor.executeIntent(request).toGraphUpdates()");
+        int confirmationIndex = toolCallNode.indexOf("state.value(\"hitl_confirmation\")");
+        int requestIndex = toolCallNode.indexOf("new SafeToolExecutionRequest(");
+        int executorCallIndex = toolCallNode.indexOf("safeToolExecutor.executeIntent(request).toGraphUpdates()");
         int guardIndex = executorSource.indexOf("hitlGuard.verifyByIntentId(");
         int executeIndex = executorSource.indexOf("tool.execute(toolParams)");
 
@@ -195,6 +198,14 @@ class M513HitlFailClosedContractTest {
         assertThat(guardIndex)
             .as(entranceName + " 的 HitlGuard 必须位于 execute 之前")
             .isLessThan(executeIndex);
+    }
+
+    private String substringBetween(String source, String start, String end) {
+        int startIndex = source.indexOf(start);
+        int endIndex = source.indexOf(end);
+        assertThat(startIndex).as("start marker must exist").isGreaterThanOrEqualTo(0);
+        assertThat(endIndex).as("end marker must exist").isGreaterThan(startIndex);
+        return source.substring(startIndex, endIndex);
     }
 
     private String read(Path path) throws IOException {
