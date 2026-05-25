@@ -55,6 +55,7 @@ public class PlanEngine {
             "确认目标与上下文",
             query.isBlank() ? "先补充用户目标、资源名称、命名空间和期望结果。" : "确认用户目标：" + query,
             "",
+            Map.of(),
             "READ",
             false,
             PlanStepStatus.PENDING
@@ -67,6 +68,7 @@ public class PlanEngine {
                 "收集诊断信息",
                 "后续可委派 ReAct 诊断链路逐步读取状态、事件和日志，当前 PLAN 阶段不直接执行工具。",
                 "react_node",
+                Map.of(),
                 "READ",
                 false,
                 PlanStepStatus.PENDING
@@ -78,6 +80,7 @@ public class PlanEngine {
                 "读取当前资源状态",
                 "在真正变更前，应先通过只读 Tool 查询当前资源、配额、权限和运行状态。",
                 "query/read-only-tool",
+                Map.of(),
                 "READ",
                 false,
                 PlanStepStatus.PENDING
@@ -92,6 +95,7 @@ public class PlanEngine {
                 ? "该计划包含潜在变更/高危动作，必须通过 HITL 确认后才能进入真实执行路径。"
                 : "若后续步骤仍为普通只读查询，可进入受保护的 Tool 执行路径；当前 PLAN 阶段尚未执行。",
             risky ? "hitl_confirm" : "tool_call/react_node",
+            Map.of(),
             risky ? "ACTION" : "READ",
             risky,
             risky ? PlanStepStatus.WAITING_HITL : PlanStepStatus.PENDING

@@ -129,8 +129,10 @@ class M42PlanExecuteSafetyContractTest {
         assertThat(read(PLAN_STEP))
             .contains("public record PlanStep")
             .contains("String suggestedTool")
+            .contains("Map<String, Object> parameters")
             .contains("String riskLevel")
             .contains("boolean requiresConfirmation")
+            .contains("不可信业务参数")
             .contains("不能作为执行层安全判定依据");
     }
 
@@ -152,6 +154,9 @@ class M42PlanExecuteSafetyContractTest {
             .contains("EXECUTE_STEP_NOT_READ_ONLY")
             .contains("EXECUTE_STEP_REQUIRES_CONFIRMATION")
             .contains("SafeToolExecutionSource.PLAN_EXECUTE_NODE")
+            .contains("Map<String, Object> stepParameters = step.parameters()")
+            .contains("containsProtectedContextParam(stepParameters)")
+            .contains("PROTECTED_PLAN_PARAMETER")
             .contains("SafeToolExecutionRequest request = new SafeToolExecutionRequest")
             .contains("SafeToolExecutionResult result = safeToolExecutor.executeIntent(request)")
             .contains("result.toGraphUpdates()")

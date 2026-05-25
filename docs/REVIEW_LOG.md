@@ -1,5 +1,66 @@
 # Atlas v3.1 开发审计日志
 
+## 2026-05-25 15:05 - M4-PX.4 第四小批 PlanStep 受控参数模型与 execute_node 参数透传
+
+### 背景
+- 第三小批已把 `execute_node` 从完全 fail-closed 推进到“单步 READ-only 空参数”安全路径，但只能向 `SafeToolExecutor` 传 `Map.of()`。
+- 本小批目标是在不开放多步、不开放写操作、不绕过 HITL/权限/租户校验的前提下，让 PlanStep 能携带受控业务参数，并由 `execute_node` 透传给统一安全执行层。
+- 关键原则：Plan/LLM 输出只是不可信候选输入，不能携带或覆盖 `token`、`orgId`、`userId`、`conversationId` 等服务端可信上下文。
+
+### 专家会诊 / Review 结论
+1. 专家会诊结论：本小批采用最小演进方案，直接在 `PlanStep` 增加 `Map<String, Object> parameters`；暂不引入独立 `PlanExecutableStep/PlanToolCall`，避免扩大范围。
+2. 安全结论：`parameters` 必须标注为“不可信业务参数”；真正执行仍必须通过 `SafeToolExecutor`，`SafeToolExecutionSource.PLAN_EXECUTE_NODE` 只用于审计/策略扩展，不能作为放宽校验依据。
+3. TDD 结论：先更新 `M42PlanExecuteSafetyContractTest`，要求 `PlanStep` 暴露参数槽、`execute_node` 使用 `step.parameters()`、并在 protected 参数出现时返回 `PROTECTED_PLAN_PARAMETER`。
+4. 独立 Review：首次 delegate Review 超时无效；第二次轻量独立 Review 判定无阻塞问题、可提交，并建议扩充 protected key 变体。已吸收该建议。
+
+### 变更内容
+- `src/main/java/com/atlas/plan/PlanStep.java`
+  - 新增 `Map<String, Object> parameters` 字段。
+  - 用中文注释明确该字段是不可信业务参数，只允许承载工具查询条件，不能承载系统上下文，也不能作为授权、HITL 或租户判定依据。
+- `src/main/java/com/atlas/plan/PlanEngine.java`
+  - 更新现有 4 个 `new PlanStep(...)` 构造点，默认传入 `Map.of()`，保持现有规划行为不变。
+- `src/main/java/com/atlas/graph/config/AtlasGraphConfig.java`
+  - `execute_node` 在原有单步 READ-only 门控后读取 `step.parameters()`。
+  - 增加 `containsProtectedContextParam(...)` 递归检测 Map/Iterable 内的受保护上下文字段。
+  - 命中 `token`、`authorization`、`access_token`、`auth_token`、`organizationId/organization_id`、`orgId/org_id`、`tenantId/tenant_id`、`conversationId/conversation_id`、`userId/user_id` 等字段时返回 `PROTECTED_PLAN_PARAMETER`，不调用 `SafeToolExecutor`。
+  - 未命中 protected 字段时，将业务参数放入 `SafeToolExecutionRequest.parameters`，可信身份/租户/会话仍从 Graph state 填充，并继续委托 `SafeToolExecutor.executeIntent(...)`。
+- `src/test/java/com/atlas/contract/M42PlanExecuteSafetyContractTest.java`
+  - 增加 `PlanStep` 参数槽契约断言。
+  - 增加 `execute_node` 参数透传与 protected 参数 fail-closed 源码契约断言。
+
+### 测试结果
+| 测试项 | 命令/方式 | 结果 |
+|--------|-----------|------|
+| TDD 红灯 | `mvn -q -Dtest=M42PlanExecuteSafetyContractTest test` | ✅ 先失败于缺少 `PlanStep.parameters` 和 `step.parameters()` 透传，符合预期 |
+| 定向绿灯 | `mvn -q -Dtest=M42PlanExecuteSafetyContractTest test` | ✅ PASS |
+| 编译验证 | `mvn -q -DskipTests compile` | ✅ PASS |
+| 组合安全回归 | `mvn -q -Dtest=M513HitlFailClosedContractTest,M42PlanExecuteSafetyContractTest,M4Px4ToolExecuteEntrypointContractTest,SafeToolExecutorTest test` | ✅ PASS |
+| 空白检查 | `git diff --check` | ✅ PASS |
+| 全量测试首次 | `mvn -q test` | ✅ PASS |
+| Review 建议吸收后定向/编译/组合 | 同上 | ✅ PASS |
+| Review 建议吸收后全量测试 | `mvn -q test` | ✅ PASS |
+
+### 代码 Review
+#### 优点
+- 延续“小样本先实验”原则：只在现有单步 READ-only 安全路径上传递业务参数，不开放多步、不开放写操作、不迁移 ReAct/Callback。
+- 安全边界没有分散：真实 Tool 执行仍由 `SafeToolExecutor` 统一处理 ToolRegistry、权限、HITL、租户上下文、ThreadLocal 恢复和异常包装。
+- 对 protected 参数采用 fail-closed，而不是静默删除后继续执行，避免 Plan/LLM 尝试覆盖服务端上下文时被误认为安全。
+- protected key 覆盖 camelCase、snake_case 和常见鉴权/租户别名，降低绕过风险。
+
+#### 风险
+- 当前仍是 `Map<String, Object>`，只完成 protected 字段防线；后续如果开放更复杂参数，仍需接入 Tool schema/白名单/类型归一化，避免未知业务参数自由进入 Tool。
+- `riskLevel=READ` 仍来自 PlanStep 展示字段，只能作为第一层门控；最终工具风险等级仍必须以 `SafeToolExecutor` 解析的 ToolMetadata 为准。
+- 递归检测覆盖 Map/Iterable，对自定义对象字段不做反射扫描；目前 Plan 参数来源以 JSON Map/List 为主，后续若引入 POJO 参数需补测试。
+
+### 根因与解决方案
+- 根因：第三小批为保证安全只传空参数，导致 execute_node 无法验证“Plan 查询条件 → SafeToolExecutor → Tool”的真实数据通路。
+- 解决：新增 `PlanStep.parameters` 作为显式参数槽，并在 execute_node 入口先对受保护上下文字段 fail-closed，再把剩余业务参数交给 `SafeToolExecutor`，形成“Plan 不可信输入 + 执行层可信上下文”的分离模型。
+
+### 后续建议
+1. 下一小批建议接入 `ToolParameterNormalizer` / Tool schema 白名单，让 Plan 参数从“protected 字段过滤”升级为“按工具声明字段过滤和类型归一化”。
+2. 继续保持 `M4Px4ToolExecuteEntrypointContractTest` 对裸 `BaseTool#execute(Map)` 入口的治理，防止新链路绕过 `SafeToolExecutor`。
+3. 迁移 `ReActEngine` 到 `SafeToolExecutor` 前，先锁定多步 observation、SSE event、HITL confirmation 行为基线，避免智能链路降级。
+
 ## 2026-05-25 12:21 - M4-PX.4 第三小批 execute_node READ-only 单步安全门控
 
 ### 背景

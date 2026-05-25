@@ -509,31 +509,39 @@ public class AtlasGraphConfig {
                 executeResult.put("code", "EXECUTE_STEP_UNSUPPORTED");
                 executeResult.put("reason", "缺少候选 intentId。");
             } else {
-                // 【关键安全边界】execute_node 不直接执行任何 Tool，只构造服务端可信请求，
-                // 然后交给 SafeToolExecutor 统一校验 Tool 元数据、权限、HITL、租户上下文和异常恢复。
-                SafeToolExecutionRequest request = new SafeToolExecutionRequest(
-                    step.suggestedTool(),
-                    Map.of(),
-                    state.value("user_id").map(Object::toString).orElse("anonymous"),
-                    state.value("token").map(Object::toString).orElse(""),
-                    state.value("orgId").map(Object::toString).orElse(""),
-                    state.value("conversation_id").map(Object::toString).orElse(""),
-                    null,
-                    SafeToolExecutionSource.PLAN_EXECUTE_NODE
-                );
-                SafeToolExecutionResult result = safeToolExecutor.executeIntent(request);
-                Map<String, Object> updates = result.toGraphUpdates();
-                Map<String, Object> executedResult = new HashMap<>();
-                executedResult.put("executed", result.executed());
-                executedResult.put("success", result.success());
-                executedResult.put("code", result.executed() ? "EXECUTE_STEP_DELEGATED" : "EXECUTE_STEP_BLOCKED_BY_SAFE_EXECUTOR");
-                executedResult.put("intentId", step.suggestedTool());
-                executedResult.put("source", SafeToolExecutionSource.PLAN_EXECUTE_NODE.name());
-                executedResult.put("stepCount", planSteps.size());
-                updates.put("execute_node_result", result.answer());
-                updates.put("execute_result", executedResult);
-                updates.put("execute_steps", planSteps);
-                return updates;
+                Map<String, Object> stepParameters = step.parameters() == null ? Map.of() : step.parameters();
+                if (containsProtectedContextParam(stepParameters)) {
+                    answer = "⛔ execute_node 已停止：PlanStep.parameters 包含受保护的系统上下文字段，不能由计划结果覆盖身份、租户或会话信息。";
+                    executeResult.put("code", "PROTECTED_PLAN_PARAMETER");
+                    executeResult.put("stepId", step.id());
+                    executeResult.put("reason", "Plan 参数属于不可信输入，出现 token/orgId/userId/conversationId 等字段时按 fail-closed 策略停止。");
+                } else {
+                    // 【关键安全边界】execute_node 不直接执行任何 Tool，只构造服务端可信请求，
+                    // 然后交给 SafeToolExecutor 统一校验 Tool 元数据、权限、HITL、租户上下文和异常恢复。
+                    SafeToolExecutionRequest request = new SafeToolExecutionRequest(
+                        step.suggestedTool(),
+                        stepParameters,
+                        state.value("user_id").map(Object::toString).orElse("anonymous"),
+                        state.value("token").map(Object::toString).orElse(""),
+                        state.value("orgId").map(Object::toString).orElse(""),
+                        state.value("conversation_id").map(Object::toString).orElse(""),
+                        null,
+                        SafeToolExecutionSource.PLAN_EXECUTE_NODE
+                    );
+                    SafeToolExecutionResult result = safeToolExecutor.executeIntent(request);
+                    Map<String, Object> updates = result.toGraphUpdates();
+                    Map<String, Object> executedResult = new HashMap<>();
+                    executedResult.put("executed", result.executed());
+                    executedResult.put("success", result.success());
+                    executedResult.put("code", result.executed() ? "EXECUTE_STEP_DELEGATED" : "EXECUTE_STEP_BLOCKED_BY_SAFE_EXECUTOR");
+                    executedResult.put("intentId", step.suggestedTool());
+                    executedResult.put("source", SafeToolExecutionSource.PLAN_EXECUTE_NODE.name());
+                    executedResult.put("stepCount", planSteps.size());
+                    updates.put("execute_node_result", result.answer());
+                    updates.put("execute_result", executedResult);
+                    updates.put("execute_steps", planSteps);
+                    return updates;
+                }
             }
 
             Map<String, Object> updates = new HashMap<>();
@@ -902,5 +910,69 @@ public class AtlasGraphConfig {
         graph.addEdge("hitl_confirm", END);
 
         return graph.compile();
+    }
+
+    /**
+     * 递归检查 Plan 参数中是否包含受保护的系统上下文字段。
+     *
+     * <p>PlanStep.parameters 来自规划层，可能由 LLM 或上游状态间接生成，不能信任。
+     * execute_node 在把参数交给 SafeToolExecutor 之前先做一层快速 fail-closed：只要
+     * 顶层或嵌套对象中出现 token/orgId/userId/conversationId 等字段，就认为该计划尝试
+     * 覆盖服务端可信上下文，直接停止执行。SafeToolExecutor 仍保留最终兜底过滤，形成双层防线。</p>
+     *
+     * @param value 任意 Plan 参数值，可能是 Map、List 或普通标量
+     * @return true 表示发现受保护上下文字段，应停止 execute_node 自动执行
+     */
+    private static boolean containsProtectedContextParam(Object value) {
+        if (value instanceof Map<?, ?> map) {
+            for (Map.Entry<?, ?> entry : map.entrySet()) {
+                String key = String.valueOf(entry.getKey());
+                if (isProtectedContextKey(key) || containsProtectedContextParam(entry.getValue())) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        if (value instanceof Iterable<?> iterable) {
+            for (Object item : iterable) {
+                if (containsProtectedContextParam(item)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 判断字段名是否属于 execute_node 禁止从 Plan 参数接收的服务端上下文字段。
+     *
+     * <p>这里采用大小写不敏感匹配，并兼容 snake_case/camelCase 的历史字段名。该集合
+     * 与 SafeToolExecutor 的 protected 参数保持语义一致，但 execute_node 选择 fail-closed，
+     * 避免静默删除恶意字段后继续执行。</p>
+     */
+    private static boolean isProtectedContextKey(String key) {
+        if (key == null) {
+            return false;
+        }
+        Set<String> protectedKeys = Set.of(
+            "token",
+            "authorization",
+            "cookie",
+            "accesstoken",
+            "access_token",
+            "authtoken",
+            "auth_token",
+            "organizationid",
+            "organization_id",
+            "orgid",
+            "org_id",
+            "tenantid",
+            "tenant_id",
+            "conversationid",
+            "conversation_id",
+            "userid",
+            "user_id"
+        );
+        return protectedKeys.contains(key.toLowerCase(java.util.Locale.ROOT));
     }
 }
