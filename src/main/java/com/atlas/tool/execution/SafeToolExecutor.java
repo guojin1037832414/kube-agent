@@ -106,6 +106,14 @@ public class SafeToolExecutor {
             Map<String, Object> toolParams = buildTrustedToolParams(request, orgId);
             try {
                 Map<String, Object> rawResult = tool.execute(toolParams);
+                // BaseTool.wrapCall 将 doExecute 抛出的异常转为 errorCode=TOOL_EXECUTION_ERROR 的 Map，
+                // 异常不应视为已执行，需返回 notExecuted 以符合 fail-closed 语义。
+                Object errorCode = rawResult != null ? rawResult.get("errorCode") : null;
+                if ("TOOL_EXECUTION_ERROR".equals(String.valueOf(errorCode))) {
+                    String message = rawResult.get("message") != null
+                        ? rawResult.get("message").toString() : "Tool 执行异常";
+                    return SafeToolExecutionResult.notExecuted("❌ Tool 执行异常: " + message);
+                }
                 return toExecutionResult(intentId, rawResult);
             } catch (Exception ex) {
                 return SafeToolExecutionResult.notExecuted("❌ Tool 执行异常: " + ex.getMessage());

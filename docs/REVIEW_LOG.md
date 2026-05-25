@@ -1,5 +1,59 @@
 # Atlas v3.1 开发审计日志
 
+## 2026-05-25 09:50 - M4-PX.4 第一小批 SafeToolExecutor 安全契约补强
+
+### 背景
+- M4-PX.3 已抽出 `SafeToolExecutor` 并让 `tool_call` 复用统一执行边界，同时 `execute_node` 仍保持 fail-closed。
+- 上轮 Review 明确要求 M4-PX.4 先补齐 `SafeToolExecutor` 自身契约，再逐步迁移 ReAct / ToolCallback 等历史入口。
+- 本小批坚持 TDD 和最小改动：只补统一执行器的 HITL confirmation、异常语义、ThreadLocal 恢复契约，不迁移其它入口。
+
+### 专家会诊 / Review 结论
+1. 架构结论：所有真实 `BaseTool#execute(Map)` 入口最终应通过 `SafeToolExecutor`，但本小批先稳定执行器自身语义，避免一次性改动 ReAct / ToolCallback 带来行为漂移。
+2. 安全结论：高危 Tool 只有服务端可信 `HitlConfirmation` 的 target 精确匹配 intentId 时才能放行；target 不匹配必须 fail-closed，且不得调用 Tool。
+3. 工程结论：`BaseTool.wrapCall` 会把 `doExecute` 异常转换成 `errorCode=TOOL_EXECUTION_ERROR` 的 Map；统一执行器必须识别该结构并转成 `notExecuted`，否则异常会被误判为“已执行”。
+4. 独立审查：`git diff --check` 通过，新增行敏感信息扫描为 0；delegate 独立审查因上游子代理超时未形成有效报告，本轮由 Hermes 结合源码与测试结果完成保守审查。
+
+### 变更内容
+- `SafeToolExecutor`：识别 `rawResult.errorCode == TOOL_EXECUTION_ERROR`，返回 `SafeToolExecutionResult.notExecuted("❌ Tool 执行异常: ...")`，保持 fail-closed 语义。
+- `SafeToolExecutorTest`：新增 4 个契约测试：
+  - 高危 DELETE Tool 在 confirmation target 精确匹配时放行并执行。
+  - 高危 DELETE Tool 在 confirmation target 不匹配时阻断，且不调用 Tool。
+  - Tool 执行异常时返回未执行结果，并恢复外层 token/orgId ThreadLocal。
+  - 外层 ThreadLocal 原为空时，Tool 执行异常后保持清空，防止线程池污染。
+- 新增测试夹具 `ThrowingTool`，通过 `BaseTool.doExecute` 抛异常验证 `wrapCall` 到 `SafeToolExecutor` 的真实异常链路。
+
+### 测试结果
+| 测试项 | 命令/方式 | 结果 |
+|--------|-----------|------|
+| Claude Code 问好 | `claude -p ... --dangerously-skip-permissions --bare` | ✅ PASS，连接/模型状态正常 |
+| SafeToolExecutor 定向测试 | `mvn test -Dtest=SafeToolExecutorTest` | ✅ PASS，8 tests |
+| M4-PX/M5 安全组合回归 | `mvn -q -Dtest=M513HitlFailClosedContractTest,M42PlanExecuteSafetyContractTest,SafeToolExecutorTest test` | ✅ PASS |
+| 全量测试 | `mvn -q test` | ✅ PASS |
+| 空白检查 | `git diff --check` | ✅ PASS |
+| 敏感信息扫描 | Python 新增行扫描 | ✅ `ADDED_LINE_SECRET_SUSPECTS 0` |
+
+### 代码 Review
+#### 优点
+- 本小批只改统一执行器与对应单测，不碰 ReAct / ToolCallback，改动边界清晰。
+- 补齐了 M4-PX.3 Review 中指出的高危确认成功路径、target 不匹配阻断、异常路径 ThreadLocal 恢复。
+- 将 `BaseTool.wrapCall` 的异常 Map 显式映射为 `notExecuted`，避免“执行异常但 executed=true”的审计歧义。
+- 测试覆盖真实 `BaseTool.execute -> wrapCall -> SafeToolExecutor` 链路，不是只 mock 异常。
+
+#### 风险
+- `TOOL_EXECUTION_ERROR` 仍是字符串约定，后续可抽成常量，避免 BaseTool 与执行器之间的隐式协议漂移。
+- 当前只处理顶层 `errorCode`，若未来 Tool 将异常嵌入 `data` 或嵌套结构，需要扩展统一结果规范。
+- ReActEngine 与 AtlasToolCallback 仍存在历史直接执行入口，尚未全部收口到 `SafeToolExecutor`。
+
+### 根因与解决方案
+- 根因：统一执行器刚抽出时覆盖了正常执行、参数过滤、HITL 阻断和 ThreadLocal 正常恢复，但没有覆盖 `BaseTool.wrapCall` 异常 Map 与 confirmation 成功/不匹配边界。
+- 解决：以 TDD 小批补契约测试，再用最小生产修改将 `TOOL_EXECUTION_ERROR` 转成 fail-closed `notExecuted`。
+
+### 后续建议
+1. M4-PX.4 下一小批：新增源码契约扫描，列出生产代码中所有 `tool.execute(...)` / `baseTool.execute(...)` 直接调用点，并建立临时白名单。
+2. 逐步迁移 `ReActEngine` 到 `SafeToolExecutor`，保持多步推理能力不降级，同时继承受保护字段过滤与 ThreadLocal 恢复。
+3. 逐步迁移 `AtlasToolCallback` 到 `SafeToolExecutor`，保留 Spring AI ToolCallback 输入归一化行为。
+4. 将 `TOOL_EXECUTION_ERROR` 抽成共享常量或统一错误枚举，降低字符串协议风险。
+
 ## 2026-05-25 01:35 - M4-PX.3 SafeToolExecutor + execute_node fail-closed 最小安全闭环
 
 ### 背景

@@ -16,6 +16,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -147,6 +148,115 @@ class SafeToolExecutorTest {
             "SafeToolExecutor 执行后必须恢复外层 orgId ThreadLocal");
     }
 
+    @Test
+    void executeIntent_shouldAllowHighRiskDeleteToolWhenConfirmationTargetMatches() {
+        // 【契约1】高危 DELETE Tool 带服务端 HitlConfirmation 且 target 精确匹配 intentId 时，应放行执行
+        RecordingDeleteTool deleteTool = new RecordingDeleteTool();
+        SafeToolExecutor executor = newExecutor(deleteTool);
+
+        // 构造精确匹配的确认凭证：target = "test.delete"
+        HitlConfirmation confirmation = HitlConfirmation.human("thread-1", "test.delete");
+
+        SafeToolExecutionResult result = executor.executeIntent(new SafeToolExecutionRequest(
+            "test.delete",
+            Map.of("name", "node-x"),
+            "user-A",
+            "token-A",
+            "100002",
+            "conv-E",
+            confirmation,
+            SafeToolExecutionSource.GRAPH_TOOL_CALL
+        ));
+
+        assertTrue(result.executed(), "确认 target 匹配时 DELETE 工具应被执行");
+        assertTrue(result.success(), "DELETE 工具业务执行应返回成功");
+        assertNotNull(deleteTool.lastParams, "确认凭证有效时 Tool 应收到参数");
+        assertEquals("node-x", deleteTool.lastParams.get("name"), "业务参数应正确透传");
+    }
+
+    @Test
+    void executeIntent_shouldBlockHighRiskDeleteToolWhenConfirmationTargetMismatch() {
+        // 【契约2】高危 DELETE Tool 的 confirmation target 不匹配时必须阻断
+        RecordingDeleteTool deleteTool = new RecordingDeleteTool();
+        SafeToolExecutor executor = newExecutor(deleteTool);
+
+        // 构造不匹配的确认凭证：target = "other.intent"，与 "test.delete" 不一致
+        HitlConfirmation confirmation = HitlConfirmation.human("thread-1", "other.intent");
+
+        SafeToolExecutionResult result = executor.executeIntent(new SafeToolExecutionRequest(
+            "test.delete",
+            Map.of("name", "node-y"),
+            "user-A",
+            "token-A",
+            "100002",
+            "conv-F",
+            confirmation,
+            SafeToolExecutionSource.GRAPH_TOOL_CALL
+        ));
+
+        assertFalse(result.executed(), "确认 target 不匹配时必须 fail-closed");
+        assertNull(deleteTool.lastParams, "被拦截后不得调用 Tool.execute");
+    }
+
+    @Test
+    void executeIntent_shouldRestoreOuterThreadLocalWhenToolThrowsException() {
+        // 【契约3】Tool 执行抛异常时必须恢复外层 ThreadLocal，并返回结构化失败/未执行结果
+        ThrowingTool throwingTool = new ThrowingTool();
+        SafeToolExecutor executor = newExecutor(throwingTool);
+
+        // 执行前设置外层 ThreadLocal
+        UserPermissionContext.CURRENT_TOKEN.set("outer-token");
+        UserPermissionContext.CURRENT_ORG_ID.set("outer-org");
+
+        SafeToolExecutionResult result = executor.executeIntent(new SafeToolExecutionRequest(
+            "test.throwing",
+            Map.of("keyword", "boom"),
+            "user-A",
+            "inner-token",
+            "inner-org",
+            "conv-G",
+            null,
+            SafeToolExecutionSource.GRAPH_TOOL_CALL
+        ));
+
+        assertFalse(result.executed(), "Tool 抛异常时应返回未执行状态");
+        assertTrue(
+            result.answer().contains("boom") || result.answer().contains("Tool 执行异常"),
+            "异常 answer 应包含原始异常信息或通用异常提示"
+        );
+        assertEquals("outer-token", UserPermissionContext.CURRENT_TOKEN.get(),
+            "异常后 token ThreadLocal 必须恢复为外层值");
+        assertEquals("outer-org", UserPermissionContext.getCurrentOrgId(),
+            "异常后 orgId ThreadLocal 必须恢复为外层值");
+    }
+
+    @Test
+    void executeIntent_shouldClearThreadLocalWhenToolThrowsAndOuterWasEmpty() {
+        // 【契约4】外层 ThreadLocal 原为空时，Tool 抛异常后必须清空，防止线程池污染
+        ThrowingTool throwingTool = new ThrowingTool();
+        SafeToolExecutor executor = newExecutor(throwingTool);
+
+        // 确保外层 ThreadLocal 为空
+        UserPermissionContext.CURRENT_TOKEN.remove();
+        UserPermissionContext.CURRENT_ORG_ID.remove();
+
+        executor.executeIntent(new SafeToolExecutionRequest(
+            "test.throwing",
+            Map.of("keyword", "boom"),
+            "user-A",
+            "inner-token",
+            "inner-org",
+            "conv-H",
+            null,
+            SafeToolExecutionSource.GRAPH_TOOL_CALL
+        ));
+
+        assertNull(UserPermissionContext.CURRENT_TOKEN.get(),
+            "外层 token 为空时异常后必须保持为 null");
+        assertNull(UserPermissionContext.getCurrentOrgId(),
+            "外层 orgId 为空时异常后必须保持为 null");
+    }
+
     private SafeToolExecutor newExecutor(BaseTool... tools) {
         ToolRegistry registry = new ToolRegistry(List.of(tools), new UserPermissionContext());
         registry.init();
@@ -214,6 +324,35 @@ class SafeToolExecutorTest {
         protected AtlasToolResult doExecute(Map<String, Object> params) {
             lastParams = Map.copyOf(params);
             return AtlasToolResult.ok("删除成功", Map.of("deleted", true));
+        }
+    }
+
+    /**
+     * 测试用异常抛出 Tool，用于验证异常后 ThreadLocal 恢复契约。
+     */
+    @AtlasToolMapping(
+        name = "test_throwing_tool",
+        intentId = "test.throwing",
+        agent = "query",
+        description = "测试异常工具",
+        httpMethod = "GET",
+        apiEndpoints = {"/api/test/throw"},
+        operationType = AtlasToolMapping.OperationType.READ,
+        requiresConfirmation = false
+    )
+    private static class ThrowingTool extends BaseTool {
+        private ThrowingTool() {
+            super("test_throwing_tool", "测试异常工具");
+        }
+
+        @Override
+        protected Set<String> getRequiredParams() {
+            return Set.of();
+        }
+
+        @Override
+        protected AtlasToolResult doExecute(Map<String, Object> params) {
+            throw new IllegalStateException("boom");
         }
     }
 }
