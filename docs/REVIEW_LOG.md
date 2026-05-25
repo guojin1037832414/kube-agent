@@ -1,5 +1,61 @@
 # Atlas v3.1 开发审计日志
 
+## 2026-05-25 10:46 - M4-PX.4 第二小批 Tool 执行入口源码契约扫描
+
+### 背景
+- 哥哥要求后续开发不要停在等待状态，应主动按大版本里程碑持续推进。
+- M4-PX.4 第一小批已补齐 `SafeToolExecutor` 自身 HITL、异常、ThreadLocal 契约，本小批继续把生产代码中所有直接 `BaseTool#execute(Map)` 入口固化为可审计清单。
+- 本小批遵循“先实验再铺开”：只新增源码契约测试，不迁移 ReAct / ToolCallback / Orchestrator 生产入口，避免行为漂移。
+
+### 专家会诊 / Review 结论
+1. 专家会诊建议：新增 `M4Px4ToolExecuteEntrypointContractTest`，扫描 `src/main/java` 中 `tool.execute(...)`、`baseTool.execute(...)`、`meta.instance().execute(...)` 直接调用点。
+2. 架构结论：`SafeToolExecutor` 是唯一永久允许真实调用 `tool.execute(toolParams)` 的统一安全边界。
+3. 治理结论：`ReActEngine`、`graph.bridge.AtlasToolCallback`、`tool.core.AtlasToolCallback`、`AtlasOrchestrator legacy fallback` 只能作为临时迁移债务白名单，必须记录原因、风险、优先级和迁移目标。
+4. 独立 Review：首次审查指出行级正则跨行漏报、Set 去重吞掉重复表达式、变量名限定过窄三个问题；已修复并复审 PASS。
+
+### 变更内容
+- 新增 `src/test/java/com/atlas/contract/M4Px4ToolExecuteEntrypointContractTest.java`。
+- 契约测试包含：
+  - `productionBaseToolExecuteCalls_shouldBeEitherSafeExecutorOrTemporaryAllowlist`：精确扫描 BaseTool 直接执行入口，要求实际集合等于 1 个永久边界 + 4 个临时白名单。
+  - `suspiciousExecuteCalls_shouldBeEitherKnownToolEntrypointsOrDocumentedNonToolCalls`：宽松扫描 `xxx.execute(...)`，防止未来通过变量改名隐藏新的裸 Tool 执行入口。
+  - `safeToolExecutor_shouldRemainOnlyPermanentBaseToolExecuteBoundary`：锁定 `HitlGuard` 位于真实 `tool.execute` 前，且执行器仍包含可信参数构造、ThreadLocal 绑定/恢复。
+  - `temporaryAllowlist_shouldDocumentReasonAndMigrationTarget`：强制临时白名单结构化记录入口名、文件、表达式、原因、迁移目标、优先级、风险。
+- 本小批未修改 `src/main/java` 任何生产代码。
+
+### 测试结果
+| 测试项 | 命令/方式 | 结果 |
+|--------|-----------|------|
+| Claude Code 问好 | `/home/guojin/.local/bin/hcc /tmp/cc_ping_m4px4_contract_20260525.txt` | ✅ PASS，连接正常 |
+| 新增源码契约定向测试 | `mvn -q -Dtest=M4Px4ToolExecuteEntrypointContractTest test` | ✅ PASS |
+| M4-PX/M5 + ReAct/Callback 组合回归 | `mvn -q -Dtest=M4Px4ToolExecuteEntrypointContractTest,M513HitlFailClosedContractTest,M42PlanExecuteSafetyContractTest,SafeToolExecutorTest,AtlasToolCallbackTest,ReActEngineMultiStepE2ETest,ReActPromptBuilderPodDiagnosticContractTest test` | ✅ PASS |
+| 全量测试 | `mvn -q test` | ✅ PASS |
+| 编译验证 | `mvn -q -DskipTests compile` | ✅ PASS |
+| 空白检查 | `git diff --check` | ✅ PASS |
+| 敏感信息扫描 | Python 新增行扫描 | ✅ `ADDED_LINE_SECRET_SUSPECTS 0` |
+| 独立代码 Review | delegate_task 复审 | ✅ PASS，无阻断 |
+
+### 代码 Review
+#### 优点
+- 只新增测试，不触碰生产执行逻辑，边界非常清晰。
+- 将“唯一永久边界”和“临时迁移债务”显式区分，避免白名单被误解成安全豁免。
+- 增加宽松扫描与数量断言，能发现新增变量名裸调用和重复调用点，降低源码契约漏报风险。
+- 测试失败信息中文可操作，能直接提示开发者接入 `SafeToolExecutor` 或补迁移债务说明。
+
+#### 风险
+- 源码正则扫描仍不是 AST/类型解析，极端语法或复杂泛型强转仍可能需要后续升级 JavaParser / ArchUnit。
+- 当前 4 个历史入口仍未真正迁移，只是被治理清单锁定；后续必须按 P0/P1/P2 逐步减少白名单。
+- 宽松扫描当前允许 `DelegatingExecutor.delegate.execute(...)` 作为非 Tool 调用基线，未来如异步执行器重构需同步更新说明。
+
+### 根因与解决方案
+- 根因：在 Atlas v3.1 演进过程中，Graph 新链路已开始使用 `SafeToolExecutor`，但 ReAct、ToolCallback、legacy fallback 等历史入口仍直接执行 Tool，存在安全边界分散问题。
+- 解决：先以源码契约测试建立全局 execute 入口清单和临时债务表，防止新增绕行入口；后续再小批迁移最高风险路径。
+
+### 后续建议
+1. M4-PX.4 第三小批：优先为 `ReActEngine` 迁移到 `SafeToolExecutor` 前补行为基线测试，确保 observation、事件流、多步循环不降智。
+2. P0 迁移 `ReActEngine`：构造 `SafeToolExecutionRequest`，source 使用 `REACT_ENGINE`，保留原有 observation 序列化。
+3. P1 迁移 `graph.bridge.AtlasToolCallback`：保留 `normalizedParams`，委托 `SafeToolExecutor`。
+4. 每迁移一个入口，必须同步删除 `TEMPORARY_DIRECT_EXECUTE_ALLOWLIST` 对应项，让白名单持续收敛。
+
 ## 2026-05-25 09:50 - M4-PX.4 第一小批 SafeToolExecutor 安全契约补强
 
 ### 背景
