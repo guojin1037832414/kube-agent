@@ -1,5 +1,67 @@
 # Atlas v3.1 开发审计日志
 
+## 2026-05-25 19:31 - M4-PX.4 第六小批 PLAN_EXECUTE_NODE 未知业务字段结构化拒绝
+
+### 背景
+- 第五小批已让 `PLAN_EXECUTE_NODE` 来源接入 `ToolParameterSpec` schema 白名单与 `ToolParameterNormalizer` alias 归一化，未知业务字段不会透传给 Tool。
+- 但第五小批仍采用“白名单过滤后继续执行”的策略：普通未知业务字段会被静默丢弃，审计上无法区分 planner/schema 漂移、模型幻觉参数和真实安全输入。
+- 本小批目标是在不扩大执行能力、不迁移 ReAct/ToolCallback、不开放多步/写操作的前提下，仅对 `SafeToolExecutionSource.PLAN_EXECUTE_NODE` 来源升级为未知业务字段结构化 fail-closed。
+
+### 专家会诊 / Review 结论
+1. 安全专家结论：`execute_node` 的 Plan 参数来自不可信规划结果；Tool 有 schema 时，原始 Plan 参数中既不是 canonical 字段、也不是该 Tool 声明 alias 的普通业务字段，应直接结构化拒绝并不调用 Tool。
+2. 测试专家结论：必须用 TDD 先证明当前实现会“静默丢弃未知字段后继续执行”，再实现 fail-closed；同时补非 Plan 来源兼容测试，防止误伤历史路径。
+3. 工程边界：受保护上下文字段仍按既有上下文覆盖语义处理，不把 `token/orgId/userId/conversationId` 等字段当业务参数授权，也不让其覆盖服务端可信上下文。
+4. 独立 Review：delegate 独立审查判定无阻塞问题；确认未扩大执行能力、未知字段会阻断 Tool 调用、非 Plan 来源保持兼容，并建议补充 protected context 回归测试。该建议已吸收。
+
+### 变更内容
+- `src/main/java/com/atlas/tool/execution/SafeToolExecutor.java`
+  - 在 `PLAN_EXECUTE_NODE` 参数治理路径中构建 `allowedParamNames` 与 `declaredAliasNames`。
+  - 新增 `rejectUnknownPlanParameters(...)`：检查原始 Plan 参数，若字段既非 canonical、非已声明 alias、也非受保护上下文字段，则抛出结构化错误 `TOOL_PARAMETER_UNKNOWN_FOR_PLAN_EXECUTE`。
+  - 保持 alias 兼容：`q/ns` 等已声明 alias 可作为输入，但最终 `sanitized` 仍只保留 canonical 字段，alias 原字段不透传。
+  - 保持 protected context 治理：伪造 `token/orgId/userId/conversationId` 等字段不会被授权或透传，最终由 `SafeToolExecutor` 写入服务端可信上下文。
+- `src/test/java/com/atlas/tool/execution/SafeToolExecutorTest.java`
+  - 调整原 schema/alias 成功测试，使其只验证合法 alias 归一化与 canonical 透传。
+  - 新增 `executeIntent_shouldRejectUnknownBusinessParamsForPlanSourceAndNotCallTool`：验证未知业务字段 `fakeParam` 返回 `notExecuted`、包含结构化错误码、且不调用真实 Tool。
+  - 新增 `executeIntent_shouldIgnoreForgedProtectedContextParamsForPlanSourceAndUseTrustedContext`：验证 Plan 中伪造 protected context 字段不会误杀合法请求，也不会覆盖服务端可信上下文。
+  - 新增 `executeIntent_shouldKeepUnknownBusinessParamsForGraphToolCallCompatibility`：验证非 Plan 来源仍保持旧兼容语义。
+- `src/test/java/com/atlas/contract/M42PlanExecuteSafetyContractTest.java`
+  - 增强源码契约，锁定 `rejectUnknownPlanParameters(...)`、`declaredAliasNames`、`TOOL_PARAMETER_UNKNOWN_FOR_PLAN_EXECUTE` 等关键安全结构。
+
+### 测试结果
+| 测试项 | 命令/方式 | 结果 |
+|--------|-----------|------|
+| TDD 红灯 | `mvn -q -Dtest=SafeToolExecutorTest test` | ✅ 先失败于 `expected false but was true`，证明旧实现会静默丢弃未知字段后继续执行 |
+| 定向绿灯 | `mvn -q -Dtest=SafeToolExecutorTest test` | ✅ PASS |
+| 组合安全回归 | `mvn -q -Dtest=SafeToolExecutorTest,M42PlanExecuteSafetyContractTest,M4Px4ToolExecuteEntrypointContractTest test` | ✅ PASS |
+| Review 建议吸收后组合/编译/扫描 | 定向组合 + `mvn -q -DskipTests compile` + `git diff --check` + 敏感信息扫描 | ✅ PASS |
+| 全量测试 | `mvn -q test` | ✅ PASS |
+| 编译验证 | `mvn -q -DskipTests compile` | ✅ PASS |
+| 空白检查 | `git diff --check` | ✅ PASS |
+| 敏感信息扫描 | 新增 diff grep `sk-* / password / token-* / api-key / secret` | ✅ 未发现新增凭证 |
+| 独立 Review | delegate 独立审查 | ✅ 无阻塞问题，建议已吸收关键 protected context 测试 |
+
+### 代码 Review
+#### 优点
+- 安全语义从“未知字段静默过滤”升级为“结构化拒绝”，能更早暴露 planner/schema 漂移，审计可见性更强。
+- 检查原始 Plan 参数而不是 normalizer 结果，避免 alias 归一化过程掩盖未知字段来源。
+- 使用 `TreeSet` 输出未知字段，使错误信息稳定，便于测试、日志和前端展示。
+- 只收紧 `PLAN_EXECUTE_NODE`，没有改变 Graph/ReAct/ToolCallback 等兼容路径，也没有放宽权限、HITL 或上下文覆盖逻辑。
+- protected context 补充测试覆盖了伪造租户/用户/会话字段不透传、不覆盖的关键边界。
+
+#### 风险
+- 当前未知字段检测只针对顶层 Map key；如果未来开放嵌套 object/array 参数，需要扩展 `ToolParameterSpec` 的嵌套 schema 与递归 unknown-field 检测。
+- 如果某个 Tool 错误地把受保护字段名声明为业务 alias，可能造成 schema 设计层面的混淆；后续可增加契约测试禁止 `ToolParameterSpec.aliases()` 使用 protected context 字段。
+- 当前通过 `IllegalStateException` 携带结构化错误码，再由 `SafeToolExecutor` 转成 `notExecuted`；后续可抽象专用参数校验异常或错误码枚举，提升类型安全。
+
+### 根因与解决方案
+- 根因：第五小批已完成 schema 白名单过滤，但“静默丢弃未知字段”会隐藏 Plan 生成异常或攻击性参数注入，导致系统继续执行一个被裁剪后的请求，审计和排障都不够透明。
+- 解决：在 Plan 来源下先基于 Tool schema 计算 canonical 与 alias 集合，再检查原始参数；只要出现未声明普通业务字段，就结构化 fail-closed，不进入 `BaseTool#execute(Map)`。
+
+### 后续建议
+1. 给允许 Plan 自动执行的真实 READ Tool 分批补齐 `ToolParameterSpec`，并在每批后加入 schema/alias/未知字段契约测试。
+2. 增加源码契约：禁止 `ToolParameterSpec.aliases()` 声明 `token/orgId/organizationId/userId/conversationId` 等受保护字段名。
+3. 后续迁移 ReActEngine/AtlasToolCallback 到 `SafeToolExecutor` 前，先单独做专家会诊，锁定 SSE、HITL、Observation、多步推理不降智的测试基线。
+
 ## 2026-05-25 16:35 - M4-PX.4 第五小批 PLAN_EXECUTE_NODE 参数 schema 白名单过滤
 
 ### 背景

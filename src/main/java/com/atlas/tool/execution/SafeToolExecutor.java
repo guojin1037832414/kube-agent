@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 /**
@@ -211,6 +212,11 @@ public class SafeToolExecutor {
         Set<String> allowedParamNames = specs.stream()
             .map(ToolParameterSpec::name)
             .collect(Collectors.toUnmodifiableSet());
+        Set<String> declaredAliasNames = specs.stream()
+            .flatMap(spec -> spec.aliases() == null ? java.util.stream.Stream.<String>empty() : spec.aliases().stream())
+            .collect(Collectors.toUnmodifiableSet());
+
+        rejectUnknownPlanParameters(rawParams, allowedParamNames, declaredAliasNames);
 
         Map<String, Object> sanitized = new HashMap<>();
         normalized.forEach((key, value) -> {
@@ -219,6 +225,29 @@ public class SafeToolExecutor {
             }
         });
         return sanitized;
+    }
+
+    /**
+     * 拒绝 PLAN_EXECUTE_NODE 来源的未知业务字段。
+     *
+     * <p>这里故意检查原始 Plan 参数，而不是检查 normalizer 产物：normalizer 会保留 alias 原字段并补齐
+     * canonical 字段，已声明的 alias（如 q/ns）允许作为输入兼容存在，但最终不会透传给 Tool；真正需要
+     * 拒绝的是既不是 canonical、也不是当前 Tool 声明 alias、也不是受保护上下文字段的未知业务参数。
+     * 这样可以把 planner/schema 漂移显式暴露为结构化 fail-closed，而不是静默扩大查询范围。</p>
+     */
+    private void rejectUnknownPlanParameters(Map<String, Object> rawParams,
+                                             Set<String> allowedParamNames,
+                                             Set<String> declaredAliasNames) {
+        Set<String> unknownPlanParams = rawParams.keySet().stream()
+            .filter(key -> !allowedParamNames.contains(key))
+            .filter(key -> !declaredAliasNames.contains(key))
+            .filter(key -> !isProtectedContextParam(key))
+            .collect(Collectors.toCollection(TreeSet::new));
+        if (!unknownPlanParams.isEmpty()) {
+            throw new IllegalStateException(
+                "TOOL_PARAMETER_UNKNOWN_FOR_PLAN_EXECUTE: PLAN_EXECUTE_NODE 来源包含 ToolParameterSpec 未声明的参数: "
+                    + unknownPlanParams);
+        }
     }
 
     private boolean isProtectedContextParam(String key) {

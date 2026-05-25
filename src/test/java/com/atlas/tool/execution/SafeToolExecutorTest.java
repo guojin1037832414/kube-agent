@@ -51,8 +51,7 @@ class SafeToolExecutorTest {
             "test.schema.read",
             Map.of(
                 "q", "gpu",
-                "ns", "default",
-                "fakeParam", "should-not-flow"
+                "ns", "default"
             ),
             "user-A",
             "token-A",
@@ -67,9 +66,74 @@ class SafeToolExecutorTest {
         assertEquals("default", readTool.lastParams.get("namespace"), "Plan alias ns 必须按 schema 归一化为 namespace");
         assertFalse(readTool.lastParams.containsKey("q"), "原始 alias 字段不得继续透传给 Tool");
         assertFalse(readTool.lastParams.containsKey("ns"), "原始 alias 字段不得继续透传给 Tool");
-        assertFalse(readTool.lastParams.containsKey("fakeParam"), "未在 ToolParameterSpec 声明的业务字段不得透传给 Tool");
         assertEquals("user-A", readTool.lastParams.get("userId"), "服务端可信 userId 仍需由 SafeToolExecutor 最后补齐");
         assertEquals("100002", readTool.lastParams.get("organizationId"), "服务端可信 organizationId 仍需由 SafeToolExecutor 最后补齐");
+    }
+
+    @Test
+    void executeIntent_shouldRejectUnknownBusinessParamsForPlanSourceAndNotCallTool() {
+        // 【M4-PX.4 第六小批契约】PLAN_EXECUTE_NODE 是自动执行候选，不能静默丢弃未知字段后继续执行。
+        // 如果 Plan 携带 ToolParameterSpec 未声明的业务字段，必须结构化 fail-closed，避免 planner 漂移或参数注入被隐藏。
+        SchemaAwareReadTool readTool = new SchemaAwareReadTool();
+        SafeToolExecutor executor = newExecutor(readTool);
+
+        SafeToolExecutionResult result = executor.executeIntent(new SafeToolExecutionRequest(
+            "test.schema.read",
+            Map.of(
+                "q", "gpu",
+                "ns", "default",
+                "fakeParam", "should-reject"
+            ),
+            "user-A",
+            "token-A",
+            "100002",
+            "conv-plan-unknown-field",
+            null,
+            SafeToolExecutionSource.PLAN_EXECUTE_NODE
+        ));
+
+        assertFalse(result.executed(),
+            "PLAN_EXECUTE_NODE 来源出现未知业务字段时必须 fail-closed，而不是静默丢弃后继续执行");
+        assertTrue(result.answer().contains("TOOL_PARAMETER_UNKNOWN_FOR_PLAN_EXECUTE"),
+            "失败原因应包含结构化错误码，便于审计与前端展示");
+        assertTrue(result.answer().contains("fakeParam"),
+            "失败原因应暴露被拒绝的未知字段名，便于定位 planner/schema 漂移");
+        assertNull(readTool.lastParams, "未知业务字段被拒绝时不得调用真实 Tool.execute");
+    }
+
+    @Test
+    void executeIntent_shouldIgnoreForgedProtectedContextParamsForPlanSourceAndUseTrustedContext() {
+        // 【M4-PX.4 第六小批补充契约】受保护上下文字段不是业务 schema 字段，不能被 Plan 授权，
+        // 也不应被未知字段检查误判为普通业务字段；最终必须由服务端可信上下文覆盖。
+        SchemaAwareReadTool readTool = new SchemaAwareReadTool();
+        SafeToolExecutor executor = newExecutor(readTool);
+
+        SafeToolExecutionResult result = executor.executeIntent(new SafeToolExecutionRequest(
+            "test.schema.read",
+            Map.of(
+                "q", "gpu",
+                "organizationId", "evil-org",
+                "orgId", "evil-org-alias",
+                "userId", "evil-user",
+                "token", "evil-token",
+                "conversation_id", "evil-conv-alias"
+            ),
+            "trusted-user",
+            "trusted-token",
+            "trusted-org",
+            "trusted-conv",
+            null,
+            SafeToolExecutionSource.PLAN_EXECUTE_NODE
+        ));
+
+        assertTrue(result.executed(), "受保护字段应走上下文覆盖语义，不应被当成未知业务字段误杀");
+        assertEquals("gpu", readTool.lastParams.get("keyword"), "合法 alias 仍应归一化为 canonical 字段");
+        assertEquals("trusted-user", readTool.lastParams.get("userId"), "userId 必须来自服务端可信上下文");
+        assertEquals("trusted-org", readTool.lastParams.get("organizationId"), "organizationId 必须来自服务端可信上下文");
+        assertEquals("trusted-conv", readTool.lastParams.get("conversationId"), "conversationId 必须来自服务端可信上下文");
+        assertFalse(readTool.lastParams.containsKey("token"), "token 不得透传给业务 Tool");
+        assertFalse(readTool.lastParams.containsKey("orgId"), "orgId alias 不得透传给业务 Tool");
+        assertFalse(readTool.lastParams.containsKey("conversation_id"), "conversation_id alias 不得透传给业务 Tool");
     }
 
     @Test
@@ -126,6 +190,35 @@ class SafeToolExecutorTest {
             "执行完成后 token ThreadLocal 必须恢复为执行前快照");
         assertEquals(previousOrgId, UserPermissionContext.getCurrentOrgId(),
             "执行完成后 orgId ThreadLocal 必须恢复为执行前快照");
+    }
+
+    @Test
+    void executeIntent_shouldKeepUnknownBusinessParamsForGraphToolCallCompatibility() {
+        // 【兼容性契约】第六小批只收紧 PLAN_EXECUTE_NODE 自动执行入口。
+        // 普通 Graph/ReAct/ToolCallback 兼容路径仍保持历史语义：未知业务字段继续交给 Tool 自身处理，只过滤受保护上下文。
+        RecordingReadTool readTool = new RecordingReadTool();
+        SafeToolExecutor executor = newExecutor(readTool);
+
+        SafeToolExecutionResult result = executor.executeIntent(new SafeToolExecutionRequest(
+            "test.read",
+            Map.of(
+                "keyword", "gpu",
+                "legacyBusinessParam", "keep-for-compat"
+            ),
+            "user-A",
+            "token-A",
+            "100002",
+            "conv-graph-compat",
+            null,
+            SafeToolExecutionSource.GRAPH_TOOL_CALL
+        ));
+
+        assertTrue(result.executed(), "非 PLAN_EXECUTE_NODE 来源应保持旧兼容语义");
+        assertEquals("gpu", readTool.lastParams.get("keyword"), "Graph 路径业务参数仍应正常透传");
+        assertEquals("keep-for-compat", readTool.lastParams.get("legacyBusinessParam"),
+            "Graph/ReAct 兼容路径不应因第六小批收紧而拒绝普通未知业务字段");
+        assertEquals("user-A", readTool.lastParams.get("userId"), "服务端可信 userId 仍应最后补齐");
+        assertEquals("100002", readTool.lastParams.get("organizationId"), "服务端可信 organizationId 仍应最后补齐");
     }
 
     @Test
