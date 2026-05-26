@@ -1,5 +1,72 @@
 # Atlas v3.1 开发审计日志
 
+## 2026-05-26 13:57 - M5.3 ToolParameterSpec 第三批 page/limit-only 安全扩面
+
+### 背景
+- 第二批已覆盖 6 个普通 `page/limit/keyword` 查询 Tool，但仍有一部分只读 Tool 只有固定 `page=1&limit=100`，没有结构化 `ToolParameterSpec`。
+- 本轮继续执行“专家会诊前置 + 先实验再铺开”，目标是选择低风险只读 Tool 做第三批 schema-first 扩面。
+- 过程中全量测试连续暴露两条既有 HOLD 红线：敏感列表 Tool 不得开放分页枚举能力，Dashboard 固定查询 Tool 不得开放用户可控分页；因此本轮按测试契约优先原则主动收缩范围。
+
+### 专家会诊与范围收缩
+1. 初始会诊建议优先做 page/limit-only 只读列表，避免开放 keyword/search。
+2. 实验阶段曾短暂纳入 `gpu_global_list/sys_model_list/permission_menu_list/role_assignable/role_editable`，但 `SensitiveListToolHoldContractTest` 明确禁止这些敏感列表在专项审计前暴露可控分页，因此全部撤回。
+3. 替换候选后曾短暂纳入 `dashboard_deployment_count/dashboard_image_count`，但 `DashboardFixedQueryHoldContractTest` 明确规定 Dashboard count 属于固定摘要查询，不得暴露 page/limit，也不得透传调用方分页，因此全部撤回。
+4. 最终本轮只保留 5 个低风险只读 page/limit-only Tool：
+   - `NodeQueryTool` → `node_query`
+   - `FileVolumePathTool` → `file_volume_path`
+   - `FileStorageOptionTool` → `file_storage_option`
+   - `ImageRepositoryTool` → `image_repository`
+   - `BareMetalTemplateTool` → `bare_metal_template`
+
+### 变更内容
+- 上述 5 个 Tool 新增 `getParameterSpecs()`，统一返回 `pageLimitOnlyParameterSpecs()`。
+- 执行层从固定 `Map.of("page", "1", "limit", "100")` 改为 `buildPageLimitOnlyQuery(params, 100)`：
+  - 支持调用方结构化传入 `page/limit`；
+  - 严格拒绝 `limit > 100`；
+  - 不暴露、不透传 `keyword/name/search/kw`；
+  - 保持 orgId/token 等受保护上下文仍由服务端可信上下文解析。
+- 5 个 Tool 的 `doExecute(...)` 增加 `AtlasToolValidationException` 透传，避免业务 `catch (Exception)` 吞掉参数校验异常，使 `BaseTool.execute(...)` 能统一返回结构化校验失败结果。
+- `HomeInfoPublicPageLimitContractTest` 新增第三批契约：
+  - schema 层只允许 page/limit；
+  - 执行层只透传 page/limit，不透传 keyword/name/search/kw；
+  - limit 超过 100 时在 HTTP 调用前 fail-fast。
+
+### 测试结果
+| 测试项 | 命令/方式 | 结果 |
+|--------|-----------|------|
+| 第三批 page/limit + 敏感 HOLD + Dashboard HOLD 定向测试 | `mvn -q -Dtest='HomeInfoPublicPageLimitContractTest,SensitiveListToolHoldContractTest,DashboardFixedQueryHoldContractTest,ListToolParameterSpecContractTest,M4Px4ToolParameterAliasContractTest,ToolRegistryPromptContractTest,ToolInputSchemaBuilderTest,SafeToolExecutorTest' test` | ✅ PASS |
+| 编译验证 | `mvn -q -DskipTests compile` | ✅ PASS |
+| 全量测试 | `mvn -q test` | ✅ PASS |
+| 空白检查 | `git diff --check` | ✅ PASS |
+
+> 注：测试日志中 `ThrowingTool boom` 为 `SafeToolExecutorTest` 的预期异常测试夹具；Maven 退出码为 0。
+
+### 代码 Review
+#### 优点
+- 遵循“先实验再铺开”：全量测试发现红线后立即收缩范围，没有为了推进数量而修改 HOLD 测试。
+- 第三批只开放 page/limit，不开放 keyword/search，适合低风险展示/选项类只读查询。
+- schema 与执行层同步落地，避免“Prompt 有参数但 HTTP 请求仍固定”的伪 schema。
+- 参数校验异常不再被 Tool 内部通用异常捕获吞掉，错误处理更统一。
+- 保留并验证既有 `SensitiveListToolHoldContractTest` 与 `DashboardFixedQueryHoldContractTest`，安全边界更清晰。
+
+#### 风险
+- `file_volume_path/file_storage_option/image_repository/node_query` 等虽然是只读接口，但可控分页仍可能增加枚举能力；本轮通过 `limit <= 100` 和不开放 keyword 降低风险。
+- `BareMetalTemplateTool` 不依赖 orgId，仍为全局模板读取；本轮只开放分页、不开放搜索，后续如需更细权限需单独审计。
+- 剩余敏感列表和 Dashboard 固定查询仍处于 HOLD，不应在批量脚本中误纳入。
+
+### 根因与解决方案
+- 根因 1：部分历史 Tool 固定 `page=1&limit=100`，导致 LLM 无法结构化控制分页。
+  - 解决：低风险 Tool 改为 `pageLimitOnlyParameterSpecs()` + `buildPageLimitOnlyQuery(params, 100)`。
+- 根因 2：简单按“只读 + 固定分页”筛选会误纳入敏感列表或 Dashboard 固定摘要查询。
+  - 解决：以现有 HOLD 契约测试为红线，任何冲突都收缩实现范围，而不是放宽测试。
+- 根因 3：`doExecute(...)` 中通用 `catch (Exception)` 会吞掉参数校验异常。
+  - 解决：显式 rethrow `AtlasToolValidationException`，交给 `BaseTool` 统一结构化处理。
+
+### 后续建议
+1. 下一批扩面前先把 `SensitiveListToolHoldContractTest`、`DashboardFixedQueryHoldContractTest` 中的 HOLD 清单作为排除列表自动化纳入候选筛选脚本。
+2. 对敏感列表如 RBAC、组织、配额、全局 GPU/模型等，需要单独专家审计后再决定是否开放 page/limit。
+3. 对 Dashboard count/easy-flow 固定查询继续保持不可控分页，除非产品语义明确变更为普通列表查询。
+
 ## 2026-05-26 11:59 - M4.1 ToolParameterSpec 第二批查询 Tool schema-first 覆盖
 
 ### 背景

@@ -1,9 +1,11 @@
 package com.atlas.tool.impl;
 
+import com.atlas.auth.UserPermissionContext;
 import com.atlas.http.KubeManagerHttpClient;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.tool.core.BaseTool;
 import com.atlas.tool.core.ToolParameterSpec;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -30,6 +32,39 @@ import static org.mockito.Mockito.when;
  * 场景。PUBLIC + keyword 会把首页展示能力扩大为公开探测入口。</p>
  */
 class HomeInfoPublicPageLimitContractTest {
+
+    @AfterEach
+    void tearDown() {
+        UserPermissionContext.CURRENT_ORG_ID.remove();
+        UserPermissionContext.CURRENT_TOKEN.remove();
+    }
+
+    @Test
+    void thirdBatchPageLimitOnlyTools_shouldExposeOnlyPageAndLimitSpecsWithoutKeywordOrSearchAliases() {
+        assertPageLimitOnlySpecs(new NodeQueryTool(null), "node_query");
+        assertPageLimitOnlySpecs(new FileVolumePathTool(null), "file_volume_path");
+        assertPageLimitOnlySpecs(new FileStorageOptionTool(null), "file_storage_option");
+        assertPageLimitOnlySpecs(new ImageRepositoryTool(null), "image_repository");
+        assertPageLimitOnlySpecs(new BareMetalTemplateTool(null), "bare_metal_template");
+    }
+
+    @Test
+    void thirdBatchPageLimitOnlyTools_shouldPassThroughPageAndLimitButNeverKeyword() {
+        assertPageLimitPassThroughWithOrg(NodeQueryTool::new, "/api/100001/node");
+        assertPageLimitPassThroughWithOrg(FileVolumePathTool::new, "/api/100001/file/volume-path");
+        assertPageLimitPassThroughWithOrg(FileStorageOptionTool::new, "/api/100001/file/storage/option");
+        assertPageLimitPassThroughWithOrg(ImageRepositoryTool::new, "/api/100001/image/repository");
+        assertPageLimitPassThrough(BareMetalTemplateTool::new, "/api/bare-metal-config-template");
+    }
+
+    @Test
+    void thirdBatchPageLimitOnlyTools_shouldRejectLimitGreaterThan100BeforeHttpCall() {
+        assertRejectLimitTooLargeWithOrg(NodeQueryTool::new, "/api/100001/node");
+        assertRejectLimitTooLargeWithOrg(FileVolumePathTool::new, "/api/100001/file/volume-path");
+        assertRejectLimitTooLargeWithOrg(FileStorageOptionTool::new, "/api/100001/file/storage/option");
+        assertRejectLimitTooLargeWithOrg(ImageRepositoryTool::new, "/api/100001/image/repository");
+        assertRejectLimitTooLarge(BareMetalTemplateTool::new, "/api/bare-metal-config-template");
+    }
 
     @Test
     void homeInfoTools_shouldExposeOnlyPageAndLimitSpecsWithoutKeywordOrSearchAliases() {
@@ -107,9 +142,20 @@ class HomeInfoPublicPageLimitContractTest {
     }
 
     private void assertPageLimitPassThrough(ToolFactory factory, String expectedPath) {
+        assertPageLimitPassThrough(factory, expectedPath, false);
+    }
+
+    private void assertPageLimitPassThroughWithOrg(ToolFactory factory, String expectedPath) {
+        assertPageLimitPassThrough(factory, expectedPath, true);
+    }
+
+    private void assertPageLimitPassThrough(ToolFactory factory, String expectedPath, boolean bindOrg) {
         KubeManagerHttpClient httpClient = mock(KubeManagerHttpClient.class);
         when(httpClient.get(eq(expectedPath), anyMap())).thenReturn(Map.of("result", List.of()));
 
+        if (bindOrg) {
+            UserPermissionContext.CURRENT_ORG_ID.set("100001");
+        }
         BaseTool tool = factory.create(httpClient);
         Map<String, Object> result = tool.execute(Map.of(
             "page", "2",
@@ -127,6 +173,12 @@ class HomeInfoPublicPageLimitContractTest {
     }
 
     private void assertRejectLimitTooLarge(ToolFactory factory, String expectedPath) {
+        assertRejectInvalidPagination(factory, expectedPath, Map.of("page", "1", "limit", "101"),
+            "VALUE_OUT_OF_RANGE");
+    }
+
+    private void assertRejectLimitTooLargeWithOrg(ToolFactory factory, String expectedPath) {
+        UserPermissionContext.CURRENT_ORG_ID.set("100001");
         assertRejectInvalidPagination(factory, expectedPath, Map.of("page", "1", "limit", "101"),
             "VALUE_OUT_OF_RANGE");
     }
