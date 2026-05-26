@@ -5,8 +5,10 @@ import com.atlas.tool.annotation.AtlasToolMapping;
 import com.atlas.tool.annotation.ToolPermission;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.tool.core.BaseTool;
+import com.atlas.tool.core.ToolParameterSpec;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -38,12 +40,24 @@ public class ServiceQueryTool extends BaseTool {
         return Set.of();
     }
 
+    /**
+     * 声明 service_status 的标准列表查询参数契约。
+     *
+     * <p>当前后端暂无 Service 专用接口，本 Tool 使用资源看板近似查询；
+     * 仍然暴露 page/limit/keyword，是为了让 ReAct/Plan 在只读资源检索场景下
+     * 使用统一参数模型，而不是诱导模型手写 URL query。</p>
+     */
+    @Override
+    public List<ToolParameterSpec> getParameterSpecs() {
+        return listQueryParameterSpecs("Service 名称、资源名称或关键词筛选条件。");
+    }
+
     @Override
     protected AtlasToolResult doExecute(Map<String, Object> params) {
         try {
             String orgId = resolveOrganizationId(params);
             String path = "/api/" + orgId + "/dashboard/resources";
-            Map<String, Object> response = httpClient.get(path, Map.of("page", "1", "limit", "100"));
+            Map<String, Object> response = httpClient.get(path, buildListQuery(params));
             Object data = extractData(response);
             return AtlasToolResult.ok("资源看板查询完成 (近似)", data);
         } catch (Exception e) {

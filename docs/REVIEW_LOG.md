@@ -1,5 +1,73 @@
 # Atlas v3.1 开发审计日志
 
+## 2026-05-26 11:59 - M4.1 ToolParameterSpec 第二批查询 Tool schema-first 覆盖
+
+### 背景
+- M4-PX 已完成 Plan 参数安全治理与 alias 受保护字段契约，但仍有部分只读查询 Tool 未声明 `ToolParameterSpec`。
+- 本轮按“专家会诊前置 + 先实验再铺开”原则，选择低风险、可快速契约验证的第二批普通列表/查询 Tool，不触碰写操作、HITL、ReAct 执行架构迁移或 PUBLIC 首页展示接口。
+- 目标是让 ReAct/Plan/Tool JSON Schema/参数归一化与真实 HTTP query 执行保持一致，避免 LLM 手写 URL query 或出现“声明了参数但执行层忽略”的伪 schema。
+
+### 专家会诊结论
+1. Java/Spring AI 架构视角：本轮优先扩展 `ToolParameterSpec` 覆盖，比继续做 Prompt 裁剪或大规模 ReAct E2E 更安全、更可验证。
+2. 开源 Agent 框架视角：schema-first 参数契约应小批量推进，并同步锁定 alias 与执行层透传，避免工具目录和执行代码漂移。
+3. 生产代码审计视角：必须排除 `token/orgId/userId/conversationId` 等受保护上下文字段，PUBLIC 首页展示类 Tool 继续保持 page/limit-only，不能误暴露 keyword/search 探测能力。
+
+### 变更内容
+- 6 个第二批查询 Tool 新增 `getParameterSpecs()`，统一复用 `BaseTool#listQueryParameterSpecs(...)`：
+  - `NamespaceQueryTool` → `namespace_status`
+  - `ServiceQueryTool` → `service_status`
+  - `IngressQueryTool` → `ingress_query`
+  - `DaemonSetQueryTool` → `daemonset_status`
+  - `ClusterQueryTool` → `cluster_query`
+  - `ImageQueryTool` → `image_query`
+- 上述 6 个 Tool 的 `doExecute(...)` 从固定 `page=1&limit=100` 或无 query，改为 `buildListQuery(params)`：
+  - 支持 canonical `page/limit/keyword`；
+  - `keyword` 仅 trim 后透传；
+  - query map 交给 `KubeManagerHttpClient` 编码，不手写 `?` 拼接。
+- `ListToolParameterSpecContractTest` 扩展两类契约：
+  - schema 契约：6 个 Tool 必须暴露 `page/limit/keyword`，并包含 `pageNo/page_size/name/search/kw` 等既定 alias；
+  - 执行契约：6 个 Tool 必须把 `page=3&limit=20&keyword=gpu node` 真正透传到 HTTP client，防止伪 schema。
+
+### 测试结果
+| 测试项 | 命令/方式 | 结果 |
+|--------|-----------|------|
+| 第二批 schema/执行层契约 | `mvn -q -Dtest=ListToolParameterSpecContractTest test` | ✅ PASS |
+| schema + alias 安全定向测试 | `mvn -q -Dtest=ListToolParameterSpecContractTest,M4Px4ToolParameterAliasContractTest test` | ✅ PASS |
+| 组合回归 | `mvn -q -Dtest='ListToolParameterSpecContractTest,M4Px4ToolParameterAliasContractTest,HomeInfoPublicPageLimitContractTest,KubeManagerHttpClientUrlContractTest,ToolParameterNormalizerTest,SafeToolExecutorTest,M42PlanExecuteSafetyContractTest,M4Px4ToolExecuteEntrypointContractTest,ToolRegistryPromptContractTest,ReActEngineMultiStepE2ETest' test` | ✅ PASS |
+| 编译验证 | `mvn -q -DskipTests compile` | ✅ PASS |
+| 全量测试 | `mvn -q test` | ✅ PASS |
+| 空白检查 | `git diff --check` | ✅ PASS |
+| 敏感信息扫描 | diff 静态扫描 `sk-* / github_pat / glpat / api-key / secret / password / bearer` | ✅ secret_suspects=0 |
+
+> 注：`SafeToolExecutorTest` 中 `ThrowingTool` 打印 `boom` 堆栈是测试夹具用于验证异常时 ThreadLocal 清理/恢复的预期日志；Maven 退出码为 0。
+
+### 代码 Review
+#### 优点
+- 小批覆盖 6 个只读查询 Tool，范围可控，符合“先实验再铺开”。
+- 不只声明 schema，还让执行层消费 `buildListQuery(params)`，解决“LLM 可见参数与 HTTP 请求不一致”的真实问题。
+- 复用 `BaseTool#listQueryParameterSpecs(...)` 与 `buildListQuery(...)`，避免每个 Tool 复制 page/limit/keyword alias 后产生漂移。
+- 保持 PUBLIC 首页展示 Tool 的特殊安全边界，由 `HomeInfoPublicPageLimitContractTest` 继续锁定不得暴露 keyword/search。
+- alias 安全契约继续通过，未引入受保护上下文字段 alias。
+
+#### 风险
+- `ServiceQueryTool`、`IngressQueryTool`、`DaemonSetQueryTool` 当前仍使用 dashboard 近似接口；本轮只是让其支持统一分页/关键词透传，不代表已有后端专用 Service/Ingress/DaemonSet API。
+- `keyword` 是否被 kube-manager 各 endpoint 完整支持，仍依赖后端接口实现；但 query 透传已经由单元契约锁定。
+- 普通列表默认 `limit=100` 未设置上限拒绝；这沿用既有 `buildListQuery` 行为。若未来要限制所有内部列表大页，需要另开小批统一治理。
+
+### 根因与解决方案
+- 根因 1：历史查询 Tool 缺少结构化参数 schema，ReAct/Plan 只能依赖自然语言说明，容易生成不稳定参数或 URL query。
+  - 解决：为第二批普通查询 Tool 补 `ToolParameterSpec`，让工具目录、JSON Schema 和 normalizer 都有统一参数来源。
+- 根因 2：部分 Tool 即使适合分页/关键词筛选，执行层也固定 `page=1&limit=100` 或没有 query，导致用户筛选意图无法落到 HTTP 请求。
+  - 解决：切换为 `buildListQuery(params)`，并新增执行层透传契约测试。
+- 根因 3：参数契约扩面可能误伤 PUBLIC 展示接口或受保护上下文字段。
+  - 解决：继续运行 `HomeInfoPublicPageLimitContractTest` 与 `M4Px4ToolParameterAliasContractTest` 作为安全回归。
+
+### 后续建议
+1. 继续按 5~8 个/批推进剩余只读查询 Tool 的 `ToolParameterSpec` 覆盖，每批都同步 schema + 执行透传契约。
+2. 对 dashboard 近似实现的 Service/Ingress/DaemonSet 后续补真实后端 API 调研，避免长期“近似查询”影响回答准确度。
+3. 在真实 READ Tool schema 覆盖更完整后，再评估 ReAct/AtlasToolCallback 接入 `SafeToolExecutor`，避免多步推理链路降智或破坏 SSE 观测。
+
+
 ## 2026-05-26 00:00 - M4-PX.4 第七小批 ToolParameterSpec alias 受保护字段契约治理
 
 ### 背景

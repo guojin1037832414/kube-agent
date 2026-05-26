@@ -5,8 +5,10 @@ import com.atlas.tool.annotation.AtlasToolMapping;
 import com.atlas.tool.annotation.ToolPermission;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.tool.core.BaseTool;
+import com.atlas.tool.core.ToolParameterSpec;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -38,6 +40,17 @@ public class ImageQueryTool extends BaseTool {
         return Set.of();
     }
 
+    /**
+     * 声明 image_query 的标准列表查询参数契约。
+     *
+     * <p>镜像资源查询允许用户按镜像名称、仓库地址或标签关键词筛选。
+     * schema 只暴露 page/limit/keyword，具体编码交给 HTTP client 统一处理。</p>
+     */
+    @Override
+    public List<ToolParameterSpec> getParameterSpecs() {
+        return listQueryParameterSpecs("镜像名称、仓库地址、镜像标签或关键词筛选条件。");
+    }
+
     @Override
     protected AtlasToolResult doExecute(Map<String, Object> params) {
         try {
@@ -45,7 +58,7 @@ public class ImageQueryTool extends BaseTool {
             String orgId = resolveOrganizationId(params);
 
             String path = "/api/" + orgId + "/image";
-            Map<String, Object> response = httpClient.get(path, Map.of("page", "1", "limit", "100"));
+            Map<String, Object> response = httpClient.get(path, buildListQuery(params));
             Object data = extractData(response);
 
             return AtlasToolResult.ok("镜像查询完成", data);
