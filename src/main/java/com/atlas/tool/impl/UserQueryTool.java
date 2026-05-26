@@ -44,14 +44,6 @@ public class UserQueryTool extends BaseTool {
     }
 
     @Override
-    protected Map<String, Class<?>> getParamTypes() {
-        return Map.ofEntries(
-            Map.entry("page", Integer.class),
-            Map.entry("pageSize", Integer.class)
-        );
-    }
-
-    @Override
     protected AtlasToolResult doExecute(Map<String, Object> params) {
         try {
             log.info("[user_query] 执行查询用户列表");

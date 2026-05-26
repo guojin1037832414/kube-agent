@@ -2,6 +2,64 @@
 
 > 本文件记录阶段性开发闭环：问题背景、解决方案、测试结果、代码 Review、风险与后续计划。
 
+## 2026-05-26 16:40 - M5.5 Schema 扩面 HOLD 边界固化：敏感身份/RBAC 与非普通列表固定查询
+
+### 背景
+- M5.3 已给一批安全只读列表 Tool 增加 `page/limit` 或 `page/limit/keyword` 参数契约。
+- 继续扫描剩余固定 `page=1, limit=100` Tool 时发现候选混杂：用户/账号/RBAC、Dashboard 固定摘要、指标摘要、详情/历史查询、全局 GPU 映射等。
+- 若继续机械扩面，会把敏感读取或摘要/详情接口误扩成可翻页、可搜索、可枚举的普通列表入口。
+
+### 专家会诊结论
+1. 测试/质量门禁专家有效返回：下一批必须先补 HOLD 反向保护，形成 `spec 声明 + doExecute 透传/忽略 + prompt/HOLD` 的闭环；不能只声明 schema。
+2. 安全/RBAC 与 schema 子会诊因子代理慢调用超时，未形成有效报告；本轮按保守策略处理，不将用户/RBAC/全局资源/Dashboard/详情指标类纳入普通列表扩面。
+3. 现场源码扫描确认：`UserQueryTool` 已标注 `SENSITIVE_READ + requiresConfirmation=true`；`UserManagementTool/UserDetailTool` 虽尚未统一补齐生产风险注解，但同属身份管理读取域，本轮按保守策略纳入 HOLD；`HelmReleaseHistoryTool/MpiJobDetailTool` 是指定对象历史/详情语义；`NodeMetricsTool/GpuMetricsTool/GpuMapDetailTool/NodeAllocationTool` 是指标/映射/分配摘要语义。
+
+### 变更内容
+- `SensitiveListToolHoldContractTest`：新增身份/RBAC HOLD 保护：
+  - `UserQueryTool` → 用户账号列表敏感读取；同时移除隐藏 `page/pageSize` 类型声明，避免入口层消费分页参数。
+  - `UserManagementTool` → 用户管理列表敏感读取
+  - `UserDetailTool` → 用户详情敏感读取
+- 新增 `NonListFixedQueryHoldContractTest`：固化非普通列表固定查询 HOLD：
+  - `NodeMetricsTool`
+  - `GpuMetricsTool`
+  - `GpuMapDetailTool`
+  - `NodeAllocationTool`
+  - `HelmReleaseHistoryTool`
+  - `MpiJobDetailTool`
+- 新测试同时验证：
+  - 不声明 `page/limit/keyword` 标准列表三件套；
+  - 不通过 `name/search/kw` 等 alias 暴露搜索入口；
+  - 身份/RBAC 与非普通列表执行层均忽略调用方注入的 `page=9/limit=999/keyword/name/search/kw`，仍只向 kube-manager 下发固定 `page=1, limit=100`。
+
+### 测试结果
+| 项目 | 命令/方式 | 结果 |
+|------|-----------|------|
+| HOLD 定向契约 | `mvn -q -Dtest=SensitiveListToolHoldContractTest,DashboardFixedQueryHoldContractTest,NonListFixedQueryHoldContractTest test` | ✅ PASS |
+| Review 后补强定向 | `mvn -q -Dtest=SensitiveListToolHoldContractTest,NonListFixedQueryHoldContractTest test` | ✅ PASS |
+| Schema/Prompt/HITL 相关回归 | `mvn -q -Dtest=SensitiveListToolHoldContractTest,DashboardFixedQueryHoldContractTest,NonListFixedQueryHoldContractTest,ListToolParameterSpecContractTest,ListToolParameterPassThroughContractTest,HomeInfoPublicPageLimitContractTest,ToolRegistryPromptContractTest,M4Px4ToolParameterAliasContractTest,M513HitlFailClosedContractTest test` | ✅ PASS |
+| 后端编译 | `mvn -q -DskipTests compile` | ✅ PASS |
+| 空白检查 | `git diff --check` | ✅ PASS |
+| 敏感信息扫描 | Python added-line scan | ✅ secret_suspects=0 |
+
+### 代码 Review
+#### 优点
+- 本轮没有贸然扩大生产 Tool 参数面，而是先固化红线，符合“先实验再铺开”和安全优先策略。
+- 新增测试覆盖执行层反向保护，避免出现“不声明 schema 但 doExecute 偷偷消费调用方分页/搜索参数”的隐患。
+- 对身份/RBAC、详情/历史、指标摘要三类语义做了区分，避免把所有 `Map.of(page, limit)` 误判为普通列表。
+
+#### 风险
+- 部分指标/详情类未来可能确实需要专用 schema（如 `release/id/nodeName`），当前 HOLD 只是防误扩面，不代表永久不开放。
+- `GpuMapDetailTool` 使用 `/api/gpu/all/gpu-map`，属于全局视角；后续若开放参数必须先确认后端权限与脱敏边界。
+
+### 根因与解决方案
+- 根因：历史 Tool 中大量固定分页查询的代码形态相似，但业务语义差异很大，不能通过正则/批量脚本直接套普通列表契约。
+- 解决：先把敏感域与非普通列表固定查询纳入 HOLD 合同测试，再选择真正低风险的普通列表小批次扩面。
+
+### 后续建议
+1. 下一轮只从已确认普通资源列表中选择 3~6 个 Tool 做 schema 扩面，并同步 pass-through 测试。
+2. 对详情类单独设计 `id/release/name` 等细粒度参数契约，不复用 `keyword`。
+3. 对指标摘要类评估是否采用 page/limit-only，必须先确认是否会扩大资源拓扑枚举面。
+
 
 ## 2026-05-24 17:55 - M5.17 Tool HTTP/风险元数据第四批基础设施 GET/READ 扩面
 

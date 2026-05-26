@@ -1,14 +1,26 @@
 package com.atlas.tool.impl;
 
+import com.atlas.auth.UserPermissionContext;
+import com.atlas.http.KubeManagerHttpClient;
+import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.tool.core.BaseTool;
 import com.atlas.tool.core.ToolParameterSpec;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
 
 /**
  * 敏感列表 Tool 暂缓保护测试。
@@ -21,6 +33,17 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
  * 审计日志和产品语义完成专项确认前，把 HOLD 决策测试化，防止后续批量脚本误开放。</p>
  */
 class SensitiveListToolHoldContractTest {
+
+    @BeforeEach
+    void setUpTrustedOrganizationContext() {
+        UserPermissionContext.CURRENT_ORG_ID.set("100001");
+    }
+
+    @AfterEach
+    void tearDownTrustedOrganizationContext() {
+        UserPermissionContext.CURRENT_ORG_ID.remove();
+        UserPermissionContext.CURRENT_TOKEN.remove();
+    }
 
     @Test
     void m51_shouldKeepOrderAndQuotaReceiveOnHoldUntilPermissionAuditCompletes() {
@@ -36,6 +59,16 @@ class SensitiveListToolHoldContractTest {
         assertNoStandardListQueryContract(new RegisterAuditListTool(null), "register_audit_list", "组织注册审核列表");
         assertNoStandardListQueryContract(new RoleAssignableListTool(null), "role_assignable", "可分配角色边界列表");
         assertNoStandardListQueryContract(new RoleEditableListTool(null), "role_editable", "可编辑角色边界列表");
+        assertNoStandardListQueryContract(new UserQueryTool(null), "user_query", "用户账号列表敏感读取");
+        assertNoStandardListQueryContract(new UserManagementTool(null), "user_management", "用户管理列表敏感读取");
+        assertNoStandardListQueryContract(new UserDetailTool(null), "user_detail", "用户详情敏感读取");
+    }
+
+    @Test
+    void m55_sensitiveIdentityTools_shouldIgnoreCallerPaginationAndSearchParams() {
+        assertSensitiveFixedQuery(UserQueryTool::new, "/api/100001/user", Map.of());
+        assertSensitiveFixedQuery(UserManagementTool::new, "/api/100001/user", Map.of());
+        assertSensitiveFixedQuery(UserDetailTool::new, "/api/100001/user/u-001", Map.of("id", "u-001"));
     }
 
     @Test
@@ -47,6 +80,35 @@ class SensitiveListToolHoldContractTest {
     @Test
     void m54_shouldKeepPublicSysInfoMapOnNoParameterHoldUntilPublicConfigSchemaCompletes() {
         assertNoStandardListQueryContract(new SysInfoMapTool(null), "sys_info_map", "PUBLIC no-org 系统配置 Map");
+    }
+
+    /**
+     * 断言敏感身份类 Tool 即使收到调用方注入的分页/搜索参数，也仍然只使用固定查询。
+     *
+     * <p>这层执行期保护用于弥补“仅检查 getParameterSpecs”覆盖不足的问题：敏感工具不仅不能
+     * 对 LLM 声明标准列表参数，也不能在未完成权限/脱敏专项前从 params 中消费这些枚举参数。</p>
+     */
+    private void assertSensitiveFixedQuery(ToolFactory factory, String expectedPath, Map<String, Object> requiredParams) {
+        KubeManagerHttpClient httpClient = mock(KubeManagerHttpClient.class);
+        when(httpClient.get(eq(expectedPath), eq(Map.of("page", "1", "limit", "100"))))
+            .thenReturn(Map.of("result", List.of()));
+
+        Map<String, Object> params = new java.util.LinkedHashMap<>();
+        params.putAll(requiredParams);
+        params.put("orgId", "100001");
+        params.put("page", "9");
+        params.put("pageSize", "999");
+        params.put("limit", "999");
+        params.put("keyword", "probe");
+        params.put("name", "hidden-name");
+        params.put("search", "hidden-search");
+        params.put("kw", "x");
+
+        Map<String, Object> result = factory.create(httpClient).execute(params);
+
+        assertEquals(Boolean.TRUE, result.get(AtlasToolResult.KEY_SUCCESS));
+        verify(httpClient).get(eq(expectedPath), eq(Map.of("page", "1", "limit", "100")));
+        verifyNoMoreInteractions(httpClient);
     }
 
     /**
@@ -66,5 +128,10 @@ class SensitiveListToolHoldContractTest {
             toolName + " 属于" + sensitiveDomain + "，权限/审计专项完成前不得暴露 limit 批量枚举能力");
         assertFalse(specs.containsKey("keyword"),
             toolName + " 属于" + sensitiveDomain + "，权限/审计专项完成前不得暴露 keyword 搜索枚举能力");
+    }
+
+    @FunctionalInterface
+    private interface ToolFactory {
+        BaseTool create(KubeManagerHttpClient httpClient);
     }
 }
