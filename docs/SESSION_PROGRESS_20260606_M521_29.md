@@ -162,6 +162,8 @@
 
 ## Verification Completed
 
+- M5.21-36 targeted verification passed:
+  - `mvn -q "-Dtest=NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest" test`
 - Passed:
   - `mvn -q "-Dtest=M511AtlasToolHttpContractTest,ListToolParameterPassThroughContractTest,ListToolParameterSpecContractTest" test`
   - `mvn -q "-Dtest=M511AtlasToolHttpContractTest,ListToolParameterPassThroughContractTest,ListToolParameterSpecContractTest,SensitiveListToolHoldContractTest,M520McpManifestSafetyContractTest,ToolRegistryPermissionTest" test`
@@ -233,11 +235,12 @@
 - `DownloadTaskProgressTool` added for sensitive read-only `GET /api/{orgId}/download/progress/{id}`; download start/pause/resume/delete remain HOLD.
 - `RegistryListTool` moved out of HOLD for sensitive read-only `GET /api/registry` only; registry create/update/delete and repo-tag remain HOLD.
 - `NimDeploymentPreflightTool` added for sensitive read-only NIM repository/tag/template preflight only; `nim_create` remains HOLD.
+- `NimTemplateMergeSupport` added for NIM template merge and DeploymentDTO offline preview only; preview remains `safeToPost=false`, protects `name/displayName/image`, and does not open POST create.
 
 ## Next Step
 
 Continue NIM orchestration only through safe slices:
-- design NIM HITL card and DTO merge tests,
+- design NIM HITL card and create-plan state machine tests,
 - or pick another mature GET area with clean backend/frontend evidence.
 
 ## Recovery Reminder

@@ -7,6 +7,24 @@
 ---
 
 
+## [M5.21-36] - 第三十六批 NIM 模板合并与 DeploymentDTO 离线预览审计
+
+**交付**: 新增 `NimTemplateMergeSupport`，把 mature `vue-kube-manager` NIM 一键部署中的 `mergeTemplate + formatApplication` 确定性换算沉淀为 `safeToPost=false` 的离线 DeploymentDTO 草案预览，辅助后续 HITL 设计，但不开放 `nim_create`。
+
+**变更**
+- 新增 `NimTemplateMergeSupport`，生成 `deploymentBodyPreview`，包含 `bodyDraft`、`uiMergedDraft`、`gpuResolution`、`requiredBeforeCreate` 和 `protectedFields`。
+- `NimDeploymentPreflightSupport` 在预检计划中返回 `deploymentBodyPreview`，让 Agent 能解释模板合并后的请求体草案。
+- 新增 `NimTemplateMergeSupportTest`，覆盖模板覆盖保护、单位换算、GPU map 缺失/解析、CPU-only 自动伸缩和缺少 `displayName` 的完整性判断。
+- 扩展 `NimDeploymentPreflightToolHttpContractTest`，锁定预检 Tool 仍只读且 preview `safeToPost=false`。
+- 新增 `docs/M5_21_THIRTY_SIXTH_WAVE_NIM_TEMPLATE_MERGE_PREVIEW_AUDIT_20260606.md`，并更新 M5.21 波次索引。
+
+**安全**
+- 本批不新增 HTTP endpoint，不调用真实 `8100`，不调用 `POST /api/{orgId}/deployment`。
+- `deploymentBodyPreview.safeToPost=false` 被测试锁定，缺少 GPU map 或未确认 `displayName` 时 `bodyComplete=false`。
+- Agent 侧相对 mature 前端额外保护 `name/displayName/image`，避免模板覆盖用户确认的服务名或已选镜像。
+- 公开预检不消费用户/LLM 传入的 `gpuMap`，避免伪造 GPU 解析；未来只能由受控编排传入已审计 GPU map。
+- `nim_create` 继续 HOLD，等待 license、系统组织/SYS_ADMIN 禁止策略、HITL 卡片、审计日志、费用/配额、状态轮询全部完成。
+
 ## [M5.21-35] - 第三十五批 NIM 部署只读预检编排审计
 
 **交付**: 新增 `nim_deployment_preflight`，按 mature `vue-kube-manager` NIM 一键部署流程读取一键部署目录、NIM tag 与 `templateType=NIM` 模板，形成可审计部署规划草案，但不创建 Deployment。

@@ -81,9 +81,30 @@ Current track:
 
 Recently completed:
 
-`M5.21-35 NIM deployment preflight sensitive read orchestration`
+`M5.21-36 NIM template merge preview`
 
 Latest checkpoint:
+
+- Date: 2026-06-06 22:38 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-36 implemented and verified:
+  - Added `NimTemplateMergeSupport` for offline NIM template merge and DeploymentDTO preview.
+  - `nim_deployment_preflight` now returns `deploymentBodyPreview`.
+  - Preview is explicitly `safeToPost=false` and `previewOnly=true`.
+  - Preview protects `name/displayName/image` instead of copying the mature frontend's weaker displayName-only protection.
+  - `bodyComplete=false` when GPU map is missing for GPU templates or `displayName` is not confirmed.
+  - Public preflight ignores user/LLM supplied `gpuMap`; only future controlled orchestration may pass an audited GPU map into the pure support overload.
+  - No new HTTP endpoint was added; no real `8100` access; no POST create.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest" test`
+    - `mvn -q "-Dtest=NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest" test`
+    - `git -c safe.directory=F:/gitProject/kube-agent diff --check`
+    - Static secret scan found 0 matches.
+    - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+  - Pending before final checkpoint:
+    - H-drive recovery sync,
+    - git commit and push.
 
 - Date: 2026-06-06 21:36 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.

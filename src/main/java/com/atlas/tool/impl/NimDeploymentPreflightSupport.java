@@ -181,6 +181,11 @@ final class NimDeploymentPreflightSupport {
         plan.put("selectedTag", selectedTag.get("tag"));
         plan.put("selectedImage", image);
         plan.put("selectedTemplate", selectedTemplate);
+        plan.put("deploymentBodyPreview", NimTemplateMergeSupport.buildDeploymentBodyPreview(
+            params,
+            image,
+            selectedTemplate
+        ));
         plan.put("catalogCandidates", catalogData);
         plan.put("tagCandidates", tagData);
         plan.put("templateCandidates", templateData);

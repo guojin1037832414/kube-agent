@@ -88,6 +88,19 @@ class NimDeploymentPreflightToolHttpContractTest {
         assertEquals("NONE", data.get("sideEffect"));
         assertEquals("nvcr.io/nim/llama:1.0.0", data.get("selectedImage"));
         assertTrue(data.containsKey("nextRequiredConfirmation"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> deploymentBodyPreview = (Map<String, Object>) data.get("deploymentBodyPreview");
+        assertEquals(false, deploymentBodyPreview.get("safeToPost"));
+        assertEquals(false, deploymentBodyPreview.get("bodyComplete"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> bodyDraft = (Map<String, Object>) deploymentBodyPreview.get("bodyDraft");
+        assertEquals("llama-service", bodyDraft.get("name"));
+        assertEquals("llama-service", bodyDraft.get("displayName"));
+        assertEquals("nvcr.io/nim/llama:1.0.0", bodyDraft.get("image"));
+        assertEquals(4000, bodyDraft.get("cpuLimits"));
+        assertEquals(16384, bodyDraft.get("memLimits"));
+        assertEquals("A100", bodyDraft.get("gpuSpec"));
+        assertFalse(bodyDraft.containsKey("gpuModel"));
 
         verify(httpClient).get(eq("/api/100002/repository"), eq(Map.of(
             "page", "1",
