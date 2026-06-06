@@ -81,9 +81,58 @@ Current track:
 
 Recently completed:
 
-`M5.21-47 NIM controlled POST request spec adapter contract`
+`M5.21-48 NIM write execution handoff and idempotency contract`
 
 Latest checkpoint:
+
+- Date: 2026-06-07 05:54 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-48 implemented and verified:
+  - Added `NimCreateWriteExecutionHandoffSupport` as a pure/mock-first write execution handoff contract between request spec adapter and future durable write executor.
+  - It consumes:
+    - `creationGate`
+    - `auditContext`
+    - `auditReceipt`
+    - `writeBodyRebuildReport`
+    - `writeRequestSpecReport`
+  - It returns:
+    - `writeExecutionHandoff=NIM_CREATE_WRITE_EXECUTION_HANDOFF`
+    - `executionMode=WRITE_EXECUTION_HANDOFF_CONTRACT_ONLY`
+    - `networkAccess=NOT_PERFORMED`
+    - `sideEffect=NONE`
+    - `writeExecutionPrepared`
+    - `futureExecutor=FUTURE_DURABLE_WRITE_EXECUTOR`
+    - `realHttpExecutionAllowed=false`
+    - `preWriteAuditRequired=true`
+    - `idempotencyRequired=true`
+    - `idempotencyKeySource=SERVER_DERIVED_FROM_AUDIT_AND_REQUEST_SPEC`
+    - `idempotencyKey=nim-create-<32 hex>`
+    - `callerIdempotencyKeyAllowed=false`
+    - `executionHandoffPlan`
+    - `handoffDigest`
+    - `blockedBy`.
+  - `executionHandoffPlan` declares future `POST /api/{orgId}/deployment`, but still reports `networkAccess=NOT_PERFORMED` and `sideEffect=NONE`.
+  - Handoff binds durable audit receipt, audit identity, body digest, request spec digest, server-derived idempotency key, pre-write audit handoff, and post-write readiness handoff.
+  - `NimCreateStateMachineSupport.ReadinessRequest` now includes `writeExecutionHandoffReport`, with compatibility constructors for negative fixtures that intentionally omit handoff.
+  - State-machine output now includes `writeExecutionHandoffRequired=true`.
+  - Missing report returns `WRITE_EXECUTION_HANDOFF_REPORT_NOT_READY`.
+  - Invalid or digest/audit-receipt/request-spec-mismatched report returns `WRITE_EXECUTION_HANDOFF_REPORT_CONTRACT_INVALID`.
+  - Secret leakage in the report returns `WRITE_EXECUTION_HANDOFF_REPORT_CONTAINS_FORBIDDEN_SECRET`.
+  - State machine recomputes `handoffDigest` and verifies the handoff plan is bound to the current request spec/body/audit receipt.
+  - Added `NimCreateWriteExecutionHandoffSupportTest`.
+  - Added `docs/M5_21_FORTY_EIGHTH_WAVE_NIM_WRITE_EXECUTION_HANDOFF_AUDIT_20260607.md`.
+  - Multi-expert review notes:
+    - Architecture: future write execution must not jump from request spec directly to durable writer; handoff is its own audited gate.
+    - Security: idempotency key must be server-derived from audit/request spec evidence; caller idempotency claims are ignored.
+    - Test: future green state-machine fixtures must carry body rebuild, request spec, execution handoff, and READY readiness report.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateWriteExecutionHandoffSupportTest,NimCreateWriteRequestSpecAdapterSupportTest,NimCreateStateMachineSupportTest,NimCreateWriteBodyRebuilderSupportTest,NimCreateAuditReadinessSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateWriteExecutionHandoffSupportTest,NimCreateWriteRequestSpecAdapterSupportTest,NimCreateWriteBodyRebuilderSupportTest,NimCreateReadinessHttpAdapterSupportTest,NimCreateReadinessExecutorSupportTest,NimCreateStateMachineSupportTest,NimCreateAuditReadinessSupportTest,NimCreateAuditWriterSupportTest,NimTrustedPolicyProviderSupportTest,NimCreationGateSupportTest,NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest,HighRiskMutationToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest,M510ArchitectureBoundaryTest" test`
+    - `git diff --check`
+    - Static secret-pattern scan only matched documentation text and test sentinel fake values; no real secret found.
+    - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+  - No real `8100` access; no real audit table write; no real NIM polling; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
 
 - Date: 2026-06-07 05:10 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
@@ -623,10 +672,19 @@ Latest in-progress/completed chunk after checkpoint:
   - Added `RegistrySiteToolHttpContractTest`.
   - Targeted test passed: `mvn -q "-Dtest=RegistrySiteToolHttpContractTest,ListToolParameterPassThroughContractTest,ListToolParameterSpecContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest" test`.
 
+Current NIM chain summary after M5.21-48:
+
+- Public `nim_deployment_preflight` remains read-only and cannot create deployments.
+- `NimTemplateMergeSupport` creates only `safeToPost=false` previews.
+- `NimCreationGateSupport` and `NimTrustedPolicySnapshot` model trusted policy/gate evidence, but public facts remain untrusted until a backend provider supplies them.
+- `NimCreateStateMachineSupport` requires trusted policy, server HITL, durable audit receipt, controlled body rebuild, controlled POST request spec, controlled write execution handoff, READY readiness execution report, and a code release switch before future writes.
+- `NimCreateWriteExecutionHandoffSupport` is the newest gate; it binds request spec/body/audit receipt with a server-derived idempotency key and post-write readiness handoff, but it still does not execute HTTP.
+
 Recommended next work:
 
 - Continue NIM orchestration through safe slices:
-  - design `NimTrustedPolicyProvider` to fill `NimTrustedPolicySnapshot` from real backend license/user/org evidence,
-  - add future `nim_create` state-machine contract tests requiring server-generated `HitlConfirmation`, audit context, and an open trusted gate before any write,
-  - design creation-aftercare readiness polling as a separate sensitive read path that never generates, stores, or displays real API keys,
+  - design a future durable write executor contract shell without executing real `POST /api/{orgId}/deployment`,
+  - identify the real durable audit log/table/service and define replacement points for the mock-first audit writer,
+  - later wire `NimTrustedPolicyProviderSupport` to real backend license/user/org readers only after contract tests exist,
+  - keep `nim_create` HOLD until trusted policy, durable audit writer, durable write executor, readiness aftercare, and release switch all pass review,
   - or pick another mature GET area with clean backend/frontend evidence.

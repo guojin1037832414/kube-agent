@@ -117,6 +117,7 @@ class NimCreateWriteRequestSpecAdapterSupportTest {
         Map<String, Object> receipt = durableAuditReceipt(audit);
         Map<String, Object> bodyReport = writeBodyReport(audit, receipt);
         Map<String, Object> requestSpecReport = writeRequestSpecReport(audit, receipt, bodyReport);
+        Map<String, Object> handoffReport = writeExecutionHandoffReport(audit, receipt, bodyReport, requestSpecReport);
 
         Map<String, Object> guard = NimCreateStateMachineSupport.evaluate(new NimCreateStateMachineSupport.ReadinessRequest(
             Map.of("name", "nim-ready"),
@@ -127,6 +128,7 @@ class NimCreateWriteRequestSpecAdapterSupportTest {
             receipt,
             bodyReport,
             requestSpecReport,
+            handoffReport,
             completeReadinessPlan(),
             completeReadinessExecutionReport(),
             NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
@@ -157,6 +159,7 @@ class NimCreateWriteRequestSpecAdapterSupportTest {
             receipt,
             bodyReport,
             forgedReport,
+            handoffReport,
             completeReadinessPlan(),
             completeReadinessExecutionReport(),
             NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
@@ -199,6 +202,21 @@ class NimCreateWriteRequestSpecAdapterSupportTest {
                 audit,
                 receipt,
                 bodyReport
+            )
+        );
+    }
+
+    private Map<String, Object> writeExecutionHandoffReport(Map<String, Object> audit,
+                                                            Map<String, Object> receipt,
+                                                            Map<String, Object> bodyReport,
+                                                            Map<String, Object> requestSpecReport) {
+        return NimCreateWriteExecutionHandoffSupport.prepare(
+            new NimCreateWriteExecutionHandoffSupport.WriteExecutionHandoffInput(
+                openGate(),
+                audit,
+                receipt,
+                bodyReport,
+                requestSpecReport
             )
         );
     }

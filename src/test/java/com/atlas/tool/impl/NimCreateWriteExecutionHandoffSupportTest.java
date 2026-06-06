@@ -3,6 +3,7 @@ package com.atlas.tool.impl;
 import com.atlas.hitl.HitlConfirmation;
 import org.junit.jupiter.api.Test;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -12,62 +13,76 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * NIM 创建受控写入 body 重建契约测试。
+ * NIM 创建写执行交接契约测试。
  *
- * <p>本测试不调用 kube-manager、不执行 POST，只锁定未来写链的 DeploymentDTO 必须从已审计状态重建，
- * 且必须绑定 durable audit receipt，不能直接复用 preview bodyDraft 或携带密钥/上下文字段。</p>
+ * <p>本测试不访问 kube-manager、不执行 {@code POST /api/{orgId}/deployment}。
+ * 目标是锁定 future durable write executor 前最后一层 handoff：服务端派生幂等键、pre-write audit
+ * receipt 交接、request spec digest 复核和写后 readiness handoff 都必须先合同化。</p>
  */
-class NimCreateWriteBodyRebuilderSupportTest {
+class NimCreateWriteExecutionHandoffSupportTest {
 
     @Test
-    void rebuilder_shouldBuildWhitelistedBodyFromAuditedStateWithoutNetworkAccess() {
+    void handoff_shouldPrepareIdempotentExecutionPlanWithoutNetworkAccess() {
         Map<String, Object> audit = completeAuditContext();
         Map<String, Object> receipt = durableAuditReceipt(audit);
+        Map<String, Object> bodyReport = writeBodyReport(audit, receipt);
+        Map<String, Object> requestSpecReport = writeRequestSpecReport(audit, receipt, bodyReport);
 
-        Map<String, Object> report = NimCreateWriteBodyRebuilderSupport.rebuild(
-            new NimCreateWriteBodyRebuilderSupport.WriteBodyRebuildInput(
-                openGate(),
-                completePreview(),
-                audit,
-                receipt
-            )
-        );
+        Map<String, Object> report = writeExecutionHandoffReport(audit, receipt, bodyReport, requestSpecReport);
 
-        assertEquals(NimCreateWriteBodyRebuilderSupport.REBUILDER_NAME, report.get("writeBodyRebuilder"));
-        assertEquals(NimCreateWriteBodyRebuilderSupport.EXECUTION_MODE, report.get("executionMode"));
+        assertEquals(NimCreateWriteExecutionHandoffSupport.HANDOFF_NAME, report.get("writeExecutionHandoff"));
+        assertEquals(NimCreateWriteExecutionHandoffSupport.EXECUTION_MODE, report.get("executionMode"));
         assertEquals("NOT_PERFORMED", report.get("networkAccess"));
         assertEquals("NONE", report.get("sideEffect"));
-        assertEquals(true, report.get("writeBodyPrepared"));
+        assertEquals(true, report.get("writeExecutionPrepared"));
         assertEquals("POST", report.get("httpMethod"));
         assertEquals("POST /api/{orgId}/deployment", report.get("backendEndpoint"));
-        assertEquals("100002", report.get("organizationId"));
-        assertEquals(false, report.get("directPreviewReuseAllowed"));
-        assertEquals(false, report.get("previewBodyReferenceUsed"));
-        assertEquals(true, report.get("fieldWhitelistApplied"));
-        assertEquals(true, report.get("protectedContextStripped"));
+        assertEquals("FUTURE_DURABLE_WRITE_EXECUTOR", report.get("futureExecutor"));
         assertEquals(false, report.get("releaseCredential"));
-        assertEquals(receipt.get("receiptId"), report.get("sourceAuditReceiptId"));
-        assertEquals(receipt.get("eventDigest"), report.get("sourceAuditEventDigest"));
-        assertEquals(NimCreateWriteBodyRebuilderSupport.BODY_DIGEST_ALGORITHM, report.get("bodyDigestAlgorithm"));
-        assertTrue(report.get("bodyDigest").toString().matches("[a-f0-9]{64}"));
+        assertEquals(false, report.get("realHttpExecutionAllowed"));
+        assertEquals(true, report.get("preWriteAuditRequired"));
+        assertEquals(true, report.get("idempotencyRequired"));
+        assertEquals(false, report.get("callerIdempotencyKeyAllowed"));
+        assertEquals(false, report.get("callerHeadersAllowed"));
+        assertEquals(false, report.get("authorizationHeaderFromCallerAllowed"));
+        assertEquals(false, report.get("realApiKeyAllowed"));
+        assertEquals(bodyReport.get("bodyDigest"), report.get("sourceBodyDigest"));
+        assertEquals(requestSpecReport.get("requestSpecDigest"), report.get("sourceRequestSpecDigest"));
+        assertTrue(report.get("idempotencyKey").toString().matches("nim-create-[a-f0-9]{32}"));
+        assertTrue(report.get("handoffDigest").toString().matches("[a-f0-9]{64}"));
 
         @SuppressWarnings("unchecked")
-        Map<String, Object> body = (Map<String, Object>) report.get("body");
-        assertEquals("llama-nim", body.get("name"));
-        assertEquals("llama-nim", body.get("displayName"));
-        assertEquals("nvcr.io/nim/llama:1.0", body.get("image"));
-        assertEquals(88, body.get("templateId"));
-        assertEquals(2500, body.get("cpuLimits"));
-        assertEquals(2500, body.get("cpuRequests"));
-        assertEquals(12288, body.get("memLimits"));
-        assertEquals(12288, body.get("memRequests"));
-        assertEquals(1, body.get("replicas"));
-        assertEquals(true, body.get("enableSecondNetwork"));
-        assertFalse(body.containsKey("organizationId"));
-        assertFalse(body.containsKey("orgId"));
-        assertFalse(body.containsKey("token"));
-        assertFalse(body.containsKey("ngcApiKey"));
-        assertFalse(body.containsKey("ignoredCallerField"));
+        Map<String, Object> plan = (Map<String, Object>) report.get("executionHandoffPlan");
+        assertEquals("deployment-create", plan.get("target"));
+        assertEquals("POST", plan.get("method"));
+        assertEquals("/api/100002/deployment", plan.get("resolvedPath"));
+        assertEquals("NOT_PERFORMED", plan.get("networkAccess"));
+        assertEquals("NONE", plan.get("sideEffect"));
+        assertEquals(false, plan.get("callerHeadersAllowed"));
+        assertEquals("KUBE_MANAGER_HTTP_CLIENT_CONTEXT_ONLY", plan.get("kubeManagerAuthBoundary"));
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> idempotency = (Map<String, Object>) plan.get("idempotency");
+        assertEquals(true, idempotency.get("required"));
+        assertEquals(report.get("idempotencyKey"), idempotency.get("key"));
+        assertEquals(NimCreateWriteExecutionHandoffSupport.IDEMPOTENCY_KEY_SOURCE, idempotency.get("keySource"));
+        assertEquals(false, idempotency.get("callerKeyAllowed"));
+        assertEquals(true, idempotency.get("reuseAllowedOnlyForSameAuditReceiptAndRequestSpec"));
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> preWriteAudit = (Map<String, Object>) plan.get("preWriteAuditHandoff");
+        assertEquals(receipt.get("receiptId"), preWriteAudit.get("receiptId"));
+        assertEquals(receipt.get("eventDigest"), preWriteAudit.get("eventDigest"));
+        assertEquals(true, preWriteAudit.get("durable"));
+        assertEquals(true, preWriteAudit.get("realStorageTouched"));
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> readiness = (Map<String, Object>) plan.get("postWriteReadinessHandoff");
+        assertEquals(true, readiness.get("requiredAfterWrite"));
+        assertEquals(NimCreateReadinessExecutorSupport.EXECUTOR_NAME, readiness.get("nextExecutor"));
+        assertEquals(true, readiness.get("pollOnly"));
+        assertEquals(true, readiness.get("readOnly"));
+        assertEquals(true, readiness.get("forbiddenBeforeWrite"));
 
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
@@ -75,15 +90,21 @@ class NimCreateWriteBodyRebuilderSupportTest {
     }
 
     @Test
-    void stateMachine_shouldRequireWriteBodyRebuildReportBeforeFutureWrite() {
+    void stateMachine_shouldRequireWriteExecutionHandoffBeforeFutureWrite() {
         Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> receipt = durableAuditReceipt(audit);
+        Map<String, Object> bodyReport = writeBodyReport(audit, receipt);
+        Map<String, Object> requestSpecReport = writeRequestSpecReport(audit, receipt, bodyReport);
+
         Map<String, Object> guard = NimCreateStateMachineSupport.evaluate(new NimCreateStateMachineSupport.ReadinessRequest(
-            Map.of("name", "nim-no-body-report"),
+            Map.of("name", "nim-no-handoff"),
             openGate(),
             completePreview(),
             HitlConfirmation.human("thread-1", "nim_create"),
             audit,
-            durableAuditReceipt(audit),
+            receipt,
+            bodyReport,
+            requestSpecReport,
             completeReadinessPlan(),
             completeReadinessExecutionReport(),
             NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
@@ -91,24 +112,17 @@ class NimCreateWriteBodyRebuilderSupportTest {
         ));
 
         assertEquals("HELD", guard.get("state"));
-        assertEquals(true, guard.get("writeBodyRebuildRequired"));
+        assertEquals(true, guard.get("writeExecutionHandoffRequired"));
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> blockers = (List<Map<String, Object>>) guard.get("blockedBy");
-        assertHasBlocker(blockers, "WRITE_BODY_REBUILD_REPORT_NOT_READY");
+        assertHasBlocker(blockers, "WRITE_EXECUTION_HANDOFF_REPORT_NOT_READY");
     }
 
     @Test
-    void stateMachine_shouldAcceptBodyRebuildReportOnlyWhenBoundToAuditReceipt() {
+    void stateMachine_shouldAcceptHandoffOnlyWhenBoundToRequestSpecAndAuditReceipt() {
         Map<String, Object> audit = completeAuditContext();
         Map<String, Object> receipt = durableAuditReceipt(audit);
-        Map<String, Object> bodyReport = NimCreateWriteBodyRebuilderSupport.rebuild(
-            new NimCreateWriteBodyRebuilderSupport.WriteBodyRebuildInput(
-                openGate(),
-                completePreview(),
-                audit,
-                receipt
-            )
-        );
+        Map<String, Object> bodyReport = writeBodyReport(audit, receipt);
         Map<String, Object> requestSpecReport = writeRequestSpecReport(audit, receipt, bodyReport);
         Map<String, Object> handoffReport = writeExecutionHandoffReport(audit, receipt, bodyReport, requestSpecReport);
 
@@ -134,85 +148,92 @@ class NimCreateWriteBodyRebuilderSupportTest {
         List<Map<String, Object>> blockers = (List<Map<String, Object>>) guard.get("blockedBy");
         assertTrue(blockers.isEmpty());
 
-        Map<String, Object> mismatchedBodyReport = new java.util.LinkedHashMap<>(bodyReport);
-        mismatchedBodyReport.put("sourceAuditReceiptId", "nim-audit-durable-other");
-        Map<String, Object> mismatchGuard = NimCreateStateMachineSupport.evaluate(new NimCreateStateMachineSupport.ReadinessRequest(
-            Map.of("name", "nim-mismatch"),
+        Map<String, Object> forged = new LinkedHashMap<>(handoffReport);
+        forged.put("sourceRequestSpecDigest", "badbadbadbadbadbadbadbadbadbadbadbadbadbadbadbadbadbadbadbadbadb");
+
+        Map<String, Object> forgedGuard = NimCreateStateMachineSupport.evaluate(new NimCreateStateMachineSupport.ReadinessRequest(
+            Map.of("name", "nim-forged-handoff"),
             openGate(),
             completePreview(),
             HitlConfirmation.human("thread-1", "nim_create"),
             audit,
             receipt,
-            mismatchedBodyReport,
+            bodyReport,
             requestSpecReport,
-            handoffReport,
+            forged,
             completeReadinessPlan(),
             completeReadinessExecutionReport(),
             NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
             true
         ));
 
-        assertEquals("HELD", mismatchGuard.get("state"));
+        assertEquals("HELD", forgedGuard.get("state"));
         @SuppressWarnings("unchecked")
-        List<Map<String, Object>> mismatchBlockers = (List<Map<String, Object>>) mismatchGuard.get("blockedBy");
-        assertHasBlocker(mismatchBlockers, "WRITE_BODY_REBUILD_REPORT_CONTRACT_INVALID");
+        List<Map<String, Object>> forgedBlockers = (List<Map<String, Object>>) forgedGuard.get("blockedBy");
+        assertHasBlocker(forgedBlockers, "WRITE_EXECUTION_HANDOFF_REPORT_CONTRACT_INVALID");
     }
 
     @Test
-    void rebuilder_shouldRejectPreviewDirectPostSecretLeakageAndNonDurableReceipt() {
-        Map<String, Object> preview = new java.util.LinkedHashMap<>(completePreview());
-        preview.put("safeToPost", true);
-        @SuppressWarnings("unchecked")
-        Map<String, Object> bodyDraft = new java.util.LinkedHashMap<>((Map<String, Object>) preview.get("bodyDraft"));
-        bodyDraft.put("ngcApiKey", "must-not-leak");
-        preview.put("bodyDraft", bodyDraft);
-
+    void handoff_shouldRejectSecretLeakageAndMismatchedRequestSpec() {
         Map<String, Object> audit = completeAuditContext();
-        Map<String, Object> report = NimCreateWriteBodyRebuilderSupport.rebuild(
-            new NimCreateWriteBodyRebuilderSupport.WriteBodyRebuildInput(
-                openGate(),
-                preview,
-                audit,
-                NimCreateAuditWriterSupport.buildMockReceipt(audit)
-            )
-        );
+        Map<String, Object> receipt = durableAuditReceipt(audit);
+        Map<String, Object> bodyReport = writeBodyReport(audit, receipt);
+        Map<String, Object> requestSpecReport = new LinkedHashMap<>(writeRequestSpecReport(audit, receipt, bodyReport));
+        requestSpecReport.put("requestSpecDigest", "badbadbadbadbadbadbadbadbadbadbadbadbadbadbadbadbadbadbadbadbadb");
+        requestSpecReport.put("Authorization", "Bearer real-key-material");
 
-        assertEquals(false, report.get("writeBodyPrepared"));
-        assertEquals("", report.get("bodyDigest"));
+        Map<String, Object> report = writeExecutionHandoffReport(audit, receipt, bodyReport, requestSpecReport);
+
+        assertEquals(false, report.get("writeExecutionPrepared"));
+        assertEquals("", report.get("idempotencyKey"));
+        assertEquals("", report.get("handoffDigest"));
         @SuppressWarnings("unchecked")
-        Map<String, Object> body = (Map<String, Object>) report.get("body");
-        assertTrue(body.isEmpty());
+        Map<String, Object> plan = (Map<String, Object>) report.get("executionHandoffPlan");
+        assertTrue(plan.isEmpty());
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
-        assertHasBlocker(blockers, "DEPLOYMENT_BODY_PREVIEW_NOT_REBUILDABLE");
-        assertHasBlocker(blockers, "AUDIT_RECEIPT_NOT_BOUND_FOR_BODY_REBUILD");
-        assertHasBlocker(blockers, "WRITE_BODY_REBUILD_INPUT_CONTAINS_FORBIDDEN_SECRET");
+        assertHasBlocker(blockers, "WRITE_REQUEST_SPEC_REPORT_NOT_APPROVED_FOR_EXECUTION_HANDOFF");
+        assertHasBlocker(blockers, "WRITE_EXECUTION_HANDOFF_INPUT_CONTAINS_FORBIDDEN_SECRET");
     }
 
-    @Test
-    void rebuilder_shouldRejectUnsafeBodyIdentityFields() {
-        Map<String, Object> preview = new java.util.LinkedHashMap<>(completePreview());
-        @SuppressWarnings("unchecked")
-        Map<String, Object> bodyDraft = new java.util.LinkedHashMap<>((Map<String, Object>) preview.get("bodyDraft"));
-        bodyDraft.put("name", "../admin");
-        bodyDraft.put("image", "nvcr.io/nim/llama:1.0?debug=true");
-        preview.put("bodyDraft", bodyDraft);
-
-        Map<String, Object> audit = completeAuditContext();
-        Map<String, Object> report = NimCreateWriteBodyRebuilderSupport.rebuild(
-            new NimCreateWriteBodyRebuilderSupport.WriteBodyRebuildInput(
+    private Map<String, Object> writeExecutionHandoffReport(Map<String, Object> audit,
+                                                            Map<String, Object> receipt,
+                                                            Map<String, Object> bodyReport,
+                                                            Map<String, Object> requestSpecReport) {
+        return NimCreateWriteExecutionHandoffSupport.prepare(
+            new NimCreateWriteExecutionHandoffSupport.WriteExecutionHandoffInput(
                 openGate(),
-                preview,
                 audit,
-                durableAuditReceipt(audit)
+                receipt,
+                bodyReport,
+                requestSpecReport
             )
         );
+    }
 
-        assertEquals(false, report.get("writeBodyPrepared"));
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
-        assertHasBlocker(blockers, "WRITE_BODY_NAME_UNSAFE");
-        assertHasBlocker(blockers, "WRITE_BODY_IDENTITY_FIELDS_UNSAFE");
+    private Map<String, Object> writeRequestSpecReport(Map<String, Object> audit,
+                                                       Map<String, Object> receipt,
+                                                       Map<String, Object> bodyReport) {
+        return NimCreateWriteRequestSpecAdapterSupport.compile(
+            new NimCreateWriteRequestSpecAdapterSupport.WriteRequestSpecInput(
+                openGate(),
+                audit,
+                receipt,
+                bodyReport
+            )
+        );
+    }
+
+    private Map<String, Object> writeBodyReport(Map<String, Object> audit,
+                                                Map<String, Object> receipt) {
+        return NimCreateWriteBodyRebuilderSupport.rebuild(
+            new NimCreateWriteBodyRebuilderSupport.WriteBodyRebuildInput(
+                openGate(),
+                completePreview(),
+                audit,
+                receipt
+            )
+        );
     }
 
     private Map<String, Object> openGate() {
@@ -232,7 +253,7 @@ class NimCreateWriteBodyRebuilderSupportTest {
     }
 
     private Map<String, Object> completePreview() {
-        Map<String, Object> bodyDraft = new java.util.LinkedHashMap<>();
+        Map<String, Object> bodyDraft = new LinkedHashMap<>();
         bodyDraft.put("name", "llama-nim");
         bodyDraft.put("displayName", "llama-nim");
         bodyDraft.put("image", "nvcr.io/nim/llama:1.0");
@@ -244,12 +265,9 @@ class NimCreateWriteBodyRebuilderSupportTest {
         bodyDraft.put("gpuPercentLimits", 0);
         bodyDraft.put("gpuMemLimits", 0);
         bodyDraft.put("replicas", 1);
-        bodyDraft.put("enableWebSsh", true);
         bodyDraft.put("enableSecondNetwork", true);
-        bodyDraft.put("autoScaleConfig", null);
         bodyDraft.put("organizationId", "caller-forged");
         bodyDraft.put("token", "");
-        bodyDraft.put("ignoredCallerField", "ignored");
         return Map.of(
             "safeToPost", false,
             "previewOnly", true,
@@ -294,34 +312,6 @@ class NimCreateWriteBodyRebuilderSupportTest {
             entry("organizationId", audit.get("organizationId")),
             entry("targetTool", audit.get("targetTool")),
             entry("writeBodyProvenance", audit.get("writeBodyProvenance"))
-        );
-    }
-
-    private Map<String, Object> writeRequestSpecReport(Map<String, Object> audit,
-                                                       Map<String, Object> receipt,
-                                                       Map<String, Object> bodyReport) {
-        return NimCreateWriteRequestSpecAdapterSupport.compile(
-            new NimCreateWriteRequestSpecAdapterSupport.WriteRequestSpecInput(
-                openGate(),
-                audit,
-                receipt,
-                bodyReport
-            )
-        );
-    }
-
-    private Map<String, Object> writeExecutionHandoffReport(Map<String, Object> audit,
-                                                            Map<String, Object> receipt,
-                                                            Map<String, Object> bodyReport,
-                                                            Map<String, Object> requestSpecReport) {
-        return NimCreateWriteExecutionHandoffSupport.prepare(
-            new NimCreateWriteExecutionHandoffSupport.WriteExecutionHandoffInput(
-                openGate(),
-                audit,
-                receipt,
-                bodyReport,
-                requestSpecReport
-            )
         );
     }
 

@@ -31,6 +31,7 @@ class NimCreateAuditReadinessSupportTest {
         Map<String, Object> receipt = durableAuditReceipt(audit);
         Map<String, Object> bodyReport = writeBodyRebuildReport(gate, preview, audit, receipt);
         Map<String, Object> requestSpecReport = writeRequestSpecReport(gate, audit, receipt, bodyReport);
+        Map<String, Object> handoffReport = writeExecutionHandoffReport(gate, audit, receipt, bodyReport, requestSpecReport);
 
         assertEquals(true, audit.get("auditPrepared"));
         assertEquals("NIM_CREATE_REQUEST", audit.get("auditEventType"));
@@ -70,6 +71,7 @@ class NimCreateAuditReadinessSupportTest {
             receipt,
             bodyReport,
             requestSpecReport,
+            handoffReport,
             readiness,
             readinessExecutionReport(),
             NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
@@ -259,6 +261,22 @@ class NimCreateAuditReadinessSupportTest {
                 audit,
                 receipt,
                 bodyReport
+            )
+        );
+    }
+
+    private Map<String, Object> writeExecutionHandoffReport(Map<String, Object> gate,
+                                                            Map<String, Object> audit,
+                                                            Map<String, Object> receipt,
+                                                            Map<String, Object> bodyReport,
+                                                            Map<String, Object> requestSpecReport) {
+        return NimCreateWriteExecutionHandoffSupport.prepare(
+            new NimCreateWriteExecutionHandoffSupport.WriteExecutionHandoffInput(
+                gate,
+                audit,
+                receipt,
+                bodyReport,
+                requestSpecReport
             )
         );
     }

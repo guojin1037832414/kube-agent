@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-47, NIM controlled POST request spec adapter contract.
+- Current latest wave: M5.21-48, NIM write execution handoff and idempotency contract.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -46,6 +46,32 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-48 NIM write execution handoff and idempotency contract is implemented and verified:
+  - Added `NimCreateWriteExecutionHandoffSupport`.
+  - It is a pure/mock-first handoff layer between request spec adapter and future durable write executor.
+  - It consumes `creationGate`, `auditContext`, `auditReceipt`, `writeBodyRebuildReport`, and `writeRequestSpecReport`.
+  - It outputs `writeExecutionHandoff=NIM_CREATE_WRITE_EXECUTION_HANDOFF`, `executionMode=WRITE_EXECUTION_HANDOFF_CONTRACT_ONLY`, `networkAccess=NOT_PERFORMED`, `sideEffect=NONE`, `writeExecutionPrepared`, `futureExecutor=FUTURE_DURABLE_WRITE_EXECUTOR`, `executionHandoffPlan`, `idempotencyKey`, `handoffDigest`, and `blockedBy`.
+  - `idempotencyKeySource=SERVER_DERIVED_FROM_AUDIT_AND_REQUEST_SPEC`; caller-provided idempotency keys are forbidden and ignored by the state machine.
+  - Handoff plan declares future `POST /api/{orgId}/deployment`, but `realHttpExecutionAllowed=false` and no HTTP client is held.
+  - Handoff binds durable audit receipt, audit identity, body digest, request spec digest, pre-write audit handoff, and post-write readiness handoff.
+  - `NimCreateStateMachineSupport.ReadinessRequest` now includes `writeExecutionHandoffReport`.
+  - State-machine output now includes `writeExecutionHandoffRequired=true`.
+  - New blockers:
+    - `WRITE_EXECUTION_HANDOFF_REPORT_NOT_READY`
+    - `WRITE_EXECUTION_HANDOFF_REPORT_CONTRACT_INVALID`
+    - `WRITE_EXECUTION_HANDOFF_REPORT_CONTAINS_FORBIDDEN_SECRET`
+  - State machine recomputes `handoffDigest` and verifies handoff plan binding.
+  - Added `NimCreateWriteExecutionHandoffSupportTest`.
+  - Added `docs/M5_21_FORTY_EIGHTH_WAVE_NIM_WRITE_EXECUTION_HANDOFF_AUDIT_20260607.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateWriteExecutionHandoffSupportTest,NimCreateWriteRequestSpecAdapterSupportTest,NimCreateStateMachineSupportTest,NimCreateWriteBodyRebuilderSupportTest,NimCreateAuditReadinessSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateWriteExecutionHandoffSupportTest,NimCreateWriteRequestSpecAdapterSupportTest,NimCreateWriteBodyRebuilderSupportTest,NimCreateReadinessHttpAdapterSupportTest,NimCreateReadinessExecutorSupportTest,NimCreateStateMachineSupportTest,NimCreateAuditReadinessSupportTest,NimCreateAuditWriterSupportTest,NimTrustedPolicyProviderSupportTest,NimCreationGateSupportTest,NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest,HighRiskMutationToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest,M510ArchitectureBoundaryTest" test`
+    - `git diff --check`
+    - Static secret scan only matched docs and test sentinel fake values; no real secret found.
+    - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+  - No real `8100` access; no real audit table write; no real NIM polling; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
 
 - M5.21-47 NIM controlled POST request spec adapter contract is implemented and verified:
   - Added `NimCreateWriteRequestSpecAdapterSupport`.
@@ -535,14 +561,16 @@
 - `NimCreateStateMachineSupport` now requires a READY readiness executor report for future controlled writes; readiness plan alone is no longer sufficient.
 - `NimCreateReadinessHttpAdapterSupport` added for request spec compilation only; it does not execute HTTP, does not hold an HTTP client, rejects unsafe service URLs and unknown readiness endpoints, and cannot be used as a write-release credential.
 - `NimCreateWriteBodyRebuilderSupport` added for controlled write body rebuilding only; it creates a testable, audit-receipt-bound DeploymentDTO contract and prevents preview body direct reuse.
+- `NimCreateWriteRequestSpecAdapterSupport` added for controlled POST request spec compilation only; it fixes the future path/body/auth boundary while still performing no network access.
+- `NimCreateWriteExecutionHandoffSupport` added for controlled write execution handoff only; it binds request spec, body digest, durable audit receipt, server-derived idempotency key, and post-write readiness handoff before any future durable writer can execute.
 
 ## Next Step
 
 Continue NIM orchestration only through safe slices:
-- design durable audit writer adapter replacement points after identifying the true audit table/log backend,
+- design future durable write executor contract shell without executing real POST,
+- identify the true durable audit log/table/service and design replacement points for `NimCreateAuditWriterSupport`,
 - later wire `NimTrustedPolicyProviderSupport` to real backend license/user/org readers only after mock-first contracts are complete,
-- design controlled POST body rebuild contract so future writes never reuse preflight preview bodies directly,
-- later design a fail-closed POST request spec adapter that consumes the rebuilt body contract without executing real HTTP,
+- keep `nim_create` HOLD until trusted policy, durable audit writer, durable write executor, readiness aftercare, and release switch all pass review,
 - or pick another mature GET area with clean backend/frontend evidence.
 
 ## Recovery Reminder

@@ -6,6 +6,27 @@
 
 ---
 
+## [M5.21-48] - 第四十八批 NIM 写执行交接与幂等契约审计
+
+**交付**: 新增 `NimCreateWriteExecutionHandoffSupport`，把未来 `nim_create` 真实 durable write executor 前的执行交接、服务端幂等键、pre-write audit handoff 和 post-write readiness handoff 独立合同化；本批仍不执行真实网络写入。
+
+**变更**
+- 新增 `NimCreateWriteExecutionHandoffSupport`，纯函数消费 `creationGate`、`auditContext`、`auditReceipt`、`writeBodyRebuildReport`、`writeRequestSpecReport`。
+- `prepare(...)` 输出 `writeExecutionHandoff=NIM_CREATE_WRITE_EXECUTION_HANDOFF`、`executionMode=WRITE_EXECUTION_HANDOFF_CONTRACT_ONLY`、`networkAccess=NOT_PERFORMED`、`sideEffect=NONE`、`writeExecutionPrepared`、`futureExecutor=FUTURE_DURABLE_WRITE_EXECUTOR`、`executionHandoffPlan`、`idempotencyKey`、`handoffDigest` 和 `blockedBy`。
+- handoff plan 固定为未来 `POST /api/{orgId}/deployment` 形态，但 `realHttpExecutionAllowed=false`，并绑定 `requestSpecDigest`、`bodyDigest`、durable audit receipt 和 server-derived idempotency key。
+- `idempotencyKeySource=SERVER_DERIVED_FROM_AUDIT_AND_REQUEST_SPEC`，调用方不能提供或覆盖幂等键。
+- `NimCreateStateMachineSupport.ReadinessRequest` 新增 `writeExecutionHandoffReport`，并保留兼容构造器让旧负例可继续表达缺失 handoff。
+- 状态机输出新增 `writeExecutionHandoffRequired=true`。
+- 缺少 handoff 报告返回 `WRITE_EXECUTION_HANDOFF_REPORT_NOT_READY`；合约不合法、digest/receipt/request spec/audit identity 不匹配返回 `WRITE_EXECUTION_HANDOFF_REPORT_CONTRACT_INVALID`；secret 泄漏返回 `WRITE_EXECUTION_HANDOFF_REPORT_CONTAINS_FORBIDDEN_SECRET`。
+- 状态机会复算 `handoffDigest`，并确认 handoff plan 绑定 request spec digest、body digest、pre-write audit handoff 和 post-write readiness handoff。
+- 新增 `NimCreateWriteExecutionHandoffSupportTest`，并更新状态机、request spec、body rebuilder、audit readiness 的未来绿色 fixture。
+- 新增 `docs/M5_21_FORTY_EIGHTH_WAVE_NIM_WRITE_EXECUTION_HANDOFF_AUDIT_20260607.md`，并更新 M5.21 波次索引和项目记忆。
+
+**安全**
+- 本批不新增 Tool/Controller，不持有 HTTP client，不访问真实 `8100`，不调用 `POST /api/{orgId}/deployment`。
+- handoff 报告不是 release credential，不能替代 trusted policy、HITL、durable audit receipt、body rebuild、request spec、READY readiness executor 或 release switch。
+- `nim_create` 继续保持 `httpMethod=NONE + PLACEHOLDER + requiresConfirmation=true`。
+
 ## [M5.21-47] - 第四十七批 NIM 受控 POST request spec 适配器审计
 
 **交付**: 新增 `NimCreateWriteRequestSpecAdapterSupport`，把未来 `nim_create` 真实 POST 前的 HTTP 请求规格独立合同化；本批仍不执行真实网络写入。

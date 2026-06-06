@@ -73,6 +73,7 @@ final class NimCreateStateMachineSupport {
             Map.of(),
             Map.of(),
             Map.of(),
+            Map.of(),
             "",
             false
         ));
@@ -107,6 +108,14 @@ final class NimCreateStateMachineSupport {
             safeRequest.writeRequestSpecReport(),
             blockers
         );
+        validateWriteExecutionHandoffReport(
+            safeRequest.auditContext(),
+            safeRequest.auditReceipt(),
+            safeRequest.writeBodyRebuildReport(),
+            safeRequest.writeRequestSpecReport(),
+            safeRequest.writeExecutionHandoffReport(),
+            blockers
+        );
         validateReadinessPlan(safeRequest.readinessPlan(), blockers);
         validateReadinessExecutionReport(safeRequest.readinessExecutionReport(), blockers);
         validateWriteBodyProvenance(safeRequest.writeBodyProvenance(), blockers);
@@ -127,6 +136,7 @@ final class NimCreateStateMachineSupport {
         result.put("fallbackWriteAllowed", false);
         result.put("writeBodyRebuildRequired", true);
         result.put("writeRequestSpecRequired", true);
+        result.put("writeExecutionHandoffRequired", true);
         result.put("readinessExecutionRequired", true);
         result.put("apiKeyPolicy", API_KEY_POLICY);
         return result;
@@ -519,6 +529,75 @@ final class NimCreateStateMachineSupport {
         }
     }
 
+    private static void validateWriteExecutionHandoffReport(Map<String, Object> auditContext,
+                                                            Map<String, Object> auditReceipt,
+                                                            Map<String, Object> writeBodyRebuildReport,
+                                                            Map<String, Object> writeRequestSpecReport,
+                                                            Map<String, Object> writeExecutionHandoffReport,
+                                                            List<Map<String, Object>> blockers) {
+        if (writeExecutionHandoffReport.isEmpty()) {
+            blockers.add(blocker(
+                "WRITE_EXECUTION_HANDOFF_REPORT_NOT_READY",
+                "缺少受控写执行交接报告；未来真实写入不能从 request spec 直接跳到 durable write executor。",
+                "write-execution-handoff"
+            ));
+            return;
+        }
+
+        Map<String, Object> handoffPlan = objectMap(writeExecutionHandoffReport.get("executionHandoffPlan"));
+        Map<String, Object> idempotency = objectMap(handoffPlan.get("idempotency"));
+        Map<String, Object> preWriteAuditHandoff = objectMap(handoffPlan.get("preWriteAuditHandoff"));
+        Map<String, Object> postWriteReadinessHandoff = objectMap(handoffPlan.get("postWriteReadinessHandoff"));
+        boolean contractValid = NimCreateWriteExecutionHandoffSupport.HANDOFF_NAME.equals(text(writeExecutionHandoffReport.get("writeExecutionHandoff")))
+            && NimCreateWriteExecutionHandoffSupport.EXECUTION_MODE.equals(text(writeExecutionHandoffReport.get("executionMode")))
+            && "NOT_PERFORMED".equals(text(writeExecutionHandoffReport.get("networkAccess")))
+            && "NONE".equals(text(writeExecutionHandoffReport.get("sideEffect")))
+            && Boolean.TRUE.equals(writeExecutionHandoffReport.get("writeExecutionPrepared"))
+            && TARGET_TOOL.equals(text(writeExecutionHandoffReport.get("targetTool")))
+            && "POST".equals(text(writeExecutionHandoffReport.get("httpMethod")))
+            && NimCreateAuditReadinessSupport.BACKEND_ENDPOINT.equals(text(writeExecutionHandoffReport.get("backendEndpoint")))
+            && "/api/{orgId}/deployment".equals(text(writeExecutionHandoffReport.get("pathTemplate")))
+            && text(auditContext.get("organizationId")).equals(text(writeExecutionHandoffReport.get("organizationId")))
+            && NimCreateWriteExecutionHandoffSupport.FUTURE_EXECUTOR.equals(text(writeExecutionHandoffReport.get("futureExecutor")))
+            && Boolean.FALSE.equals(writeExecutionHandoffReport.get("releaseCredential"))
+            && Boolean.FALSE.equals(writeExecutionHandoffReport.get("realHttpExecutionAllowed"))
+            && Boolean.TRUE.equals(writeExecutionHandoffReport.get("preWriteAuditRequired"))
+            && Boolean.TRUE.equals(writeExecutionHandoffReport.get("idempotencyRequired"))
+            && NimCreateWriteExecutionHandoffSupport.IDEMPOTENCY_KEY_SOURCE.equals(text(writeExecutionHandoffReport.get("idempotencyKeySource")))
+            && text(writeExecutionHandoffReport.get("idempotencyKey")).matches("nim-create-[a-f0-9]{32}")
+            && Boolean.FALSE.equals(writeExecutionHandoffReport.get("callerIdempotencyKeyAllowed"))
+            && Boolean.FALSE.equals(writeExecutionHandoffReport.get("callerHeadersAllowed"))
+            && Boolean.FALSE.equals(writeExecutionHandoffReport.get("authorizationHeaderFromCallerAllowed"))
+            && Boolean.FALSE.equals(writeExecutionHandoffReport.get("realApiKeyAllowed"))
+            && text(auditReceipt.get("receiptId")).equals(text(writeExecutionHandoffReport.get("sourceAuditReceiptId")))
+            && text(auditReceipt.get("eventDigest")).equals(text(writeExecutionHandoffReport.get("sourceAuditEventDigest")))
+            && text(auditContext.get("requestId")).equals(text(writeExecutionHandoffReport.get("sourceRequestId")))
+            && text(auditContext.get("conversationId")).equals(text(writeExecutionHandoffReport.get("sourceConversationId")))
+            && text(auditContext.get("userId")).equals(text(writeExecutionHandoffReport.get("sourceUserId")))
+            && text(writeBodyRebuildReport.get("bodyDigest")).equals(text(writeExecutionHandoffReport.get("sourceBodyDigest")))
+            && text(writeRequestSpecReport.get("requestSpecDigest")).equals(text(writeExecutionHandoffReport.get("sourceRequestSpecDigest")))
+            && NimCreateWriteExecutionHandoffSupport.HANDOFF_DIGEST_ALGORITHM.equals(text(writeExecutionHandoffReport.get("handoffDigestAlgorithm")))
+            && text(writeExecutionHandoffReport.get("handoffDigest")).matches("[a-f0-9]{64}")
+            && text(writeExecutionHandoffReport.get("handoffDigest")).equals(digestFor(handoffPlan))
+            && listOfMaps(writeExecutionHandoffReport.get("blockedBy")).isEmpty()
+            && handoffPlanContractValid(auditContext, auditReceipt, writeBodyRebuildReport, writeRequestSpecReport, handoffPlan, idempotency, preWriteAuditHandoff, postWriteReadinessHandoff);
+
+        if (!contractValid) {
+            blockers.add(blocker(
+                "WRITE_EXECUTION_HANDOFF_REPORT_CONTRACT_INVALID",
+                "受控写执行交接报告必须来自 NIM_CREATE_WRITE_EXECUTION_HANDOFF，绑定 audit receipt/request spec digest，并声明服务端幂等键与写后 readiness handoff。",
+                "write-execution-handoff"
+            ));
+        }
+        if (containsForbiddenSecretMaterial(writeExecutionHandoffReport)) {
+            blockers.add(blocker(
+                "WRITE_EXECUTION_HANDOFF_REPORT_CONTAINS_FORBIDDEN_SECRET",
+                "受控写执行交接报告不得携带 Authorization、token、password、secret 或真实 NGC/NIM API Key。",
+                "write-execution-handoff"
+            ));
+        }
+    }
+
     private static void validateWriteBodyProvenance(String writeBodyProvenance,
                                                     List<Map<String, Object>> blockers) {
         String provenance = text(writeBodyProvenance);
@@ -579,6 +658,13 @@ final class NimCreateStateMachineSupport {
             "writeRequestPrepared",
             "requestSpec",
             "requestSpecDigest",
+            "writeExecutionHandoffReport",
+            "writeExecutionHandoff",
+            "writeExecutionPrepared",
+            "executionHandoffPlan",
+            "handoffDigest",
+            "idempotencyKey",
+            "idempotency",
             "Authorization",
             "headers",
             "creationGate",
@@ -726,6 +812,50 @@ final class NimCreateStateMachineSupport {
             && NimCreateAuditReadinessSupport.BACKEND_ENDPOINT.equals(text(requestSpec.get("futureSideEffectIfExecuted")))
             && requestBody.equals(objectMap(writeBodyRebuildReport.get("body")))
             && writeBodyContractValid(requestBody);
+    }
+
+    private static boolean handoffPlanContractValid(Map<String, Object> auditContext,
+                                                    Map<String, Object> auditReceipt,
+                                                    Map<String, Object> writeBodyRebuildReport,
+                                                    Map<String, Object> writeRequestSpecReport,
+                                                    Map<String, Object> handoffPlan,
+                                                    Map<String, Object> idempotency,
+                                                    Map<String, Object> preWriteAuditHandoff,
+                                                    Map<String, Object> postWriteReadinessHandoff) {
+        String organizationId = text(auditContext.get("organizationId"));
+        return !handoffPlan.isEmpty()
+            && "deployment-create".equals(text(handoffPlan.get("target")))
+            && "POST".equals(text(handoffPlan.get("method")))
+            && NimCreateAuditReadinessSupport.BACKEND_ENDPOINT.equals(text(handoffPlan.get("backendEndpoint")))
+            && "/api/{orgId}/deployment".equals(text(handoffPlan.get("pathTemplate")))
+            && ("/api/" + organizationId + "/deployment").equals(text(handoffPlan.get("resolvedPath")))
+            && NimCreateWriteExecutionHandoffSupport.FUTURE_EXECUTOR.equals(text(handoffPlan.get("futureExecutor")))
+            && "NOT_PERFORMED".equals(text(handoffPlan.get("networkAccess")))
+            && "NONE".equals(text(handoffPlan.get("sideEffect")))
+            && text(writeRequestSpecReport.get("requestSpecDigest")).equals(text(handoffPlan.get("requestSpecDigest")))
+            && text(writeBodyRebuildReport.get("bodyDigest")).equals(text(handoffPlan.get("bodyDigest")))
+            && Boolean.FALSE.equals(handoffPlan.get("callerHeadersAllowed"))
+            && Boolean.FALSE.equals(handoffPlan.get("authorizationHeaderFromCallerAllowed"))
+            && Boolean.FALSE.equals(handoffPlan.get("realApiKeyAllowed"))
+            && "KUBE_MANAGER_HTTP_CLIENT_CONTEXT_ONLY".equals(text(handoffPlan.get("kubeManagerAuthBoundary")))
+            && Boolean.TRUE.equals(idempotency.get("required"))
+            && text(idempotency.get("key")).matches("nim-create-[a-f0-9]{32}")
+            && NimCreateWriteExecutionHandoffSupport.IDEMPOTENCY_KEY_SOURCE.equals(text(idempotency.get("keySource")))
+            && Boolean.FALSE.equals(idempotency.get("callerKeyAllowed"))
+            && Boolean.TRUE.equals(idempotency.get("reuseAllowedOnlyForSameAuditReceiptAndRequestSpec"))
+            && Boolean.TRUE.equals(preWriteAuditHandoff.get("required"))
+            && text(auditReceipt.get("receiptId")).equals(text(preWriteAuditHandoff.get("receiptId")))
+            && text(auditReceipt.get("eventDigest")).equals(text(preWriteAuditHandoff.get("eventDigest")))
+            && REQUIRED_AUDIT_STORAGE_MODE.equals(text(preWriteAuditHandoff.get("storageMode")))
+            && REQUIRED_AUDIT_RECEIPT_STATUS.equals(text(preWriteAuditHandoff.get("receiptStatus")))
+            && Boolean.TRUE.equals(preWriteAuditHandoff.get("durable"))
+            && Boolean.TRUE.equals(preWriteAuditHandoff.get("realStorageTouched"))
+            && Boolean.TRUE.equals(postWriteReadinessHandoff.get("requiredAfterWrite"))
+            && NimCreateReadinessExecutorSupport.EXECUTOR_NAME.equals(text(postWriteReadinessHandoff.get("nextExecutor")))
+            && Boolean.TRUE.equals(postWriteReadinessHandoff.get("pollOnly"))
+            && Boolean.TRUE.equals(postWriteReadinessHandoff.get("readOnly"))
+            && API_KEY_POLICY.equals(text(postWriteReadinessHandoff.get("apiKeyHandling")))
+            && Boolean.TRUE.equals(postWriteReadinessHandoff.get("forbiddenBeforeWrite"));
     }
 
     private static String digestFor(Map<String, Object> value) {
@@ -905,11 +1035,41 @@ final class NimCreateStateMachineSupport {
         Map<String, Object> auditReceipt,
         Map<String, Object> writeBodyRebuildReport,
         Map<String, Object> writeRequestSpecReport,
+        Map<String, Object> writeExecutionHandoffReport,
         Map<String, Object> readinessPlan,
         Map<String, Object> readinessExecutionReport,
         String writeBodyProvenance,
         boolean nimCreateReleased
     ) {
+        ReadinessRequest(Map<String, Object> params,
+                         Map<String, Object> creationGate,
+                         Map<String, Object> deploymentBodyPreview,
+                         HitlConfirmation hitlConfirmation,
+                         Map<String, Object> auditContext,
+                         Map<String, Object> auditReceipt,
+                         Map<String, Object> writeBodyRebuildReport,
+                         Map<String, Object> writeRequestSpecReport,
+                         Map<String, Object> readinessPlan,
+                         Map<String, Object> readinessExecutionReport,
+                         String writeBodyProvenance,
+                         boolean nimCreateReleased) {
+            this(
+                params,
+                creationGate,
+                deploymentBodyPreview,
+                hitlConfirmation,
+                auditContext,
+                auditReceipt,
+                writeBodyRebuildReport,
+                writeRequestSpecReport,
+                Map.of(),
+                readinessPlan,
+                readinessExecutionReport,
+                writeBodyProvenance,
+                nimCreateReleased
+            );
+        }
+
         ReadinessRequest(Map<String, Object> params,
                          Map<String, Object> creationGate,
                          Map<String, Object> deploymentBodyPreview,
@@ -930,6 +1090,7 @@ final class NimCreateStateMachineSupport {
                 auditReceipt,
                 writeBodyRebuildReport,
                 Map.of(),
+                Map.of(),
                 readinessPlan,
                 readinessExecutionReport,
                 writeBodyProvenance,
@@ -956,6 +1117,7 @@ final class NimCreateStateMachineSupport {
                 auditReceipt,
                 Map.of(),
                 Map.of(),
+                Map.of(),
                 readinessPlan,
                 readinessExecutionReport,
                 writeBodyProvenance,
@@ -981,6 +1143,7 @@ final class NimCreateStateMachineSupport {
                 auditReceipt,
                 Map.of(),
                 Map.of(),
+                Map.of(),
                 readinessPlan,
                 Map.of(),
                 writeBodyProvenance,
@@ -996,6 +1159,7 @@ final class NimCreateStateMachineSupport {
             auditReceipt = auditReceipt == null ? Map.of() : objectMap(auditReceipt);
             writeBodyRebuildReport = writeBodyRebuildReport == null ? Map.of() : objectMap(writeBodyRebuildReport);
             writeRequestSpecReport = writeRequestSpecReport == null ? Map.of() : objectMap(writeRequestSpecReport);
+            writeExecutionHandoffReport = writeExecutionHandoffReport == null ? Map.of() : objectMap(writeExecutionHandoffReport);
             readinessPlan = readinessPlan == null ? Map.of() : objectMap(readinessPlan);
             readinessExecutionReport = readinessExecutionReport == null ? Map.of() : objectMap(readinessExecutionReport);
             writeBodyProvenance = writeBodyProvenance == null ? "" : writeBodyProvenance.trim();

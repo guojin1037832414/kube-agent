@@ -204,6 +204,7 @@ class NimCreateStateMachineSupportTest {
         Map<String, Object> receipt = completeAuditReceipt();
         Map<String, Object> bodyReport = completeWriteBodyRebuildReport(audit, receipt);
         Map<String, Object> requestSpecReport = completeWriteRequestSpecReport(audit, receipt, bodyReport);
+        Map<String, Object> handoffReport = completeWriteExecutionHandoffReport(audit, receipt, bodyReport, requestSpecReport);
         Map<String, Object> guard = NimCreateStateMachineSupport.evaluate(new NimCreateStateMachineSupport.ReadinessRequest(
             Map.of("name", "nim-ready"),
             openGate(),
@@ -213,6 +214,7 @@ class NimCreateStateMachineSupportTest {
             receipt,
             bodyReport,
             requestSpecReport,
+            handoffReport,
             completeReadinessPlan(),
             completeReadinessExecutionReport(),
             NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
@@ -421,6 +423,21 @@ class NimCreateStateMachineSupportTest {
                 audit,
                 receipt,
                 bodyReport
+            )
+        );
+    }
+
+    private Map<String, Object> completeWriteExecutionHandoffReport(Map<String, Object> audit,
+                                                                    Map<String, Object> receipt,
+                                                                    Map<String, Object> bodyReport,
+                                                                    Map<String, Object> requestSpecReport) {
+        return NimCreateWriteExecutionHandoffSupport.prepare(
+            new NimCreateWriteExecutionHandoffSupport.WriteExecutionHandoffInput(
+                openGate(),
+                audit,
+                receipt,
+                bodyReport,
+                requestSpecReport
             )
         );
     }
