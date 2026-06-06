@@ -109,6 +109,8 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - audit context 先被 durable audit writer 持久化，并返回 `DURABLE_RECORDED + DURABLE_AUDIT_LOG` receipt。
 - mature `kube-manager` 的 `sys_log` 只能作为 durable audit storage 候选证据；它是通用系统日志，不能直接替代 NIM 专用 pre-write audit receipt。
 - 未来 NIM audit writer 必须从可信服务端 principal 获取 username/orgId/userId，只写脱敏 params/body 摘要，并区分 pre-write intent 与 post-write result。
+- 当前 `NimCreateDurableAuditWriterPlanSupport` 只生成两阶段 writer plan 和 record templates，仍然 `IMPLEMENTATION_HOLD`；计划层不能替代 `DURABLE_RECORDED` receipt。
+- 真实 dedicated writer 必须先通过 storage availability gate，再持久化 pre-write intent，POST 结束后持久化 post-write result，两条记录都确认 durable 后才允许签发 receipt。
 - write body rebuilder 只能从已审计 NIM 状态重建白名单 DeploymentDTO，不得复用 preview body 引用。
 - POST request spec adapter 只能从 body rebuild report 编译 `POST /api/{orgId}/deployment` 规格，且 `sideEffect=NONE`、无调用方 header、无 Authorization、无真实 NGC/NIM API Key。
 - write execution handoff 必须在真实 durable writer 前绑定 request spec digest、body digest、durable audit receipt、服务端派生幂等键和写后 readiness handoff；它仍然不是 HTTP 执行器。

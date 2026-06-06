@@ -81,9 +81,41 @@ Current track:
 
 Recently completed:
 
-`M5.21-51 NIM durable audit storage candidate contract`
+`M5.21-52 NIM durable audit writer two-phase plan contract`
 
 Latest checkpoint:
+
+- Date: 2026-06-07 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+  - M5.21-52 implemented and verified:
+  - Added `NimCreateDurableAuditWriterPlanSupport` as a pure/mock-first two-phase plan contract for the future dedicated NIM durable audit writer.
+  - It consumes:
+    - `auditContext`
+    - `trustedPrincipalSnapshot`
+    - `durableAuditStorageReport`
+    - optional `writeRequestSpecReport`
+    - optional `writeExecutionHandoffReport`
+  - It returns `durableAuditWriterPlan=NIM_CREATE_DURABLE_AUDIT_WRITER_PLAN`, `executionMode=DURABLE_AUDIT_WRITER_PLAN_CONTRACT_ONLY`, and `writerState=IMPLEMENTATION_HOLD|REJECTED`.
+  - Positive input produces `writerPlan.storageAvailabilityGate`, `trustedIdentityBinding`, `preWriteRecordTemplate`, `postWriteRecordTemplate`, and `receiptIssuanceRule`.
+  - Positive input remains blocked by:
+    - `DURABLE_AUDIT_STORAGE_CANDIDATE_IMPLEMENTATION_HOLD`
+    - `DURABLE_AUDIT_WRITER_IMPLEMENTATION_HOLD`
+  - Missing storage candidate report is rejected with `DURABLE_AUDIT_STORAGE_CANDIDATE_REPORT_NOT_READY`.
+  - Forged durable/release/receipt claims are rejected with `DURABLE_AUDIT_WRITER_FORGED_RELEASE_CLAIM`.
+  - Secret leakage is rejected with `DURABLE_AUDIT_WRITER_INPUT_CONTAINS_FORBIDDEN_SECRET`.
+  - Added `NimCreateDurableAuditWriterPlanSupportTest`.
+  - Added `docs/M5_21_FIFTY_SECOND_WAVE_NIM_DURABLE_AUDIT_WRITER_PLAN_AUDIT_20260607.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateDurableAuditWriterPlanSupportTest,NimCreateDurableAuditStorageSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateDurableAuditWriterPlanSupportTest,NimCreateDurableAuditStorageSupportTest,NimCreateWriteExecutionHandoffSupportTest,NimCreateWriteRequestSpecAdapterSupportTest,NimCreateWriteBodyRebuilderSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateDurableAuditWriterPlanSupportTest,NimCreateDurableAuditStorageSupportTest,NimCreateAuditWriterSupportTest,NimCreateStateMachineSupportTest,NimCreateDurableWriteExecutorSupportTest,NimCreateWriteExecutionHandoffSupportTest,NimCreateWriteRequestSpecAdapterSupportTest,NimCreateWriteBodyRebuilderSupportTest,NimCreateReadinessHttpAdapterSupportTest,NimCreateReadinessExecutorSupportTest,NimCreateAuditReadinessSupportTest,NimTrustedPolicyProviderSupportTest,NimCreationGateSupportTest,NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest,HighRiskMutationToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest,M510ArchitectureBoundaryTest" test`
+    - `git diff --check`
+    - Real secret-pattern static scan found 0 matches.
+    - Boundary scan found no new real `ElasticsearchTemplate`, `ISysLogService`, HTTP client, or `java.net` import in this wave.
+    - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+  - External recovery docs synced and SHA256-verified to `H:\codex重要文件\kube-agent`.
+  - No real `8100` access; no Elasticsearch connection; no `ISysLogService` call; no `sys_log` write; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
 
 - Date: 2026-06-07 06:31 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
@@ -752,13 +784,14 @@ Latest in-progress/completed chunk after checkpoint:
   - Added `RegistrySiteToolHttpContractTest`.
   - Targeted test passed: `mvn -q "-Dtest=RegistrySiteToolHttpContractTest,ListToolParameterPassThroughContractTest,ListToolParameterSpecContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest" test`.
 
-Current NIM chain summary after M5.21-51:
+Current NIM chain summary after M5.21-52:
 
 - Public `nim_deployment_preflight` remains read-only and cannot create deployments.
 - `NimTemplateMergeSupport` creates only `safeToPost=false` previews.
 - `NimCreationGateSupport` and `NimTrustedPolicySnapshot` model trusted policy/gate evidence, but public facts remain untrusted until a backend provider supplies them.
 - `NimCreateStateMachineSupport` requires trusted policy, server HITL, durable audit receipt, controlled body rebuild, controlled POST request spec, controlled write execution handoff, durable write executor report, READY readiness execution report, and a code release switch before future writes.
 - `NimCreateDurableAuditStorageSupport` now identifies mature `sys_log` as a partial-fit durable storage candidate, but keeps it as `IMPLEMENTATION_HOLD` until a dedicated NIM audit writer exists.
+- `NimCreateDurableAuditWriterPlanSupport` now turns the `sys_log` candidate evidence into a dedicated two-phase writer plan with pre-write intent, post-write result, storage availability gate, trusted principal binding, and receipt issuance rules; it still remains `IMPLEMENTATION_HOLD` and cannot issue durable receipts.
 - `NimCreateWriteExecutionHandoffSupport` is the newest gate; it binds request spec/body/audit receipt with a server-derived idempotency key and post-write readiness handoff, but it still does not execute HTTP.
 - `NimCreateDurableWriteExecutorSupport` is the future writer contract shell; it accepts trusted handoff/request spec input but still returns `IMPLEMENTATION_HOLD` and `writeExecuted=false`.
 - The state machine now accepts the current executor shell only as evidence shape, then blocks release with `DURABLE_WRITE_EXECUTOR_IMPLEMENTATION_HOLD`.
@@ -766,8 +799,8 @@ Current NIM chain summary after M5.21-51:
 Recommended next work:
 
 - Continue NIM orchestration through safe slices:
-  - design a dedicated NIM durable audit writer interface using the `sys_log` candidate only as evidence, not as a direct release credential,
-  - define pre-write intent and post-write result records plus storage availability gates,
+  - design the real dedicated NIM durable audit writer boundary and test double from the M5.21-52 plan,
+  - implement storage availability gate semantics before any real pre-write record can be accepted,
   - design the reviewed real durable write executor boundary around a controlled kube-manager HTTP boundary, write-before/write-after audit, idempotency persistence, POST response validation, and post-write readiness triggering,
   - later wire `NimTrustedPolicyProviderSupport` to real backend license/user/org readers only after contract tests exist,
   - keep `nim_create` HOLD until trusted policy, durable audit writer, durable write executor, readiness aftercare, and release switch all pass review,

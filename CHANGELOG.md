@@ -6,6 +6,26 @@
 
 ---
 
+## [M5.21-52] - 第五十二批 NIM durable audit writer 两阶段计划契约审计
+
+**交付**: 在 M5.21-51 `sys_log` 持久化候选证据之上，新增 NIM 专用 durable audit writer 的两阶段计划契约，明确未来必须先写 pre-write intent、再写 post-write result，同时当前仍不能签发 durable receipt。
+
+**变更**
+- 新增 `NimCreateDurableAuditWriterPlanSupport`，纯数据消费 `auditContext`、`trustedPrincipalSnapshot`、`durableAuditStorageReport`，并可选绑定 `writeRequestSpecReport` / `writeExecutionHandoffReport`。
+- 输出 `durableAuditWriterPlan=NIM_CREATE_DURABLE_AUDIT_WRITER_PLAN`、`executionMode=DURABLE_AUDIT_WRITER_PLAN_CONTRACT_ONLY`、`writerState=IMPLEMENTATION_HOLD|REJECTED`。
+- 正向输入生成 `writerPlan.storageAvailabilityGate`、`trustedIdentityBinding`、`preWriteRecordTemplate`、`postWriteRecordTemplate`、`receiptIssuanceRule`。
+- `preWriteRecordTemplate` 固化 future pre-write intent 记录；`postWriteRecordTemplate` 固化 future post-write result 记录，并可绑定 request spec digest、body digest、handoff digest 和服务端幂等键。
+- 正向输入仍返回 `DURABLE_AUDIT_STORAGE_CANDIDATE_IMPLEMENTATION_HOLD` 与 `DURABLE_AUDIT_WRITER_IMPLEMENTATION_HOLD`。
+- 缺少 storage candidate report 返回 `DURABLE_AUDIT_STORAGE_CANDIDATE_REPORT_NOT_READY`。
+- 伪造 durable/release/receipt claim 返回 `DURABLE_AUDIT_WRITER_FORGED_RELEASE_CLAIM`；secret 泄漏返回 `DURABLE_AUDIT_WRITER_INPUT_CONTAINS_FORBIDDEN_SECRET`。
+- 新增 `NimCreateDurableAuditWriterPlanSupportTest`。
+- 新增 `docs/M5_21_FIFTY_SECOND_WAVE_NIM_DURABLE_AUDIT_WRITER_PLAN_AUDIT_20260607.md`，并更新 M5.21 波次索引和项目记忆。
+
+**安全**
+- 本批不连接 Elasticsearch，不调用 `ISysLogService`，不写 `sys_log`，不新增 HTTP client，不访问真实 `8100`，不调用 `POST /api/{orgId}/deployment`。
+- writer plan 不是 durable receipt，不能替代 `DURABLE_RECORDED + DURABLE_AUDIT_LOG`。
+- `nim_create` 继续保持 `httpMethod=NONE + PLACEHOLDER + requiresConfirmation=true`。
+
 ## [M5.21-51] - 第五十一批 NIM durable audit storage 候选契约审计
 
 **交付**: 识别 mature `kube-manager` 的 `sys_log` 系统日志链路作为 NIM durable audit storage 候选证据，并新增纯函数契约，明确它还不能直接签发 NIM 专用 durable audit receipt。
