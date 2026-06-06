@@ -110,6 +110,7 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - write body rebuilder 只能从已审计 NIM 状态重建白名单 DeploymentDTO，不得复用 preview body 引用。
 - POST request spec adapter 只能从 body rebuild report 编译 `POST /api/{orgId}/deployment` 规格，且 `sideEffect=NONE`、无调用方 header、无 Authorization、无真实 NGC/NIM API Key。
 - write execution handoff 必须在真实 durable writer 前绑定 request spec digest、body digest、durable audit receipt、服务端派生幂等键和写后 readiness handoff；它仍然不是 HTTP 执行器。
+- durable write executor 当前只有合同壳，合法 handoff 也只能进入 `IMPLEMENTATION_HOLD`，不得产生 `writeExecuted=true` 或部署 ID。
 - readiness executor 必须只读轮询并返回 READY，不能在 readiness 阶段调用 chat/embedding 写接口。
 - 最后还需要代码级 release switch 显式打开，才能考虑接入真实 durable write executor。
 

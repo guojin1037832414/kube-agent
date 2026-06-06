@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-48, NIM write execution handoff and idempotency contract.
+- Current latest wave: M5.21-49, NIM durable write executor contract shell.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -46,6 +46,20 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-49 NIM durable write executor contract shell is implemented and verified:
+  - Added `NimCreateDurableWriteExecutorSupport`.
+  - It is a pure/mock-first contract shell for the future `FUTURE_DURABLE_WRITE_EXECUTOR`.
+  - It consumes `writeExecutionHandoffReport` and `writeRequestSpecReport`.
+  - It outputs `durableWriteExecutor=FUTURE_DURABLE_WRITE_EXECUTOR`, `executionMode=DURABLE_WRITE_EXECUTOR_CONTRACT_SHELL`, `executionState=IMPLEMENTATION_HOLD|REJECTED`, `networkAccess=NOT_PERFORMED`, `sideEffect=NONE`, `executionAttemptSpec`, and `blockedBy`.
+  - Even trusted handoff/request spec input only returns `inputAccepted=true`, `writeAttempted=false`, `writeExecuted=false`, `postWriteReadinessTriggered=false`, and `DURABLE_WRITE_EXECUTOR_IMPLEMENTATION_HOLD`.
+  - The shell verifies request spec digest, body digest, handoff digest, server-derived idempotency key, durable audit handoff, retry policy, and post-write readiness handoff.
+  - `NimCreateStateMachineSupport` now ignores caller-forged durable writer result claims such as `writeExecuted`, `deploymentId`, `writeResult`, and `postWriteReadinessTriggered`.
+  - Added `NimCreateDurableWriteExecutorSupportTest`.
+  - Added `docs/M5_21_FORTY_NINTH_WAVE_NIM_DURABLE_WRITE_EXECUTOR_SHELL_AUDIT_20260607.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateDurableWriteExecutorSupportTest,NimCreateWriteExecutionHandoffSupportTest,NimCreateWriteRequestSpecAdapterSupportTest,NimCreateStateMachineSupportTest" test`
+  - No real `8100` access; no HTTP client; no real audit table write; no real NIM polling; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
 
 - M5.21-48 NIM write execution handoff and idempotency contract is implemented and verified:
   - Added `NimCreateWriteExecutionHandoffSupport`.
@@ -563,11 +577,12 @@
 - `NimCreateWriteBodyRebuilderSupport` added for controlled write body rebuilding only; it creates a testable, audit-receipt-bound DeploymentDTO contract and prevents preview body direct reuse.
 - `NimCreateWriteRequestSpecAdapterSupport` added for controlled POST request spec compilation only; it fixes the future path/body/auth boundary while still performing no network access.
 - `NimCreateWriteExecutionHandoffSupport` added for controlled write execution handoff only; it binds request spec, body digest, durable audit receipt, server-derived idempotency key, and post-write readiness handoff before any future durable writer can execute.
+- `NimCreateDurableWriteExecutorSupport` added as a future durable writer contract shell; it verifies trusted handoff/request spec input but remains `IMPLEMENTATION_HOLD` and never attempts POST.
 
 ## Next Step
 
 Continue NIM orchestration only through safe slices:
-- design future durable write executor contract shell without executing real POST,
+- extend the state machine so future release also requires a durable write executor report, while the current shell report still cannot release writes,
 - identify the true durable audit log/table/service and design replacement points for `NimCreateAuditWriterSupport`,
 - later wire `NimTrustedPolicyProviderSupport` to real backend license/user/org readers only after mock-first contracts are complete,
 - keep `nim_create` HOLD until trusted policy, durable audit writer, durable write executor, readiness aftercare, and release switch all pass review,

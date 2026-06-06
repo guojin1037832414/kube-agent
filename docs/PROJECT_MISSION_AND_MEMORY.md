@@ -81,9 +81,39 @@ Current track:
 
 Recently completed:
 
-`M5.21-48 NIM write execution handoff and idempotency contract`
+`M5.21-49 NIM durable write executor contract shell`
 
 Latest checkpoint:
+
+- Date: 2026-06-07 06:14 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-49 implemented and verified:
+  - Added `NimCreateDurableWriteExecutorSupport` as a pure/mock-first contract shell for the future durable write executor.
+  - It consumes:
+    - `writeExecutionHandoffReport`
+    - `writeRequestSpecReport`
+  - It returns:
+    - `durableWriteExecutor=FUTURE_DURABLE_WRITE_EXECUTOR`
+    - `executionMode=DURABLE_WRITE_EXECUTOR_CONTRACT_SHELL`
+    - `executionState=IMPLEMENTATION_HOLD|REJECTED`
+    - `networkAccess=NOT_PERFORMED`
+    - `sideEffect=NONE`
+    - `inputAccepted`
+    - `executorImplementationAvailable=false`
+    - `realHttpExecutionAllowed=false`
+    - `writeAttempted=false`
+    - `writeExecuted=false`
+    - `postWriteReadinessTriggered=false`
+    - `executionAttemptSpec`
+    - `blockedBy`.
+  - A valid handoff/request spec pair is accepted as input but still blocked by `DURABLE_WRITE_EXECUTOR_IMPLEMENTATION_HOLD`.
+  - The shell verifies request spec digest, body digest, handoff digest, server-derived idempotency key, durable audit handoff, retry policy, and post-write readiness handoff.
+  - `NimCreateStateMachineSupport` now ignores caller-forged durable write executor result claims such as `writeExecuted`, `deploymentId`, `writeResult`, and `postWriteReadinessTriggered`.
+  - Added `NimCreateDurableWriteExecutorSupportTest`.
+  - Added `docs/M5_21_FORTY_NINTH_WAVE_NIM_DURABLE_WRITE_EXECUTOR_SHELL_AUDIT_20260607.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateDurableWriteExecutorSupportTest,NimCreateWriteExecutionHandoffSupportTest,NimCreateWriteRequestSpecAdapterSupportTest,NimCreateStateMachineSupportTest" test`
+  - No real `8100` access; no HTTP client; no real audit table write; no real NIM polling; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
 
 - Date: 2026-06-07 05:54 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
@@ -679,11 +709,12 @@ Current NIM chain summary after M5.21-48:
 - `NimCreationGateSupport` and `NimTrustedPolicySnapshot` model trusted policy/gate evidence, but public facts remain untrusted until a backend provider supplies them.
 - `NimCreateStateMachineSupport` requires trusted policy, server HITL, durable audit receipt, controlled body rebuild, controlled POST request spec, controlled write execution handoff, READY readiness execution report, and a code release switch before future writes.
 - `NimCreateWriteExecutionHandoffSupport` is the newest gate; it binds request spec/body/audit receipt with a server-derived idempotency key and post-write readiness handoff, but it still does not execute HTTP.
+- `NimCreateDurableWriteExecutorSupport` is now the future writer contract shell; it accepts trusted handoff/request spec input but still returns `IMPLEMENTATION_HOLD` and `writeExecuted=false`.
 
 Recommended next work:
 
 - Continue NIM orchestration through safe slices:
-  - design a future durable write executor contract shell without executing real `POST /api/{orgId}/deployment`,
+  - extend the state machine so future release also requires a durable write executor report, while the current shell report still cannot release writes,
   - identify the real durable audit log/table/service and define replacement points for the mock-first audit writer,
   - later wire `NimTrustedPolicyProviderSupport` to real backend license/user/org readers only after contract tests exist,
   - keep `nim_create` HOLD until trusted policy, durable audit writer, durable write executor, readiness aftercare, and release switch all pass review,

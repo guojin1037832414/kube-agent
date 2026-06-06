@@ -6,6 +6,24 @@
 
 ---
 
+## [M5.21-49] - 第四十九批 NIM durable write executor 合同壳审计
+
+**交付**: 新增 `NimCreateDurableWriteExecutorSupport`，为未来 `FUTURE_DURABLE_WRITE_EXECUTOR` 建立 mock-first 入场合同壳；它验证 handoff/request spec 证据，但在真实实现完成前强制 `IMPLEMENTATION_HOLD`，不执行真实写入。
+
+**变更**
+- 新增 `NimCreateDurableWriteExecutorSupport`，纯函数消费 `writeExecutionHandoffReport` 和 `writeRequestSpecReport`。
+- `prepare(...)` 输出 `durableWriteExecutor=FUTURE_DURABLE_WRITE_EXECUTOR`、`executionMode=DURABLE_WRITE_EXECUTOR_CONTRACT_SHELL`、`executionState=IMPLEMENTATION_HOLD|REJECTED`、`networkAccess=NOT_PERFORMED`、`sideEffect=NONE`、`executionAttemptSpec` 和 `blockedBy`。
+- 合法 handoff/request spec 输入也只会得到 `inputAccepted=true`、`writeAttempted=false`、`writeExecuted=false`、`postWriteReadinessTriggered=false` 和 `DURABLE_WRITE_EXECUTOR_IMPLEMENTATION_HOLD`。
+- executor shell 会复核 request spec digest、body digest、handoff digest、server-derived idempotency key、durable audit handoff 和 post-write readiness handoff。
+- `NimCreateStateMachineSupport` 的 ignored caller claims 新增 `durableWriteExecutorReport`、`durableWriteExecutor`、`executorImplementationAvailable`、`writeAttempted`、`writeExecuted`、`writeResult`、`deploymentId`、`deploymentUid`、`postWriteReadinessTriggered`。
+- 新增 `NimCreateDurableWriteExecutorSupportTest`。
+- 新增 `docs/M5_21_FORTY_NINTH_WAVE_NIM_DURABLE_WRITE_EXECUTOR_SHELL_AUDIT_20260607.md`，并更新 M5.21 波次索引和项目记忆。
+
+**安全**
+- 本批不新增 Tool/Controller，不持有 HTTP client，不访问真实 `8100`，不调用 `POST /api/{orgId}/deployment`。
+- executor shell 报告不是 release credential；当前 `executorImplementationAvailable=false`。
+- `nim_create` 继续保持 `httpMethod=NONE + PLACEHOLDER + requiresConfirmation=true`。
+
 ## [M5.21-48] - 第四十八批 NIM 写执行交接与幂等契约审计
 
 **交付**: 新增 `NimCreateWriteExecutionHandoffSupport`，把未来 `nim_create` 真实 durable write executor 前的执行交接、服务端幂等键、pre-write audit handoff 和 post-write readiness handoff 独立合同化；本批仍不执行真实网络写入。
