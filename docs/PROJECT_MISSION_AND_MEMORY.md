@@ -87,7 +87,8 @@ Latest checkpoint:
 
 - Date: 2026-06-06 22:38 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
-- M5.21-36 implemented and verified:
+- M5.21-36 implemented, verified, committed, and recovery-synced:
+  - Commit: `815f7da feat(M5.21): add NIM template merge preview`.
   - Added `NimTemplateMergeSupport` for offline NIM template merge and DeploymentDTO preview.
   - `nim_deployment_preflight` now returns `deploymentBodyPreview`.
   - Preview is explicitly `safeToPost=false` and `previewOnly=true`.
@@ -102,9 +103,8 @@ Latest checkpoint:
     - Static secret scan found 0 matches.
     - `mvn -q test`
   - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
-  - Pending before final checkpoint:
-    - H-drive recovery sync,
-    - git commit and push.
+  - External recovery docs synced and hash-verified to `H:\codex重要文件\kube-agent`.
+  - Push status: pending final docs checkpoint push.
 
 - Date: 2026-06-06 21:36 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.

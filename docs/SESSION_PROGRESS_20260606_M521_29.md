@@ -164,6 +164,14 @@
 
 - M5.21-36 targeted verification passed:
   - `mvn -q "-Dtest=NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest" test`
+- M5.21-36 broader/final verification passed:
+  - `mvn -q "-Dtest=NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest" test`
+  - `git -c safe.directory=F:/gitProject/kube-agent diff --check`
+  - Static secret scan found 0 matches.
+  - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+  - Implementation commit: `815f7da feat(M5.21): add NIM template merge preview`
+  - External recovery docs synced and hash-verified to `H:\codex重要文件\kube-agent`.
 - Passed:
   - `mvn -q "-Dtest=M511AtlasToolHttpContractTest,ListToolParameterPassThroughContractTest,ListToolParameterSpecContractTest" test`
   - `mvn -q "-Dtest=M511AtlasToolHttpContractTest,ListToolParameterPassThroughContractTest,ListToolParameterSpecContractTest,SensitiveListToolHoldContractTest,M520McpManifestSafetyContractTest,ToolRegistryPermissionTest" test`
