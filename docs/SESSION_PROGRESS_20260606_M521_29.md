@@ -44,6 +44,13 @@
 
 ## Current Status
 
+- M5.21-34 repository catalog/tag sensitive read alignment is implemented and targeted tests passed:
+  - Added `RepositoryCatalogListTool`, `RepositoryCatalogCategoryListTool`, `RepositoryCatalogTagListTool`, and `RepositoryCatalogNimTagListTool`.
+  - Added `RepositoryCatalogQuerySupport` to keep product/application repository catalog semantics separate from site registry config and ordinary image repository list.
+  - Tool schema supports mature `RepositoryParamDTO` fields for catalog list and requires explicit `repository` for tag reads.
+  - Operation metadata is `AUTHENTICATED + SENSITIVE_READ + requiresConfirmation=true`.
+  - Image pull/retry/delete/push/build/load, NIM deployment creation, and `GET /api/registry/repo-tag` remain HOLD.
+
 - M5.21-29 is complete.
 - Code, tests, changelog, wave index, and audit doc have all been updated.
 - Branch switched from `master` to `codex/m521-29-top-agent-mission` for the checkpoint.
@@ -92,6 +99,12 @@
   - `src/main/java/com/atlas/tool/impl/UploadStatusListTool.java`
 - M5.21-33 tool implementation fixes:
   - `src/main/java/com/atlas/tool/impl/RegistryListTool.java`
+- M5.21-34 tool implementation fixes:
+  - `src/main/java/com/atlas/tool/impl/RepositoryCatalogQuerySupport.java`
+  - `src/main/java/com/atlas/tool/impl/RepositoryCatalogListTool.java`
+  - `src/main/java/com/atlas/tool/impl/RepositoryCatalogCategoryListTool.java`
+  - `src/main/java/com/atlas/tool/impl/RepositoryCatalogTagListTool.java`
+  - `src/main/java/com/atlas/tool/impl/RepositoryCatalogNimTagListTool.java`
 - Tests:
   - `src/test/java/com/atlas/contract/M511AtlasToolHttpContractTest.java`
   - `src/test/java/com/atlas/http/KubeManagerHttpClientTokenFallbackSecurityTest.java`
@@ -101,6 +114,7 @@
   - `src/test/java/com/atlas/tool/impl/DownloadTaskStatusToolHttpContractTest.java`
   - `src/test/java/com/atlas/tool/impl/DownloadTaskProgressToolHttpContractTest.java`
   - `src/test/java/com/atlas/tool/impl/RegistrySiteToolHttpContractTest.java`
+  - `src/test/java/com/atlas/tool/impl/RepositoryCatalogToolHttpContractTest.java`
   - `src/test/java/com/atlas/mcp/M520McpManifestSafetyContractTest.java`
 - Intent config:
   - `src/main/resources/intents.yml`
@@ -110,6 +124,7 @@
   - `docs/M5_21_THIRTY_FIRST_WAVE_DOWNLOAD_STATUS_READ_AUDIT_20260606.md`
   - `docs/M5_21_THIRTY_SECOND_WAVE_DOWNLOAD_PROGRESS_READ_AUDIT_20260606.md`
   - `docs/M5_21_THIRTY_THIRD_WAVE_REGISTRY_SITE_READ_AUDIT_20260606.md`
+  - `docs/M5_21_THIRTY_FOURTH_WAVE_REPOSITORY_CATALOG_READ_AUDIT_20260606.md`
   - `docs/M5_21_WAVE_INDEX_20260606.md`
   - `CHANGELOG.md`
   - `docs/SESSION_PROGRESS_20260606_M521_29.md`
@@ -156,6 +171,14 @@
   - `mvn -q test`
   - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
   - External recovery docs synced to `H:\codex重要文件\kube-agent`.
+- M5.21-34 targeted verification passed:
+  - `mvn -q "-Dtest=RepositoryCatalogToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest" test`
+- M5.21-34 final pre-commit verification passed:
+  - `git -c safe.directory=F:/gitProject/kube-agent diff --check`
+  - Static secret scan found no real credentials; matches were 0.
+  - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+  - External recovery docs synced to `H:\codex重要文件\kube-agent`.
 
 ## Final M5.21-29 Decisions
 
@@ -176,7 +199,7 @@
 ## Next Step
 
 Pick the next M5.21 mature kube-manager Tool alignment wave. Prefer a narrow evidence-backed slice, likely one of:
-- Repository catalog/category/tag read migration for `/api/{orgId}/repository`.
+- Final verification, H: drive sync, commit, and push for M5.21-34.
 - Another mature GET area with clean backend/frontend evidence.
 
 ## Recovery Reminder

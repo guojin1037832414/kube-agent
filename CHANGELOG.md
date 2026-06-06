@@ -7,6 +7,25 @@
 ---
 
 
+## [M5.21-34] - 第三十四批 产品/应用镜像目录敏感只读审计
+
+**交付**: 新增 organization-scoped repository catalog 只读能力，对齐 mature kube-manager 的 `GET /api/{orgId}/repository`、`/category`、`/tags`、`/nim/tags`，明确它们服务 NGC/NV AIE/NIM 产品/应用镜像目录，而不是站点级 registry 配置或普通组织镜像仓库列表。
+
+**变更**
+- 新增 `RepositoryCatalogQuerySupport`，集中处理目录列表 query 与 tag 查询的 `repository` 必填校验。
+- 新增 `RepositoryCatalogListTool`，对齐 `GET /api/{orgId}/repository`。
+- 新增 `RepositoryCatalogCategoryListTool`，对齐 `GET /api/{orgId}/repository/category`。
+- 新增 `RepositoryCatalogTagListTool`，对齐 `GET /api/{orgId}/repository/tags?repository=...`。
+- 新增 `RepositoryCatalogNimTagListTool`，对齐 `GET /api/{orgId}/repository/nim/tags?repository=...`。
+- 新增 `RepositoryCatalogToolHttpContractTest`，覆盖成熟路径、可信 orgId、query 透传、tag 必填、非法 repository fail-closed 和风险元数据。
+- 更新 `M511AtlasToolHttpContractTest` 与 `intents.yml`。
+- 新增 `docs/M5_21_THIRTY_FOURTH_WAVE_REPOSITORY_CATALOG_READ_AUDIT_20260606.md`，并更新 M5.21 波次索引。
+
+**安全**
+- 四个 Tool 均为 `AUTHENTICATED + SENSITIVE_READ + requiresConfirmation=true`，不会导出到 MCP safe manifest。
+- 本批没有调用真实 `8100`，没有接入镜像拉取、重试、删除、推送或 NIM 部署创建。
+- `/api/registry/repo-tag` 继续 HOLD，因为它可能触发站点级 registry 外部枚举，语义不同于本批本地目录 tag 状态。
+
 ## [M5.21-33] - 第三十三批 镜像注册处站点级敏感只读对齐审计
 
 **交付**: 将 `RegistryListTool` 从不存在的组织路径 `/api/{orgId}/registry` 对齐为成熟 kube-manager 的站点级 `GET /api/registry`，并明确它查询的是镜像注册处配置，不是组织内产品 repository 目录。

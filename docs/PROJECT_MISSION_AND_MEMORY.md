@@ -79,11 +79,11 @@ Current track:
 
 Recently completed:
 
-`M5.21-33 registry site read alignment`
+`M5.21-34 repository catalog/tag sensitive read alignment`
 
 Latest checkpoint:
 
-- Date: 2026-06-06 21:01 Asia/Shanghai.
+- Date: 2026-06-06 21:16 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
 - M5.21-33 was completed, committed, and pushed:
   - Commit: `e5ba040 fix(M5.21): align registry site read tool`
@@ -110,6 +110,20 @@ Latest checkpoint:
 
 Latest in-progress/completed chunk after checkpoint:
 
+- Date: 2026-06-06 21:16 Asia/Shanghai.
+- M5.21-34 implemented and targeted verification passed:
+  - Added `RepositoryCatalogListTool` for mature `GET /api/{orgId}/repository`.
+  - Added `RepositoryCatalogCategoryListTool` for `GET /api/{orgId}/repository/category`.
+  - Added `RepositoryCatalogTagListTool` for `GET /api/{orgId}/repository/tags`, requiring explicit `repository`.
+  - Added `RepositoryCatalogNimTagListTool` for `GET /api/{orgId}/repository/nim/tags`, requiring explicit `repository`.
+  - Added `RepositoryCatalogQuerySupport` to keep repository catalog schema separate from registry site and image repository semantics.
+  - All four Tools are `AUTHENTICATED + SENSITIVE_READ + requiresConfirmation=true`.
+  - Targeted test passed: `mvn -q "-Dtest=RepositoryCatalogToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest" test`.
+  - Final verification passed: `git -c safe.directory=F:/gitProject/kube-agent diff --check`, static secret scan with 0 matches, and `mvn -q test`.
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+  - External recovery docs were synced to `H:\codex重要文件\kube-agent`.
+  - HOLD: image pull/retry/delete/push/build/load, NIM deployment creation, and `GET /api/registry/repo-tag`.
+
 - Date: 2026-06-06 20:50 Asia/Shanghai.
 - M5.21-33 completed implementation and targeted verification:
   - `RegistryListTool` now calls mature site endpoint `GET /api/registry` instead of old `/api/{orgId}/registry`.
@@ -123,5 +137,5 @@ Recommended next work:
 
 - Continue with a narrow mature evidence-backed Tool alignment wave.
 - Good candidates:
-  - Repository catalog/category/tag read migration for `/api/{orgId}/repository`, `/category`, `/tags`, `/nim/tags`.
-  - Another mature GET area with clean backend/frontend evidence.
+  - Final verification, H: drive sync, commit, and push for M5.21-34.
+  - After that, continue with another mature GET area with clean backend/frontend evidence or start NIM read-only orchestration planning.

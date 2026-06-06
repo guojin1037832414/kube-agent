@@ -327,6 +327,10 @@ class M511AtlasToolHttpContractTest {
             new ExpectedEndpoint("UploadStatusListTool.java", "upload_status_list", "/api/{orgId}/download/status/{id}"),
             new ExpectedEndpoint("DownloadTaskProgressTool.java", "download_task_progress", "/api/{orgId}/download/progress/{id}"),
             new ExpectedEndpoint("RegistryListTool.java", "registry_list", "/api/registry"),
+            new ExpectedEndpoint("RepositoryCatalogListTool.java", "repository_catalog_list", "/api/{orgId}/repository"),
+            new ExpectedEndpoint("RepositoryCatalogCategoryListTool.java", "repository_catalog_category_list", "/api/{orgId}/repository/category"),
+            new ExpectedEndpoint("RepositoryCatalogTagListTool.java", "repository_catalog_tag_list", "/api/{orgId}/repository/tags"),
+            new ExpectedEndpoint("RepositoryCatalogNimTagListTool.java", "repository_catalog_nim_tag_list", "/api/{orgId}/repository/nim/tags"),
             new ExpectedEndpoint("FileMaterialListTool.java", "file_material_list", "/api/{orgId}/material/folders"),
             new ExpectedEndpoint("InboxMessageListTool.java", "inbox_message_list", "/api/{orgId}/inbox-message")
         );

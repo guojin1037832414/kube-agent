@@ -739,6 +739,86 @@ intents:
       - "Harbor仓库"
     parameters: []
 
+  repository_catalog_list:
+    description: "查询组织内产品/应用镜像目录"
+    agent: "query"
+    level: "p3"
+    keywords: ["产品镜像目录", "应用镜像目录", "NGC目录", "NIM目录", "NV AIE", "repository catalog"]
+    examples:
+      - "查询 NGC 产品镜像目录"
+      - "有哪些 NIM 一键部署镜像"
+      - "查看 NV AIE 支持的应用镜像"
+    parameters:
+      - name: "page"
+        type: "integer"
+        required: false
+        description: "页码，默认 1"
+      - name: "limit"
+        type: "integer"
+        required: false
+        description: "每页数量，默认 20，最大 100"
+      - name: "displayName"
+        type: "string"
+        required: false
+        description: "按产品/应用镜像展示名称筛选"
+      - name: "status"
+        type: "string"
+        required: false
+        description: "按 latestTagStatus 筛选，例如 Ready、Absent"
+      - name: "industryCategory"
+        type: "string"
+        required: false
+        description: "按行业或模型分类筛选"
+      - name: "aieSupported"
+        type: "boolean"
+        required: false
+        description: "是否只查询 NVIDIA AI Enterprise Supported 目录"
+      - name: "aieEssential"
+        type: "boolean"
+        required: false
+        description: "是否只查询 NVIDIA AI Enterprise Essential 目录"
+      - name: "isOneClickDeploy"
+        type: "boolean"
+        required: false
+        description: "是否只查询一键部署目录，NIM 场景常用"
+
+  repository_catalog_category_list:
+    description: "查询组织内产品/应用镜像目录分类"
+    agent: "query"
+    level: "p3"
+    keywords: ["产品镜像分类", "应用镜像分类", "NGC分类", "NIM分类", "repository category"]
+    examples:
+      - "查询产品镜像目录分类"
+      - "NIM 有哪些分类"
+    parameters: []
+
+  repository_catalog_tag_list:
+    description: "查询产品/应用镜像目录的普通 tag 状态"
+    agent: "query"
+    level: "p3"
+    keywords: ["产品镜像tag", "应用镜像tag", "NGC tag", "repository tags"]
+    examples:
+      - "查询 nvidia/cuda 的 tag 状态"
+      - "这个 NGC 镜像有哪些可用 tag"
+    parameters:
+      - name: "repository"
+        type: "string"
+        required: true
+        description: "产品/应用镜像 repository 标识，来自 repository_catalog_list 返回值"
+
+  repository_catalog_nim_tag_list:
+    description: "查询 NIM 产品目录的 tag 状态"
+    agent: "query"
+    level: "p3"
+    keywords: ["NIM tag", "NIM镜像版本", "NIM repository tags"]
+    examples:
+      - "查询这个 NIM 模型有哪些镜像 tag"
+      - "NIM llama 的可用镜像版本"
+    parameters:
+      - name: "repository"
+        type: "string"
+        required: true
+        description: "NIM repository 标识，来自 repository_catalog_list 返回值"
   image_detail_by_name:
     description: "根据镜像名称查询详情"
     agent: "query"
