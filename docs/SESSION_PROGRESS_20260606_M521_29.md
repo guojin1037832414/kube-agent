@@ -355,6 +355,8 @@
   - Provider report exposes ignored caller claims and never treats Tool params as trusted facts.
   - Creation gate and state-machine ignored caller claim detection now also covers `organizationId/orgId/roles/nvaieLicenseVerified/trustedPolicySource/authoritative`.
   - Added `docs/M5_21_FORTY_FIRST_WAVE_NIM_TRUSTED_POLICY_PROVIDER_AUDIT_20260606.md`.
+  - External recovery docs synced and hash-verified to `H:\codex重要文件\kube-agent`.
+  - Implementation commit: `1078985 feat(M5.21): add NIM trusted policy provider`.
 
 ## Final M5.21-29 Decisions
 

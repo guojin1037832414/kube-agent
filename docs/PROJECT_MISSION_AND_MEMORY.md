@@ -87,7 +87,7 @@ Latest checkpoint:
 
 - Date: 2026-06-07 00:04 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
-- M5.21-41 implemented and verified; recovery sync, commit, and push are the remaining completion steps:
+- M5.21-41 implemented, verified, recovery-synced, committed, and pushed:
   - Added `NimTrustedPolicyProviderSupport` as a pure provider contract for future NIM create trusted policy checks.
   - Added `TrustedPolicyFacts` to represent backend-trusted facts:
     - `organizationId`
@@ -115,6 +115,8 @@ Latest checkpoint:
     - Real secret-pattern static scan found 0 matches.
     - `mvn -q test`
   - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+  - External recovery docs synced and hash-verified to `H:\codex重要文件\kube-agent`.
+  - Implementation commit: `1078985 feat(M5.21): add NIM trusted policy provider`.
   - No real `8100` access; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
 
 - Date: 2026-06-06 23:55 Asia/Shanghai.
