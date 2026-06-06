@@ -1,6 +1,7 @@
 package com.atlas.mcp;
 
 import com.atlas.tool.annotation.AtlasToolMapping;
+import com.atlas.tool.annotation.ToolPermission;
 import com.atlas.tool.core.ToolRegistry;
 import org.springframework.stereotype.Service;
 
@@ -45,7 +46,7 @@ public class McpToolManifestService {
         Map<String, Object> policy = new LinkedHashMap<>();
         policy.put("mode", "safe-readonly-manifest");
         policy.put("failClosed", true);
-        policy.put("exportRule", "operationType=READ && requiresConfirmation=false && httpMethod/apiEndpoints declared");
+        policy.put("exportRule", "permission=PUBLIC && operationType=READ && requiresConfirmation=false && httpMethod/apiEndpoints declared");
         policy.put("blockedOperationTypes", List.of("UNKNOWN", "SENSITIVE_READ", "CREATE", "UPDATE", "DELETE", "ACTION"));
 
         Map<String, Object> stats = new LinkedHashMap<>();
@@ -70,6 +71,7 @@ public class McpToolManifestService {
             return false;
         }
         return metadata.operationType() == AtlasToolMapping.OperationType.READ
+            && metadata.permissionPolicy() == ToolPermission.Policy.PUBLIC
             && !metadata.requiresConfirmation()
             && metadata.httpMethod() != null
             && !metadata.httpMethod().isBlank()

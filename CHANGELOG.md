@@ -7,6 +7,24 @@
 ---
 
 
+## [M5.21-30] - 第三十批 MIG 配置按 GPU ID 只读对齐审计
+
+**交付**: 将 `MigConfigListTool` 从历史伪分页列表对齐为成熟 kube-manager 的 `GET /api/mig/{gpuId}`，保留旧 intentId 兼容，但 Tool Schema 明确要求 `gpuId`。
+
+**变更**
+- `MigConfigListTool` 路径从 `/api/{orgId}/migConfig` 改为 `/api/mig/{gpuId}`。
+- `MigConfigListTool` 移除 `page/limit/keyword` 标准列表契约，只暴露必填 `gpuId`。
+- `MigConfigListTool` 权限从 `PUBLIC` 收敛为 `AUTHENTICATED`，风险元数据标记为 `READ + requiresConfirmation=false`。
+- 新增 `MigConfigReadToolHttpContractTest`，覆盖成熟路径、空 query、非法 `gpuId` 短路、参数 schema 和权限/风险元数据。
+- `McpToolManifestService` 导出规则收紧为 `PUBLIC + READ + requiresConfirmation=false`，防止登录态只读 Tool 出现在外部 MCP 安全清单。
+- 更新 `M511AtlasToolHttpContractTest`、`ListToolParameterPassThroughContractTest`、`ListToolParameterSpecContractTest` 与 `intents.yml`。
+- 新增 `docs/M5_21_THIRTIETH_WAVE_MIG_CONFIG_READ_AUDIT_20260606.md`，并更新 M5.21 波次索引。
+
+**安全**
+- 本批没有调用真实 `8100`，没有接入 `POST/PUT/DELETE /api/mig`。
+- MIG 增删改仍按 `SYS_ADMIN_ONLY` 高风险管理操作 HOLD，后续需要单独 HITL、权限和审计设计。
+- `mig_config_list` 虽是普通 READ，但因权限为 `AUTHENTICATED`，不会导出到 MCP manifest。
+
 ## [M5.21-29] - 第二十九批 Legacy GET Tool HTTP 元数据与路径对齐审计
 
 **交付**: 补齐 7 个历史 GET Tool 的 `@AtlasToolMapping` HTTP/risk 元数据，并修正 `file_material_list`、`inbox_message_list` 与成熟 kube-manager 后端不一致的路径。

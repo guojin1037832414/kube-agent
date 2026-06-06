@@ -4,6 +4,7 @@ import com.atlas.auth.UserPermissionContext;
 import com.atlas.tool.annotation.AtlasToolMapping;
 import com.atlas.tool.core.ToolRegistry;
 import com.atlas.tool.impl.DeployDeleteTool;
+import com.atlas.tool.impl.MigConfigListTool;
 import com.atlas.tool.impl.NodeQueryTool;
 import com.atlas.tool.impl.UserQueryTool;
 import org.junit.jupiter.api.Test;
@@ -25,6 +26,7 @@ class M520McpManifestSafetyContractTest {
     void buildSafeManifest_shouldOnlyExportDeclaredPlainReadTools() {
         ToolRegistry registry = new ToolRegistry(List.of(
             new NodeQueryTool(null),
+            new MigConfigListTool(null),
             new UserQueryTool(null),
             new DeployDeleteTool(null)
         ), new UserPermissionContext());
@@ -37,7 +39,7 @@ class M520McpManifestSafetyContractTest {
         List<Map<String, Object>> tools = (List<Map<String, Object>>) manifest.get("tools");
         assertThat(tools).extracting(t -> t.get("name"))
             .contains("node_query")
-            .doesNotContain("user_query", "deploy_delete");
+            .doesNotContain("mig_config_list", "user_query", "deploy_delete");
         assertThat(tools).allSatisfy(tool -> {
             assertThat(tool.get("operationType")).isEqualTo(AtlasToolMapping.OperationType.READ.name());
             assertThat(tool.get("requiresConfirmation")).isEqualTo(false);
@@ -48,6 +50,7 @@ class M520McpManifestSafetyContractTest {
         @SuppressWarnings("unchecked")
         Map<String, Object> policy = (Map<String, Object>) manifest.get("policy");
         assertThat(policy.get("failClosed")).isEqualTo(true);
+        assertThat(policy.get("exportRule").toString()).contains("permission=PUBLIC");
         assertThat(policy.get("blockedOperationTypes").toString())
             .contains("SENSITIVE_READ", "DELETE", "ACTION", "UNKNOWN");
     }

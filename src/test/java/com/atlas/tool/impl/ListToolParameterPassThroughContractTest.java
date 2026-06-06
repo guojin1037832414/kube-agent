@@ -67,7 +67,6 @@ class ListToolParameterPassThroughContractTest {
         assertPassThrough(CoursewareListTool::new, "/api/100002/courseware/list");
         assertPassThrough(DownloadTaskListTool::new, "/api/100002/download");
         assertPassThrough(InboxMessageListTool::new, "/api/100002/inbox-message");
-        assertPassThrough(MigConfigListTool::new, "/api/100002/migConfig");
         assertPassThrough(NamespaceListTool::new, "/api/100002/namespace");
         assertPassThrough(TableListTool::new, "/api/100002/table");
         assertPassThrough(SlurmNodeListTool::new, "/api/100002/slurm-node");

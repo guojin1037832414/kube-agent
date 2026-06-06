@@ -317,7 +317,8 @@ class M511AtlasToolHttpContractTest {
         List<String> violations = new ArrayList<>();
         List<ExpectedEndpoint> expectedReadEndpoints = List.of(
             new ExpectedEndpoint("ImageQueryTool.java", "image_query", "/api/{orgId}/image"),
-            new ExpectedEndpoint("PytorchJobListTool.java", "pytorch_job_list", "/api/{orgId}/pytorch-job")
+            new ExpectedEndpoint("PytorchJobListTool.java", "pytorch_job_list", "/api/{orgId}/pytorch-job"),
+            new ExpectedEndpoint("MigConfigListTool.java", "mig_config_list", "/api/mig/{gpuId}")
         );
         List<ExpectedEndpoint> expectedSensitiveReadEndpoints = List.of(
             new ExpectedEndpoint("DataSetListTool.java", "data_set_list", "/api/{orgId}/data-set"),

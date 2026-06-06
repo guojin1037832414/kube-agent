@@ -47,10 +47,16 @@
 - M5.21-29 is complete.
 - Code, tests, changelog, wave index, and audit doc have all been updated.
 - Branch switched from `master` to `codex/m521-29-top-agent-mission` for the checkpoint.
+- M5.21-30 MIG config read alignment is complete and ready to commit:
+  - `MigConfigListTool` now uses mature `GET /api/mig/{gpuId}`.
+  - Tool schema now requires `gpuId` and no longer exposes `page/limit/keyword`.
+  - Permission tightened from `PUBLIC` to `AUTHENTICATED`; operation metadata is `READ + requiresConfirmation=false`.
+  - MIG create/update/delete endpoints remain HOLD.
+  - MCP manifest export was tightened to `PUBLIC + READ + requiresConfirmation=false + declared endpoint`, preventing authenticated read Tools from leaking into the external safe manifest.
 
 ## Files Changed By This Continuation
 
-- Tool implementation metadata/path fixes:
+- M5.21-29 tool implementation metadata/path fixes:
   - `src/main/java/com/atlas/tool/impl/DataSetListTool.java`
   - `src/main/java/com/atlas/tool/impl/FileListTool.java`
   - `src/main/java/com/atlas/tool/impl/DownloadTaskListTool.java`
@@ -58,15 +64,25 @@
   - `src/main/java/com/atlas/tool/impl/InboxMessageListTool.java`
   - `src/main/java/com/atlas/tool/impl/ImageQueryTool.java`
   - `src/main/java/com/atlas/tool/impl/PytorchJobListTool.java`
+- M5.21-30 tool implementation and MCP safety fixes:
+  - `src/main/java/com/atlas/tool/impl/MigConfigListTool.java`
+  - `src/main/java/com/atlas/mcp/McpToolManifestService.java`
 - Tests:
   - `src/test/java/com/atlas/contract/M511AtlasToolHttpContractTest.java`
   - `src/test/java/com/atlas/http/KubeManagerHttpClientTokenFallbackSecurityTest.java`
   - `src/test/java/com/atlas/tool/impl/ListToolParameterPassThroughContractTest.java`
+  - `src/test/java/com/atlas/tool/impl/ListToolParameterSpecContractTest.java`
+  - `src/test/java/com/atlas/tool/impl/MigConfigReadToolHttpContractTest.java`
+  - `src/test/java/com/atlas/mcp/M520McpManifestSafetyContractTest.java`
+- Intent config:
+  - `src/main/resources/intents.yml`
 - Docs:
   - `docs/M5_21_TWENTY_NINTH_WAVE_LEGACY_GET_METADATA_AUDIT_20260606.md`
+  - `docs/M5_21_THIRTIETH_WAVE_MIG_CONFIG_READ_AUDIT_20260606.md`
   - `docs/M5_21_WAVE_INDEX_20260606.md`
   - `CHANGELOG.md`
   - `docs/SESSION_PROGRESS_20260606_M521_29.md`
+  - `docs/PROJECT_MISSION_AND_MEMORY.md`
 
 ## Verification Completed
 
@@ -82,6 +98,13 @@
   - `mvn -q test` passed again.
   - `git -c safe.directory=F:/gitProject/kube-agent diff --check` passed.
   - Static secret scan found no real credentials; matches were only documentation/config comments about avoiding api-key/password in source.
+- M5.21-30 targeted verification passed:
+  - `mvn -q "-Dtest=MigConfigReadToolHttpContractTest,ListToolParameterPassThroughContractTest,ListToolParameterSpecContractTest,M511AtlasToolHttpContractTest" test`
+- M5.21-30 final pre-commit verification passed:
+  - `git -c safe.directory=F:/gitProject/kube-agent diff --check`
+  - Static secret scan found no real credentials; matches were only documentation/config comments about avoiding api-key/password in source.
+  - `mvn -q test`
+  - External recovery docs synced to `H:\codex重要文件\kube-agent`.
 
 ## Final M5.21-29 Decisions
 
@@ -92,17 +115,16 @@
   - `InboxMessageListTool`: `/api/{orgId}/inbox-message`
 - Continued HOLD:
   - `RegistryListTool`
-  - `MigConfigListTool`
   - `UploadStatusListTool`
   - `ExperimentInstanceListTool`
   - `ExperimentTemplateListTool`
   - RBAC/organization/quota approval sensitive management lists protected by `SensitiveListToolHoldContractTest`
+- `MigConfigListTool` moved out of HOLD for read-only `GET /api/mig/{gpuId}` only; `POST/PUT/DELETE /api/mig` remain HOLD.
 
 ## Next Step
 
 Pick the next M5.21 mature kube-manager Tool alignment wave. Prefer a narrow evidence-backed slice, likely one of:
 - Registry/repository path migration after deciding `/api/registry` vs `/api/{orgId}/repository`.
-- MIG config migration requiring explicit `gpuId`.
 - Download status/progress migration requiring task `id`.
 - Another mature GET area with clean backend/frontend evidence.
 

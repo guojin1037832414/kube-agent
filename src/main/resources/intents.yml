@@ -1451,16 +1451,20 @@ intents:
       - "查看资源占用"
     parameters: []
 
-  # --- MIG配置列表 ---
+  # --- 指定 GPU 的 MIG 配置清单 ---
   mig_config_list:
-    description: "查询MIG配置列表"
+    description: "查询指定 GPU 的 MIG 配置清单"
     agent: "query"
     level: "p3"
-    keywords: ["MIG配置", "mig", "GPU配置", "多实例GPU"]
+    keywords: ["MIG配置", "mig", "GPU配置", "多实例GPU", "GPU MIG切分"]
     examples:
-      - "MIG配置列表"
-      - "查看MIG配置"
-    parameters: []
+      - "查询 GPU 42 的 MIG 配置"
+      - "查看 gpuId 42 支持哪些 MIG 切分"
+    parameters:
+      - name: "gpuId"
+        type: "integer"
+        required: true
+        description: "GPU 规格 ID，必须来自 gpu_detail_list 返回的数字 ID"
 
   # --- Slurm节点列表 ---
   slurm_node_list:
