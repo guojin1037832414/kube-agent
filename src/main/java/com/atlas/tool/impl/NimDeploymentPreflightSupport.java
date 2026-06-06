@@ -181,10 +181,17 @@ final class NimDeploymentPreflightSupport {
         plan.put("selectedTag", selectedTag.get("tag"));
         plan.put("selectedImage", image);
         plan.put("selectedTemplate", selectedTemplate);
-        plan.put("deploymentBodyPreview", NimTemplateMergeSupport.buildDeploymentBodyPreview(
+        Map<String, Object> deploymentBodyPreview = NimTemplateMergeSupport.buildDeploymentBodyPreview(
             params,
             image,
             selectedTemplate
+        );
+        plan.put("deploymentBodyPreview", deploymentBodyPreview);
+        plan.put("creationGate", NimCreationGateSupport.buildCreationGate(
+            params,
+            image,
+            selectedTemplate,
+            deploymentBodyPreview
         ));
         plan.put("catalogCandidates", catalogData);
         plan.put("tagCandidates", tagData);
@@ -194,8 +201,8 @@ final class NimDeploymentPreflightSupport {
             "正式创建时必须走 deploy_create_instance 或未来已审计的 nim_create 编排，不能复用本预检 Tool 直接 POST"
         ));
         plan.put("holdItems", List.of(
-            "尚未自动合并成熟前端 mergeTemplate/formatApplication 的完整 DeploymentDTO",
-            "尚未开放 NIM 创建、服务轮询、NIM API readiness 探测和 API Key 展示"
+            "尚未完成 NVAIE license、系统组织/SYS_ADMIN、配额费用和 GPU map 的后端可信创建门禁",
+            "尚未开放 NIM 创建、服务轮询、NIM API readiness 探测和审计日志闭环；Agent 不生成、不保存、不展示真实 API Key"
         ));
         return plan;
     }

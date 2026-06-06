@@ -5,7 +5,8 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current wave: M5.21-29, legacy GET HTTP metadata convergence.
+- Current latest wave: M5.21-37, NIM creation gate and HITL card draft.
+- Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
 
@@ -45,6 +46,43 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-37 NIM creation gate and HITL card draft is implemented and verified:
+  - Added `NimCreationGateSupport`.
+  - `NimDeploymentPreflightSupport` now attaches a `creationGate` to the NIM preflight plan.
+  - Added `NimCreationGateSupportTest`.
+  - Extended `NimDeploymentPreflightToolHttpContractTest` to assert `creationGate` is returned while the Tool still only performs the mature three GET calls.
+  - Added `docs/M5_21_THIRTY_SEVENTH_WAVE_NIM_CREATION_GATE_AUDIT_20260606.md`.
+  - Updated `CHANGELOG.md`, `docs/M5_21_WAVE_INDEX_20260606.md`, and project memory.
+  - `creationGate` is explanatory only:
+    - `gateState=CLOSED`
+    - `allowedToCreateNow=false`
+    - `sideEffect=NONE`
+  - Caller-supplied `approved`, `confirmed`, `hitlConfirmed`, `safeToPost`, `licenseValid`, `sysAdmin`, `role`, and related fields are recorded as ignored caller claims and cannot authorize creation.
+  - Future HITL card draft includes displayName, image, templateId, GPU, CPU/memory, network, cost/quota confirmation, and API-key safety warnings.
+  - `futureWritePath.directUseOfPreviewAllowed=false` and `fallbackAllowedFromPreflight=false`; preflight output cannot be directly posted or routed into a fallback write Tool.
+  - `nim_create` remains fail-closed `PLACEHOLDER`; this wave does not call real `8100`, does not call `POST /api/{orgId}/deployment`, and does not create a NIM service.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreationGateSupportTest,NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest" test`
+    - `mvn -q "-Dtest=NimCreationGateSupportTest,NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest" test`
+    - `git -c safe.directory=F:/gitProject/kube-agent diff --check`
+    - Static secret scan found 0 matches.
+    - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+  - Remaining before this chunk is closed: external recovery sync, commit, and push.
+
+- M5.21-36 NIM template merge preview is implemented, verified, committed, recovery-synced, and pushed:
+  - Commit: `815f7da feat(M5.21): add NIM template merge preview`.
+  - Added `NimTemplateMergeSupport` and `deploymentBodyPreview`.
+  - Preview remains `safeToPost=false`, `previewOnly=true`, protects `name/displayName/image`, and does not open POST create.
+  - Public preflight ignores user/LLM supplied `gpuMap`; only future controlled orchestration may pass an audited GPU map into the pure support overload.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest" test`
+    - `mvn -q "-Dtest=NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest" test`
+    - `git -c safe.directory=F:/gitProject/kube-agent diff --check`
+    - Static secret scan found 0 matches.
+    - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
 
 - M5.21-35 NIM deployment preflight sensitive read orchestration is implemented, verified, committed, and pushed:
   - Commit: `ddb5f9a feat(M5.21): add NIM deployment preflight tool`.
@@ -118,6 +156,15 @@
   - `src/main/java/com/atlas/mcp/McpToolManifestService.java`
 - M5.21-31 tool implementation fixes:
   - `src/main/java/com/atlas/tool/impl/UploadStatusListTool.java`
+- M5.21-37 NIM creation gate implementation and docs:
+  - `src/main/java/com/atlas/tool/impl/NimCreationGateSupport.java`
+  - `src/main/java/com/atlas/tool/impl/NimDeploymentPreflightSupport.java`
+  - `src/test/java/com/atlas/tool/impl/NimCreationGateSupportTest.java`
+  - `src/test/java/com/atlas/tool/impl/NimDeploymentPreflightToolHttpContractTest.java`
+  - `docs/M5_21_THIRTY_SEVENTH_WAVE_NIM_CREATION_GATE_AUDIT_20260606.md`
+  - `CHANGELOG.md`
+  - `docs/M5_21_WAVE_INDEX_20260606.md`
+  - `docs/PROJECT_MISSION_AND_MEMORY.md`
 - M5.21-32 tool implementation fixes:
   - `src/main/java/com/atlas/tool/impl/DownloadTaskProgressTool.java`
   - `src/main/java/com/atlas/tool/impl/DownloadTaskQuerySupport.java`
@@ -226,6 +273,13 @@
   - Static secret scan found 0 matches.
   - `mvn -q test`
   - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+- M5.21-37 targeted/final verification passed:
+  - `mvn -q "-Dtest=NimCreationGateSupportTest,NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest" test`
+  - `mvn -q "-Dtest=NimCreationGateSupportTest,NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest" test`
+  - `git -c safe.directory=F:/gitProject/kube-agent diff --check`
+  - Static secret scan found 0 matches.
+  - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
 
 ## Final M5.21-29 Decisions
 
@@ -244,11 +298,14 @@
 - `RegistryListTool` moved out of HOLD for sensitive read-only `GET /api/registry` only; registry create/update/delete and repo-tag remain HOLD.
 - `NimDeploymentPreflightTool` added for sensitive read-only NIM repository/tag/template preflight only; `nim_create` remains HOLD.
 - `NimTemplateMergeSupport` added for NIM template merge and DeploymentDTO offline preview only; preview remains `safeToPost=false`, protects `name/displayName/image`, and does not open POST create.
+- `NimCreationGateSupport` added for an explanatory NIM creation gate and HITL card draft only; gate remains `CLOSED`, forged caller claims are ignored, and preflight output cannot directly trigger `nim_create` or fallback writes.
 
 ## Next Step
 
 Continue NIM orchestration only through safe slices:
-- design NIM HITL card and create-plan state machine tests,
+- design trusted NVAIE license and SYS_ADMIN/system org policy checks in the Agent execution chain,
+- add `nim_create` future state-machine contract tests that require a server-generated `HitlConfirmation`, audit context, and an open trusted gate before any write,
+- design creation-aftercare readiness polling as a separate sensitive read path that never generates, stores, or displays real API keys,
 - or pick another mature GET area with clean backend/frontend evidence.
 
 ## Recovery Reminder

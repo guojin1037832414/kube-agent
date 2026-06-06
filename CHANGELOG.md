@@ -7,6 +7,24 @@
 ---
 
 
+## [M5.21-37] - 第三十七批 NIM 创建门禁与 HITL 卡片草案审计
+
+**交付**: 新增 `NimCreationGateSupport`，在 `nim_deployment_preflight` 的离线预览结果中返回结构化 `creationGate`，明确说明 NIM 创建为什么仍被阻断、哪些调用方声明被忽略，以及未来 HITL 确认卡片需要展示哪些字段；本批仍不开放 `nim_create`。
+
+**变更**
+- 新增 `NimCreationGateSupport`，输出 `gateState=CLOSED`、`allowedToCreateNow=false`、`sideEffect=NONE`、`blockedBy`、`ignoredCallerClaims`、`requiredTrustedChecks`、`hitlCardDraft`、`futureWritePath` 和 `nextBestActions`。
+- `NimDeploymentPreflightSupport` 将 `deploymentBodyPreview` 传入创建门禁，并在预检计划中新增 `creationGate`。
+- 新增 `NimCreationGateSupportTest`，覆盖 CPU-only ready preview 仍保持关闭、伪造 approval/license/HITL/safeToPost 声明被忽略、缺少 `displayName` 时动态阻断。
+- 扩展 `NimDeploymentPreflightToolHttpContractTest`，锁定预检 Tool 返回 `creationGate` 且仍只调用 repository、NIM tags、template 三段 GET。
+- 新增 `docs/M5_21_THIRTY_SEVENTH_WAVE_NIM_CREATION_GATE_AUDIT_20260606.md`，并更新 M5.21 波次索引和项目记忆。
+
+**安全**
+- `creationGate` 只是解释型关闭门禁，不授权、不写审计、不调用 kube-manager、不生成 `HitlConfirmation`。
+- 固定阻断项包括 `NIM_CREATE_TOOL_HOLD`、NVAIE license 未可信校验、SYS_ADMIN/system org 策略未可信校验、HITL marker 未签发、审计与 readiness 闭环未完成。
+- 动态阻断项覆盖 preview 不完整、缺少 `displayName`、GPU map 未解析、`safeToPost` 标志异常。
+- `approved`、`confirmed`、`hitlConfirmed`、`safeToPost`、`licenseValid`、`sysAdmin`、`role` 等调用方入参只会进入 `ignoredCallerClaims`，不能作为创建授权依据。
+- `futureWritePath.directUseOfPreviewAllowed=false` 且 `fallbackAllowedFromPreflight=false`，防止把预检草案直接透传给写 Tool 或 fallback Tool。
+
 ## [M5.21-36] - 第三十六批 NIM 模板合并与 DeploymentDTO 离线预览审计
 
 **交付**: 新增 `NimTemplateMergeSupport`，把 mature `vue-kube-manager` NIM 一键部署中的 `mergeTemplate + formatApplication` 确定性换算沉淀为 `safeToPost=false` 的离线 DeploymentDTO 草案预览，辅助后续 HITL 设计，但不开放 `nim_create`。

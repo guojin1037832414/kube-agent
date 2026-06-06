@@ -101,6 +101,18 @@ class NimDeploymentPreflightToolHttpContractTest {
         assertEquals(16384, bodyDraft.get("memLimits"));
         assertEquals("A100", bodyDraft.get("gpuSpec"));
         assertFalse(bodyDraft.containsKey("gpuModel"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> creationGate = (Map<String, Object>) data.get("creationGate");
+        assertEquals("CLOSED", creationGate.get("gateState"));
+        assertEquals(false, creationGate.get("allowedToCreateNow"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) creationGate.get("blockedBy");
+        assertTrue(blockers.stream().anyMatch(item -> "NIM_CREATE_TOOL_HOLD".equals(item.get("code"))));
+        assertTrue(blockers.stream().anyMatch(item -> "GPU_MAP_UNRESOLVED".equals(item.get("code"))));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> hitlCardDraft = (Map<String, Object>) creationGate.get("hitlCardDraft");
+        assertEquals("NIM_CREATE_CONFIRMATION_DRAFT", hitlCardDraft.get("cardType"));
+        assertEquals("nim_create", hitlCardDraft.get("targetTool"));
 
         verify(httpClient).get(eq("/api/100002/repository"), eq(Map.of(
             "page", "1",

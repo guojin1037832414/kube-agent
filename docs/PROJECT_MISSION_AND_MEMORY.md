@@ -81,9 +81,30 @@ Current track:
 
 Recently completed:
 
-`M5.21-36 NIM template merge preview`
+`M5.21-37 NIM creation gate and HITL card draft`
 
 Latest checkpoint:
+
+- Date: 2026-06-06 23:00 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-37 implemented, verified, and recovery-sync ready:
+  - Added `NimCreationGateSupport` for a structured, fail-closed NIM creation gate.
+  - `nim_deployment_preflight` now returns `creationGate` alongside `deploymentBodyPreview`.
+  - `creationGate` always returns `gateState=CLOSED`, `allowedToCreateNow=false`, and `sideEffect=NONE`.
+  - Fixed blockers include `NIM_CREATE_TOOL_HOLD`, NVAIE license not verified, caller org/SYS_ADMIN policy not verified, HITL confirmation not issued, and audit/readiness flow not ready.
+  - Dynamic blockers include incomplete DeploymentDTO preview, missing `displayName`, unresolved GPU map, and invalid preview safety flag.
+  - Caller-supplied approval/license/HITL/safeToPost/RBAC claims are surfaced only as `ignoredCallerClaims`; they never authorize creation.
+  - `hitlCardDraft` records the future `nim_create` confirmation shape: displayName, image, templateId, GPU, CPU/memory, network, quota/cost acknowledgement, and API-key safety warnings.
+  - `futureWritePath.directUseOfPreviewAllowed=false` and `fallbackAllowedFromPreflight=false` prevent direct POST or fallback write execution from preflight output.
+  - No new HTTP endpoint was added; no real `8100` access; no POST create; `nim_create` remains fail-closed `PLACEHOLDER`.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreationGateSupportTest,NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest" test`
+    - `mvn -q "-Dtest=NimCreationGateSupportTest,NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest" test`
+    - `git -c safe.directory=F:/gitProject/kube-agent diff --check`
+    - Static secret scan found 0 matches.
+    - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+  - Commit and push will be completed after external recovery sync.
 
 - Date: 2026-06-06 22:38 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
@@ -104,7 +125,7 @@ Latest checkpoint:
     - `mvn -q test`
   - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
   - External recovery docs synced and hash-verified to `H:\codex重要文件\kube-agent`.
-  - Push status: pending final docs checkpoint push.
+  - Push status: pushed to origin before M5.21-37 began.
 
 - Date: 2026-06-06 21:36 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
@@ -180,5 +201,7 @@ Latest in-progress/completed chunk after checkpoint:
 Recommended next work:
 
 - Continue NIM orchestration through safe slices:
-  - design NIM HITL card and audited DTO merge,
+  - design trusted NVAIE license and SYS_ADMIN/system org policy checks in the Agent execution chain,
+  - add future `nim_create` state-machine contract tests requiring server-generated `HitlConfirmation`, audit context, and an open trusted gate before any write,
+  - design creation-aftercare readiness polling as a separate sensitive read path that never generates, stores, or displays real API keys,
   - or pick another mature GET area with clean backend/frontend evidence.
