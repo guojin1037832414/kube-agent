@@ -235,7 +235,11 @@ class NimCreateStateMachineSupportTest {
             "requestId", "req-1",
             "conversationId", "conv-1",
             "userId", "user-1",
-            "organizationId", "100002"
+            "organizationId", "100002",
+            "targetTool", "nim_create",
+            "writeBodyProvenance", NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
+            "secretRedactionApplied", true,
+            "apiKeyHandling", NimCreateStateMachineSupport.API_KEY_POLICY
         );
     }
 
@@ -243,8 +247,15 @@ class NimCreateStateMachineSupportTest {
         return Map.of(
             "readinessPollingPrepared", true,
             "pollOnly", true,
+            "apiKeyPlaceholderOnly", true,
             "apiKeyHandling", NimCreateStateMachineSupport.API_KEY_POLICY,
-            "targets", List.of("deployment", "service", "nim-health")
+            "targets", List.of("deployment", "service", "nim-health", "nim-models"),
+            "steps", List.of(
+                Map.of("target", "deployment", "method", "GET", "endpoint", "/api/{orgId}/deployment"),
+                Map.of("target", "service", "method", "EXTRACT_FROM_DEPLOYMENT_RESPONSE", "endpoint", "deployment.entranceMap.http|http1"),
+                Map.of("target", "nim-health", "method", "GET", "endpoint", "{nimApiBasePath}/v1/health/live"),
+                Map.of("target", "nim-models", "method", "GET", "endpoint", "{nimApiBasePath}/v1/models")
+            )
         );
     }
 

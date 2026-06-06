@@ -27,7 +27,15 @@ final class NimCreateStateMachineSupport {
         "requestId",
         "conversationId",
         "userId",
-        "organizationId"
+        "organizationId",
+        "targetTool",
+        "writeBodyProvenance"
+    );
+
+    private static final Set<String> REQUIRED_READINESS_TARGETS = Set.of(
+        "deployment",
+        "service",
+        "nim-health"
     );
 
     private static final Set<String> FORBIDDEN_SECRET_KEYS = Set.of(
@@ -207,10 +215,14 @@ final class NimCreateStateMachineSupport {
         if (auditContext.isEmpty()
             || !Boolean.TRUE.equals(auditContext.get("auditPrepared"))
             || !"NIM_CREATE_REQUEST".equals(text(auditContext.get("auditEventType")))
+            || !TARGET_TOOL.equals(text(auditContext.get("targetTool")))
+            || !TRUSTED_BODY_PROVENANCE.equals(text(auditContext.get("writeBodyProvenance")))
+            || !Boolean.TRUE.equals(auditContext.get("secretRedactionApplied"))
+            || !API_KEY_POLICY.equals(text(auditContext.get("apiKeyHandling")))
             || missingRequiredFields(auditContext, REQUIRED_AUDIT_FIELDS)) {
             blockers.add(blocker(
                 "AUDIT_CONTEXT_NOT_READY",
-                "缺少完整审计上下文，必须包含 requestId、conversationId、userId、organizationId 和 NIM_CREATE_REQUEST 事件。",
+                "缺少完整审计上下文，必须包含 requestId、conversationId、userId、organizationId、targetTool、可信 body 来源和密钥脱敏策略。",
                 "audit"
             ));
         }
@@ -228,10 +240,13 @@ final class NimCreateStateMachineSupport {
         if (readinessPlan.isEmpty()
             || !Boolean.TRUE.equals(readinessPlan.get("readinessPollingPrepared"))
             || !Boolean.TRUE.equals(readinessPlan.get("pollOnly"))
-            || !API_KEY_POLICY.equals(text(readinessPlan.get("apiKeyHandling")))) {
+            || !API_KEY_POLICY.equals(text(readinessPlan.get("apiKeyHandling")))
+            || !Boolean.TRUE.equals(readinessPlan.get("apiKeyPlaceholderOnly"))
+            || !containsAllRequiredTargets(readinessPlan.get("targets"), REQUIRED_READINESS_TARGETS)
+            || !readinessStepsAreReadOnly(readinessPlan.get("steps"))) {
             blockers.add(blocker(
                 "READINESS_PLAN_NOT_READY",
-                "缺少创建后只读 readiness 轮询计划，且必须声明不生成、不保存、不展示真实 API Key。",
+                "缺少创建后只读 readiness 轮询计划，必须覆盖 deployment/service/nim-health，且只能使用只读/派生步骤。",
                 "readiness"
             ));
         }
@@ -338,6 +353,40 @@ final class NimCreateStateMachineSupport {
             }
         }
         return false;
+    }
+
+    private static boolean containsAllRequiredTargets(Object rawTargets, Set<String> requiredTargets) {
+        if (!(rawTargets instanceof List<?> targets)) {
+            return false;
+        }
+        Set<String> actualTargets = new java.util.HashSet<>();
+        for (Object target : targets) {
+            actualTargets.add(text(target));
+        }
+        return actualTargets.containsAll(requiredTargets);
+    }
+
+    private static boolean readinessStepsAreReadOnly(Object rawSteps) {
+        if (!(rawSteps instanceof List<?> steps) || steps.isEmpty()) {
+            return false;
+        }
+        boolean hasDeploymentRead = false;
+        boolean hasNimHealthRead = false;
+        for (Object item : steps) {
+            Map<String, Object> step = objectMap(item);
+            String target = text(step.get("target"));
+            String method = text(step.get("method"));
+            if (!List.of("GET", "EXTRACT_FROM_DEPLOYMENT_RESPONSE").contains(method)) {
+                return false;
+            }
+            if ("deployment".equals(target) && "GET".equals(method)) {
+                hasDeploymentRead = true;
+            }
+            if ("nim-health".equals(target) && "GET".equals(method)) {
+                hasNimHealthRead = true;
+            }
+        }
+        return hasDeploymentRead && hasNimHealthRead;
     }
 
     private static boolean containsForbiddenSecretMaterial(Map<String, Object> map) {

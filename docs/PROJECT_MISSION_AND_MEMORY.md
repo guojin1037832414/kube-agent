@@ -81,13 +81,52 @@ Current track:
 
 Recently completed:
 
-`M5.21-39 NIM create state-machine safety contract`
+`M5.21-40 NIM audit context and readiness plan draft`
 
 Latest checkpoint:
 
+- Date: 2026-06-06 23:55 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-40 implemented, verified, recovery-synced, and committed; push is the remaining completion step:
+  - Added `NimCreateAuditReadinessSupport` as a pure support class for future `nim_create` audit context and readiness plan.
+  - `buildAuditContext(...)` now creates a state-machine consumable map containing:
+    - `auditPrepared`
+    - `auditEventType=NIM_CREATE_REQUEST`
+    - `requestId/conversationId/userId/organizationId`
+    - `targetTool=nim_create`
+    - `backendEndpoint=POST /api/{orgId}/deployment`
+    - `writeBodyProvenance=SERVER_REBUILT_FROM_AUDITED_NIM_STATE`
+    - `secretRedactionApplied=true`
+    - `apiKeyHandling=NEVER_GENERATE_STORE_OR_DISPLAY`
+    - ignored caller claim keys.
+  - `buildReadinessPlan(...)` now models mature Vue NIM readiness:
+    - Deployment list readback by name,
+    - deriving service base URL from `entranceMap.http/http1`,
+    - GET `/v1/health/live`,
+    - GET `/v1/models`,
+    - no real API Key generation/storage/display.
+  - `NimCreateStateMachineSupport` was tightened:
+    - audit must contain target tool, trusted body provenance, secret redaction, and API Key policy;
+    - readiness must cover `deployment/service/nim-health`;
+    - readiness steps may only be `GET` or `EXTRACT_FROM_DEPLOYMENT_RESPONSE`;
+    - POST readiness steps are rejected.
+  - Added `NimCreateAuditReadinessSupportTest`.
+  - Updated `NimCreateStateMachineSupportTest` future-ready fixtures.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimCreateAuditReadinessSupportTest,NimCreateStateMachineSupportTest" test`
+  - Final verification passed:
+    - `mvn -q "-Dtest=NimCreateAuditReadinessSupportTest,NimCreateStateMachineSupportTest,NimCreationGateSupportTest,NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest,HighRiskMutationToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest" test`
+    - `git -c safe.directory=F:/gitProject/kube-agent diff --check`
+    - Real secret-pattern static scan found 0 matches.
+    - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+  - External recovery docs synced and hash-verified to `H:\codex重要文件\kube-agent`.
+  - Commit: `46a601b feat(M5.21): add NIM audit readiness plan`.
+  - No real `8100` access; no `POST /api/{orgId}/deployment`; no real NIM readiness polling.
+
 - Date: 2026-06-06 23:33 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
-- M5.21-39 implemented, verified, recovery-synced, and committed; push is the remaining completion step:
+- M5.21-39 implemented, verified, recovery-synced, committed, and pushed:
   - Added `NimCreateStateMachineSupport` as a pure future write guard for `nim_create`.
   - `NimCreateTool` remains fail-closed `PLACEHOLDER`, but its failure result now includes `data.stateMachine` so the Agent can explain exactly why real NIM creation is still held.
   - State-machine output includes:
@@ -128,6 +167,7 @@ Latest checkpoint:
   - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
   - External recovery docs synced and hash-verified to `H:\codex重要文件\kube-agent`.
   - Commit: `2f63d3f feat(M5.21): add NIM create state machine guard`.
+  - Follow-up memory correction commit: `e3a30ef docs(M5.21): correct NIM state machine commit memory`.
   - No real `8100` access; no `POST /api/{orgId}/deployment`; no NIM service creation.
 
 - Date: 2026-06-06 23:12 Asia/Shanghai.

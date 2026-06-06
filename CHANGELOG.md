@@ -7,6 +7,28 @@
 ---
 
 
+## [M5.21-40] - 第四十批 NIM 审计上下文与 readiness 计划草案审计
+
+**交付**: 新增 `NimCreateAuditReadinessSupport`，把未来 `nim_create` 写入前的审计上下文与创建后 readiness 轮询计划建模为纯数据结构，并强化 `NimCreateStateMachineSupport` 对审计和 readiness 的校验；本批仍不开放真实创建。
+
+**变更**
+- 新增 `NimCreateAuditReadinessSupport`，从 request/conversation/user/org、`creationGate`、`deploymentBodyPreview` 与服务端 `HitlConfirmation` 生成:
+  - `auditContext`
+  - `readinessPlan`
+- `auditContext` 固定 `auditEventType=NIM_CREATE_REQUEST`、`targetTool=nim_create`、`writeBodyProvenance=SERVER_REBUILT_FROM_AUDITED_NIM_STATE`、`secretRedactionApplied=true` 和 API Key 安全策略。
+- `readinessPlan` 对齐 mature 前端: 先按名称只读回查 Deployment，再从 `entranceMap.http/http1` 派生 NIM 服务入口，最后只读 GET `/v1/health/live` 与 `/v1/models`。
+- `NimCreateStateMachineSupport` 加严:
+  - 审计上下文必须包含目标 Tool、可信 body 来源、密钥脱敏和 API Key 策略。
+  - readiness 必须覆盖 `deployment/service/nim-health`，并且步骤只能是 `GET` 或从 Deployment 响应派生。
+- 新增 `NimCreateAuditReadinessSupportTest`，覆盖审计/readiness 可被状态机接受、调用方 token/API Key 不进入 audit、readiness 中出现 POST 或缺目标时被阻断。
+- 新增 `docs/M5_21_FORTIETH_WAVE_NIM_AUDIT_READINESS_PLAN_AUDIT_20260606.md`，并更新 M5.21 波次索引和项目记忆。
+
+**安全**
+- 本批不新增 Tool，不新增 HTTP endpoint，不调用真实 `8100`，不调用 `POST /api/{orgId}/deployment`。
+- readiness 计划只允许只读/派生步骤，明确禁止 `POST /v1/chat/completions`、`POST /v1/embeddings` 和发送真实 Authorization API Key。
+- audit/readiness 结构不得携带 token、password、secret、真实 NGC/NIM API Key。
+- `apiKeyPlaceholder` 只能是占位说明 `Bearer {input your NGC_API_KEY here}`，不能变成 Agent 生成的真实 key。
+
 ## [M5.21-39] - 第三十九批 NIM 创建状态机安全契约审计
 
 **交付**: 新增 `NimCreateStateMachineSupport`，把未来 `nim_create` 真实写入前必须满足的可信策略、服务端 HITL、审计上下文、完整预览、只读 readiness 和禁止 fallback 写入条件固化为纯状态机契约；本批仍不开放真实创建。
