@@ -81,9 +81,31 @@ Current track:
 
 Recently completed:
 
-`M5.21-49 NIM durable write executor contract shell`
+`M5.21-50 NIM durable write executor report gate`
 
 Latest checkpoint:
+
+- Date: 2026-06-07 06:21 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-50 implemented and verified:
+  - Tightened `NimCreateStateMachineSupport` so future `nim_create` release now explicitly requires `durableWriteExecutorReport`.
+  - `ReadinessRequest` now includes `durableWriteExecutorReport` while preserving compatibility constructors for negative fixtures.
+  - State-machine output now includes `durableWriteExecutorReportRequired=true`.
+  - Missing report returns `DURABLE_WRITE_EXECUTOR_REPORT_NOT_READY`.
+  - Current M5.21-49 shell report is accepted only as a valid evidence shape, then blocked by `DURABLE_WRITE_EXECUTOR_IMPLEMENTATION_HOLD`.
+  - The state machine validates shell report binding to handoff digest, request spec digest, body digest, durable audit receipt, server-derived idempotency key, and `executionAttemptSpec`.
+  - Forged success claims such as `executorImplementationAvailable=true`, `writeAttempted=true`, `writeExecuted=true`, `postWriteReadinessTriggered=true`, `deploymentId`, `deploymentUid`, or `writeResult` trigger `DURABLE_WRITE_EXECUTOR_SUCCESS_NOT_TRUSTED`.
+  - Secret leakage in the executor report triggers `DURABLE_WRITE_EXECUTOR_REPORT_CONTAINS_FORBIDDEN_SECRET`.
+  - Updated state-machine and upstream NIM contract tests so handoff completion no longer means `READY_FOR_CONTROLLED_WRITE`; durable executor report is now a distinct required gate.
+  - Added `docs/M5_21_FIFTIETH_WAVE_NIM_DURABLE_WRITE_EXECUTOR_REPORT_GATE_AUDIT_20260607.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateStateMachineSupportTest,NimCreateWriteBodyRebuilderSupportTest,NimCreateWriteRequestSpecAdapterSupportTest,NimCreateWriteExecutionHandoffSupportTest,NimCreateDurableWriteExecutorSupportTest,NimCreateAuditReadinessSupportTest,NimCreateAuditWriterSupportTest,NimCreateReadinessHttpAdapterSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateStateMachineSupportTest,NimCreateDurableWriteExecutorSupportTest,NimCreateWriteExecutionHandoffSupportTest,NimCreateWriteRequestSpecAdapterSupportTest,NimCreateWriteBodyRebuilderSupportTest,NimCreateReadinessHttpAdapterSupportTest,NimCreateReadinessExecutorSupportTest,NimCreateAuditReadinessSupportTest,NimCreateAuditWriterSupportTest,NimTrustedPolicyProviderSupportTest,NimCreationGateSupportTest,NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest,HighRiskMutationToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest,M510ArchitectureBoundaryTest" test`
+    - `git diff --check`
+    - Real secret-pattern static scan found 0 matches.
+    - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+  - No real `8100` access; no HTTP client; no real audit table write; no real NIM polling; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
 
 - Date: 2026-06-07 06:14 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
@@ -702,20 +724,21 @@ Latest in-progress/completed chunk after checkpoint:
   - Added `RegistrySiteToolHttpContractTest`.
   - Targeted test passed: `mvn -q "-Dtest=RegistrySiteToolHttpContractTest,ListToolParameterPassThroughContractTest,ListToolParameterSpecContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest" test`.
 
-Current NIM chain summary after M5.21-48:
+Current NIM chain summary after M5.21-50:
 
 - Public `nim_deployment_preflight` remains read-only and cannot create deployments.
 - `NimTemplateMergeSupport` creates only `safeToPost=false` previews.
 - `NimCreationGateSupport` and `NimTrustedPolicySnapshot` model trusted policy/gate evidence, but public facts remain untrusted until a backend provider supplies them.
-- `NimCreateStateMachineSupport` requires trusted policy, server HITL, durable audit receipt, controlled body rebuild, controlled POST request spec, controlled write execution handoff, READY readiness execution report, and a code release switch before future writes.
+- `NimCreateStateMachineSupport` requires trusted policy, server HITL, durable audit receipt, controlled body rebuild, controlled POST request spec, controlled write execution handoff, durable write executor report, READY readiness execution report, and a code release switch before future writes.
 - `NimCreateWriteExecutionHandoffSupport` is the newest gate; it binds request spec/body/audit receipt with a server-derived idempotency key and post-write readiness handoff, but it still does not execute HTTP.
-- `NimCreateDurableWriteExecutorSupport` is now the future writer contract shell; it accepts trusted handoff/request spec input but still returns `IMPLEMENTATION_HOLD` and `writeExecuted=false`.
+- `NimCreateDurableWriteExecutorSupport` is the future writer contract shell; it accepts trusted handoff/request spec input but still returns `IMPLEMENTATION_HOLD` and `writeExecuted=false`.
+- The state machine now accepts the current executor shell only as evidence shape, then blocks release with `DURABLE_WRITE_EXECUTOR_IMPLEMENTATION_HOLD`.
 
 Recommended next work:
 
 - Continue NIM orchestration through safe slices:
-  - extend the state machine so future release also requires a durable write executor report, while the current shell report still cannot release writes,
   - identify the real durable audit log/table/service and define replacement points for the mock-first audit writer,
+  - design the reviewed real durable write executor boundary around a controlled kube-manager HTTP boundary, write-before/write-after audit, idempotency persistence, POST response validation, and post-write readiness triggering,
   - later wire `NimTrustedPolicyProviderSupport` to real backend license/user/org readers only after contract tests exist,
   - keep `nim_create` HOLD until trusted policy, durable audit writer, durable write executor, readiness aftercare, and release switch all pass review,
   - or pick another mature GET area with clean backend/frontend evidence.

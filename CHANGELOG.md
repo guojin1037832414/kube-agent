@@ -6,6 +6,25 @@
 
 ---
 
+## [M5.21-50] - 第五十批 NIM durable write executor 报告门禁审计
+
+**交付**: `NimCreateStateMachineSupport` 现在显式要求 durable write executor 报告；当前 M5.21-49 shell 报告即使形状合法，也只能证明执行器仍在 `IMPLEMENTATION_HOLD`，不能释放真实写入。
+
+**变更**
+- `ReadinessRequest` 新增 `durableWriteExecutorReport`，并保留兼容构造器表达旧负例。
+- 状态机输出新增 `durableWriteExecutorReportRequired=true`。
+- 缺少 durable executor 报告返回 `DURABLE_WRITE_EXECUTOR_REPORT_NOT_READY`。
+- 当前 shell 报告必须绑定 handoff digest、request spec digest、body digest、audit receipt、服务端幂等键和 `executionAttemptSpec`。
+- 合法 shell 报告仍追加 `DURABLE_WRITE_EXECUTOR_IMPLEMENTATION_HOLD`，保持 `writePermitted=false`。
+- 伪造 `executorImplementationAvailable/writeAttempted/writeExecuted/postWriteReadinessTriggered/deploymentId/deploymentUid/writeResult` 会触发 `DURABLE_WRITE_EXECUTOR_SUCCESS_NOT_TRUSTED`。
+- 更新状态机、body rebuilder、request spec adapter、write execution handoff、audit readiness 相关测试，统一新门禁语义。
+- 新增 `docs/M5_21_FIFTIETH_WAVE_NIM_DURABLE_WRITE_EXECUTOR_REPORT_GATE_AUDIT_20260607.md`，并更新 M5.21 波次索引和项目记忆。
+
+**安全**
+- 本批不新增 Tool/Controller，不持有 HTTP client，不访问真实 `8100`，不调用 `POST /api/{orgId}/deployment`。
+- durable executor report 是必需证据，但当前 shell report 不是 release credential。
+- `nim_create` 继续保持 `httpMethod=NONE + PLACEHOLDER + requiresConfirmation=true`。
+
 ## [M5.21-49] - 第四十九批 NIM durable write executor 合同壳审计
 
 **交付**: 新增 `NimCreateDurableWriteExecutorSupport`，为未来 `FUTURE_DURABLE_WRITE_EXECUTOR` 建立 mock-first 入场合同壳；它验证 handoff/request spec 证据，但在真实实现完成前强制 `IMPLEMENTATION_HOLD`，不执行真实写入。

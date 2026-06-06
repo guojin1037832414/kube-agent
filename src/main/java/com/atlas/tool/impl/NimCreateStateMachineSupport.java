@@ -116,6 +116,15 @@ final class NimCreateStateMachineSupport {
             safeRequest.writeExecutionHandoffReport(),
             blockers
         );
+        validateDurableWriteExecutorReport(
+            safeRequest.auditContext(),
+            safeRequest.auditReceipt(),
+            safeRequest.writeBodyRebuildReport(),
+            safeRequest.writeRequestSpecReport(),
+            safeRequest.writeExecutionHandoffReport(),
+            safeRequest.durableWriteExecutorReport(),
+            blockers
+        );
         validateReadinessPlan(safeRequest.readinessPlan(), blockers);
         validateReadinessExecutionReport(safeRequest.readinessExecutionReport(), blockers);
         validateWriteBodyProvenance(safeRequest.writeBodyProvenance(), blockers);
@@ -137,6 +146,7 @@ final class NimCreateStateMachineSupport {
         result.put("writeBodyRebuildRequired", true);
         result.put("writeRequestSpecRequired", true);
         result.put("writeExecutionHandoffRequired", true);
+        result.put("durableWriteExecutorReportRequired", true);
         result.put("readinessExecutionRequired", true);
         result.put("apiKeyPolicy", API_KEY_POLICY);
         return result;
@@ -598,6 +608,79 @@ final class NimCreateStateMachineSupport {
         }
     }
 
+    private static void validateDurableWriteExecutorReport(Map<String, Object> auditContext,
+                                                           Map<String, Object> auditReceipt,
+                                                           Map<String, Object> writeBodyRebuildReport,
+                                                           Map<String, Object> writeRequestSpecReport,
+                                                           Map<String, Object> writeExecutionHandoffReport,
+                                                           Map<String, Object> durableWriteExecutorReport,
+                                                           List<Map<String, Object>> blockers) {
+        if (durableWriteExecutorReport.isEmpty()) {
+            blockers.add(blocker(
+                "DURABLE_WRITE_EXECUTOR_REPORT_NOT_READY",
+                "缺少 durable write executor 报告；未来真实写入不能只凭 handoff 或调用方自报执行结果放行。",
+                "durable-write-executor"
+            ));
+            return;
+        }
+
+        Map<String, Object> executionAttemptSpec = objectMap(durableWriteExecutorReport.get("executionAttemptSpec"));
+        boolean shellContractValid = NimCreateDurableWriteExecutorSupport.EXECUTOR_NAME.equals(text(durableWriteExecutorReport.get("durableWriteExecutor")))
+            && NimCreateDurableWriteExecutorSupport.EXECUTION_MODE.equals(text(durableWriteExecutorReport.get("executionMode")))
+            && NimCreateDurableWriteExecutorSupport.HOLD_STATE.equals(text(durableWriteExecutorReport.get("executionState")))
+            && TARGET_TOOL.equals(text(durableWriteExecutorReport.get("targetTool")))
+            && "POST".equals(text(durableWriteExecutorReport.get("httpMethod")))
+            && NimCreateAuditReadinessSupport.BACKEND_ENDPOINT.equals(text(durableWriteExecutorReport.get("backendEndpoint")))
+            && "/api/{orgId}/deployment".equals(text(durableWriteExecutorReport.get("pathTemplate")))
+            && "NOT_PERFORMED".equals(text(durableWriteExecutorReport.get("networkAccess")))
+            && "NONE".equals(text(durableWriteExecutorReport.get("sideEffect")))
+            && Boolean.TRUE.equals(durableWriteExecutorReport.get("inputAccepted"))
+            && Boolean.FALSE.equals(durableWriteExecutorReport.get("executorImplementationAvailable"))
+            && Boolean.FALSE.equals(durableWriteExecutorReport.get("releaseCredential"))
+            && Boolean.FALSE.equals(durableWriteExecutorReport.get("realHttpExecutionAllowed"))
+            && Boolean.FALSE.equals(durableWriteExecutorReport.get("writeAttempted"))
+            && Boolean.FALSE.equals(durableWriteExecutorReport.get("writeExecuted"))
+            && Boolean.FALSE.equals(durableWriteExecutorReport.get("postWriteReadinessTriggered"))
+            && text(writeExecutionHandoffReport.get("handoffDigest")).equals(text(durableWriteExecutorReport.get("sourceHandoffDigest")))
+            && text(writeRequestSpecReport.get("requestSpecDigest")).equals(text(durableWriteExecutorReport.get("sourceRequestSpecDigest")))
+            && text(writeBodyRebuildReport.get("bodyDigest")).equals(text(durableWriteExecutorReport.get("sourceBodyDigest")))
+            && text(writeExecutionHandoffReport.get("idempotencyKey")).equals(text(durableWriteExecutorReport.get("idempotencyKey")))
+            && NimCreateWriteExecutionHandoffSupport.IDEMPOTENCY_KEY_SOURCE.equals(text(durableWriteExecutorReport.get("idempotencyKeySource")))
+            && Boolean.FALSE.equals(durableWriteExecutorReport.get("callerIdempotencyKeyAllowed"))
+            && hasOnlyBlockerCode(durableWriteExecutorReport.get("blockedBy"), "DURABLE_WRITE_EXECUTOR_IMPLEMENTATION_HOLD")
+            && executionAttemptSpecContractValid(auditContext, auditReceipt, writeBodyRebuildReport, writeRequestSpecReport, writeExecutionHandoffReport, executionAttemptSpec);
+
+        if (!shellContractValid) {
+            blockers.add(blocker(
+                "DURABLE_WRITE_EXECUTOR_REPORT_CONTRACT_INVALID",
+                "durable write executor 报告必须来自当前受控合同壳，绑定 handoff/request/body/audit digest，并保持未实现、未联网、未写入。",
+                "durable-write-executor"
+            ));
+        } else {
+            blockers.add(blocker(
+                "DURABLE_WRITE_EXECUTOR_IMPLEMENTATION_HOLD",
+                "当前 durable write executor 仍是合同壳 IMPLEMENTATION_HOLD，writeExecuted=false；真实 POST 必须等待实现、审计与发布门禁。",
+                "durable-write-executor"
+            ));
+        }
+
+        if (durableExecutorClaimsWriteSuccess(durableWriteExecutorReport)) {
+            blockers.add(blocker(
+                "DURABLE_WRITE_EXECUTOR_SUCCESS_NOT_TRUSTED",
+                "当前版本没有已审计的真实 durable write executor；任何 writeExecuted、deploymentId 或写后 readiness 触发声明都不能作为放行依据。",
+                "durable-write-executor"
+            ));
+        }
+
+        if (containsForbiddenSecretMaterial(durableWriteExecutorReport)) {
+            blockers.add(blocker(
+                "DURABLE_WRITE_EXECUTOR_REPORT_CONTAINS_FORBIDDEN_SECRET",
+                "durable write executor 报告不得携带 Authorization、token、password、secret 或真实 NGC/NIM API Key。",
+                "durable-write-executor"
+            ));
+        }
+    }
+
     private static void validateWriteBodyProvenance(String writeBodyProvenance,
                                                     List<Map<String, Object>> blockers) {
         String provenance = text(writeBodyProvenance);
@@ -724,6 +807,8 @@ final class NimCreateStateMachineSupport {
             "审计上下文必须先被持久化审计 writer 接收，并返回 durable audit receipt",
             "POST body 必须由受控重建器输出白名单 DeploymentDTO，并绑定 durable audit receipt",
             "POST body 必须由受控 NIM 状态机重新构建，不能直接复用 preview bodyDraft",
+            "受控写执行交接之后必须产出 durable write executor 报告，不能只凭 handoff 放行",
+            "当前 durable write executor shell 仍为 IMPLEMENTATION_HOLD/writeExecuted=false，真实写入必须等待实现审计",
             "创建后 readiness 只能只读轮询，且必须由受控 readiness executor 返回 READY 报告",
             "readiness executor 报告不得生成、保存、展示或携带真实 API Key",
             "nim_create 代码级 release 开关必须显式打开"
@@ -865,6 +950,49 @@ final class NimCreateStateMachineSupport {
             && Boolean.TRUE.equals(postWriteReadinessHandoff.get("readOnly"))
             && API_KEY_POLICY.equals(text(postWriteReadinessHandoff.get("apiKeyHandling")))
             && Boolean.TRUE.equals(postWriteReadinessHandoff.get("forbiddenBeforeWrite"));
+    }
+
+    private static boolean executionAttemptSpecContractValid(Map<String, Object> auditContext,
+                                                             Map<String, Object> auditReceipt,
+                                                             Map<String, Object> writeBodyRebuildReport,
+                                                             Map<String, Object> writeRequestSpecReport,
+                                                             Map<String, Object> writeExecutionHandoffReport,
+                                                             Map<String, Object> executionAttemptSpec) {
+        String organizationId = text(auditContext.get("organizationId"));
+        return !executionAttemptSpec.isEmpty()
+            && "deployment-create".equals(text(executionAttemptSpec.get("target")))
+            && "POST".equals(text(executionAttemptSpec.get("method")))
+            && NimCreateAuditReadinessSupport.BACKEND_ENDPOINT.equals(text(executionAttemptSpec.get("backendEndpoint")))
+            && "/api/{orgId}/deployment".equals(text(executionAttemptSpec.get("pathTemplate")))
+            && ("/api/" + organizationId + "/deployment").equals(text(executionAttemptSpec.get("resolvedPath")))
+            && text(writeRequestSpecReport.get("requestSpecDigest")).equals(text(executionAttemptSpec.get("requestSpecDigest")))
+            && text(writeBodyRebuildReport.get("bodyDigest")).equals(text(executionAttemptSpec.get("bodyDigest")))
+            && text(writeExecutionHandoffReport.get("handoffDigest")).equals(text(executionAttemptSpec.get("handoffDigest")))
+            && text(writeExecutionHandoffReport.get("idempotencyKey")).equals(text(executionAttemptSpec.get("idempotencyKey")))
+            && NimCreateWriteExecutionHandoffSupport.IDEMPOTENCY_KEY_SOURCE.equals(text(executionAttemptSpec.get("idempotencyKeySource")))
+            && text(auditReceipt.get("receiptId")).equals(text(executionAttemptSpec.get("auditReceiptId")))
+            && text(auditReceipt.get("eventDigest")).equals(text(executionAttemptSpec.get("auditEventDigest")))
+            && "KUBE_MANAGER_HTTP_CLIENT_CONTEXT_ONLY".equals(text(executionAttemptSpec.get("kubeManagerAuthBoundary")))
+            && Boolean.FALSE.equals(executionAttemptSpec.get("callerHeadersAllowed"))
+            && Boolean.FALSE.equals(executionAttemptSpec.get("authorizationHeaderFromCallerAllowed"))
+            && Boolean.FALSE.equals(executionAttemptSpec.get("realApiKeyAllowed"))
+            && NimCreateReadinessExecutorSupport.EXECUTOR_NAME.equals(text(executionAttemptSpec.get("postWriteReadinessExecutor")))
+            && Boolean.FALSE.equals(executionAttemptSpec.get("writeWillBeAttempted"));
+    }
+
+    private static boolean durableExecutorClaimsWriteSuccess(Map<String, Object> durableWriteExecutorReport) {
+        return Boolean.TRUE.equals(durableWriteExecutorReport.get("executorImplementationAvailable"))
+            || Boolean.TRUE.equals(durableWriteExecutorReport.get("writeAttempted"))
+            || Boolean.TRUE.equals(durableWriteExecutorReport.get("writeExecuted"))
+            || Boolean.TRUE.equals(durableWriteExecutorReport.get("postWriteReadinessTriggered"))
+            || hasText(durableWriteExecutorReport.get("deploymentId"))
+            || hasText(durableWriteExecutorReport.get("deploymentUid"))
+            || !objectMap(durableWriteExecutorReport.get("writeResult")).isEmpty();
+    }
+
+    private static boolean hasOnlyBlockerCode(Object rawBlockers, String code) {
+        List<Map<String, Object>> blockers = listOfMaps(rawBlockers);
+        return blockers.size() == 1 && code.equals(text(blockers.get(0).get("code")));
     }
 
     private static String digestFor(Map<String, Object> value) {
@@ -1045,11 +1173,43 @@ final class NimCreateStateMachineSupport {
         Map<String, Object> writeBodyRebuildReport,
         Map<String, Object> writeRequestSpecReport,
         Map<String, Object> writeExecutionHandoffReport,
+        Map<String, Object> durableWriteExecutorReport,
         Map<String, Object> readinessPlan,
         Map<String, Object> readinessExecutionReport,
         String writeBodyProvenance,
         boolean nimCreateReleased
     ) {
+        ReadinessRequest(Map<String, Object> params,
+                         Map<String, Object> creationGate,
+                         Map<String, Object> deploymentBodyPreview,
+                         HitlConfirmation hitlConfirmation,
+                         Map<String, Object> auditContext,
+                         Map<String, Object> auditReceipt,
+                         Map<String, Object> writeBodyRebuildReport,
+                         Map<String, Object> writeRequestSpecReport,
+                         Map<String, Object> writeExecutionHandoffReport,
+                         Map<String, Object> readinessPlan,
+                         Map<String, Object> readinessExecutionReport,
+                         String writeBodyProvenance,
+                         boolean nimCreateReleased) {
+            this(
+                params,
+                creationGate,
+                deploymentBodyPreview,
+                hitlConfirmation,
+                auditContext,
+                auditReceipt,
+                writeBodyRebuildReport,
+                writeRequestSpecReport,
+                writeExecutionHandoffReport,
+                Map.of(),
+                readinessPlan,
+                readinessExecutionReport,
+                writeBodyProvenance,
+                nimCreateReleased
+            );
+        }
+
         ReadinessRequest(Map<String, Object> params,
                          Map<String, Object> creationGate,
                          Map<String, Object> deploymentBodyPreview,
@@ -1072,6 +1232,7 @@ final class NimCreateStateMachineSupport {
                 writeBodyRebuildReport,
                 writeRequestSpecReport,
                 Map.of(),
+                Map.of(),
                 readinessPlan,
                 readinessExecutionReport,
                 writeBodyProvenance,
@@ -1100,6 +1261,7 @@ final class NimCreateStateMachineSupport {
                 writeBodyRebuildReport,
                 Map.of(),
                 Map.of(),
+                Map.of(),
                 readinessPlan,
                 readinessExecutionReport,
                 writeBodyProvenance,
@@ -1127,6 +1289,7 @@ final class NimCreateStateMachineSupport {
                 Map.of(),
                 Map.of(),
                 Map.of(),
+                Map.of(),
                 readinessPlan,
                 readinessExecutionReport,
                 writeBodyProvenance,
@@ -1153,6 +1316,7 @@ final class NimCreateStateMachineSupport {
                 Map.of(),
                 Map.of(),
                 Map.of(),
+                Map.of(),
                 readinessPlan,
                 Map.of(),
                 writeBodyProvenance,
@@ -1169,6 +1333,7 @@ final class NimCreateStateMachineSupport {
             writeBodyRebuildReport = writeBodyRebuildReport == null ? Map.of() : objectMap(writeBodyRebuildReport);
             writeRequestSpecReport = writeRequestSpecReport == null ? Map.of() : objectMap(writeRequestSpecReport);
             writeExecutionHandoffReport = writeExecutionHandoffReport == null ? Map.of() : objectMap(writeExecutionHandoffReport);
+            durableWriteExecutorReport = durableWriteExecutorReport == null ? Map.of() : objectMap(durableWriteExecutorReport);
             readinessPlan = readinessPlan == null ? Map.of() : objectMap(readinessPlan);
             readinessExecutionReport = readinessExecutionReport == null ? Map.of() : objectMap(readinessExecutionReport);
             writeBodyProvenance = writeBodyProvenance == null ? "" : writeBodyProvenance.trim();

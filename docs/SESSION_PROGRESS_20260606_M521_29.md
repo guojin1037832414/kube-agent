@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-49, NIM durable write executor contract shell.
+- Current latest wave: M5.21-50, NIM durable write executor report gate.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -46,6 +46,24 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-50 NIM durable write executor report gate is implemented and verified:
+  - `NimCreateStateMachineSupport.ReadinessRequest` now includes `durableWriteExecutorReport`, with compatibility constructors preserved.
+  - State-machine output now includes `durableWriteExecutorReportRequired=true`.
+  - Missing report returns `DURABLE_WRITE_EXECUTOR_REPORT_NOT_READY`.
+  - Current M5.21-49 shell report is accepted only as evidence shape and then blocked by `DURABLE_WRITE_EXECUTOR_IMPLEMENTATION_HOLD`.
+  - The state machine validates shell report binding to handoff digest, request spec digest, body digest, durable audit receipt, server-derived idempotency key, and `executionAttemptSpec`.
+  - Forged success claims (`executorImplementationAvailable`, `writeAttempted`, `writeExecuted`, `postWriteReadinessTriggered`, `deploymentId`, `deploymentUid`, `writeResult`) trigger `DURABLE_WRITE_EXECUTOR_SUCCESS_NOT_TRUSTED`.
+  - Updated state-machine and upstream NIM contract tests so handoff completion no longer means `READY_FOR_CONTROLLED_WRITE`; durable executor report is a distinct gate.
+  - Added `docs/M5_21_FIFTIETH_WAVE_NIM_DURABLE_WRITE_EXECUTOR_REPORT_GATE_AUDIT_20260607.md`.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimCreateStateMachineSupportTest,NimCreateWriteBodyRebuilderSupportTest,NimCreateWriteRequestSpecAdapterSupportTest,NimCreateWriteExecutionHandoffSupportTest,NimCreateDurableWriteExecutorSupportTest,NimCreateAuditReadinessSupportTest,NimCreateAuditWriterSupportTest,NimCreateReadinessHttpAdapterSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateStateMachineSupportTest,NimCreateDurableWriteExecutorSupportTest,NimCreateWriteExecutionHandoffSupportTest,NimCreateWriteRequestSpecAdapterSupportTest,NimCreateWriteBodyRebuilderSupportTest,NimCreateReadinessHttpAdapterSupportTest,NimCreateReadinessExecutorSupportTest,NimCreateAuditReadinessSupportTest,NimCreateAuditWriterSupportTest,NimTrustedPolicyProviderSupportTest,NimCreationGateSupportTest,NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest,HighRiskMutationToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest,M510ArchitectureBoundaryTest" test`
+    - `git diff --check`
+    - Real secret-pattern static scan found 0 matches.
+    - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+  - No real `8100` access; no HTTP client; no real audit table write; no real NIM polling; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
 
 - M5.21-49 NIM durable write executor contract shell is implemented and verified:
   - Added `NimCreateDurableWriteExecutorSupport`.
@@ -578,12 +596,13 @@
 - `NimCreateWriteRequestSpecAdapterSupport` added for controlled POST request spec compilation only; it fixes the future path/body/auth boundary while still performing no network access.
 - `NimCreateWriteExecutionHandoffSupport` added for controlled write execution handoff only; it binds request spec, body digest, durable audit receipt, server-derived idempotency key, and post-write readiness handoff before any future durable writer can execute.
 - `NimCreateDurableWriteExecutorSupport` added as a future durable writer contract shell; it verifies trusted handoff/request spec input but remains `IMPLEMENTATION_HOLD` and never attempts POST.
+- `NimCreateStateMachineSupport` now requires a durable write executor report; the current shell report is shape-valid but still blocks release with `DURABLE_WRITE_EXECUTOR_IMPLEMENTATION_HOLD`.
 
 ## Next Step
 
 Continue NIM orchestration only through safe slices:
-- extend the state machine so future release also requires a durable write executor report, while the current shell report still cannot release writes,
 - identify the true durable audit log/table/service and design replacement points for `NimCreateAuditWriterSupport`,
+- design the reviewed real durable write executor boundary around a controlled kube-manager HTTP boundary, write-before/write-after audit, idempotency persistence, POST response validation, and post-write readiness triggering,
 - later wire `NimTrustedPolicyProviderSupport` to real backend license/user/org readers only after mock-first contracts are complete,
 - keep `nim_create` HOLD until trusted policy, durable audit writer, durable write executor, readiness aftercare, and release switch all pass review,
 - or pick another mature GET area with clean backend/frontend evidence.

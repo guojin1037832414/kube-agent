@@ -128,11 +128,11 @@ class NimCreateWriteBodyRebuilderSupportTest {
             true
         ));
 
-        assertEquals("READY_FOR_CONTROLLED_WRITE", guard.get("state"));
-        assertEquals(true, guard.get("writePermitted"));
+        assertEquals("HELD", guard.get("state"));
+        assertEquals(false, guard.get("writePermitted"));
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> blockers = (List<Map<String, Object>>) guard.get("blockedBy");
-        assertTrue(blockers.isEmpty());
+        assertHasBlocker(blockers, "DURABLE_WRITE_EXECUTOR_REPORT_NOT_READY");
 
         Map<String, Object> mismatchedBodyReport = new java.util.LinkedHashMap<>(bodyReport);
         mismatchedBodyReport.put("sourceAuditReceiptId", "nim-audit-durable-other");

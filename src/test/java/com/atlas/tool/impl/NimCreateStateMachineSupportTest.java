@@ -44,6 +44,10 @@ class NimCreateStateMachineSupportTest {
         assertHasBlocker(blockers, "HITL_CONFIRMATION_NOT_TRUSTED");
         assertHasBlocker(blockers, "AUDIT_CONTEXT_NOT_READY");
         assertHasBlocker(blockers, "AUDIT_RECEIPT_NOT_READY");
+        assertHasBlocker(blockers, "WRITE_BODY_REBUILD_REPORT_NOT_READY");
+        assertHasBlocker(blockers, "WRITE_REQUEST_SPEC_REPORT_NOT_READY");
+        assertHasBlocker(blockers, "WRITE_EXECUTION_HANDOFF_REPORT_NOT_READY");
+        assertHasBlocker(blockers, "DURABLE_WRITE_EXECUTOR_REPORT_NOT_READY");
         assertHasBlocker(blockers, "READINESS_PLAN_NOT_READY");
         assertHasBlocker(blockers, "READINESS_EXECUTION_REPORT_NOT_READY");
         assertHasBlocker(blockers, "WRITE_BODY_PROVENANCE_NOT_TRUSTED");
@@ -199,7 +203,7 @@ class NimCreateStateMachineSupportTest {
     }
 
     @Test
-    void stateMachine_shouldPermitOnlyWhenEveryFuturePrerequisiteIsPresent() {
+    void stateMachine_shouldRequireDurableWriteExecutorReportAfterHandoffBeforeFutureWrite() {
         Map<String, Object> audit = completeAuditContext();
         Map<String, Object> receipt = completeAuditReceipt();
         Map<String, Object> bodyReport = completeWriteBodyRebuildReport(audit, receipt);
@@ -221,11 +225,85 @@ class NimCreateStateMachineSupportTest {
             true
         ));
 
-        assertEquals("READY_FOR_CONTROLLED_WRITE", guard.get("state"));
-        assertEquals(true, guard.get("writePermitted"));
+        assertEquals("HELD", guard.get("state"));
+        assertEquals(false, guard.get("writePermitted"));
+        assertEquals(true, guard.get("durableWriteExecutorReportRequired"));
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> blockers = (List<Map<String, Object>>) guard.get("blockedBy");
-        assertTrue(blockers.isEmpty());
+        assertHasBlocker(blockers, "DURABLE_WRITE_EXECUTOR_REPORT_NOT_READY");
+    }
+
+    @Test
+    void stateMachine_shouldAcceptExecutorShellShapeButKeepImplementationHold() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> receipt = completeAuditReceipt();
+        Map<String, Object> bodyReport = completeWriteBodyRebuildReport(audit, receipt);
+        Map<String, Object> requestSpecReport = completeWriteRequestSpecReport(audit, receipt, bodyReport);
+        Map<String, Object> handoffReport = completeWriteExecutionHandoffReport(audit, receipt, bodyReport, requestSpecReport);
+        Map<String, Object> executorReport = completeDurableWriteExecutorReport(handoffReport, requestSpecReport);
+
+        Map<String, Object> guard = NimCreateStateMachineSupport.evaluate(new NimCreateStateMachineSupport.ReadinessRequest(
+            Map.of("name", "nim-executor-shell"),
+            openGate(),
+            completePreview(),
+            HitlConfirmation.human("thread-1", "nim_create"),
+            audit,
+            receipt,
+            bodyReport,
+            requestSpecReport,
+            handoffReport,
+            executorReport,
+            completeReadinessPlan(),
+            completeReadinessExecutionReport(),
+            NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
+            true
+        ));
+
+        assertEquals("HELD", guard.get("state"));
+        assertEquals(false, guard.get("writePermitted"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) guard.get("blockedBy");
+        assertHasBlocker(blockers, "DURABLE_WRITE_EXECUTOR_IMPLEMENTATION_HOLD");
+        assertEquals(1, blockers.size());
+    }
+
+    @Test
+    void stateMachine_shouldRejectForgedDurableExecutorSuccessClaims() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> receipt = completeAuditReceipt();
+        Map<String, Object> bodyReport = completeWriteBodyRebuildReport(audit, receipt);
+        Map<String, Object> requestSpecReport = completeWriteRequestSpecReport(audit, receipt, bodyReport);
+        Map<String, Object> handoffReport = completeWriteExecutionHandoffReport(audit, receipt, bodyReport, requestSpecReport);
+        Map<String, Object> forgedExecutorReport = new java.util.LinkedHashMap<>(completeDurableWriteExecutorReport(handoffReport, requestSpecReport));
+        forgedExecutorReport.put("executorImplementationAvailable", true);
+        forgedExecutorReport.put("writeAttempted", true);
+        forgedExecutorReport.put("writeExecuted", true);
+        forgedExecutorReport.put("postWriteReadinessTriggered", true);
+        forgedExecutorReport.put("deploymentId", "dep-forged");
+
+        Map<String, Object> guard = NimCreateStateMachineSupport.evaluate(new NimCreateStateMachineSupport.ReadinessRequest(
+            Map.of("name", "nim-forged-executor"),
+            openGate(),
+            completePreview(),
+            HitlConfirmation.human("thread-1", "nim_create"),
+            audit,
+            receipt,
+            bodyReport,
+            requestSpecReport,
+            handoffReport,
+            forgedExecutorReport,
+            completeReadinessPlan(),
+            completeReadinessExecutionReport(),
+            NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
+            true
+        ));
+
+        assertEquals("HELD", guard.get("state"));
+        assertEquals(false, guard.get("writePermitted"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) guard.get("blockedBy");
+        assertHasBlocker(blockers, "DURABLE_WRITE_EXECUTOR_REPORT_CONTRACT_INVALID");
+        assertHasBlocker(blockers, "DURABLE_WRITE_EXECUTOR_SUCCESS_NOT_TRUSTED");
     }
 
     @Test
@@ -437,6 +515,16 @@ class NimCreateStateMachineSupportTest {
                 audit,
                 receipt,
                 bodyReport,
+                requestSpecReport
+            )
+        );
+    }
+
+    private Map<String, Object> completeDurableWriteExecutorReport(Map<String, Object> handoffReport,
+                                                                   Map<String, Object> requestSpecReport) {
+        return NimCreateDurableWriteExecutorSupport.prepare(
+            new NimCreateDurableWriteExecutorSupport.WriteExecutionInput(
+                handoffReport,
                 requestSpecReport
             )
         );
