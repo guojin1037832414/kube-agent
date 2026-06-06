@@ -193,6 +193,38 @@ class SafeToolExecutorTest {
     }
 
     @Test
+    void executeIntent_shouldPreserveStructuredFailureForClarification() {
+        // GPU 创建缺少 gpuSpec、参数歧义等场景会通过 AtlasToolResult.fail 携带 errorCode/suggestions。
+        // SafeToolExecutor 不能把这些信号压平成普通失败文本，否则 Graph/SSE/前端无法渲染澄清任务。
+        ClarificationFailureTool clarifyTool = new ClarificationFailureTool();
+        SafeToolExecutor executor = newExecutor(clarifyTool);
+
+        SafeToolExecutionResult result = executor.executeIntent(new SafeToolExecutionRequest(
+            "test.clarify.failure",
+            Map.of("keyword", "gpu"),
+            "user-A",
+            "token-A",
+            "100002",
+            "conv-clarify-A",
+            null,
+            SafeToolExecutionSource.GRAPH_TOOL_CALL
+        ));
+
+        assertTrue(result.executed(), "Tool 已被调用，只是业务结果需要用户补充参数");
+        assertFalse(result.success(), "结构化补参失败不应被标记为成功");
+        assertEquals("MISSING_GPU_SPEC", result.errorCode());
+        assertTrue(result.requiresClarification(), "带 errorCode/suggestions 的业务失败应成为澄清信号");
+        assertTrue(result.answer().startsWith("❌"), "失败摘要不能使用成功前缀误导用户");
+        assertEquals("MISSING_GPU_SPEC", result.toolResult().get("errorCode"));
+        assertEquals(Boolean.TRUE, result.toolResult().get("requiresClarification"));
+
+        Map<String, Object> updates = result.toGraphUpdates();
+        assertEquals("MISSING_GPU_SPEC", updates.get("tool_error_code"));
+        assertEquals(Boolean.TRUE, updates.get("requires_clarification"));
+        assertEquals(List.of("请先调用 gpu_query 查询组织级 GPU map，再选择明确 gpuSpec"), updates.get("tool_suggestions"));
+    }
+
+    @Test
     void executeIntent_shouldKeepUnknownBusinessParamsForGraphToolCallCompatibility() {
         // 【兼容性契约】第六小批只收紧 PLAN_EXECUTE_NODE 自动执行入口。
         // 普通 Graph/ReAct/ToolCallback 兼容路径仍保持历史语义：未知业务字段继续交给 Tool 自身处理，只过滤受保护上下文。
@@ -442,6 +474,39 @@ class SafeToolExecutorTest {
         protected AtlasToolResult doExecute(Map<String, Object> params) {
             lastParams = Map.copyOf(params);
             return AtlasToolResult.ok("读取成功", List.of(Map.of("name", "node-a")));
+        }
+    }
+
+    /**
+     * 测试用结构化澄清失败 Tool。
+     */
+    @AtlasToolMapping(
+        name = "test_clarification_failure_tool",
+        intentId = "test.clarify.failure",
+        agent = "deploy",
+        description = "测试结构化澄清失败工具",
+        httpMethod = "GET",
+        apiEndpoints = {"/api/test/clarify-failure"},
+        operationType = AtlasToolMapping.OperationType.READ,
+        requiresConfirmation = false
+    )
+    private static class ClarificationFailureTool extends BaseTool {
+        private ClarificationFailureTool() {
+            super("test_clarification_failure_tool", "测试结构化澄清失败工具");
+        }
+
+        @Override
+        protected Set<String> getRequiredParams() {
+            return Set.of();
+        }
+
+        @Override
+        protected AtlasToolResult doExecute(Map<String, Object> params) {
+            return AtlasToolResult.fail(
+                "创建 GPU 实例缺少明确 gpuSpec",
+                "MISSING_GPU_SPEC",
+                List.of("请先调用 gpu_query 查询组织级 GPU map，再选择明确 gpuSpec")
+            );
         }
     }
 

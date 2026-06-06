@@ -42,8 +42,6 @@ class HomeInfoPublicPageLimitContractTest {
     @Test
     void thirdBatchPageLimitOnlyTools_shouldExposeOnlyPageAndLimitSpecsWithoutKeywordOrSearchAliases() {
         assertPageLimitOnlySpecs(new NodeQueryTool(null), "node_query");
-        assertPageLimitOnlySpecs(new FileVolumePathTool(null), "file_volume_path");
-        assertPageLimitOnlySpecs(new FileStorageOptionTool(null), "file_storage_option");
         assertPageLimitOnlySpecs(new ImageRepositoryTool(null), "image_repository");
         assertPageLimitOnlySpecs(new BareMetalTemplateTool(null), "bare_metal_template");
     }
@@ -51,8 +49,6 @@ class HomeInfoPublicPageLimitContractTest {
     @Test
     void thirdBatchPageLimitOnlyTools_shouldPassThroughPageAndLimitButNeverKeyword() {
         assertPageLimitPassThroughWithOrg(NodeQueryTool::new, "/api/100001/node");
-        assertPageLimitPassThroughWithOrg(FileVolumePathTool::new, "/api/100001/file/volume-path");
-        assertPageLimitPassThroughWithOrg(FileStorageOptionTool::new, "/api/100001/file/storage/option");
         assertPageLimitPassThroughWithOrg(ImageRepositoryTool::new, "/api/100001/image/repository");
         assertPageLimitPassThrough(BareMetalTemplateTool::new, "/api/bare-metal-config-template");
     }
@@ -60,8 +56,6 @@ class HomeInfoPublicPageLimitContractTest {
     @Test
     void thirdBatchPageLimitOnlyTools_shouldRejectLimitGreaterThan100BeforeHttpCall() {
         assertRejectLimitTooLargeWithOrg(NodeQueryTool::new, "/api/100001/node");
-        assertRejectLimitTooLargeWithOrg(FileVolumePathTool::new, "/api/100001/file/volume-path");
-        assertRejectLimitTooLargeWithOrg(FileStorageOptionTool::new, "/api/100001/file/storage/option");
         assertRejectLimitTooLargeWithOrg(ImageRepositoryTool::new, "/api/100001/image/repository");
         assertRejectLimitTooLarge(BareMetalTemplateTool::new, "/api/bare-metal-config-template");
     }

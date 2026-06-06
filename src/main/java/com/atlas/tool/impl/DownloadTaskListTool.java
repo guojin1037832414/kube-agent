@@ -25,7 +25,11 @@ import java.util.Set;
     name = "download_task_list",
     agent = "storage",
     intentId = "download_task_list",
-    description = "查询文件下载任务列表"
+    description = "查询文件下载任务列表",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/download"},
+    operationType = AtlasToolMapping.OperationType.SENSITIVE_READ,
+    requiresConfirmation = true
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class DownloadTaskListTool extends BaseTool {

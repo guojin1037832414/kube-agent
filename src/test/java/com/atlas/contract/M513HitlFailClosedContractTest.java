@@ -86,8 +86,8 @@ class M513HitlFailClosedContractTest {
     }
 
     /**
-     * confirm 恢复时 HITLController 会注入已确认的 CALL_TOOL 决策，supervisor 节点必须优先复用，
-     * 否则 atlasBrain.decide 会重新决策并覆盖目标 Tool，导致确认后无法进入 tool_call 放行。
+     * confirm 恢复时 HITLController 会注入已确认的 CALL_TOOL 决策，supervisor 节点必须优先复用；
+     * clarify 恢复只是补充用户输入，必须重新进入 AtlasBrain 决策，不能复用 ASK_CLARIFY 原地打转。
      */
     @Test
     void supervisorGraph_shouldReuseInjectedBrainDecisionOnResume() throws IOException {
@@ -106,8 +106,13 @@ class M513HitlFailClosedContractTest {
             .as("复用注入决策必须发生在 atlasBrain.decide 之前")
             .isLessThan(decideIndex);
         assertThat(source)
+            .contains("HitlConfirmation existingConfirmation = state.value(\"hitl_confirmation\")")
+            .contains("existingDecision.actionType() == BrainDecision.ActionType.CALL_TOOL")
+            .contains("existingConfirmation != null")
             .contains("updates.put(\"brain_decision\", existingDecision)")
-            .contains("确认后仍无法进入 tool_call");
+            .contains("确认后仍无法进入 tool_call")
+            .contains("clarify 注入的是用户补充输入，不是人工确认")
+            .contains("必须重新进入 AtlasBrain 决策");
     }
 
     /**
@@ -152,7 +157,9 @@ class M513HitlFailClosedContractTest {
         assertThat(source)
             .as("clarify 恢复不是人工确认，不能携带旧 HitlConfirmation")
             .contains("runResumeWithCheckpointContext(threadId, clarified, null, emitter)")
-            .contains("inputs.put(\"hitl_confirmation\", null)");
+            .contains("inputs.put(\"hitl_confirmation\", null)")
+            .contains("BrainDecision.ActionType.ASK_CLARIFY")
+            .contains("clarified_input");
     }
 
     /**
@@ -167,6 +174,42 @@ class M513HitlFailClosedContractTest {
             .contains("inputs.put(\"hitl_confirmation\", null);")
             .contains("普通新请求永远不携带服务端确认 marker")
             .contains("只有 HITLController.confirmAndResume 可注入");
+    }
+
+    /**
+     * Tool 执行后返回的结构化补参信号必须进入 SSE clarify 事件，不能只留在 Graph State。
+     */
+    @Test
+    void orchestrator_shouldEmitStructuredToolClarificationThroughSse() throws IOException {
+        String source = read(ORCHESTRATOR);
+
+        assertThat(source)
+            .contains("emitStructuredClarificationIfPresent(")
+            .contains("requires_clarification")
+            .contains("tool_error_code")
+            .contains("tool_suggestions")
+            .contains("payload.put(\"source\", \"tool_result\")")
+            .contains("emit(emitter, \"clarify\", payload)")
+            .contains("emittedStructuredClarifications");
+
+        assertThat(source.indexOf("compiledGraph.stream(inputs, config)"))
+            .as("/chat/graph 实验流式入口必须存在")
+            .isGreaterThanOrEqualTo(0);
+        assertThat(source.indexOf("supervisorGraph.stream(inputs, config)"))
+            .as("supervisorGraph 主流式入口必须存在")
+            .isGreaterThanOrEqualTo(0);
+        assertThat(countOccurrences(source, "emitStructuredClarificationIfPresent("))
+            .as("实验 Graph、tool_call、execute_node 至少都要尝试转发结构化澄清")
+            .isGreaterThanOrEqualTo(4);
+
+        String hitlSource = read(HITL_CONTROLLER);
+        assertThat(hitlSource)
+            .as("confirm/clarify resume 流也必须继续转发 Tool 级结构化补参")
+            .contains("emitStructuredClarificationIfPresent(")
+            .contains("requires_clarification")
+            .contains("tool_error_code")
+            .contains("tool_suggestions")
+            .contains("emitSse(emitter, \"clarify\", payload)");
     }
 
     /**
@@ -210,5 +253,15 @@ class M513HitlFailClosedContractTest {
 
     private String read(Path path) throws IOException {
         return Files.readString(path, StandardCharsets.UTF_8);
+    }
+
+    private int countOccurrences(String source, String needle) {
+        int count = 0;
+        int index = 0;
+        while ((index = source.indexOf(needle, index)) >= 0) {
+            count++;
+            index += needle.length();
+        }
+        return count;
     }
 }

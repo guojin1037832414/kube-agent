@@ -25,7 +25,10 @@ import java.util.Set;
     name = "template_list",
     agent = "deploy",
     intentId = "template_list",
-    description = "查询模板列表"
+    description = "查询模板列表",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/template"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class TemplateListTool extends BaseTool {

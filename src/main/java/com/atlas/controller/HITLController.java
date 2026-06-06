@@ -243,6 +243,7 @@ public class HITLController {
             log.info("[HITL] 恢复会话 {}, actionType={}", threadId, newDecision.actionType());
 
             // 3. 流式执行 Graph — SSE 事件格式与主流程完全一致
+            Set<String> emittedStructuredClarifications = java.util.concurrent.ConcurrentHashMap.newKeySet();
             compiledGraph.stream(inputs, config)
                 .subscribe(
                     nodeOutput -> {
@@ -263,6 +264,16 @@ public class HITLController {
                         state.value("answer").ifPresent(ans ->
                             emitSse(emitter, "content", Map.of("answer", ans.toString()))
                         );
+
+                        if ("tool_call".equals(node) || "execute_node".equals(node)) {
+                            emitStructuredClarificationIfPresent(
+                                emitter,
+                                threadId,
+                                node,
+                                state::value,
+                                emittedStructuredClarifications
+                            );
+                        }
                     },
                     err -> {
                         log.error("[HITL] 会话 {} 恢复执行错误", threadId, err);
@@ -288,6 +299,65 @@ public class HITLController {
         } catch (Exception e) {
             log.warn("[HITL] SSE 发送失败: {}", e.getMessage());
         }
+    }
+
+    /**
+     * 恢复流中的 Tool 结构化补参信号转发。
+     *
+     * <p>confirm/clarify resume 也可能再次触发 Tool 级别的缺参或歧义，例如用户补充 GPU 型号后仍缺少
+     * 明确 {@code gpuSpec}。这里与 AtlasOrchestrator 的主流式入口保持同一事件语义，继续发 clarify。</p>
+     */
+    private void emitStructuredClarificationIfPresent(SseEmitter emitter,
+                                                      String threadId,
+                                                      String node,
+                                                      java.util.function.Function<String, Optional<Object>> stateValue,
+                                                      Set<String> emittedKeys) {
+        boolean requiresClarification = stateValue.apply("requires_clarification")
+            .map(this::isTruthy)
+            .orElse(false);
+        if (!requiresClarification) {
+            return;
+        }
+
+        Object errorCode = stateValue.apply("tool_error_code").orElse(null);
+        Object suggestions = stateValue.apply("tool_suggestions").orElse(null);
+        Object toolResult = stateValue.apply("tool_result").orElse(null);
+        if (toolResult instanceof Map<?, ?> tr) {
+            if (errorCode == null) {
+                errorCode = tr.get("errorCode");
+            }
+            if (suggestions == null) {
+                suggestions = tr.get("suggestions");
+            }
+        }
+
+        String dedupeKey = node + "|" + String.valueOf(errorCode) + "|" + String.valueOf(suggestions);
+        if (emittedKeys != null && !emittedKeys.add(dedupeKey)) {
+            return;
+        }
+
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("threadId", threadId);
+        payload.put("node", node);
+        payload.put("source", "tool_result");
+        payload.put("errorCode", errorCode != null ? errorCode : "TOOL_REQUIRES_CLARIFICATION");
+        payload.put("suggestions", suggestions != null ? suggestions : List.of());
+        payload.put("requiredContext", suggestions != null ? suggestions : List.of());
+        payload.put("content", buildClarificationContent(errorCode, suggestions));
+        emitSse(emitter, "clarify", payload);
+    }
+
+    private boolean isTruthy(Object value) {
+        if (value instanceof Boolean b) {
+            return b;
+        }
+        return value != null && "true".equalsIgnoreCase(value.toString());
+    }
+
+    private String buildClarificationContent(Object errorCode, Object suggestions) {
+        String codeText = errorCode != null ? errorCode.toString() : "TOOL_REQUIRES_CLARIFICATION";
+        return "需要补充信息后才能继续执行（" + codeText + "）"
+            + (suggestions != null ? "：" + suggestions : "");
     }
 
     /** 简易 JSON 序列化（与 AtlasOrchestrator.toJson 保持一致） */

@@ -25,7 +25,11 @@ import java.util.Set;
     name = "file_list",
     agent = "storage",
     intentId = "file_list",
-    description = "查询文件存储列表"
+    description = "查询文件存储列表",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/file"},
+    operationType = AtlasToolMapping.OperationType.SENSITIVE_READ,
+    requiresConfirmation = true
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class FileListTool extends BaseTool {

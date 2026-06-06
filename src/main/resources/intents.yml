@@ -426,6 +426,46 @@ intents:
         default: "default"
         description: "存储类"
 
+  file_user_volume_path:
+    description: "查询当前用户优先级最高的挂载路径"
+    agent: "storage"
+    level: "p2"
+    keywords: ["用户挂载路径", "我的volume path", "个人存储路径", "用户文件路径"]
+    examples:
+      - "查询我的默认挂载路径"
+      - "训练任务应该挂载到哪个用户路径"
+    parameters: []
+
+  file_user_extra_volume_path:
+    description: "查询当前用户额外挂载路径"
+    agent: "storage"
+    level: "p2"
+    keywords: ["额外挂载路径", "用户额外存储", "extra volume path", "扩展存储路径"]
+    examples:
+      - "查询我的额外挂载路径"
+      - "看看我还有哪些扩展存储路径可以用"
+    parameters: []
+
+  file_claimed_volume_option_list:
+    description: "查询当前组织已声明 PVC 可挂载选项"
+    agent: "storage"
+    level: "p2"
+    keywords: ["PVC挂载选项", "claimed volume", "可挂载PVC", "存储挂载选项"]
+    examples:
+      - "查询当前组织可挂载的PVC选项"
+      - "创建部署前列出可用的PVC挂载项"
+    parameters: []
+
+  file_train_storage:
+    description: "查询训练任务申请的存储上下文"
+    agent: "storage"
+    level: "p2"
+    keywords: ["训练存储", "train storage", "训练任务存储", "训练PVC"]
+    examples:
+      - "查询训练任务可用的存储上下文"
+      - "创建训练任务前看看训练存储配置"
+    parameters: []
+
   storage_delete:
     description: "删除存储卷"
     agent: "storage"
@@ -1113,12 +1153,46 @@ intents:
   tensorboard_list:
     description: "查询TensorBoard列表"
     agent: "query"
-    level: "p3"
-    keywords: ["TensorBoard", "tensorboard列表", "查看tensorboard", "深度学习看板"]
+    level: "p2"
+    keywords: ["TensorBoard", "tensorboard列表", "查看tensorboard", "深度学习看板", "训练可视化列表"]
     examples:
       - "TensorBoard列表"
       - "查看所有tensorboard"
     parameters: []
+
+  tensorboard_environment:
+    description: "查询TensorBoard环境信息"
+    agent: "query"
+    level: "p2"
+    keywords: ["TensorBoard环境", "tensorboard环境信息", "训练看板环境", "tensorboard data environment"]
+    examples:
+      - "查看TensorBoard环境"
+      - "TensorBoard环境信息是什么"
+    parameters: []
+
+  tensorboard_runs:
+    description: "查询当前用户TensorBoard runs"
+    agent: "query"
+    level: "p2"
+    keywords: ["TensorBoard runs", "tensorboard运行", "训练曲线runs", "训练监控runs", "tensorboard data runs"]
+    examples:
+      - "查看TensorBoard runs"
+      - "查询训练曲线runs"
+    parameters: []
+
+  trainjob_tensorboard_runs:
+    description: "查询指定训练任务TensorBoard runs"
+    agent: "query"
+    level: "p2"
+    keywords: ["训练任务TensorBoard", "trainjob tensorboard runs", "训练任务runs", "指定TensorBoard runs"]
+    examples:
+      - "查询训练任务TensorBoard runs，tensorBoardDeploymentId是42"
+      - "查看42号TensorBoard训练曲线runs"
+    parameters:
+      - name: "tensorBoardDeploymentId"
+        type: "integer"
+        required: true
+        description: "TensorBoard deployment ID"
 
   # --- 实验模板列表 ---
   experiment_template_list:
@@ -1196,6 +1270,51 @@ intents:
       - "课件列表"
       - "查看课件"
     parameters: []
+
+  courseware_detail:
+    description: "查询课件详情"
+    agent: "query"
+    level: "p3"
+    keywords: ["课件详情", "courseware detail", "查看课件详情", "教学资源详情"]
+    examples:
+      - "查询课件42的详情"
+      - "帮我解释这个课件"
+      - "查看courseware 42"
+    parameters:
+      - name: "coursewareId"
+        type: "integer"
+        required: true
+        description: "课件ID"
+
+  courseware_grade_list:
+    description: "查询课件关联班级，敏感读取，需要确认"
+    agent: "query"
+    level: "p2"
+    keywords: ["课件班级", "班级列表", "courseware grade", "课件分配班级"]
+    examples:
+      - "查询课件42关联了哪些班级"
+      - "查看这个课件可分配的班级"
+      - "帮我看课件42的班级列表"
+    parameters:
+      - name: "coursewareId"
+        type: "integer"
+        required: true
+        description: "课件ID"
+
+  courseware_learning_status:
+    description: "查询课程学习状态，敏感读取，需要确认"
+    agent: "query"
+    level: "p2"
+    keywords: ["课程学习状态", "课程环境状态", "learning status", "course deployment status"]
+    examples:
+      - "查询课件42的学习状态"
+      - "这个课程环境是否已经运行"
+      - "查看courseware 42的deployment status"
+    parameters:
+      - name: "coursewareId"
+        type: "integer"
+        required: true
+        description: "课件ID"
 
   # --- 订单列表 ---
   order_list:
@@ -1286,6 +1405,20 @@ intents:
     parameters: []
 
   # --- 数据表列表 ---
+  kubernetes_dashboard_link:
+    description: "查询 Kubernetes Dashboard 外部链接"
+    agent: "query"
+    level: "p1"
+    keywords: ["Kubernetes Dashboard", "k8s dashboard", "集群Dashboard", "kubernetes仪表盘", "dashboard链接"]
+    examples:
+      - "打开 Kubernetes Dashboard 链接"
+      - "查询集群 Dashboard 地址"
+    parameters:
+      - name: "reason"
+        type: "string"
+        required: false
+        description: "查询 Dashboard 链接的原因，用于敏感读取审批"
+
   table_list:
     description: "查询数据表列表"
     agent: "query"
@@ -1482,6 +1615,38 @@ intents:
         description: "Compose YAML配置"
 
   # --- 提交PyTorch训练任务 ---
+  compose_deploy_delete:
+    description: "删除 Docker Compose 部署"
+    agent: "deploy"
+    level: "p1"
+    keywords: ["删除compose", "compose删除", "docker compose删除", "删除编排部署"]
+    examples:
+      - "删除这个 Compose 部署"
+      - "按ID删除 docker compose"
+    parameters:
+      - name: "composeId"
+        type: "string"
+        required: true
+        description: "Compose 组合ID"
+
+  compose_deploy_update:
+    description: "更新 Docker Compose 组合名称"
+    agent: "deploy"
+    level: "p1"
+    keywords: ["更新compose", "compose改名", "修改compose名称", "docker compose改名"]
+    examples:
+      - "把这个 Compose 改个名字"
+      - "更新 Compose 组合名称"
+    parameters:
+      - name: "composeId"
+        type: "string"
+        required: true
+        description: "Compose 组合ID"
+      - name: "composeName"
+        type: "string"
+        required: true
+        description: "新的 Compose 组合名称"
+
   pytorch_job_submit:
     description: "提交PyTorch训练任务"
     agent: "deploy"
@@ -1520,6 +1685,84 @@ intents:
   # ════════════════════════════════════════════════════════
 
   # --- 删除实验实例 ---
+  helm_release_install:
+    description: "安装 Helm Release"
+    agent: "deploy"
+    level: "p1"
+    keywords: ["安装helm", "helm install", "安装chart", "部署helm release"]
+    examples:
+      - "安装一个 Helm chart"
+      - "用 bitnami/redis 安装 release"
+    parameters:
+      - name: "release"
+        type: "string"
+        required: true
+        description: "Helm Release 名称"
+      - name: "chart"
+        type: "string"
+        required: true
+        description: "Chart 名称、URL 或文件名"
+
+  helm_release_upgrade:
+    description: "升级 Helm Release"
+    agent: "deploy"
+    level: "p1"
+    keywords: ["升级helm", "helm upgrade", "更新chart", "升级release"]
+    examples:
+      - "升级 Helm Release"
+      - "把这个 release 升级到新 chart"
+    parameters:
+      - name: "release"
+        type: "string"
+        required: true
+        description: "Helm Release 名称"
+      - name: "chart"
+        type: "string"
+        required: true
+        description: "目标 Chart 名称或 URL"
+
+  helm_release_rollback:
+    description: "回滚 Helm Release"
+    agent: "deploy"
+    level: "p1"
+    keywords: ["回滚helm", "helm rollback", "回滚release", "恢复helm版本"]
+    examples:
+      - "回滚这个 Helm Release"
+      - "把 release 回滚到 revision 2"
+    parameters:
+      - name: "release"
+        type: "string"
+        required: true
+        description: "Helm Release 名称"
+      - name: "version"
+        type: "string"
+        required: true
+        description: "目标 revision 版本号"
+
+  helm_repo_update:
+    description: "更新 Helm 仓库索引"
+    agent: "deploy"
+    level: "p1"
+    keywords: ["更新helm仓库", "helm repo update", "刷新chart仓库", "更新chart源"]
+    examples:
+      - "更新 Helm 仓库索引"
+      - "刷新 chart 仓库缓存"
+    parameters: []
+
+  helm_repo_remove:
+    description: "移除 Helm 仓库"
+    agent: "deploy"
+    level: "p0"
+    keywords: ["删除helm仓库", "移除helm仓库", "helm repo remove", "删除chart源"]
+    examples:
+      - "移除 Helm 仓库"
+      - "删除这个 chart 源"
+    parameters:
+      - name: "repoName"
+        type: "string"
+        required: true
+        description: "Helm 仓库名称"
+
   experiment_instance_delete:
     description: "删除实验实例"
     agent: "deploy"
@@ -1597,6 +1840,735 @@ intents:
   # ═══════════════════════════════════════════════════════════
   # 兜底意图
   # ═══════════════════════════════════════════════════════════
+
+  easy_flow_instance_list:
+    description: "查询 EasyFlow 流程实例列表"
+    agent: "query"
+    level: "p2"
+    keywords: ["EasyFlow实例", "流程实例", "训练流程实例", "easy-flow instance", "查看流程运行"]
+    examples:
+      - "查看最近的 EasyFlow 实例"
+      - "找一下训练流程实例"
+    parameters:
+      - name: "keyword"
+        type: "string"
+        required: false
+        description: "流程名称、实例名称、阶段或状态筛选词"
+
+  easy_flow_instance_detail:
+    description: "查询 EasyFlow 流程实例详情"
+    agent: "query"
+    level: "p2"
+    keywords: ["EasyFlow详情", "流程实例详情", "实例状态", "easy-flow detail"]
+    examples:
+      - "查看 EasyFlow 实例 7 的详情"
+      - "这个流程实例当前到哪一步了"
+    parameters:
+      - name: "instanceId"
+        type: "string"
+        required: true
+        description: "EasyFlow 实例 ID"
+
+  easy_flow_analyzer_list:
+    description: "查询 EasyFlow 日志解析器列表"
+    agent: "diag"
+    level: "p2"
+    keywords: ["日志解析器", "日志分析器", "EasyFlow analyzer", "训练日志摘要类型"]
+    examples:
+      - "有哪些 EasyFlow 日志解析器"
+      - "训练日志可以用哪些摘要解析器"
+    parameters: []
+
+  easy_flow_instance_log:
+    description: "查询 EasyFlow 实例指定阶段的最新日志"
+    agent: "diag"
+    level: "p1"
+    keywords: ["EasyFlow日志", "训练流程日志", "实例日志", "stage log", "查看训练日志"]
+    examples:
+      - "查看 EasyFlow 实例 7 train 阶段最近 100 行日志"
+      - "这个训练流程最新日志有什么报错"
+    parameters:
+      - name: "instanceId"
+        type: "string"
+        required: true
+        description: "EasyFlow 实例 ID"
+      - name: "stageCode"
+        type: "string"
+        required: true
+        description: "流程阶段编码，例如 train、test、infer"
+
+  easy_flow_instance_log_list:
+    description: "查询 EasyFlow 实例指定阶段的日志列表"
+    agent: "diag"
+    level: "p1"
+    keywords: ["EasyFlow日志列表", "多Pod日志", "流程阶段日志列表", "instance log list"]
+    examples:
+      - "查看 EasyFlow 实例 7 train 阶段所有 Pod 的日志"
+      - "把这个流程阶段的日志列表查出来"
+    parameters:
+      - name: "instanceId"
+        type: "string"
+        required: true
+        description: "EasyFlow 实例 ID"
+      - name: "stageCode"
+        type: "string"
+        required: true
+        description: "流程阶段编码"
+
+  easy_flow_instance_log_abstract:
+    description: "查询 EasyFlow 实例指定阶段的日志摘要"
+    agent: "diag"
+    level: "p1"
+    keywords: ["EasyFlow日志摘要", "训练日志摘要", "日志分析", "训练进度分析", "log abstract"]
+    examples:
+      - "分析 EasyFlow 实例 7 train 阶段的日志摘要"
+      - "这个训练流程的 loss 和进度怎么样"
+    parameters:
+      - name: "instanceId"
+        type: "string"
+        required: true
+        description: "EasyFlow 实例 ID"
+      - name: "stageCode"
+        type: "string"
+        required: true
+        description: "流程阶段编码"
+      - name: "analyzerCode"
+        type: "string"
+        required: false
+        description: "日志解析器编码，不确定时先查询 easy_flow_analyzer_list"
+
+  easy_flow_flow_list:
+    description: "查询 EasyFlow 流程列表"
+    agent: "query"
+    level: "p2"
+    keywords: ["EasyFlow流程", "流程列表", "训练流程模板", "easy-flow flow", "查看流程定义"]
+    examples:
+      - "查看 EasyFlow 流程列表"
+      - "有哪些训练流程模板"
+    parameters:
+      - name: "type"
+        type: "string"
+        required: false
+        description: "流程类型筛选"
+      - name: "description"
+        type: "string"
+        required: false
+        description: "流程描述关键词"
+
+  easy_flow_flow_detail:
+    description: "查询 EasyFlow 流程详情"
+    agent: "query"
+    level: "p2"
+    keywords: ["EasyFlow流程详情", "流程定义详情", "流程阶段结构", "easy-flow flow detail"]
+    examples:
+      - "查看 EasyFlow 流程 7 的详情"
+      - "这个训练流程有哪些阶段"
+    parameters:
+      - name: "flowId"
+        type: "string"
+        required: true
+        description: "EasyFlow 流程 ID"
+
+  easy_flow_stage_list:
+    description: "查询 EasyFlow 流程阶段列表"
+    agent: "query"
+    level: "p2"
+    keywords: ["EasyFlow阶段", "流程阶段", "stage list", "训练阶段列表"]
+    examples:
+      - "查看 EasyFlow 流程 7 的阶段列表"
+      - "这个训练流程有哪些 stage"
+    parameters:
+      - name: "flowId"
+        type: "string"
+        required: true
+        description: "EasyFlow 流程 ID"
+
+  easy_flow_stage_detail:
+    description: "查询 EasyFlow 流程阶段详情"
+    agent: "query"
+    level: "p2"
+    keywords: ["EasyFlow阶段详情", "流程阶段详情", "stage detail", "训练阶段资源配置"]
+    examples:
+      - "查看 EasyFlow 流程 7 阶段 11 的详情"
+      - "这个训练阶段用了什么镜像和资源"
+    parameters:
+      - name: "flowId"
+        type: "string"
+        required: true
+        description: "EasyFlow 流程 ID"
+      - name: "stageId"
+        type: "string"
+        required: true
+        description: "EasyFlow 阶段 ID"
+
+  dashboard_easy_flow_count:
+    description: "查询Dashboard EasyFlow统计信息"
+    agent: "query"
+    level: "p3"
+    keywords: ["Dashboard流程统计", "easy-flow统计", "工作流数量", "流程计数"]
+    examples:
+      - "Dashboard工作流统计"
+      - "EasyFlow数量统计"
+      - "现在有多少个流程"
+    parameters: []
+
+  resource_preset_detail:
+    description: "查询资源预设详情"
+    agent: "query"
+    level: "p3"
+    keywords: ["资源预设详情", "资源配置详情", "resource preset detail", "资源规格详情"]
+    examples:
+      - "查看资源预设42的详情"
+      - "这个resourceCode对应什么资源配置"
+      - "解释一下资源预设配置"
+    parameters:
+      - name: "resourcePresetId"
+        type: "integer"
+        required: true
+        description: "资源预设ID，仅允许正整数"
+
+  pod_use_record_list:
+    description: "查询容器使用记录"
+    agent: "query"
+    level: "p2"
+    keywords: ["容器使用记录", "Pod使用记录", "资源使用明细", "运行历史", "pod use record"]
+    examples:
+      - "查看最近几天的容器使用记录"
+      - "这个训练Pod的使用明细"
+      - "查询张三的Pod使用记录"
+    parameters:
+      - name: "startTime"
+        type: "string"
+        required: false
+        description: "查询开始时间，格式建议为 yyyy-MM-dd HH:mm:ss"
+      - name: "endTime"
+        type: "string"
+        required: false
+        description: "查询结束时间，格式建议为 yyyy-MM-dd HH:mm:ss"
+
+  pod_use_bill_list:
+    description: "查询Pod使用账单"
+    agent: "query"
+    level: "p2"
+    keywords: ["Pod账单", "扣费记录", "成本分析", "使用费用", "pod bill"]
+    examples:
+      - "分析最近一周Pod账单"
+      - "gpu-train这个应用花了多少钱"
+      - "查看训练任务扣费记录"
+    parameters:
+      - name: "applicationName"
+        type: "string"
+        required: false
+        description: "Deployment或Job名称筛选"
+      - name: "startTime"
+        type: "string"
+        required: false
+        description: "账单开始时间，格式建议为 yyyy-MM-dd HH:mm:ss"
+      - name: "endTime"
+        type: "string"
+        required: false
+        description: "账单结束时间，格式建议为 yyyy-MM-dd HH:mm:ss"
+
+  cost_config_list:
+    description: "查询计费配置"
+    agent: "query"
+    level: "p2"
+    keywords: ["计费配置", "资源单价", "成本配置", "定价配置", "cost config"]
+    examples:
+      - "查看当前计费配置"
+      - "GPU资源单价是多少"
+      - "解释这个账单金额的定价来源"
+    parameters:
+      - name: "startTime"
+        type: "string"
+        required: false
+        description: "计费配置创建开始时间，格式建议为 yyyy-MM-dd HH:mm:ss"
+      - name: "endTime"
+        type: "string"
+        required: false
+        description: "计费配置创建结束时间，格式建议为 yyyy-MM-dd HH:mm:ss"
+
+  node_remaining_resource:
+    description: "查询当前组织剩余可分配资源"
+    agent: "query"
+    level: "p2"
+    keywords: ["剩余资源", "可分配资源", "资源余量", "节点剩余", "node remaining"]
+    examples:
+      - "当前组织还剩多少GPU和CPU资源"
+      - "部署前帮我看一下可分配资源"
+      - "现在资源余量够不够"
+    parameters: []
+
+  metric_gpu_server_instant:
+    description: "查询GPU服务器瞬时指标"
+    agent: "query"
+    level: "p2"
+    keywords: ["GPU服务器指标", "GPU资源概览", "GPU算力", "GPU监控", "gpu metric"]
+    examples:
+      - "查看GPU服务器指标"
+      - "当前GPU资源概览"
+      - "GPU算力和使用情况怎么样"
+    parameters: []
+
+  metric_cpu_server_instant:
+    description: "查询CPU服务器瞬时指标"
+    agent: "query"
+    level: "p2"
+    keywords: ["CPU服务器指标", "CPU资源概览", "CPU监控", "cpu metric"]
+    examples:
+      - "查看CPU服务器指标"
+      - "当前CPU资源概览"
+      - "CPU节点情况怎么样"
+    parameters: []
+
+  metric_storage_server_instant:
+    description: "查询存储服务器瞬时指标"
+    agent: "query"
+    level: "p2"
+    keywords: ["存储指标", "存储容量", "存储余量", "storage metric"]
+    examples:
+      - "查看存储服务器指标"
+      - "当前存储容量和余量"
+      - "存储资源够不够"
+    parameters: []
+
+  metric_pod_instant:
+    description: "查询Pod瞬时指标"
+    agent: "query"
+    level: "p2"
+    keywords: ["Pod指标", "Pod状态概览", "应用实例数量", "pod metric"]
+    examples:
+      - "查看当前Pod状态概览"
+      - "现在应用实例有多少"
+      - "Pod运行状态怎么样"
+    parameters: []
+
+  industry_app_template_list:
+    description: "查询行业应用模板列表"
+    agent: "query"
+    level: "p3"
+    keywords: ["行业应用模板", "业务应用模板", "应用资产", "可部署应用", "industry app template"]
+    examples:
+      - "有哪些行业应用模板可以部署"
+      - "帮我查一下交通行业的应用模板"
+      - "搜索带有gpu标签的行业应用"
+    parameters:
+      - name: "keyword"
+        type: "string"
+        required: false
+        description: "模板名称或描述关键字"
+
+  industry_app_template_detail:
+    description: "查询行业应用模板详情"
+    agent: "query"
+    level: "p3"
+    keywords: ["行业应用详情", "应用模板详情", "模板资源说明", "industry app detail"]
+    examples:
+      - "查看行业应用模板42的详情"
+      - "这个应用模板需要什么镜像和端口"
+      - "解释一下模板42的资源和业务说明"
+    parameters:
+      - name: "appId"
+        type: "integer"
+        required: true
+        description: "行业应用模板ID"
+
+  industry_app_template_api_doc:
+    description: "查询行业应用模板API文档"
+    agent: "query"
+    level: "p3"
+    keywords: ["应用API文档", "行业应用接口文档", "OpenAPI文档", "api doc"]
+    examples:
+      - "查看行业应用模板42的API文档"
+      - "这个应用对外提供哪些接口"
+      - "帮我分析模板42的OpenAPI文档"
+    parameters:
+      - name: "appId"
+        type: "integer"
+        required: true
+        description: "行业应用模板ID"
+
+  industry_app_instance_list:
+    description: "查询行业应用实例列表"
+    agent: "query"
+    level: "p3"
+    keywords: ["行业应用实例", "已部署应用", "业务应用运行状态", "industry app instance"]
+    examples:
+      - "查看已部署的行业应用实例"
+      - "有没有运行中的视觉识别应用"
+      - "只看我的行业应用实例"
+    parameters:
+      - name: "name"
+        type: "string"
+        required: false
+        description: "实例名称筛选"
+
+  industry_app_instance_api_history:
+    description: "查询行业应用实例API调用历史"
+    agent: "query"
+    level: "p3"
+    keywords: ["API调用历史", "行业应用访问记录", "接口调用记录", "api history"]
+    examples:
+      - "查看行业应用实例77最近一小时的API调用历史"
+      - "分析这个应用接口有没有异常访问"
+      - "查一下实例77的GET调用记录"
+    parameters:
+      - name: "instanceId"
+        type: "integer"
+        required: true
+        description: "行业应用实例ID"
+
+  industry_app_resource_preset_list:
+    description: "查询行业应用模板资源预设"
+    agent: "query"
+    level: "p3"
+    keywords: ["行业应用资源预设", "应用资源规格", "模板资源配置", "resource preset"]
+    examples:
+      - "查看模板42有哪些资源预设"
+      - "这个行业应用可选哪些GPU资源规格"
+      - "部署模板42前先看资源配置"
+    parameters:
+      - name: "appId"
+        type: "integer"
+        required: true
+        description: "行业应用模板ID"
+
+  industry_app_param_list:
+    description: "查询行业应用模板高级参数"
+    agent: "query"
+    level: "p3"
+    keywords: ["行业应用高级参数", "应用部署参数", "模板参数", "app param"]
+    examples:
+      - "查看模板42有哪些高级参数"
+      - "部署这个行业应用时能配置哪些业务参数"
+      - "解释模板42的app-param"
+    parameters:
+      - name: "appId"
+        type: "integer"
+        required: true
+        description: "行业应用模板ID"
+
+  product_type_list:
+    description: "查询组织内产品分类配置"
+    agent: "query"
+    level: "p2"
+    keywords: ["产品分类配置", "组织内产品分类", "商品分类配置", "product type config"]
+    examples:
+      - "查询组织内产品分类配置"
+      - "当前有哪些产品分类"
+      - "帮我分析内部商品分类"
+    parameters: []
+
+  post_pay_product_list:
+    description: "查询组织内按量付费产品配置"
+    agent: "query"
+    level: "p2"
+    keywords: ["组织内按量付费产品", "内部按量产品", "按量付费配置", "post pay config"]
+    examples:
+      - "查询组织内按量付费产品"
+      - "有哪些内部按小时计费资源"
+      - "帮我分析当前按量付费产品配置"
+    parameters:
+      - name: "productTypeCode"
+        type: "string"
+        required: false
+        description: "产品分类编码"
+
+  public_product_type_list:
+    description: "查询公开产品分类"
+    agent: "query"
+    level: "p3"
+    keywords: ["产品分类", "商品分类", "资源产品类型", "product type"]
+    examples:
+      - "有哪些产品分类"
+      - "资源商城支持哪些产品类型"
+      - "查询公开商品分类"
+    parameters: []
+
+  public_post_pay_product_list:
+    description: "查询公开按量付费产品"
+    agent: "query"
+    level: "p3"
+    keywords: ["按量付费产品", "后付费产品", "按小时计费", "post pay product"]
+    examples:
+      - "查询按量付费的GPU产品"
+      - "有哪些后付费资源规格"
+      - "帮我找A800按量付费产品"
+    parameters:
+      - name: "productTypeCode"
+        type: "string"
+        required: false
+        description: "产品分类编码"
+
+  public_pre_pay_product_list:
+    description: "查询公开预付费产品"
+    agent: "query"
+    level: "p3"
+    keywords: ["预付费产品", "包月产品", "预付费资源", "pre pay product"]
+    examples:
+      - "查询预付费服务器产品"
+      - "有哪些包月资源规格"
+      - "帮我对比预付费产品"
+    parameters:
+      - name: "productTypeCode"
+        type: "string"
+        required: false
+        description: "产品分类编码"
+
+  public_server_product_list:
+    description: "查询公开服务器产品"
+    agent: "query"
+    level: "p3"
+    keywords: ["服务器产品", "GPU服务器", "云服务器规格", "server product"]
+    examples:
+      - "查询可租赁的GPU服务器"
+      - "有哪些A800服务器产品"
+      - "帮我找适合训练的服务器规格"
+    parameters:
+      - name: "gpuModel"
+        type: "string"
+        required: false
+        description: "GPU型号，多个型号用英文逗号分隔"
+
+  server_config_list:
+    description: "查询组织内服务器产品配置"
+    agent: "query"
+    level: "p2"
+    keywords: ["服务器配置", "服务器产品配置", "内部服务器规格", "server config", "可租赁服务器配置"]
+    examples:
+      - "查询组织内服务器配置"
+      - "有哪些内部可租赁服务器规格"
+      - "帮我分析当前服务器产品配置"
+    parameters:
+      - name: "gpuModel"
+        type: "string"
+        required: false
+        description: "GPU型号，多个型号用英文逗号分隔"
+
+  lease_order_amount_estimate:
+    description: "预估租赁订单金额，不创建订单"
+    agent: "query"
+    level: "p2"
+    keywords: ["订单金额预估", "租赁价格计算", "服务器租赁费用", "order amount estimate"]
+    examples:
+      - "帮我预估服务器42从明天到后天要多少钱"
+      - "计算一下租赁这个服务器一天的费用"
+      - "只报价，不要创建订单"
+    parameters:
+      - name: "id"
+        type: "integer"
+        required: true
+        description: "服务器配置ID"
+      - name: "startTime"
+        type: "string"
+        required: true
+        description: "租赁开始时间"
+      - name: "endTime"
+        type: "string"
+        required: true
+        description: "租赁结束时间"
+
+  user_enable:
+    description: "启用用户账号，高风险操作，必须人工确认"
+    agent: "rbac"
+    level: "p1"
+    keywords: ["启用用户", "恢复账号", "打开账号", "enable user"]
+    examples:
+      - "启用用户42"
+      - "把目标用户43恢复可用"
+      - "确认后启用这个账号"
+    parameters:
+      - name: "id"
+        type: "integer"
+        required: true
+        description: "要启用的目标用户ID"
+
+  user_disable:
+    description: "禁用用户账号，高风险操作，必须人工确认"
+    agent: "rbac"
+    level: "p1"
+    keywords: ["禁用用户", "停用账号", "关闭账号", "disable user"]
+    examples:
+      - "禁用用户42"
+      - "把这个账号停用"
+      - "确认后禁用目标用户"
+    parameters:
+      - name: "id"
+        type: "integer"
+        required: true
+        description: "要禁用的目标用户ID"
+
+  user_recharge:
+    description: "为用户账户充值，财务高风险操作，必须人工确认"
+    agent: "rbac"
+    level: "p1"
+    keywords: ["用户充值", "账户充值", "余额充值", "recharge user"]
+    examples:
+      - "给用户42充值100元"
+      - "为目标账号充值10000分"
+      - "确认后给这个用户补贴充值"
+    parameters:
+      - name: "id"
+        type: "integer"
+        required: true
+        description: "要充值的目标用户ID"
+      - name: "amount"
+        type: "integer"
+        required: true
+        description: "充值金额，单位为分"
+      - name: "remark"
+        type: "string"
+        required: false
+        description: "充值备注"
+
+  hpc_partition_list:
+    description: "查询 HPC/Slurm 集群分区列表"
+    agent: "deploy"
+    level: "p3"
+    keywords: ["HPC分区", "Slurm分区", "队列列表", "partition list"]
+    examples:
+      - "查询集群98有哪些HPC分区"
+      - "提交作业前先看一下这个Slurm集群的分区"
+      - "帮我分析集群98的可用队列"
+    parameters:
+      - name: "clusterId"
+        type: "integer"
+        required: true
+        description: "HPC/Slurm集群ID"
+
+  hpc_sbatch_parameter_list:
+    description: "查询 Slurm sbatch 参数分类列表"
+    agent: "deploy"
+    level: "p3"
+    keywords: ["sbatch参数", "Slurm提交参数", "作业参数模板", "sbatch parameter"]
+    examples:
+      - "查询Basic Job Information分类下的sbatch参数"
+      - "提交作业前看一下Resource Allocation参数"
+      - "有哪些Slurm作业提交参数可以配置"
+    parameters:
+      - name: "category"
+        type: "string"
+        required: true
+        description: "sbatch参数分类名称"
+
+  hpc_environment_list:
+    description: "查询 HPC 集群 Miniconda 环境列表"
+    agent: "deploy"
+    level: "p2"
+    keywords: ["HPC环境", "Miniconda环境", "conda env list", "环境列表", "hpc environment"]
+    examples:
+      - "查询集群98有哪些Miniconda环境"
+      - "提交HPC作业前帮我看看可用的conda环境"
+      - "列出这个Slurm集群的环境列表"
+    parameters:
+      - name: "clusterId"
+        type: "integer"
+        required: true
+        description: "HPC/Slurm集群ID"
+
+  hpc_module_list:
+    description: "查询 HPC 集群 Lmod module 列表"
+    agent: "deploy"
+    level: "p2"
+    keywords: ["HPC模块", "Lmod模块", "module avail", "软件模块", "hpc module"]
+    examples:
+      - "查询集群98有哪些Lmod module"
+      - "提交作业前看看可加载的软件模块"
+      - "帮我列出这个HPC集群的module avail结果"
+    parameters:
+      - name: "clusterId"
+        type: "integer"
+        required: true
+        description: "HPC/Slurm集群ID"
+
+  bcm_user_list:
+    description: "查询当前组织具备超算权限的用户列表"
+    agent: "deploy"
+    level: "p2"
+    keywords: ["超算用户", "BCM用户", "HPC用户", "可分配用户", "bcm users"]
+    examples:
+      - "查询当前组织有哪些超算用户"
+      - "创建Slurm集群前看看可以分配给哪些用户"
+      - "列出BCM可用用户"
+    parameters: []
+
+  bcm_slurm_node_allocation_list:
+    description: "查询当前组织已分配的 Slurm 节点"
+    agent: "deploy"
+    level: "p2"
+    keywords: ["已分配Slurm节点", "BCM Slurm节点", "超算节点分配", "all slurm nodes"]
+    examples:
+      - "查询当前组织已分配的Slurm节点"
+      - "创建Slurm集群前盘点可用节点"
+      - "列出BCM分配给本组织的Slurm节点"
+    parameters: []
+
+  bcm_bare_metal_node_allocation_list:
+    description: "查询当前组织已分配的 BareMetal 节点"
+    agent: "deploy"
+    level: "p2"
+    keywords: ["已分配裸金属节点", "BareMetal节点分配", "BCM BareMetal节点", "all bare metal nodes"]
+    examples:
+      - "查询当前组织已分配的裸金属节点"
+      - "创建BareMetal实例前盘点可用节点"
+      - "列出BCM分配给本组织的BareMetal节点"
+    parameters: []
+
+  virtual_machine_list:
+    description: "查询虚拟机列表"
+    agent: "query"
+    level: "p3"
+    keywords: ["虚拟机列表", "VM列表", "virtual machine list", "查看虚拟机"]
+    examples:
+      - "查询当前组织下的虚拟机"
+      - "帮我看看有哪些VM"
+      - "列出虚拟机状态"
+    parameters: []
+
+  virtual_machine_detail:
+    description: "按名称查询虚拟机详情"
+    agent: "query"
+    level: "p3"
+    keywords: ["虚拟机详情", "VM详情", "virtual machine detail", "查看VM"]
+    examples:
+      - "查询虚拟机vm-training-01的详情"
+      - "帮我看看这个VM的状态"
+      - "查看virtual machine vm-test的详情"
+    parameters:
+      - name: "name"
+        type: "string"
+        required: true
+        description: "虚拟机名称"
+
+  template_detail:
+    description: "查询应用模板详情"
+    agent: "deploy"
+    level: "p3"
+    keywords: ["应用模板详情", "模板详情", "template detail", "部署模板详情"]
+    examples:
+      - "查询应用模板42的详情"
+      - "帮我解释这个部署模板的默认配置"
+      - "查看template 42"
+    parameters:
+      - name: "templateId"
+        type: "integer"
+        required: true
+        description: "应用模板ID"
+
+  job_template_detail:
+    description: "查询训练 Job 模板详情"
+    agent: "deploy"
+    level: "p3"
+    keywords: ["训练模板详情", "Job模板详情", "train job template detail", "任务模板详情"]
+    examples:
+      - "查询训练Job模板77的详情"
+      - "帮我解释这个PyTorch任务模板"
+      - "查看job template 77"
+    parameters:
+      - name: "templateId"
+        type: "integer"
+        required: true
+        description: "训练Job模板ID"
 
   unknown:
     description: "未知意图/兜底"

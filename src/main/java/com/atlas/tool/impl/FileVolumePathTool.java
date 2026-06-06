@@ -5,35 +5,37 @@ import com.atlas.tool.annotation.AtlasToolMapping;
 import com.atlas.tool.annotation.ToolPermission;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.tool.core.BaseTool;
-import com.atlas.tool.core.ToolParameterSpec;
 import com.atlas.tool.exception.AtlasToolValidationException;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 /**
- * 查询存储卷路径列表 Tool — 接入真实 kube-manager API。
+ * 查询当前组织可用挂载路径。
  *
  * <p>意图映射: {@code intentId = "file_volume_path"}</p>
- * <p>Agent归属: storage | 安全级别: P3</p>
- * <p>API路径: GET /api/{orgId}/file/volume-path</p>
+ * <p>文件挂载路径会暴露组织文件系统结构，并会影响后续部署、训练任务和课程环境的真实落点，因此按敏感只读处理。
+ * 本 Tool 不暴露分页、搜索、path、namespace 等参数，避免把准备上下文接口扩大成文件路径枚举入口。</p>
  */
 @Component
 @AtlasToolMapping(
     name = "file_volume_path",
     agent = "storage",
     intentId = "file_volume_path",
-    description = "查询存储卷路径列表"
+    description = "查询当前组织可用挂载路径",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/file/volume-path"},
+    operationType = AtlasToolMapping.OperationType.SENSITIVE_READ,
+    requiresConfirmation = true
 )
-@ToolPermission(ToolPermission.Policy.PUBLIC)
+@ToolPermission(ToolPermission.Policy.AUTHENTICATED)
 public class FileVolumePathTool extends BaseTool {
 
     private final KubeManagerHttpClient httpClient;
 
     public FileVolumePathTool(KubeManagerHttpClient httpClient) {
-        super("file_volume_path", "查询存储卷路径列表");
+        super("file_volume_path", "查询当前组织可用挂载路径");
         this.httpClient = httpClient;
     }
 
@@ -42,32 +44,17 @@ public class FileVolumePathTool extends BaseTool {
         return Set.of();
     }
 
-    /**
-     * 声明 page/limit-only 参数契约。
-     *
-     * <p>本 Tool 只允许模型控制分页参数，不开放 keyword/name/search/kw 等搜索入口。
-     * 这样既能让 ReAct/LLM 以结构化方式控制分页，又不会把低风险只读列表扩大为
-     * 公开搜索或批量探测面。执行层同步使用 {@link #buildPageLimitOnlyQuery(Map, int)}，
-     * 保证 Tool Schema 与真实 HTTP 请求参数保持一致。</p>
-     */
-    @Override
-    public List<ToolParameterSpec> getParameterSpecs() {
-        return pageLimitOnlyParameterSpecs();
-    }
-
     @Override
     protected AtlasToolResult doExecute(Map<String, Object> params) {
         try {
             String orgId = resolveOrganizationId(params);
-            String path = "/api/{orgId}/file/volume-path".replace("{orgId}", orgId);
-            Map<String, Object> response = httpClient.get(path, buildPageLimitOnlyQuery(params, 100));
-            Object data = extractData(response);
-            return AtlasToolResult.ok("查询存储卷路径列表完成", data);
+            Map<String, Object> response = httpClient.get("/api/" + orgId + "/file/volume-path", Map.of());
+            return AtlasToolResult.ok("查询挂载路径完成", extractData(response));
         } catch (AtlasToolValidationException e) {
             throw e;
         } catch (Exception e) {
             log.error("[file_volume_path] 调用 kube-manager API 失败", e);
-            return AtlasToolResult.fail("查询存储卷路径列表失败: " + e.getMessage());
+            return AtlasToolResult.fail("查询挂载路径失败: " + e.getMessage());
         }
     }
 }

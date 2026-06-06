@@ -260,15 +260,26 @@ public class SafeToolExecutor {
         String message = result.get("message") != null ? result.get("message").toString() : "";
         Object data = result.get("data");
 
-        String summary = data instanceof java.util.List<?>
-            ? String.format("✅ %s（共 %d 条数据）", message, ((java.util.List<?>) data).size())
-            : "✅ " + message;
+        String prefix = success ? "✅ " : "❌ ";
+        String summary = success && data instanceof java.util.List<?>
+            ? String.format("%s%s（共 %d 条数据）", prefix, message, ((java.util.List<?>) data).size())
+            : prefix + message;
 
         Map<String, Object> structured = new HashMap<>();
         structured.put("success", success);
         structured.put("message", message);
         structured.put("tool", intentId);
         structured.put("data", data != null ? data : Map.of());
+        if (result.get("errorCode") != null) {
+            structured.put("errorCode", result.get("errorCode"));
+        }
+        if (result.get("suggestions") != null) {
+            structured.put("suggestions", result.get("suggestions"));
+        }
+        if (!success && (result.get("errorCode") != null || result.get("suggestions") != null)) {
+            // 给 Graph / SSE / 前端一个稳定布尔位：这是可被继续澄清的问题，而不是普通异常。
+            structured.put("requiresClarification", true);
+        }
         return SafeToolExecutionResult.executed(success, summary, structured);
     }
 }

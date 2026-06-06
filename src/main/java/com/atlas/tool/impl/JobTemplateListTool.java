@@ -25,7 +25,10 @@ import java.util.Set;
     name = "job_template_list",
     agent = "deploy",
     intentId = "job_template_list",
-    description = "查询训练任务模板列表"
+    description = "查询训练任务模板列表",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/train-job-template"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class JobTemplateListTool extends BaseTool {

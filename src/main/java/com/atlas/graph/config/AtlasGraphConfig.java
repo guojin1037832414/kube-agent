@@ -660,10 +660,18 @@ public class AtlasGraphConfig {
                 .filter(BrainDecision.class::isInstance)
                 .map(BrainDecision.class::cast)
                 .orElse(null);
-            if (existingDecision != null) {
-                // M5.13 HITL 恢复闭环：confirm/clarify 会通过 Graph resume 显式注入新的 brain_decision。
-                // 其中 confirm 注入的是已通过服务端 token 校验的 CALL_TOOL 决策，必须优先复用，
+            HitlConfirmation existingConfirmation = state.value("hitl_confirmation")
+                .filter(HitlConfirmation.class::isInstance)
+                .map(HitlConfirmation.class::cast)
+                .orElse(null);
+            if (existingDecision != null
+                && existingDecision.actionType() == BrainDecision.ActionType.CALL_TOOL
+                && existingConfirmation != null) {
+                // M5.13/M5.21 HITL 恢复闭环：
+                // confirm 注入的是已通过服务端 token 校验的 CALL_TOOL 决策，必须优先复用，
                 // 否则再次调用 AtlasBrain 会覆盖目标 Tool，导致确认后仍无法进入 tool_call。
+                // clarify 注入的是用户补充输入，不是人工确认；必须重新进入 AtlasBrain 决策，
+                // 避免复用 ASK_CLARIFY 后继续路由到 ask_clarify，形成补参后的原地打转。
                 java.util.Map<String, Object> updates = new java.util.HashMap<>();
                 updates.put("brain_decision", existingDecision);
                 updates.put("reasoning", existingDecision.reasoning());

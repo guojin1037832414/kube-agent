@@ -199,7 +199,10 @@ class M42PlanExecuteSafetyContractTest {
             .contains("tool.execute(toolParams)")
             .contains("restoreThreadLocalContext(previousToken, previousOrgId)")
             .contains("系统上下文字段最后写入")
-            .contains("缺失 orgId、未注册 Tool、权限不足、HITL 未确认均 fail-closed");
+            .contains("缺失 orgId、未注册 Tool、权限不足、HITL 未确认均 fail-closed")
+            .contains("requiresClarification")
+            .contains("errorCode")
+            .contains("suggestions");
     }
 
     private String read(Path path) throws IOException {

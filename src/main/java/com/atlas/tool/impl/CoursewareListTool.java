@@ -25,7 +25,10 @@ import java.util.Set;
     name = "courseware_list",
     agent = "query",
     intentId = "courseware_list",
-    description = "查询课件列表"
+    description = "查询课件列表",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/courseware/list"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class CoursewareListTool extends BaseTool {

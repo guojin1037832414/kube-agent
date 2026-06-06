@@ -17,7 +17,10 @@ public record SafeToolExecutionResult(
     boolean executed,
     boolean success,
     String answer,
-    Map<String, Object> toolResult
+    Map<String, Object> toolResult,
+    String errorCode,
+    Object suggestions,
+    boolean requiresClarification
 ) {
 
     /**
@@ -27,7 +30,7 @@ public record SafeToolExecutionResult(
      * @return 执行结果
      */
     public static SafeToolExecutionResult notExecuted(String answer) {
-        return new SafeToolExecutionResult(false, false, answer, null);
+        return new SafeToolExecutionResult(false, false, answer, null, null, null, false);
     }
 
     /**
@@ -41,7 +44,13 @@ public record SafeToolExecutionResult(
     public static SafeToolExecutionResult executed(boolean success,
                                                    String answer,
                                                    Map<String, Object> toolResult) {
-        return new SafeToolExecutionResult(true, success, answer, toolResult);
+        String errorCode = toolResult != null && toolResult.get("errorCode") != null
+            ? toolResult.get("errorCode").toString() : null;
+        Object suggestions = toolResult != null ? toolResult.get("suggestions") : null;
+        // Tool 已执行但返回结构化失败建议时，上层应把它当成“需要澄清/补参”的强信号，
+        // 而不是普通文本失败。比如 GPU 创建缺少 gpuSpec 时，前端可以直接渲染澄清选项。
+        boolean requiresClarification = !success && (errorCode != null || suggestions != null);
+        return new SafeToolExecutionResult(true, success, answer, toolResult, errorCode, suggestions, requiresClarification);
     }
 
     /**
@@ -54,6 +63,15 @@ public record SafeToolExecutionResult(
         updates.put("answer", answer != null ? answer : "");
         if (toolResult != null) {
             updates.put("tool_result", toolResult);
+        }
+        if (errorCode != null) {
+            updates.put("tool_error_code", errorCode);
+        }
+        if (suggestions != null) {
+            updates.put("tool_suggestions", suggestions);
+        }
+        if (requiresClarification) {
+            updates.put("requires_clarification", true);
         }
         return updates;
     }

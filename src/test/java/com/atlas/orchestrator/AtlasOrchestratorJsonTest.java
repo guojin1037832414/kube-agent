@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Method;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -63,5 +64,39 @@ class AtlasOrchestratorJsonTest {
         JsonNode parsed = new ObjectMapper().readTree(json);
         assertEquals("content", parsed.get("type").asText());
         assertEquals(original, parsed.get("content").asText());
+    }
+
+    @Test
+    void testToJson_serializesListsAsJsonArraysForStructuredClarification() throws Exception {
+        AtlasOrchestrator orchestrator = new AtlasOrchestrator(
+            mock(IntentRouter.class),
+            mock(StreamingEmitter.class),
+            mock(ToolRegistry.class),
+            mock(UserPermissionContext.class),
+            mock(KubeManagerHttpClient.class),
+            mock(HitlGuard.class),
+            mock(ReActEventSinkRegistry.class),
+            mock(TimedDecisionCache.class),
+            mock(ToolResultPolishingService.class),
+            Runnable::run,
+            mock(SessionStore.class),
+            null,
+            null
+        );
+
+        Method method = AtlasOrchestrator.class.getDeclaredMethod("toJson", Map.class);
+        method.setAccessible(true);
+
+        String json = (String) method.invoke(orchestrator, Map.of(
+            "type", "clarify",
+            "suggestions", List.of("先调用 gpu_query", "选择明确 gpuSpec"),
+            "metadata", Map.of("codes", List.of("MISSING_GPU_SPEC"))
+        ));
+
+        JsonNode parsed = new ObjectMapper().readTree(json);
+        assertTrue(parsed.get("suggestions").isArray(), "suggestions 必须是 JSON 数组，前端才能直接渲染选项");
+        assertEquals("先调用 gpu_query", parsed.get("suggestions").get(0).asText());
+        assertTrue(parsed.get("metadata").get("codes").isArray(), "嵌套 List 也必须保持数组结构");
+        assertEquals("MISSING_GPU_SPEC", parsed.get("metadata").get("codes").get(0).asText());
     }
 }

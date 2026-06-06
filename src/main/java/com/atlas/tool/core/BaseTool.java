@@ -121,12 +121,15 @@ public abstract class BaseTool implements AtlasTool {
     public final Map<String, Object> execute(Map<String, Object> params) {
         long startMs = System.currentTimeMillis();
         return wrapCall(() -> {
+            // 调用方可能传入 Map.of(...) 或 Jackson/框架生成的不可变 Map。
+            // 类型转换和默认值回填需要修改参数，因此入口先复制为本地可变副本，避免工具因参数容器不可变而失败。
+            Map<String, Object> workingParams = params == null ? null : new LinkedHashMap<>(params);
             // 1. 参数校验
-            validate(params);
+            validate(workingParams);
             // 2. 类型转换
-            convertTypes(params);
+            convertTypes(workingParams);
             // 3. 业务执行
-            AtlasToolResult result = doExecute(params);
+            AtlasToolResult result = doExecute(workingParams);
             // 4. 附加元数据
             if (result != null) {
                 result.withToolName(toolName)

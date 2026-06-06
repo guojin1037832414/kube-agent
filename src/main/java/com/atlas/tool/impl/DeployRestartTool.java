@@ -5,30 +5,34 @@ import com.atlas.tool.annotation.AtlasToolMapping;
 import com.atlas.tool.annotation.ToolPermission;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.tool.core.BaseTool;
+import com.atlas.tool.core.ToolParameterSpec;
 import org.springframework.stereotype.Component;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
- * 重启实例 Tool。
+ * 重启部署实例 Tool。
  *
- * <p>意图映射: {@code intentId = "deploy_restart"}</p>
- * <p>Agent归属: deploy | 安全级别: P0</p>
+ * <p>专家会诊结论：当前成熟 kube-manager 的 DeploymentController 尚未暴露 deployment restart 接口。
+ * 因此本 Tool 暂时 fail-closed，不向线上后端发送不存在或未审计的写请求，避免 agent 误导用户。</p>
  */
 @Component
 @AtlasToolMapping(
     name = "deploy_restart",
     agent = "deploy",
     intentId = "deploy_restart",
-    description = "重启实例",
-    httpMethod = "POST",
-    apiEndpoints = {"/api/{orgId}/deployment/{target}/restart"},
-    operationType = AtlasToolMapping.OperationType.ACTION,
+    description = "重启实例（当前后端未提供已审计接口，默认拒绝执行）",
+    httpMethod = "NONE",
+    apiEndpoints = {},
+    operationType = AtlasToolMapping.OperationType.PLACEHOLDER,
     requiresConfirmation = true
 )
 @ToolPermission(ToolPermission.Policy.ADMIN_ONLY)
 public class DeployRestartTool extends BaseTool {
 
+    @SuppressWarnings("unused")
     private final KubeManagerHttpClient httpClient;
 
     public DeployRestartTool(KubeManagerHttpClient httpClient) {
@@ -42,23 +46,28 @@ public class DeployRestartTool extends BaseTool {
     }
 
     @Override
-    protected AtlasToolResult doExecute(Map<String, Object> params) {
-        log.info("[deploy_restart] 执行重启实例");
-        String target = params.get("name") != null ? params.get("name").toString()
-            : (params.get("userId") != null ? params.get("userId").toString() : "unknown");
+    public List<ToolParameterSpec> getParameterSpecs() {
+        return List.of(
+            ToolParameterSpec.stringParam(
+                "name",
+                "希望重启的 Deployment/实例名称。当前 kube-manager 未提供已审计的重启接口，本工具会拒绝直接执行。",
+                true,
+                List.of("deploymentName", "instanceName", "targetName")
+            )
+        );
+    }
 
-        try {
-            String orgId = resolveOrganizationId(params);
-            Map<String, Object> response = httpClient.post(
-                "/api/" + orgId + "/deployment/" + target + "/restart",
-                Map.of()
-            );
-            Object data = extractData(response);
-            String summary = "实例重启成功: " + target;
-            return AtlasToolResult.ok(summary, data);
-        } catch (Exception e) {
-            log.error("[deploy_restart] 调用 kube-manager API 失败", e);
-            return AtlasToolResult.fail("实例重启失败: " + e.getMessage());
-        }
+    @Override
+    protected AtlasToolResult doExecute(Map<String, Object> params) {
+        String name = params.get("name") == null ? "" : params.get("name").toString().trim();
+        // fail-closed：没有真实后端契约时，宁可让用户看到明确限制，也不构造猜测路径。
+        return AtlasToolResult.fail(
+            "当前 kube-manager 未暴露已审计的实例重启接口，已拒绝执行 deploy_restart: " + name,
+            "UNSUPPORTED_BACKEND_OPERATION",
+            List.of(
+                "请先在 kube-manager 增加并审计实例重启 API，再接入该 Tool",
+                "临时处理请使用已审计的扩缩容、删除重建等流程，并逐步确认影响范围"
+            )
+        );
     }
 }

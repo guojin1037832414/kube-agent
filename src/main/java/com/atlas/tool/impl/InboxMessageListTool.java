@@ -18,14 +18,18 @@ import java.util.Set;
  *
  * <p>意图映射: {@code intentId = "inbox_message_list"}</p>
  * <p>Agent归属: query | 安全级别: P3</p>
- * <p>API路径: GET /api/{orgId}/message</p>
+ * <p>API路径: GET /api/{orgId}/inbox-message</p>
  */
 @Component
 @AtlasToolMapping(
     name = "inbox_message_list",
     agent = "query",
     intentId = "inbox_message_list",
-    description = "查询消息通知列表"
+    description = "查询消息通知列表",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/inbox-message"},
+    operationType = AtlasToolMapping.OperationType.SENSITIVE_READ,
+    requiresConfirmation = true
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class InboxMessageListTool extends BaseTool {
@@ -54,7 +58,7 @@ public class InboxMessageListTool extends BaseTool {
     protected AtlasToolResult doExecute(Map<String, Object> params) {
         try {
             String orgId = resolveOrganizationId(params);
-            String path = "/api/" + orgId + "/message";
+            String path = "/api/" + orgId + "/inbox-message";
 
             Map<String, Object> response = httpClient.get(path, buildListQuery(params));
             Object data = extractData(response);

@@ -25,9 +25,11 @@ import com.atlas.react.ReActEventSinkRegistry;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
+import java.util.function.Function;
 
 /**
  * Atlas 统一编排器 — v3.1 P0 清场版。
@@ -400,6 +402,7 @@ public class AtlasOrchestrator {
         // 异步执行 Graph stream
         Runnable graphTask = () -> {
             try {
+                Set<String> emittedStructuredClarifications = ConcurrentHashMap.newKeySet();
                 Map<String, Object> inputs = new java.util.HashMap<>();
                 inputs.put("input", Optional.ofNullable(request.userQuery()).orElse(""));
                 inputs.put("conversation_id", Optional.ofNullable(request.conversationId()).orElse(""));
@@ -474,6 +477,15 @@ public class AtlasOrchestrator {
                                 "result", result.toString()
                             ))
                         );
+                        if ("tool_call".equals(node) || "execute_node".equals(node)) {
+                            emitStructuredClarificationIfPresent(
+                                emitter,
+                                sessionId,
+                                node,
+                                state::value,
+                                emittedStructuredClarifications
+                            );
+                        }
                         },
                         err -> {
                             log.error("[Graph] 会话 {} 流式错误", sessionId, err);
@@ -513,6 +525,7 @@ public class AtlasOrchestrator {
             // ReAct 事件流会在执行过程中主动发送 content；这里记录是否已发送最终内容，
             // 防止 react_node 完成后再从 state 里重复推送同一份最终答案。
             java.util.concurrent.atomic.AtomicBoolean reactContentEmitted = new java.util.concurrent.atomic.AtomicBoolean(false);
+            Set<String> emittedStructuredClarifications = ConcurrentHashMap.newKeySet();
             ReActEventSink reactEventSink = event -> {
                 if ("content".equals(event.type())) {
                     reactContentEmitted.set(true);
@@ -633,6 +646,23 @@ public class AtlasOrchestrator {
                                         emit(emitter, "content", Map.of("content", sb.toString()));
                                     }
                                 });
+                            emitStructuredClarificationIfPresent(
+                                emitter,
+                                sessionId,
+                                node,
+                                state::value,
+                                emittedStructuredClarifications
+                            );
+                        }
+
+                        if ("execute_node".equals(node)) {
+                            emitStructuredClarificationIfPresent(
+                                emitter,
+                                sessionId,
+                                node,
+                                state::value,
+                                emittedStructuredClarifications
+                            );
                         }
 
                         // ── M3.2: ReAct 节点结果推送（手写 ReAct 引擎执行结果）──
@@ -733,7 +763,66 @@ public class AtlasOrchestrator {
         };
     }
 
-    @SuppressWarnings("unchecked")
+    /**
+     * 将 Tool 层结构化补参信号转为前端可消费的 clarify SSE 事件。
+     *
+     * <p>AtlasBrain 的 ASK_CLARIFY 是“执行前澄清”，而这里处理的是 Tool 已返回
+     * {@code errorCode/suggestions} 后的“执行后补参澄清”。两者都用前端已有的 clarify
+     * 事件承载，但本方法会额外带上 source/node/errorCode/suggestions，方便前端区分来源。</p>
+     */
+    private void emitStructuredClarificationIfPresent(SseEmitter emitter,
+                                                      String sessionId,
+                                                      String node,
+                                                      Function<String, Optional<Object>> stateValue,
+                                                      Set<String> emittedKeys) {
+        boolean requiresClarification = stateValue.apply("requires_clarification")
+            .map(this::isTruthy)
+            .orElse(false);
+        if (!requiresClarification) {
+            return;
+        }
+
+        Object errorCode = stateValue.apply("tool_error_code").orElse(null);
+        Object suggestions = stateValue.apply("tool_suggestions").orElse(null);
+        Object toolResult = stateValue.apply("tool_result").orElse(null);
+        if (toolResult instanceof Map<?, ?> tr) {
+            if (errorCode == null) {
+                errorCode = tr.get("errorCode");
+            }
+            if (suggestions == null) {
+                suggestions = tr.get("suggestions");
+            }
+        }
+
+        String dedupeKey = node + "|" + String.valueOf(errorCode) + "|" + String.valueOf(suggestions);
+        if (emittedKeys != null && !emittedKeys.add(dedupeKey)) {
+            return;
+        }
+
+        Map<String, Object> payload = new java.util.LinkedHashMap<>();
+        payload.put("threadId", sessionId);
+        payload.put("node", node);
+        payload.put("source", "tool_result");
+        payload.put("errorCode", errorCode != null ? errorCode : "TOOL_REQUIRES_CLARIFICATION");
+        payload.put("suggestions", suggestions != null ? suggestions : List.of());
+        payload.put("requiredContext", suggestions != null ? suggestions : List.of());
+        payload.put("content", buildClarificationContent(errorCode, suggestions));
+        emit(emitter, "clarify", payload);
+    }
+
+    private boolean isTruthy(Object value) {
+        if (value instanceof Boolean b) {
+            return b;
+        }
+        return value != null && "true".equalsIgnoreCase(value.toString());
+    }
+
+    private String buildClarificationContent(Object errorCode, Object suggestions) {
+        String codeText = errorCode != null ? errorCode.toString() : "TOOL_REQUIRES_CLARIFICATION";
+        return "需要补充信息后才能继续执行（" + codeText + "）"
+            + (suggestions != null ? "：" + suggestions : "");
+    }
+
     private String toJson(Map<String, Object> map) {
         StringBuilder sb = new StringBuilder();
         sb.append("{");
@@ -742,21 +831,36 @@ public class AtlasOrchestrator {
             if (!first) sb.append(",");
             first = false;
             sb.append("\"").append(e.getKey()).append("\":");
-            Object v = e.getValue();
-            if (v == null) {
-                sb.append("null");
-            } else if (v instanceof String s) {
-                sb.append("\"").append(escapeJsonString(s)).append("\"");
-            } else if (v instanceof Number || v instanceof Boolean) {
-                sb.append(v);
-            } else if (v instanceof Map) {
-                sb.append(toJson((Map<String, Object>) v));
-            } else {
-                sb.append("\"").append(escapeJsonString(v.toString())).append("\"");
-            }
+            appendJsonValue(sb, e.getValue());
         }
         sb.append("}");
         return sb.toString();
+    }
+
+    @SuppressWarnings("unchecked")
+    private void appendJsonValue(StringBuilder sb, Object value) {
+        if (value == null) {
+            sb.append("null");
+        } else if (value instanceof String s) {
+            sb.append("\"").append(escapeJsonString(s)).append("\"");
+        } else if (value instanceof Number || value instanceof Boolean) {
+            sb.append(value);
+        } else if (value instanceof Map<?, ?> map) {
+            sb.append(toJson((Map<String, Object>) map));
+        } else if (value instanceof Iterable<?> iterable) {
+            sb.append("[");
+            boolean first = true;
+            for (Object item : iterable) {
+                if (!first) {
+                    sb.append(",");
+                }
+                first = false;
+                appendJsonValue(sb, item);
+            }
+            sb.append("]");
+        } else {
+            sb.append("\"").append(escapeJsonString(value.toString())).append("\"");
+        }
     }
 
     /**

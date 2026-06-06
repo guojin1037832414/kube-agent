@@ -11,6 +11,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -92,7 +93,14 @@ class M511AtlasToolHttpContractTest {
             new ExpectedEndpoint("CurrencyQueryListTool.java", "currency_query_list", "/api/{orgId}/currency"),
             new ExpectedEndpoint("DeploymentDetailTool.java", "deployment_detail", "/api/{orgId}/deployment"),
             new ExpectedEndpoint("ImageDetailByNameTool.java", "image_detail_by_name", "/api/{orgId}/image/name"),
-            new ExpectedEndpoint("NodeDetailTool.java", "node_detail", "/api/{orgId}/node")
+            new ExpectedEndpoint("NodeDetailTool.java", "node_detail", "/api/{orgId}/node"),
+            new ExpectedEndpoint("EasyFlowAnalyzerListTool.java", "easy_flow_analyzer_list", "/api/{orgId}/easy-flow/analyzer"),
+            new ExpectedEndpoint("EasyFlowFlowDetailTool.java", "easy_flow_flow_detail", "/api/{orgId}/easy-flow/flow/{flowId}"),
+            new ExpectedEndpoint("EasyFlowFlowListTool.java", "easy_flow_flow_list", "/api/{orgId}/easy-flow/flow"),
+            new ExpectedEndpoint("EasyFlowInstanceDetailTool.java", "easy_flow_instance_detail", "/api/{orgId}/easy-flow/instance/{instanceId}"),
+            new ExpectedEndpoint("EasyFlowInstanceListTool.java", "easy_flow_instance_list", "/api/{orgId}/easy-flow/instance"),
+            new ExpectedEndpoint("EasyFlowStageDetailTool.java", "easy_flow_stage_detail", "/api/{orgId}/easy-flow/flow/{flowId}/stage/{stageId}"),
+            new ExpectedEndpoint("EasyFlowStageListTool.java", "easy_flow_stage_list", "/api/{orgId}/easy-flow/flow/{flowId}/stage")
         );
 
         for (ExpectedEndpoint expected : expectedEndpoints) {
@@ -115,12 +123,19 @@ class M511AtlasToolHttpContractTest {
             new ExpectedEndpoint("GpuMetricsTool.java", "gpu_metrics", "/api/{orgId}/node/all/gpu-map"),
             new ExpectedEndpoint("NetworkQueryTool.java", "network_query", "/api/{orgId}/dashboard/deployment"),
             new ExpectedEndpoint("PodQueryTool.java", "pod_status", "/api/{orgId}/pod"),
+            new ExpectedEndpoint("NodeRemainingResourceTool.java", "node_remaining_resource", "/api/{orgId}/node/remaining"),
+            new ExpectedEndpoint("MetricGpuServerInstantTool.java", "metric_gpu_server_instant", "/api/public/metric/prometheus/instant/server/gpu"),
+            new ExpectedEndpoint("MetricCpuServerInstantTool.java", "metric_cpu_server_instant", "/api/public/metric/prometheus/instant/server/cpu"),
+            new ExpectedEndpoint("MetricStorageServerInstantTool.java", "metric_storage_server_instant", "/api/public/metric/prometheus/instant/server/storage"),
+            new ExpectedEndpoint("MetricPodInstantTool.java", "metric_pod_instant", "/api/public/metric/prometheus/instant/pod"),
             new ExpectedEndpoint("DaemonSetQueryTool.java", "daemonset_status", "/api/{orgId}/dashboard/deployment"),
             new ExpectedEndpoint("DeploymentQueryTool.java", "deployment_status", "/api/{orgId}/deployment"),
             new ExpectedEndpoint("ServiceQueryTool.java", "service_status", "/api/{orgId}/dashboard/resources"),
             new ExpectedEndpoint("IngressQueryTool.java", "ingress_query", "/api/{orgId}/dashboard/deployment"),
             new ExpectedEndpoint("ResourceMonitorTool.java", "resource_monitor", "/api/{orgId}/resource"),
             new ExpectedEndpoint("ResourcePresetListTool.java", "resource_preset_list", "/api/{orgId}/resource-preset"),
+            new ExpectedEndpoint("ResourcePresetDetailTool.java", "resource_preset_detail", "/api/{orgId}/resource-preset/{resourcePresetId}"),
+            new ExpectedEndpoint("DashboardEasyFlowCountTool.java", "dashboard_easy_flow_count", "/api/{orgId}/dashboard/easy-flow/count"),
             new ExpectedEndpoint("SlurmClusterListTool.java", "slurm_cluster_list", "/api/{orgId}/bcm/slurm-cluster"),
             new ExpectedEndpoint("SlurmNodeListTool.java", "slurm_node_list", "/api/{orgId}/slurm-node")
         );
@@ -139,11 +154,18 @@ class M511AtlasToolHttpContractTest {
         List<String> violations = new ArrayList<>();
         List<ExpectedEndpoint> expectedEndpoints = List.of(
             new ExpectedEndpoint("LogQueryTool.java", "log_query", "/api/log"),
+            new ExpectedEndpoint("EasyFlowInstanceLogAbstractTool.java", "easy_flow_instance_log_abstract", "/api/{orgId}/easy-flow/instance/{instanceId}/log/{stageCode}/abstract"),
+            new ExpectedEndpoint("EasyFlowInstanceLogListTool.java", "easy_flow_instance_log_list", "/api/{orgId}/easy-flow/instance/{instanceId}/log/{stageCode}/list"),
+            new ExpectedEndpoint("EasyFlowInstanceLogTool.java", "easy_flow_instance_log", "/api/{orgId}/easy-flow/instance/{instanceId}/log/{stageCode}"),
             new ExpectedEndpoint("UserQueryTool.java", "user_query", "/api/{orgId}/user"),
             new ExpectedEndpoint("PermissionMenuListTool.java", "permission_menu_list", "/api/{orgId}/permission/menu"),
+            new ExpectedEndpoint("KubernetesDashboardLinkTool.java", "kubernetes_dashboard_link", "/api/external-link/kubernetes/dashboard"),
             new ExpectedEndpoint("LdapConfigListTool.java", "ldap_config_list", "/api/{orgId}/ldap"),
             new ExpectedEndpoint("RoleAssignableListTool.java", "role_assignable", "/api/{orgId}/role/assignable"),
             new ExpectedEndpoint("OrderListTool.java", "order_list", "/api/{orgId}/lease/order"),
+            new ExpectedEndpoint("PodUseRecordListTool.java", "pod_use_record_list", "/api/{orgId}/pod-use/record"),
+            new ExpectedEndpoint("PodUseBillListTool.java", "pod_use_bill_list", "/api/{orgId}/pod-use/bill"),
+            new ExpectedEndpoint("CostConfigListTool.java", "cost_config_list", "/api/{orgId}/cost"),
             new ExpectedEndpoint("QuotaMyListTool.java", "quota_my_list", "/api/{orgId}/quota/my")
         );
 
@@ -157,27 +179,279 @@ class M511AtlasToolHttpContractTest {
     }
 
     @Test
+    void m521IndustryAppReadEndpoints_shouldMatchReviewedWhitelist() throws IOException {
+        List<String> violations = new ArrayList<>();
+        List<ExpectedEndpoint> expectedEndpoints = List.of(
+            new ExpectedEndpoint("IndustryAppTemplateListTool.java", "industry_app_template_list", "/api/{orgId}/industry-app/template"),
+            new ExpectedEndpoint("IndustryAppTemplateDetailTool.java", "industry_app_template_detail", "/api/{orgId}/industry-app/template/{appId}"),
+            new ExpectedEndpoint("IndustryAppTemplateApiDocTool.java", "industry_app_template_api_doc", "/api/{orgId}/industry-app/template/{appId}/api-doc"),
+            new ExpectedEndpoint("IndustryAppInstanceListTool.java", "industry_app_instance_list", "/api/{orgId}/industry-app/instance"),
+            new ExpectedEndpoint("IndustryAppInstanceApiHistoryTool.java", "industry_app_instance_api_history", "/api/{orgId}/industry-app/instance/{instanceId}/api-history"),
+            new ExpectedEndpoint("IndustryAppResourcePresetListTool.java", "industry_app_resource_preset_list", "/api/{orgId}/industry-app/template/{appId}/resource-preset"),
+            new ExpectedEndpoint("IndustryAppParamListTool.java", "industry_app_param_list", "/api/{orgId}/industry-app/template/{appId}/app-param")
+        );
+
+        for (ExpectedEndpoint expected : expectedEndpoints) {
+            verifyExpectedEndpoint(expected, "M5.21", "READ", false, violations);
+        }
+
+        assertThat(violations)
+            .as("M5.21 行业应用 READ endpoint 精确白名单违规:\n%s", String.join("\n", violations))
+            .isEmpty();
+    }
+
+    @Test
+    void m521SaleProductReadEndpoints_shouldMatchReviewedWhitelist() throws IOException {
+        List<String> violations = new ArrayList<>();
+        List<ExpectedEndpoint> expectedEndpoints = List.of(
+            new ExpectedEndpoint("PublicProductTypeListTool.java", "public_product_type_list", "/api/public/product/type"),
+            new ExpectedEndpoint("PublicPostPayProductListTool.java", "public_post_pay_product_list", "/api/public/product/post-pay"),
+            new ExpectedEndpoint("PublicPrePayProductListTool.java", "public_pre_pay_product_list", "/api/public/product/pre-pay"),
+            new ExpectedEndpoint("PublicServerProductListTool.java", "public_server_product_list", "/api/public/product/server"),
+            new ExpectedEndpoint("LeaseOrderAmountEstimateTool.java", "lease_order_amount_estimate", "/api/{orgId}/lease/order/count")
+        );
+
+        for (ExpectedEndpoint expected : expectedEndpoints) {
+            verifyExpectedEndpoint(expected, "M5.21", "READ", false, violations);
+        }
+
+        assertThat(violations)
+            .as("M5.21 产品与租赁报价 READ endpoint 精确白名单违规:\n%s", String.join("\n", violations))
+            .isEmpty();
+    }
+
+    @Test
+    void m521ProductConfigSensitiveReadEndpoints_shouldMatchReviewedWhitelist() throws IOException {
+        List<String> violations = new ArrayList<>();
+        List<ExpectedEndpoint> expectedEndpoints = List.of(
+            new ExpectedEndpoint("ProductTypeListTool.java", "product_type_list", "/api/{orgId}/product/type"),
+            new ExpectedEndpoint("PostPayProductListTool.java", "post_pay_product_list", "/api/{orgId}/product/post-pay"),
+            new ExpectedEndpoint("ServerConfigListTool.java", "server_config_list", "/api/{orgId}/server")
+        );
+
+        for (ExpectedEndpoint expected : expectedEndpoints) {
+            verifyExpectedEndpoint(expected, "M5.21", "SENSITIVE_READ", true, violations);
+        }
+
+        assertThat(violations)
+            .as("M5.21 product config SENSITIVE_READ endpoint exact whitelist violations\n%s", String.join("\n", violations))
+            .isEmpty();
+    }
+
+    @Test
+    void m521HpcPreparationReadEndpoints_shouldMatchReviewedWhitelist() throws IOException {
+        List<String> violations = new ArrayList<>();
+        List<ExpectedEndpoint> expectedEndpoints = List.of(
+            new ExpectedEndpoint("HpcPartitionListTool.java", "hpc_partition_list", "/api/{orgId}/hpc-job/partition/{clusterId}"),
+            new ExpectedEndpoint("HpcSbatchParameterListTool.java", "hpc_sbatch_parameter_list", "/api/{orgId}/hpc-job/sbatch_parameter/{category}")
+        );
+
+        for (ExpectedEndpoint expected : expectedEndpoints) {
+            verifyExpectedEndpoint(expected, "M5.21", "READ", false, violations);
+        }
+
+        assertThat(violations)
+            .as("M5.21 HPC 作业准备数据 READ endpoint 精确白名单违规:\n%s", String.join("\n", violations))
+            .isEmpty();
+    }
+
+    @Test
+    void m521HpcEnvironmentModuleSensitiveReadEndpoints_shouldMatchReviewedWhitelist() throws IOException {
+        List<String> violations = new ArrayList<>();
+        List<ExpectedEndpoint> expectedEndpoints = List.of(
+            new ExpectedEndpoint("HpcEnvironmentListTool.java", "hpc_environment_list", "/api/{orgId}/hpc-env/environments/{clusterId}"),
+            new ExpectedEndpoint("HpcModuleListTool.java", "hpc_module_list", "/api/{orgId}/hpc-env/modules")
+        );
+
+        for (ExpectedEndpoint expected : expectedEndpoints) {
+            verifyExpectedEndpoint(expected, "M5.21", "SENSITIVE_READ", true, violations);
+        }
+
+        assertThat(violations)
+            .as("M5.21 HPC environment/module SENSITIVE_READ endpoint exact whitelist violations\n%s", String.join("\n", violations))
+            .isEmpty();
+    }
+
+    @Test
+    void m521BcmAllocationSensitiveReadEndpoints_shouldMatchReviewedWhitelist() throws IOException {
+        List<String> violations = new ArrayList<>();
+        List<ExpectedEndpoint> expectedEndpoints = List.of(
+            new ExpectedEndpoint("BcmUserListTool.java", "bcm_user_list", "/api/{orgId}/bcm/users"),
+            new ExpectedEndpoint("BcmSlurmNodeAllocationListTool.java", "bcm_slurm_node_allocation_list", "/api/{orgId}/bcm/all-slurm-nodes"),
+            new ExpectedEndpoint("BcmBareMetalNodeAllocationListTool.java", "bcm_bare_metal_node_allocation_list", "/api/{orgId}/bcm/all-bare-metal-nodes")
+        );
+
+        for (ExpectedEndpoint expected : expectedEndpoints) {
+            verifyExpectedEndpoint(expected, "M5.21", "SENSITIVE_READ", true, violations);
+        }
+
+        assertThat(violations)
+            .as("M5.21 BCM allocation SENSITIVE_READ endpoint exact whitelist violations\n%s", String.join("\n", violations))
+            .isEmpty();
+    }
+
+    @Test
+    void m521FileStorageSensitiveReadEndpoints_shouldMatchReviewedWhitelist() throws IOException {
+        List<String> violations = new ArrayList<>();
+        List<ExpectedEndpoint> expectedEndpoints = List.of(
+            new ExpectedEndpoint("FileVolumePathTool.java", "file_volume_path", "/api/{orgId}/file/volume-path"),
+            new ExpectedEndpoint("FileUserVolumePathTool.java", "file_user_volume_path", "/api/{orgId}/file/volume-path/user"),
+            new ExpectedEndpoint("FileUserExtraVolumePathTool.java", "file_user_extra_volume_path", "/api/{orgId}/file/volume-path/user-extra"),
+            new ExpectedEndpoint("FileClaimedVolumeOptionListTool.java", "file_claimed_volume_option_list", "/api/{orgId}/file/claimed-volume-option"),
+            new ExpectedEndpoint("FileStorageOptionTool.java", "file_storage_option", "/api/{orgId}/file/storage/option"),
+            new ExpectedEndpoint("FileSelectStorageTool.java", "file_select_storage", "/api/{orgId}/file/selectStorage"),
+            new ExpectedEndpoint("FileTrainStorageTool.java", "file_train_storage", "/api/{orgId}/file/train-storage")
+        );
+
+        for (ExpectedEndpoint expected : expectedEndpoints) {
+            verifyExpectedEndpoint(expected, "M5.21", "SENSITIVE_READ", true, violations);
+        }
+
+        assertThat(violations)
+            .as("M5.21 file/storage SENSITIVE_READ endpoint exact whitelist violations\n%s", String.join("\n", violations))
+            .isEmpty();
+    }
+
+    @Test
+    void m521LegacyGetEndpoints_shouldMatchReviewedWhitelist() throws IOException {
+        List<String> violations = new ArrayList<>();
+        List<ExpectedEndpoint> expectedReadEndpoints = List.of(
+            new ExpectedEndpoint("ImageQueryTool.java", "image_query", "/api/{orgId}/image"),
+            new ExpectedEndpoint("PytorchJobListTool.java", "pytorch_job_list", "/api/{orgId}/pytorch-job")
+        );
+        List<ExpectedEndpoint> expectedSensitiveReadEndpoints = List.of(
+            new ExpectedEndpoint("DataSetListTool.java", "data_set_list", "/api/{orgId}/data-set"),
+            new ExpectedEndpoint("FileListTool.java", "file_list", "/api/{orgId}/file"),
+            new ExpectedEndpoint("DownloadTaskListTool.java", "download_task_list", "/api/{orgId}/download"),
+            new ExpectedEndpoint("FileMaterialListTool.java", "file_material_list", "/api/{orgId}/material/folders"),
+            new ExpectedEndpoint("InboxMessageListTool.java", "inbox_message_list", "/api/{orgId}/inbox-message")
+        );
+
+        for (ExpectedEndpoint expected : expectedReadEndpoints) {
+            verifyExpectedEndpoint(expected, "M5.21", "READ", false, violations);
+        }
+        for (ExpectedEndpoint expected : expectedSensitiveReadEndpoints) {
+            verifyExpectedEndpoint(expected, "M5.21", "SENSITIVE_READ", true, violations);
+        }
+
+        assertThat(violations)
+            .as("M5.21 legacy GET endpoint exact whitelist violations\n%s", String.join("\n", violations))
+            .isEmpty();
+    }
+
+    @Test
+    void m521VirtualMachineReadEndpoints_shouldMatchReviewedWhitelist() throws IOException {
+        List<String> violations = new ArrayList<>();
+        List<ExpectedEndpoint> expectedEndpoints = List.of(
+            new ExpectedEndpoint("VirtualMachineListTool.java", "virtual_machine_list", "/api/{orgId}/virtual-machine"),
+            new ExpectedEndpoint("VirtualMachineDetailTool.java", "virtual_machine_detail", "/api/{orgId}/virtual-machine/{name}")
+        );
+
+        for (ExpectedEndpoint expected : expectedEndpoints) {
+            verifyExpectedEndpoint(expected, "M5.21", "READ", false, violations);
+        }
+
+        assertThat(violations)
+            .as("M5.21 虚拟机 READ endpoint 精确白名单违规:\n%s", String.join("\n", violations))
+            .isEmpty();
+    }
+
+    @Test
+    void m521TemplateReadEndpoints_shouldMatchReviewedWhitelist() throws IOException {
+        List<String> violations = new ArrayList<>();
+        List<ExpectedEndpoint> expectedEndpoints = List.of(
+            new ExpectedEndpoint("TemplateListTool.java", "template_list", "/api/{orgId}/template"),
+            new ExpectedEndpoint("TemplateDetailTool.java", "template_detail", "/api/{orgId}/template/{templateId}"),
+            new ExpectedEndpoint("JobTemplateListTool.java", "job_template_list", "/api/{orgId}/train-job-template"),
+            new ExpectedEndpoint("JobTemplateDetailTool.java", "job_template_detail", "/api/{orgId}/train-job-template/{templateId}")
+        );
+
+        for (ExpectedEndpoint expected : expectedEndpoints) {
+            verifyExpectedEndpoint(expected, "M5.21", "READ", false, violations);
+        }
+
+        assertThat(violations)
+            .as("M5.21 模板详情 READ endpoint 精确白名单违规:\n%s", String.join("\n", violations))
+            .isEmpty();
+    }
+
+    @Test
+    void m521CoursewareReadEndpoints_shouldMatchReviewedWhitelist() throws IOException {
+        List<String> violations = new ArrayList<>();
+        List<ExpectedEndpoint> expectedReadEndpoints = List.of(
+            new ExpectedEndpoint("CoursewareListTool.java", "courseware_list", "/api/{orgId}/courseware/list"),
+            new ExpectedEndpoint("CoursewareDetailTool.java", "courseware_detail", "/api/{orgId}/courseware/info/{coursewareId}")
+        );
+        List<ExpectedEndpoint> expectedSensitiveReadEndpoints = List.of(
+            new ExpectedEndpoint("CoursewareGradeListTool.java", "courseware_grade_list", "/api/{orgId}/courseware/grade/{coursewareId}"),
+            new ExpectedEndpoint("CoursewareLearningStatusTool.java", "courseware_learning_status", "/api/{orgId}/learn/deployment/status/{coursewareId}")
+        );
+
+        for (ExpectedEndpoint expected : expectedReadEndpoints) {
+            verifyExpectedEndpoint(expected, "M5.21", "READ", false, violations);
+        }
+        for (ExpectedEndpoint expected : expectedSensitiveReadEndpoints) {
+            verifyExpectedEndpoint(expected, "M5.21", "SENSITIVE_READ", true, violations);
+        }
+
+        assertThat(violations)
+            .as("M5.21 课件 READ endpoint 精确白名单违规:\n%s", String.join("\n", violations))
+            .isEmpty();
+    }
+
+    @Test
+    void m521TensorBoardSensitiveReadEndpoints_shouldMatchReviewedWhitelist() throws IOException {
+        List<String> violations = new ArrayList<>();
+        List<ExpectedEndpoint> expectedEndpoints = List.of(
+            new ExpectedEndpoint("TensorBoardListTool.java", "tensorboard_list", "/api/{orgId}/tensorboard"),
+            new ExpectedEndpoint("TensorBoardEnvironmentTool.java", "tensorboard_environment", "/api/{orgId}/tensorboard/data/environment"),
+            new ExpectedEndpoint("TensorBoardRunsTool.java", "tensorboard_runs", "/api/{orgId}/tensorboard/data/runs"),
+            new ExpectedEndpoint("TrainJobTensorBoardRunsTool.java", "trainjob_tensorboard_runs", "/api/{orgId}/tensorboard/trainjob-runs/{tensorBoardDeploymentId}")
+        );
+
+        for (ExpectedEndpoint expected : expectedEndpoints) {
+            verifyExpectedEndpoint(expected, "M5.21", "SENSITIVE_READ", true, violations);
+        }
+
+        assertThat(violations)
+            .as("M5.21 TensorBoard SENSITIVE_READ endpoint exact whitelist violations\n%s", String.join("\n", violations))
+            .isEmpty();
+    }
+
+    @Test
     void m519HighRiskMutationEndpoints_shouldMatchReviewedWhitelist() throws IOException {
         List<String> violations = new ArrayList<>();
         List<ExpectedRiskEndpoint> expectedEndpoints = List.of(
-            new ExpectedRiskEndpoint("ComposeDeployCreateTool.java", "compose_deploy_create", "POST", "CREATE", "/api/{orgId}/compose"),
+            new ExpectedRiskEndpoint("ComposeDeployCreateTool.java", "compose_deploy_create", "POST", "CREATE", "/api/{orgId}/compose/deploy"),
+            new ExpectedRiskEndpoint("ComposeDeployDeleteTool.java", "compose_deploy_delete", "DELETE", "DELETE", "/api/{orgId}/compose/{composeId}"),
+            new ExpectedRiskEndpoint("ComposeDeployUpdateTool.java", "compose_deploy_update", "PUT", "ACTION", "/api/{orgId}/compose/{composeId}"),
             new ExpectedRiskEndpoint("DeployCreateTool.java", "deploy_create_instance", "POST", "CREATE", "/api/{orgId}/deployment"),
-            new ExpectedRiskEndpoint("DeployDeleteTool.java", "deploy_delete", "POST", "DELETE", "/api/{orgId}/deployment/{target}/delete"),
-            new ExpectedRiskEndpoint("DeployRestartTool.java", "deploy_restart", "POST", "ACTION", "/api/{orgId}/deployment/{target}/restart"),
+            new ExpectedRiskEndpoint("DeployDeleteTool.java", "deploy_delete", "DELETE", "DELETE", "/api/{orgId}/deployment?name={name}"),
+            new ExpectedRiskEndpoint("DeployScaleTool.java", "deploy_scale", "PATCH", "ACTION", "/api/{orgId}/deployment/scale"),
             new ExpectedRiskEndpoint("DistributedCreateTool.java", "distributed_create", "POST", "CREATE", "/api/{orgId}/bcm/slurm-cluster"),
-            new ExpectedRiskEndpoint("ExperimentInstanceDeleteTool.java", "experiment_instance_delete", "DELETE", "DELETE", "/api/{orgId}/experiment/instance/{id}"),
-            new ExpectedRiskEndpoint("ExperimentInstanceStopTool.java", "experiment_instance_stop", "POST", "ACTION", "/api/{orgId}/experiment/instance/stop/{id}"),
-            new ExpectedRiskEndpoint("ExperimentStartTool.java", "experiment_start", "POST", "ACTION", "/api/{orgId}/experiment/instance/start"),
+            new ExpectedRiskEndpoint("ExperimentInstanceDeleteTool.java", "experiment_instance_delete", "NONE", "PLACEHOLDER", ""),
+            new ExpectedRiskEndpoint("ExperimentInstanceStopTool.java", "experiment_instance_stop", "PUT", "ACTION", "/api/{orgId}/experiment/instance/shutdown/{id}"),
+            new ExpectedRiskEndpoint("ExperimentStartTool.java", "experiment_start", "PUT", "ACTION", "/api/{orgId}/experiment/instance/start/{id}"),
+            new ExpectedRiskEndpoint("HelmReleaseInstallTool.java", "helm_release_install", "POST", "CREATE", "/api/{orgId}/helm/releases/{release}"),
+            new ExpectedRiskEndpoint("HelmReleaseRollbackTool.java", "helm_release_rollback", "PUT", "ACTION", "/api/{orgId}/helm/release/{release}/rollback/{version}"),
             new ExpectedRiskEndpoint("HelmReleaseDeleteTool.java", "helm_release_delete", "DELETE", "DELETE", "/api/{orgId}/helm/releases/{releaseName}"),
+            new ExpectedRiskEndpoint("HelmReleaseUpgradeTool.java", "helm_release_upgrade", "PUT", "ACTION", "/api/{orgId}/helm/release/{release}/upgrade"),
             new ExpectedRiskEndpoint("HelmRepoAddTool.java", "helm_repo_add", "POST", "CREATE", "/api/{orgId}/helm/repositories"),
+            new ExpectedRiskEndpoint("HelmRepoRemoveTool.java", "helm_repo_remove", "DELETE", "DELETE", "/api/{orgId}/helm/repositories/{repoName}"),
+            new ExpectedRiskEndpoint("HelmRepoUpdateTool.java", "helm_repo_update", "PUT", "ACTION", "/api/{orgId}/helm/repositories"),
+            new ExpectedRiskEndpoint("ImageDeleteTool.java", "image_delete", "DELETE", "DELETE", "/api/{orgId}/image/{imageId}?entirely={entirely}"),
             new ExpectedRiskEndpoint("ImagePullTool.java", "image_pull", "POST", "ACTION", "/api/{orgId}/image/pull"),
-            new ExpectedRiskEndpoint("MpiJobAbortTool.java", "mpi_job_abort", "POST", "ACTION", "/api/{orgId}/mpi-job/abort/{id}"),
-            new ExpectedRiskEndpoint("NimCreateTool.java", "nim_create", "POST", "CREATE", "/api/{orgId}/pod"),
-            new ExpectedRiskEndpoint("PytorchJobSubmitTool.java", "pytorch_job_submit", "POST", "ACTION", "/api/{orgId}/pytorch-job/submit"),
+            new ExpectedRiskEndpoint("MpiJobAbortTool.java", "mpi_job_abort", "POST", "ACTION", "/api/{orgId}/mpi-job/{jobId}"),
+            new ExpectedRiskEndpoint("MpiJobSubmitTool.java", "mpi_job_submit", "POST", "ACTION", "/api/{orgId}/mpi-job/submit/{mpiJobId}"),
+            new ExpectedRiskEndpoint("NimCreateTool.java", "nim_create", "NONE", "PLACEHOLDER", ""),
+            new ExpectedRiskEndpoint("PytorchJobSubmitTool.java", "pytorch_job_submit", "POST", "ACTION", "/api/{orgId}/pytorch-job/submit/{pyTorchJobId}"),
             new ExpectedRiskEndpoint("StorageCreateTool.java", "storage_create", "POST", "CREATE", "/api/{orgId}/file/storage"),
-            new ExpectedRiskEndpoint("StorageDeleteTool.java", "storage_delete", "POST", "DELETE", "/api/{orgId}/file/storage/{target}/delete"),
+            new ExpectedRiskEndpoint("StorageDeleteTool.java", "storage_delete", "DELETE", "DELETE", "/api/{orgId}/file/deleteStorage?name={name}"),
             new ExpectedRiskEndpoint("UserCreateTool.java", "user_create", "POST", "CREATE", "/api/{orgId}/user"),
-            new ExpectedRiskEndpoint("UserDeleteTool.java", "user_delete", "DELETE", "DELETE", "/api/{orgId}/user/{target}")
+            new ExpectedRiskEndpoint("UserDeleteTool.java", "user_delete", "DELETE", "DELETE", "/api/{orgId}/user/{id}"),
+            new ExpectedRiskEndpoint("UserEnableTool.java", "user_enable", "PUT", "ACTION", "/api/{orgId}/user/enable/{id}"),
+            new ExpectedRiskEndpoint("UserDisableTool.java", "user_disable", "PUT", "ACTION", "/api/{orgId}/user/disable/{id}"),
+            new ExpectedRiskEndpoint("UserRechargeTool.java", "user_recharge", "PUT", "ACTION", "/api/{orgId}/user/recharge")
         );
 
         for (ExpectedRiskEndpoint expected : expectedEndpoints) {
@@ -364,7 +638,13 @@ class M511AtlasToolHttpContractTest {
                     "tool=" + expected.toolName() + ", expectedRequiresConfirmation=" + expectedRequiresConfirmation
                         + ", actualRequiresConfirmation=" + requiresConfirmation));
             }
-            if (!declaredEndpoints.equals(Set.of(expected.endpoint()))) {
+            Set<String> actualEndpoints = declaredEndpoints.stream()
+                .filter(endpoint -> endpoint != null && !endpoint.isBlank())
+                .collect(Collectors.toSet());
+            Set<String> expectedEndpoints = expected.endpoint().isBlank()
+                ? Set.of()
+                : Set.of(expected.endpoint());
+            if (!actualEndpoints.equals(expectedEndpoints)) {
                 violations.add(format(path, milestone + "_ENDPOINT_MISMATCH",
                     "tool=" + expected.toolName() + ", expected=[" + expected.endpoint()
                         + "], actual=" + declaredEndpoints));
@@ -426,7 +706,13 @@ class M511AtlasToolHttpContractTest {
                     "tool=" + expected.toolName() + ", operationType=" + operationType
                         + ", suggestion=高风险 Tool 必须 requiresConfirmation=true"));
             }
-            if (!declaredEndpoints.equals(Set.of(expected.endpoint()))) {
+            Set<String> actualEndpoints = declaredEndpoints.stream()
+                .filter(endpoint -> endpoint != null && !endpoint.isBlank())
+                .collect(Collectors.toSet());
+            Set<String> expectedEndpoints = expected.endpoint().isBlank()
+                ? Set.of()
+                : Set.of(expected.endpoint());
+            if (!actualEndpoints.equals(expectedEndpoints)) {
                 violations.add(format(path, milestone + "_ENDPOINT_MISMATCH",
                     "tool=" + expected.toolName() + ", expected=[" + expected.endpoint()
                         + "], actual=" + declaredEndpoints));

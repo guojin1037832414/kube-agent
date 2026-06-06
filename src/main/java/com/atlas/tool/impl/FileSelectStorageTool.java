@@ -6,34 +6,38 @@ import com.atlas.tool.annotation.ToolPermission;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.tool.core.BaseTool;
 import com.atlas.tool.core.ToolParameterSpec;
+import com.atlas.tool.exception.AtlasToolValidationException;
 import org.springframework.stereotype.Component;
 
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 /**
- * 根据名称查询存储详情 Tool — 接入真实 kube-manager API。
+ * 按存储名称查询已申请存储详情。
  *
  * <p>意图映射: {@code intentId = "file_select_storage"}</p>
- * <p>Agent归属: storage | 安全级别: P3</p>
- * <p>API路径: GET /api/{orgId}/file/selectStorage</p>
+ * <p>该接口用于存储扩容前反显原申请信息。Tool 只允许透传成熟前端也使用的 {@code name} 参数，不接受
+ * organizationId、scope、userId、page、limit 等会改变权限边界或扩大枚举面的字段。</p>
  */
 @Component
 @AtlasToolMapping(
     name = "file_select_storage",
     agent = "storage",
     intentId = "file_select_storage",
-    description = "根据名称查询存储详情"
+    description = "按存储名称查询已申请存储详情",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/file/selectStorage"},
+    operationType = AtlasToolMapping.OperationType.SENSITIVE_READ,
+    requiresConfirmation = true
 )
-@ToolPermission(ToolPermission.Policy.PUBLIC)
+@ToolPermission(ToolPermission.Policy.AUTHENTICATED)
 public class FileSelectStorageTool extends BaseTool {
 
     private final KubeManagerHttpClient httpClient;
 
     public FileSelectStorageTool(KubeManagerHttpClient httpClient) {
-        super("file_select_storage", "根据名称查询存储详情");
+        super("file_select_storage", "按存储名称查询已申请存储详情");
         this.httpClient = httpClient;
     }
 
@@ -42,44 +46,28 @@ public class FileSelectStorageTool extends BaseTool {
         return Set.of("name");
     }
 
-    /**
-     * 存储详情查询参数契约。
-     *
-     * <p>当前执行逻辑读取的 canonical 字段是 {@code name}。这里的 name 严格表示
-     * 存储卷/PVC 名称，不是普通文件名、目录名、镜像名或 StorageClass 名称。</p>
-     */
     @Override
     public List<ToolParameterSpec> getParameterSpecs() {
-        return List.of(
-            ToolParameterSpec.stringParam(
-                "name",
-                "要查询详情的存储卷/PVC 名称。这里的 name 不是文件名、目录名、镜像名称或 StorageClass 名称。",
-                true,
-                List.of("storageName", "storage_name", "storage", "pvc", "pvcName", "pvc_name", "volumeName", "volume_name", "targetName", "target_name")
-            )
-        );
+        return List.of(ToolParameterSpec.stringParam(
+            "name",
+            "存储名称，必须来自当前组织的存储列表或 kube-manager 前端展示值。",
+            true,
+            List.of("storageName", "storage_name", "storage", "pvc", "pvcName", "pvc_name", "volumeName", "volume_name", "targetName", "target_name")
+        ));
     }
 
     @Override
     protected AtlasToolResult doExecute(Map<String, Object> params) {
         try {
             String orgId = resolveOrganizationId(params);
-            String path = "/api/{orgId}/file/selectStorage".replace("{orgId}", orgId);
-
-            Map<String, Object> query = new LinkedHashMap<>();
-            query.put("page", "1");
-            query.put("limit", "100");
-
-            Object nameParam = params.get("name");
-            if (nameParam != null && !nameParam.toString().isBlank()) {
-                query.put("name", nameParam.toString());
-            }
-            Map<String, Object> response = httpClient.get(path, query);
-            Object data = extractData(response);
-            return AtlasToolResult.ok("根据名称查询存储详情完成", data);
+            String name = FileStorageQuerySupport.requiredTrimmedString(params.get("name"), "name", "存储名称");
+            Map<String, Object> response = httpClient.get("/api/" + orgId + "/file/selectStorage", Map.of("name", name));
+            return AtlasToolResult.ok("查询存储详情完成", extractData(response));
+        } catch (AtlasToolValidationException e) {
+            throw e;
         } catch (Exception e) {
             log.error("[file_select_storage] 调用 kube-manager API 失败", e);
-            return AtlasToolResult.fail("根据名称查询存储详情失败: " + e.getMessage());
+            return AtlasToolResult.fail("查询存储详情失败: " + e.getMessage());
         }
     }
 }

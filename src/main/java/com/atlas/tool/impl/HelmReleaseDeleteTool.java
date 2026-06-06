@@ -5,6 +5,7 @@ import com.atlas.tool.annotation.AtlasToolMapping;
 import com.atlas.tool.annotation.ToolPermission;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.tool.core.BaseTool;
+import com.atlas.tool.core.ToolParameterSpec;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -40,6 +41,18 @@ public class HelmReleaseDeleteTool extends BaseTool {
     @Override
     protected Set<String> getRequiredParams() {
         return Set.of("releaseName");
+    }
+
+    @Override
+    public List<ToolParameterSpec> getParameterSpecs() {
+        return List.of(
+            ToolParameterSpec.stringParam(
+                "releaseName",
+                "要卸载的 Helm Release 名称。该动作会删除 Kubernetes 集群中的 Helm 应用，必须先经用户确认。",
+                true,
+                List.of("release", "name")
+            )
+        );
     }
 
     @Override

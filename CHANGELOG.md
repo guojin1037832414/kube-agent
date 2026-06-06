@@ -7,6 +7,66 @@
 ---
 
 
+## [M5.21-29] - 第二十九批 Legacy GET Tool HTTP 元数据与路径对齐审计
+
+**交付**: 补齐 7 个历史 GET Tool 的 `@AtlasToolMapping` HTTP/risk 元数据，并修正 `file_material_list`、`inbox_message_list` 与成熟 kube-manager 后端不一致的路径。
+**变更**
+- `DataSetListTool`、`FileListTool`、`DownloadTaskListTool`、`FileMaterialListTool`、`InboxMessageListTool` 标记为 `SENSITIVE_READ + requiresConfirmation=true`。
+- `ImageQueryTool`、`PytorchJobListTool` 标记为普通 `READ`。
+- `FileMaterialListTool` 路径从 `/api/{orgId}/file-material` 对齐为 `/api/{orgId}/material/folders`。
+- `InboxMessageListTool` 路径从 `/api/{orgId}/message` 对齐为 `/api/{orgId}/inbox-message`。
+- `M511AtlasToolHttpContractTest` 新增 legacy GET endpoint 精确白名单；`ListToolParameterPassThroughContractTest` 更新路径期望。
+- 新增 `docs/M5_21_TWENTY_NINTH_WAVE_LEGACY_GET_METADATA_AUDIT_20260606.md`，并更新 M5.21 波次索引。
+**安全**
+- 本批没有调用真实 `8100`，没有新增写入、删除、状态变更或文件内容读取能力。
+- `RegistryListTool`、`MigConfigListTool`、`UploadStatusListTool`、Experiment 列表和 RBAC/组织/审批敏感管理面列表继续 HOLD，等待单独证据与权限边界审计。
+
+## [M5.21-28] - 第二十八批 文件/存储准备上下文敏感只读 Tool 审计
+
+**交付**: 补齐部署、训练任务和课程环境创建前的文件/存储准备上下文能力，迁移既有挂载路径、存储选项、存储详情 Tool 为敏感只读，并新增用户挂载路径、用户额外挂载路径、PVC 挂载选项和训练存储上下文只读 Tool；所有文件内容读取和文件/存储变更操作继续 HOLD。
+
+**变更**
+- `FileVolumePathTool`、`FileStorageOptionTool`、`FileSelectStorageTool` 迁移为 `AUTHENTICATED + SENSITIVE_READ + requiresConfirmation=true`，并移除普通只读 page/limit 预期。
+- 新增 `FileUserVolumePathTool`、`FileUserExtraVolumePathTool`、`FileClaimedVolumeOptionListTool`、`FileTrainStorageTool`。
+- 新增 `FileStorageQuerySupport`，集中处理文件/存储只读 Tool 的最小参数白名单。
+- 新增 `FileStorageReadToolHttpContractTest` 与 `docs/M5_21_TWENTY_EIGHTH_WAVE_FILE_STORAGE_READ_AUDIT_20260606.md`。
+- `M511AtlasToolHttpContractTest` 新增 file/storage `SENSITIVE_READ` endpoint 精确白名单。
+- `intents.yml` 新增 `file_user_volume_path`、`file_user_extra_volume_path`、`file_claimed_volume_option_list`、`file_train_storage` 意图；`file_volume_path`、`file_storage_option`、`file_select_storage` 复用原入口。
+
+**安全**
+- 本批没有调用真实 8100，也没有调用文件预览、下载、上传、编辑、复制移动、压缩解压、删除、存储申请、扩容或删除接口。
+- 新增 Tool 均标记为 `AUTHENTICATED + SENSITIVE_READ + requiresConfirmation=true`；无参接口固定空 query，`selectStorage` 仅透传 `name`。
+
+## [M5.21-27] - 第二十七批 BCM 用户与节点分配敏感只读 Tool 审计
+
+**交付**: 补齐 Slurm/BareMetal 创建前的组织内用户与节点分配盘点能力，新增 BCM 用户、Slurm 已分配节点、BareMetal 已分配节点三个敏感只读 Tool。
+
+**变更**
+- 新增 `BcmUserListTool`、`BcmSlurmNodeAllocationListTool`、`BcmBareMetalNodeAllocationListTool`。
+- 新增 `BcmAllocationReadToolHttpContractTest` 与 `docs/M5_21_TWENTY_SEVENTH_WAVE_BCM_ALLOCATION_READ_AUDIT_20260606.md`。
+- `M511AtlasToolHttpContractTest` 新增 BCM allocation `SENSITIVE_READ` endpoint 精确白名单。
+- `intents.yml` 新增 `bcm_user_list`、`bcm_slurm_node_allocation_list`、`bcm_bare_metal_node_allocation_list` 意图。
+
+**安全**
+- 本批没有调用真实 8100，也没有创建 Slurm/BareMetal、切换 SSH/Sudo 或访问站点管理员跨组织接口。
+- 三个新增 Tool 均标记为 `AUTHENTICATED + SENSITIVE_READ + requiresConfirmation=true`，且不透传用户给出的组织、搜索或写操作字段。
+
+## [M5.21-26] - 第二十六批 HPC 环境与 Lmod module 敏感只读 Tool 审计
+
+**交付**: 补齐 HPC 作业提交前的软件环境分析能力，新增 Miniconda 环境列表与 Lmod module 列表读取 Tool；所有会改变 HPC 软件栈的操作继续 HOLD。
+
+**变更**
+- 新增 `HpcEnvironmentListTool`，接入 `GET /api/{orgId}/hpc-env/environments/{clusterId}`。
+- 新增 `HpcModuleListTool`，接入 `GET /api/{orgId}/hpc-env/modules?clusterId=...`。
+- 新增 `HpcEnvironmentModuleToolHttpContractTest` 与审计文档。
+- 新增 `docs/M5_21_WAVE_INDEX_20260606.md`，汇总 M5.21 mature kube-manager 对齐批次。
+- `M511AtlasToolHttpContractTest` 新增 HPC environment/module `SENSITIVE_READ` endpoint 精确白名单。
+- `intents.yml` 新增 `hpc_environment_list` 与 `hpc_module_list` 意图。
+
+**安全**
+- 本批没有调用真实 8100，也没有创建、删除环境、安装 package、安装或删除 module。
+- 两个新增 Tool 均标记为 `AUTHENTICATED + SENSITIVE_READ + requiresConfirmation=true`。
+
 ## [M4-PX.3] — SafeToolExecutor 与 execute_node fail-closed 最小安全闭环
 
 **周期**: 2026-05-25

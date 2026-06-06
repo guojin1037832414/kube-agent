@@ -25,9 +25,13 @@ import java.util.Set;
     name = "tensorboard_list",
     agent = "query",
     intentId = "tensorboard_list",
-    description = "查询TensorBoard列表"
+    description = "查询当前用户 TensorBoard 列表，属于敏感读取",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/tensorboard"},
+    operationType = AtlasToolMapping.OperationType.SENSITIVE_READ,
+    requiresConfirmation = true
 )
-@ToolPermission(ToolPermission.Policy.PUBLIC)
+@ToolPermission(ToolPermission.Policy.AUTHENTICATED)
 public class TensorBoardListTool extends BaseTool {
 
     private final KubeManagerHttpClient httpClient;

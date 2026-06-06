@@ -25,7 +25,11 @@ import java.util.Set;
     name = "data_set_list",
     agent = "query",
     intentId = "data_set_list",
-    description = "查询数据集列表"
+    description = "查询数据集列表",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/data-set"},
+    operationType = AtlasToolMapping.OperationType.SENSITIVE_READ,
+    requiresConfirmation = true
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class DataSetListTool extends BaseTool {

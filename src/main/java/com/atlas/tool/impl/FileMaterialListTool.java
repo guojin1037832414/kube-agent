@@ -18,14 +18,18 @@ import java.util.Set;
  *
  * <p>意图映射: {@code intentId = "file_material_list"}</p>
  * <p>Agent归属: storage | 安全级别: P3</p>
- * <p>API路径: GET /api/{orgId}/file-material</p>
+ * <p>API路径: GET /api/{orgId}/material/folders</p>
  */
 @Component
 @AtlasToolMapping(
     name = "file_material_list",
     agent = "storage",
     intentId = "file_material_list",
-    description = "查询文件素材列表"
+    description = "查询文件素材列表",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/material/folders"},
+    operationType = AtlasToolMapping.OperationType.SENSITIVE_READ,
+    requiresConfirmation = true
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class FileMaterialListTool extends BaseTool {
@@ -61,7 +65,7 @@ public class FileMaterialListTool extends BaseTool {
     protected AtlasToolResult doExecute(Map<String, Object> params) {
         try {
             String orgId = resolveOrganizationId(params);
-            String path = "/api/{orgId}/file-material".replace("{orgId}", orgId);
+            String path = "/api/{orgId}/material/folders".replace("{orgId}", orgId);
 
             Map<String, Object> response = httpClient.get(path, buildListQuery(params));
             Object data = extractData(response);

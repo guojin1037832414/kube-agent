@@ -25,7 +25,10 @@ import java.util.Set;
     name = "pytorch_job_list",
     agent = "query",
     intentId = "pytorch_job_list",
-    description = "查询PyTorch任务列表"
+    description = "查询PyTorch任务列表",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/pytorch-job"},
+    operationType = AtlasToolMapping.OperationType.READ
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
 public class PytorchJobListTool extends BaseTool {

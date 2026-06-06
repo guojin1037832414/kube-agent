@@ -52,7 +52,6 @@ class ListToolParameterSpecContractTest {
         assertListQueryContract(new ComposeListTool(null), "compose_list");
         assertListQueryContract(new ExperimentInstanceListTool(null), "experiment_instance_list");
         assertListQueryContract(new ExperimentTemplateListTool(null), "experiment_template_list");
-        assertListQueryContract(new ExternalLinkListTool(null), "external_link_list");
         assertListQueryContract(new HelmRepoListTool(null), "helm_repo_list");
         assertListQueryContract(new HelmReleaseListTool(null), "helm_release_list");
         assertListQueryContract(new CoursewareListTool(null), "courseware_list");

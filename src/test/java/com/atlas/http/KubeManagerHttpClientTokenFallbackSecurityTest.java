@@ -114,12 +114,12 @@ class KubeManagerHttpClientTokenFallbackSecurityTest {
             .contains("resolveUserTokenRequired(\"GET\", path)"));
         assertTrue(methodBody(source, "post", "String path, Map<String, Object> body")
             .contains("resolveUserTokenRequired(\"POST\", path)"));
-        assertTrue(methodBody(source, "delete", "String path, Map<String, Object> body")
+        assertTrue(methodBody(source, "delete", "String path, Map<String, Object> queryParams")
             .contains("resolveUserTokenRequired(\"DELETE\", path)"));
 
         assertTrue(!methodBody(source, "get", "String path, Map<String, Object> queryParams").contains("resolveToken()"));
         assertTrue(!methodBody(source, "post", "String path, Map<String, Object> body").contains("resolveToken()"));
-        assertTrue(!methodBody(source, "delete", "String path, Map<String, Object> body").contains("resolveToken()"));
+        assertTrue(!methodBody(source, "delete", "String path, Map<String, Object> queryParams").contains("resolveToken()"));
     }
 
     /**

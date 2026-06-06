@@ -1,0 +1,59 @@
+package com.atlas.tool.impl;
+
+import com.atlas.http.KubeManagerHttpClient;
+import com.atlas.tool.annotation.AtlasToolMapping;
+import com.atlas.tool.annotation.ToolPermission;
+import com.atlas.tool.core.AtlasToolResult;
+import com.atlas.tool.core.BaseTool;
+import org.springframework.stereotype.Component;
+
+import java.util.Map;
+import java.util.Set;
+
+/**
+ * 查询 Dashboard EasyFlow 统计信息 Tool，接入 kube-manager 看板只读统计接口。
+ *
+ * <p>意图映射: {@code intentId = "dashboard_easy_flow_count"}</p>
+ * <p>Agent 归属: query | 安全级别: P3</p>
+ * <p>API 路径: GET /api/{orgId}/dashboard/easy-flow/count</p>
+ */
+@Component
+@AtlasToolMapping(
+    name = "dashboard_easy_flow_count",
+    agent = "query",
+    intentId = "dashboard_easy_flow_count",
+    description = "查询 Dashboard EasyFlow 统计信息",
+    httpMethod = "GET",
+    apiEndpoints = {"/api/{orgId}/dashboard/easy-flow/count"},
+    operationType = AtlasToolMapping.OperationType.READ
+)
+@ToolPermission(ToolPermission.Policy.PUBLIC)
+public class DashboardEasyFlowCountTool extends BaseTool {
+
+    private final KubeManagerHttpClient httpClient;
+
+    public DashboardEasyFlowCountTool(KubeManagerHttpClient httpClient) {
+        super("dashboard_easy_flow_count", "查询 Dashboard EasyFlow 统计信息");
+        this.httpClient = httpClient;
+    }
+
+    @Override
+    protected Set<String> getRequiredParams() {
+        return Set.of();
+    }
+
+    @Override
+    protected AtlasToolResult doExecute(Map<String, Object> params) {
+        try {
+            String orgId = resolveOrganizationId(params);
+            String path = "/api/{orgId}/dashboard/easy-flow/count".replace("{orgId}", orgId);
+            // Dashboard 统计当前保持产品固定查询语义，不把调用方传入的分页/搜索条件透传给后端。
+            Map<String, Object> response = httpClient.get(path, Map.of("page", "1", "limit", "100"));
+            Object data = extractData(response);
+            return AtlasToolResult.ok("查询 Dashboard EasyFlow 统计信息完成", data);
+        } catch (Exception e) {
+            log.error("[dashboard_easy_flow_count] 调用 kube-manager API 失败", e);
+            return AtlasToolResult.fail("查询 Dashboard EasyFlow 统计信息失败: " + e.getMessage());
+        }
+    }
+}

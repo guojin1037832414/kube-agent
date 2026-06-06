@@ -111,7 +111,7 @@ public class KubeManagerHttpClient {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    //  公共方法：GET / POST / DELETE 统一封装
+    //  公共方法：GET / POST / PATCH / DELETE 统一封装
     // ═══════════════════════════════════════════════════════════════
 
     /**
@@ -209,6 +209,90 @@ public class KubeManagerHttpClient {
     }
 
     /**
+     * 通用 PATCH 请求 — 发送 JSON Body。
+     *
+     * <p>kube-manager 的缩放等变更接口使用 PATCH。这里与 POST/DELETE 一样必须携带
+     * 当前用户真实 Token，避免 Agent 在缺少用户上下文时替用户修改线上资源。</p>
+     */
+    @Retryable(
+        retryFor = {ResourceAccessException.class},
+        maxAttempts = 3,
+        backoff = @Backoff(delay = 500, multiplier = 2)
+    )
+    public Map<String, Object> patch(String path, Map<String, Object> body) {
+        String token = resolveUserTokenRequired("PATCH", path);
+
+        log.debug("[HTTP PATCH] {} body={}, tokenSource=user_threadlocal", path, body);
+
+        String responseBody = restClient.patch()
+            .uri(path)
+            .header("X-Token", token)
+            .body(body)
+            .retrieve()
+            .onStatus(HttpStatusCode::isError, (req, res) -> {
+                String raw = new String(res.getBody().readAllBytes(), StandardCharsets.UTF_8);
+                log.error("[HTTP PATCH 错误] {} {}: {}", res.getStatusCode(), path, raw);
+                throw new RestClientResponseException(
+                    "PATCH " + path + " 失败: " + res.getStatusCode(),
+                    res.getStatusCode().value(), res.getStatusCode().toString(),
+                    res.getHeaders(), raw.getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8);
+            })
+            .body(String.class);
+
+        return parseJson(responseBody);
+    }
+
+    /**
+     * 通用 POST 请求 - 同时发送 query 参数与 JSON Body。
+     *
+     * <p>Helm install 等成熟 kube-manager 接口使用 path variable + query + body 的组合。
+     * 这里集中封装 URI 构造，避免 Tool 自己拼接查询串导致 chart 名称、版本号等参数转义不一致。</p>
+     */
+    @Retryable(
+        retryFor = {ResourceAccessException.class},
+        maxAttempts = 3,
+        backoff = @Backoff(delay = 500, multiplier = 2)
+    )
+    public Map<String, Object> post(String path, Map<String, Object> queryParams, Map<String, Object> body) {
+        String token = resolveUserTokenRequired("POST", path);
+
+        log.debug("[HTTP POST] {} query={}, body={}, tokenSource=user_threadlocal", path, queryParams, body);
+
+        String responseBody = restClient.post()
+            .uri(builder -> {
+                builder.path(path);
+                if (queryParams != null) {
+                    queryParams.forEach((k, v) -> {
+                        if (v != null) {
+                            builder.queryParam(k, v);
+                        }
+                    });
+                }
+                return builder.build();
+            })
+            .header("X-Token", token)
+            .body(body)
+            .retrieve()
+            .onStatus(HttpStatusCode::isError, (req, res) -> {
+                String raw = new String(res.getBody().readAllBytes(), StandardCharsets.UTF_8);
+                log.error("[HTTP POST 错误] {} {}: {}", res.getStatusCode(), path, raw);
+                throw new RestClientResponseException(
+                    "POST " + path + " 失败: " + res.getStatusCode(),
+                    res.getStatusCode().value(), res.getStatusCode().toString(),
+                    res.getHeaders(), raw.getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8);
+            })
+            .body(String.class);
+
+        return parseJson(responseBody);
+    }
+
+    /**
+     * 通用 PUT 请求 - 发送 JSON Body。
+     *
+     * <p>实验实例启动/关闭等动作在成熟前端中使用 PUT。这里与 POST/PATCH 一样强制使用
+     * 当前登录用户 Token，避免高风险变更在缺少用户上下文时降级成系统账号代跑。</p>
+     */
+    /**
      * DELETE 请求（部分旧接口用 POST 模拟 DELETE，这里提供原生 DELETE）。
      *
      * <p><b>M5.8 安全收口：</b>删除类请求风险最高，必须绑定真实用户 Token；
@@ -219,12 +303,94 @@ public class KubeManagerHttpClient {
         maxAttempts = 3,
         backoff = @Backoff(delay = 500, multiplier = 2)
     )
-    public Map<String, Object> delete(String path, Map<String, Object> body) {
+    public Map<String, Object> put(String path, Map<String, Object> body) {
+        String token = resolveUserTokenRequired("PUT", path);
+
+        log.debug("[HTTP PUT] {} body={}, tokenSource=user_threadlocal", path, body);
+
+        String responseBody = restClient.put()
+            .uri(path)
+            .header("X-Token", token)
+            .body(body)
+            .retrieve()
+            .onStatus(HttpStatusCode::isError, (req, res) -> {
+                String raw = new String(res.getBody().readAllBytes(), StandardCharsets.UTF_8);
+                log.error("[HTTP PUT 错误] {} {}: {}", res.getStatusCode(), path, raw);
+                throw new RestClientResponseException(
+                    "PUT " + path + " 失败: " + res.getStatusCode(),
+                    res.getStatusCode().value(), res.getStatusCode().toString(),
+                    res.getHeaders(), raw.getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8);
+            })
+            .body(String.class);
+
+        return parseJson(responseBody);
+    }
+
+    /**
+     * 通用 PUT 请求 - 同时发送 query 参数与 JSON Body。
+     *
+     * <p>Helm upgrade 的成熟接口把 chart 放在 query 中，把升级参数放在 body 中。
+     * 该重载让 Tool 只表达业务字段，不直接拼接 URL 查询串。</p>
+     */
+    @Retryable(
+        retryFor = {ResourceAccessException.class},
+        maxAttempts = 3,
+        backoff = @Backoff(delay = 500, multiplier = 2)
+    )
+    public Map<String, Object> put(String path, Map<String, Object> queryParams, Map<String, Object> body) {
+        String token = resolveUserTokenRequired("PUT", path);
+
+        log.debug("[HTTP PUT] {} query={}, body={}, tokenSource=user_threadlocal", path, queryParams, body);
+
+        String responseBody = restClient.put()
+            .uri(builder -> {
+                builder.path(path);
+                if (queryParams != null) {
+                    queryParams.forEach((k, v) -> {
+                        if (v != null) {
+                            builder.queryParam(k, v);
+                        }
+                    });
+                }
+                return builder.build();
+            })
+            .header("X-Token", token)
+            .body(body)
+            .retrieve()
+            .onStatus(HttpStatusCode::isError, (req, res) -> {
+                String raw = new String(res.getBody().readAllBytes(), StandardCharsets.UTF_8);
+                log.error("[HTTP PUT 错误] {} {}: {}", res.getStatusCode(), path, raw);
+                throw new RestClientResponseException(
+                    "PUT " + path + " 失败: " + res.getStatusCode(),
+                    res.getStatusCode().value(), res.getStatusCode().toString(),
+                    res.getHeaders(), raw.getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8);
+            })
+            .body(String.class);
+
+        return parseJson(responseBody);
+    }
+
+    @Retryable(
+        retryFor = {ResourceAccessException.class},
+        maxAttempts = 3,
+        backoff = @Backoff(delay = 500, multiplier = 2)
+    )
+    public Map<String, Object> delete(String path, Map<String, Object> queryParams) {
         String token = resolveUserTokenRequired("DELETE", path);
-        log.debug("[HTTP DELETE] {} body={}, tokenSource=user_threadlocal", path, body);
+        log.debug("[HTTP DELETE] {} 参数={}, tokenSource=user_threadlocal", path, queryParams);
 
         String responseBody = restClient.delete()
-            .uri(path)
+            .uri(builder -> {
+                builder.path(path);
+                if (queryParams != null) {
+                    queryParams.forEach((k, v) -> {
+                        if (v != null) {
+                            builder.queryParam(k, v);
+                        }
+                    });
+                }
+                return builder.build();
+            })
             .header("X-Token", token)
             .retrieve()
             .onStatus(HttpStatusCode::isError, (req, res) -> {

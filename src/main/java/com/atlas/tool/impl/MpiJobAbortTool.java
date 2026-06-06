@@ -5,25 +5,28 @@ import com.atlas.tool.annotation.AtlasToolMapping;
 import com.atlas.tool.annotation.ToolPermission;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.tool.core.BaseTool;
+import com.atlas.tool.core.ToolParameterSpec;
 import org.springframework.stereotype.Component;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
- * 中止MPI任务 Tool。
- * <p><b>⚠️ 危险操作</b>: P1级, 中止后任务不可恢复, 执行前需用户确认</p>
+ * 终止 MPI 任务 Tool。
  *
- * <p>意图映射: {@code intentId = "mpi_job_abort"}</p>
- * <p>Agent归属: deploy | 安全级别: P1</p>
+ * <p>历史意图名叫 {@code mpi_job_abort}，但成熟 kube-manager 的真实语义是
+ * {@code POST /api/{organizationId}/mpi-job/{jobId}} 停止运行中的 MPIJob，数据库记录会保留。
+ * 这是会释放集群资源并改变任务状态的动作，必须经过 HITL 确认。</p>
  */
 @Component
 @AtlasToolMapping(
     name = "mpi_job_abort",
     agent = "deploy",
     intentId = "mpi_job_abort",
-    description = "中止MPI分布式计算任务",
+    description = "终止运行中的 MPI 分布式训练任务，会改变任务状态并释放资源",
     httpMethod = "POST",
-    apiEndpoints = {"/api/{orgId}/mpi-job/abort/{id}"},
+    apiEndpoints = {"/api/{orgId}/mpi-job/{jobId}"},
     operationType = AtlasToolMapping.OperationType.ACTION,
     requiresConfirmation = true
 )
@@ -33,7 +36,7 @@ public class MpiJobAbortTool extends BaseTool {
     private final KubeManagerHttpClient httpClient;
 
     public MpiJobAbortTool(KubeManagerHttpClient httpClient) {
-        super("mpi_job_abort", "中止MPI任务");
+        super("mpi_job_abort", "终止 MPI 任务");
         this.httpClient = httpClient;
     }
 
@@ -43,25 +46,38 @@ public class MpiJobAbortTool extends BaseTool {
     }
 
     @Override
+    public List<ToolParameterSpec> getParameterSpecs() {
+        return List.of(
+            ToolParameterSpec.stringParam(
+                "id",
+                "要终止的 MPI Job ID 或 kube-manager 任务标识。终止会改变任务状态并释放资源，必须精确到单个任务。",
+                true,
+                List.of("mpiJobId", "jobId", "taskId")
+            )
+        );
+    }
+
+    @Override
     protected AtlasToolResult doExecute(Map<String, Object> params) {
-        log.info("[mpi_job_abort] 执行中止MPI任务");
-        String id = params.get("id") != null ? params.get("id").toString() : "";
-        if (id.isBlank()) {
-            return AtlasToolResult.fail("缺少必需的参数: id（MPI任务ID）");
+        Object rawId = params.get("id");
+        if (rawId == null || rawId.toString().isBlank()) {
+            return AtlasToolResult.fail("缺少必填参数: id（MPI任务ID）", "MISSING_ID",
+                List.of("请提供要终止的 MPI 任务 ID"));
         }
 
         try {
             String orgId = resolveOrganizationId(params);
+            String jobId = rawId.toString().trim();
+            // 对齐成熟 kube-manager：停止 MPIJob 是 POST /mpi-job/{jobId}，不是 /abort/{id}。
             Map<String, Object> response = httpClient.post(
-                "/api/" + orgId + "/mpi-job/abort/" + id,
+                "/api/" + orgId + "/mpi-job/" + jobId,
                 Map.of()
             );
             Object data = extractData(response);
-            String summary = "MPI任务已中止: ID=" + id;
-            return AtlasToolResult.ok(summary, data);
+            return AtlasToolResult.ok("MPI任务终止请求已发送: ID=" + jobId, data);
         } catch (Exception e) {
             log.error("[mpi_job_abort] 调用 kube-manager API 失败", e);
-            return AtlasToolResult.fail("MPI任务中止失败: " + e.getMessage());
+            return AtlasToolResult.fail("MPI任务终止失败: " + e.getMessage());
         }
     }
 }

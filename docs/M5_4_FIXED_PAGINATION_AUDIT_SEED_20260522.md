@@ -10,6 +10,8 @@
 | `DiagnosePodTool.java` | `diagnose_pod` | PUBLIC | True | True | `/api/` | 诊断Pod/服务故障 |
 | `FileStorageOptionTool.java` | `file_storage_option` | PUBLIC | True | False | `/api/{orgId}/file/storage/option` | 查询存储选项配置 |
 | `FileVolumePathTool.java` | `file_volume_path` | PUBLIC | True | False | `/api/{orgId}/file/volume-path` | 查询存储卷路径列表 |
+
+> 2026-06-06 M5.21-28 复审说明: `file_storage_option` 与 `file_volume_path` 已从本阶段的普通 page/limit-only 只读候选迁移为 `AUTHENTICATED + SENSITIVE_READ + requiresConfirmation=true`。文件路径和存储开关会暴露组织文件系统结构与资源策略，后续不得按本旧表恢复 PUBLIC/page-limit 预期。
 | `GpuMapDetailTool.java` | `gpu_map_detail` | PUBLIC | False | False | `/api/gpu/all/gpu-map` | 查询GPU映射配置详情 |
 | `GpuMetricsTool.java` | `gpu_metrics` | PUBLIC | True | False | `/api/` | 查询GPU配置映射 |
 | `HelmReleaseHistoryTool.java` | `helm_release_history` | PUBLIC | True | False | `/api/{orgId}/helm/releases` | 查询Helm Release历史记录 |

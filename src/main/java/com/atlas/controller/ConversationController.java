@@ -106,7 +106,8 @@ public class ConversationController {
             @RequestHeader(value = "X-Session-Id", required = false) String sessionId,
             @PathVariable String id) {
 
-        Optional<Conversation> opt = conversationStore.findById(id);
+        String userId = resolveUserId(sessionId);
+        Optional<Conversation> opt = conversationStore.findByUserAndId(userId, id);
         if (opt.isEmpty()) {
             return ResponseEntity.status(404).body(ApiResponse.fail("会话不存在"));
         }
@@ -130,7 +131,11 @@ public class ConversationController {
             @RequestHeader(value = "X-Session-Id", required = false) String sessionId,
             @PathVariable String id) {
 
-        conversationStore.remove(id);
+        String userId = resolveUserId(sessionId);
+        boolean removed = conversationStore.removeForUser(userId, id);
+        if (!removed) {
+            return ResponseEntity.status(404).body(ApiResponse.fail("会话不存在"));
+        }
         return ResponseEntity.ok(ApiResponse.ok("删除成功"));
     }
 
@@ -152,7 +157,8 @@ public class ConversationController {
             return ResponseEntity.badRequest().body(ApiResponse.fail("标题不能为空"));
         }
 
-        boolean updated = conversationStore.updateTitle(id, newTitle);
+        String userId = resolveUserId(sessionId);
+        boolean updated = conversationStore.updateTitleForUser(userId, id, newTitle);
         if (!updated) {
             return ResponseEntity.status(404).body(ApiResponse.fail("会话不存在"));
         }

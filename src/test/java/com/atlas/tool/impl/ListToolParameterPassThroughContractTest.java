@@ -47,7 +47,7 @@ class ListToolParameterPassThroughContractTest {
     void listTools_shouldPassPageLimitAndKeywordToKubeManagerQueryParams() {
         assertPassThrough(MpiJobListTool::new, "/api/100002/mpi-job");
         assertPassThrough(PytorchJobListTool::new, "/api/100002/pytorch-job");
-        assertPassThrough(FileMaterialListTool::new, "/api/100002/file-material");
+        assertPassThrough(FileMaterialListTool::new, "/api/100002/material/folders");
         assertPassThrough(GpuDetailListTool::new, "/api/100002/gpu-detail");
         assertPassThrough(DataSetListTool::new, "/api/100002/data-set");
         assertPassThrough(ModelListTool::new, "/api/100002/model");
@@ -62,12 +62,11 @@ class ListToolParameterPassThroughContractTest {
         assertPassThrough(ComposeListTool::new, "/api/100002/compose");
         assertPassThrough(ExperimentInstanceListTool::new, "/api/100002/experiment/instance");
         assertPassThrough(ExperimentTemplateListTool::new, "/api/100002/experiment/template");
-        assertPassThrough(ExternalLinkListTool::new, "/api/100002/external-link");
         assertPassThrough(HelmRepoListTool::new, "/api/100002/helm/repositories");
         assertPassThrough(HelmReleaseListTool::new, "/api/100002/helm/releases");
         assertPassThrough(CoursewareListTool::new, "/api/100002/courseware/list");
         assertPassThrough(DownloadTaskListTool::new, "/api/100002/download");
-        assertPassThrough(InboxMessageListTool::new, "/api/100002/message");
+        assertPassThrough(InboxMessageListTool::new, "/api/100002/inbox-message");
         assertPassThrough(MigConfigListTool::new, "/api/100002/migConfig");
         assertPassThrough(NamespaceListTool::new, "/api/100002/namespace");
         assertPassThrough(TableListTool::new, "/api/100002/table");
@@ -130,7 +129,7 @@ class ListToolParameterPassThroughContractTest {
     void listTools_shouldRejectNonPositivePaginationBeforeHttpCall() {
         assertInvalidPagination(MpiJobListTool::new, "/api/100002/mpi-job", "page", "0", "VALUE_OUT_OF_RANGE");
         assertInvalidPagination(PytorchJobListTool::new, "/api/100002/pytorch-job", "limit", "-1", "VALUE_OUT_OF_RANGE");
-        assertInvalidPagination(FileMaterialListTool::new, "/api/100002/file-material", "page", "abc", "TYPE_MISMATCH");
+        assertInvalidPagination(FileMaterialListTool::new, "/api/100002/material/folders", "page", "abc", "TYPE_MISMATCH");
         assertInvalidPagination(GpuDetailListTool::new, "/api/100002/gpu-detail", "limit", 1.5D, "TYPE_MISMATCH");
         assertInvalidPagination(DataSetListTool::new, "/api/100002/data-set", "page", "0", "VALUE_OUT_OF_RANGE");
         assertInvalidPagination(ModelListTool::new, "/api/100002/model", "limit", 1.5D, "TYPE_MISMATCH");

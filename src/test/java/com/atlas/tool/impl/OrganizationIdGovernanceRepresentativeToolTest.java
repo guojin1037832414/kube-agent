@@ -12,10 +12,12 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import org.mockito.ArgumentCaptor;
 
 /**
  * M5.5 代表性 Tool 的 organizationId 治理测试。
@@ -75,13 +77,24 @@ class OrganizationIdGovernanceRepresentativeToolTest {
         StorageCreateTool tool = new StorageCreateTool(httpClient);
         Map<String, Object> params = new LinkedHashMap<>();
         params.put("organizationId", "100002");
-        params.put("name", "pvc-data-1");
+        params.put("name", "train-data");
         params.put("size", 10);
-        params.put("storageClass", "default");
+        params.put("type", "fileset");
+        params.put("scope", "user");
+        params.put("location", "shanghai");
+        params.put("approved", true);
         Map<String, Object> result = tool.execute(params);
 
         assertEquals(true, result.get(AtlasToolResult.KEY_SUCCESS));
-        verify(httpClient).post(eq("/api/100001/file/storage"), anyMap());
+        ArgumentCaptor<Map<String, Object>> bodyCaptor = forClass(Map.class);
+        verify(httpClient).post(eq("/api/100001/file/storage"), bodyCaptor.capture());
+        assertEquals(Map.of(
+            "areaCode", "shanghai",
+            "displayName", "train-data",
+            "size", 10,
+            "type", "fileset",
+            "scope", "user"
+        ), bodyCaptor.getValue());
         verify(httpClient, never()).post(eq("/api/100002/file/storage"), anyMap());
     }
 

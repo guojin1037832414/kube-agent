@@ -46,6 +46,7 @@ class DashboardFixedQueryHoldContractTest {
     @Test
     void m54_dashboardFixedQueryTools_shouldNotExposeStandardListParameterSpecs() {
         assertNoListSpecs(new DashboardDeploymentCountTool(null), "dashboard_deployment_count");
+        assertNoListSpecs(new DashboardEasyFlowCountTool(null), "dashboard_easy_flow_count");
         assertNoListSpecs(new DashboardImageCountTool(null), "dashboard_image_count");
         assertNoListSpecs(new DashboardEasyFlowTool(null), "dashboard_easy_flow");
     }
@@ -54,6 +55,8 @@ class DashboardFixedQueryHoldContractTest {
     void m54_dashboardFixedQueryTools_shouldIgnoreCallerPaginationAndSearchParams() {
         assertFixedQuery(DashboardDeploymentCountTool::new,
             "/api/100001/dashboard/deployment/count");
+        assertFixedQuery(DashboardEasyFlowCountTool::new,
+            "/api/100001/dashboard/easy-flow/count");
         assertFixedQuery(DashboardImageCountTool::new,
             "/api/100001/dashboard/image/count");
         assertFixedQuery(DashboardEasyFlowTool::new,

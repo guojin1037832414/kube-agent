@@ -87,6 +87,17 @@ public class ConversationStore {
     }
 
     /**
+     * 按“用户 + 会话 ID”查询。
+     *
+     * <p>会话 ID 本身不是权限凭证，所有详情、改名、删除入口都必须用当前用户再收敛一次，
+     * 防止别人猜到/拿到 conversationId 后横向读取或修改会话元数据。</p>
+     */
+    public Optional<Conversation> findByUserAndId(String userId, String id) {
+        return findById(id)
+                .filter(c -> c.userId().equals(userId));
+    }
+
+    /**
      * 列出某用户的全部会话，按 updatedAt 倒序排列（最新在前）。
      */
     public List<Conversation> findByUser(String userId) {
@@ -113,6 +124,15 @@ public class ConversationStore {
         cache.put(id, updated);
         log.debug("[ConversationStore] 标题已更新: convId={}, title={}", id, newTitle);
         return true;
+    }
+
+    /**
+     * 仅允许会话所属用户更新标题。
+     */
+    public boolean updateTitleForUser(String userId, String id, String newTitle) {
+        Conversation existing = cache.getIfPresent(id);
+        if (existing == null || !existing.userId().equals(userId)) return false;
+        return updateTitle(id, newTitle);
     }
 
     /**
@@ -143,6 +163,15 @@ public class ConversationStore {
             log.debug("[ConversationStore] 会话已删除: convId={}", id);
         }
         return existed;
+    }
+
+    /**
+     * 仅允许会话所属用户删除会话。
+     */
+    public boolean removeForUser(String userId, String id) {
+        Conversation existing = cache.getIfPresent(id);
+        if (existing == null || !existing.userId().equals(userId)) return false;
+        return remove(id);
     }
 
     /**

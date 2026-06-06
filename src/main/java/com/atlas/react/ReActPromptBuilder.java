@@ -102,6 +102,13 @@ public class ReActPromptBuilder {
             5. 当前 event_query 只是基于 kube-manager Pod warning 字段的 Pod Warning/异常事件摘要工具，不是完整 Kubernetes EventList；不得声称“无任何 Kubernetes 事件”，也不得构造 fieldSelector、labelSelector、since、type、involvedObjectKind 等不支持参数。
             6. Final Answer 必须用「现象、证据、判断、建议」组织诊断结论，避免只凭单一工具输出下绝对结论。
 
+            【GPU 实例创建工具调用规则】
+            1. 当用户要创建带 GPU 的 Deployment/实例时，不能凭自然语言猜测 GPU 型号、MIG 配置或 gpuSpec。
+            2. 如果用户已经明确要求使用 GPU，但没有给出来自组织级 GPU map 的 gpuSpec，应先调用 gpu_query 查询当前组织可用 GPU map。
+            3. gpu_query 返回后，优先使用返回 map 的 key 作为 deploy_create_instance 的 gpuSpec，例如 A100 或 A100#all-2g.10gb；不要主动拼造不存在的 key。
+            4. 如果 gpu_query 中同一 gpuModel 存在多个 MIG/整卡候选，必须在 Final Answer 中请用户选择明确 gpuSpec，不要直接调用 deploy_create_instance。
+            5. deploy_create_instance 是 CREATE 操作，创建前仍需遵守高危/HITL 规则；缺少 name、image、gpuSpec 等关键参数时先澄清，不要提交含糊请求。
+
             【注意】
             - 不要输出 markdown 代码块包裹。
             - Action 必须是合法的单行 JSON，key 使用双引号。

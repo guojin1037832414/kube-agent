@@ -108,18 +108,22 @@ class ToolRegistryPromptContractTest {
 
     @Test
     void buildSystemPrompt_shouldExposeSecondBatchStorageImageHelmToolContracts() {
+        UserPermissionContext userPermissionContext = new UserPermissionContext();
+        userPermissionContext.onLogin("token-user", "zhangsan", "user", Set.of());
+        userPermissionContext.bind("token-user");
         ToolRegistry registry = new ToolRegistry(List.of(
             new FileSelectStorageTool(null),
             new ImageDetailByNameTool(null),
             new HelmChartInfoTool(null),
             new HelmChartSearchTool(null)
-        ), new UserPermissionContext());
+        ), userPermissionContext);
         registry.init();
 
         String prompt = registry.buildSystemPromptForCurrentUser();
 
         assertTrue(prompt.contains("file_select_storage"));
-        assertTrue(prompt.contains("name(string,必填,要查询详情的存储卷/PVC 名称"));
+        assertTrue(prompt.contains("operationType=SENSITIVE_READ"));
+        assertTrue(prompt.contains("name(string,必填"));
 
         assertTrue(prompt.contains("image_detail_by_name"));
         assertTrue(prompt.contains("name(string,可选,要查询详情的容器镜像名称或镜像引用"));
