@@ -6,6 +6,25 @@
 
 ---
 
+## [M5.21-51] - 第五十一批 NIM durable audit storage 候选契约审计
+
+**交付**: 识别 mature `kube-manager` 的 `sys_log` 系统日志链路作为 NIM durable audit storage 候选证据，并新增纯函数契约，明确它还不能直接签发 NIM 专用 durable audit receipt。
+
+**变更**
+- 新增 `NimCreateDurableAuditStorageSupport`，纯数据消费 `auditContext` 和 `trustedPrincipalSnapshot`。
+- 输出 `durableAuditStorage=NIM_CREATE_DURABLE_AUDIT_STORAGE_CANDIDATE`、`executionMode=DURABLE_AUDIT_STORAGE_CANDIDATE_CONTRACT_ONLY`、`storageState=IMPLEMENTATION_HOLD|REJECTED`。
+- 固化 mature 证据: `SaveLogAspect`、`ISysLogService.saveLog(SysLog)`、`SysLog`、`sys_log`、`GET /api/log`、`/system/log`。
+- 正向输入生成脱敏 `sysLogFieldMapping`，但仍 `realStorageTouched=false`、`durable=false`、`releaseEligible=false`、`durableReceiptCanBeIssued=false`。
+- 正向输入仍返回 `DEDICATED_NIM_AUDIT_WRITER_NOT_IMPLEMENTED`，防止把通用系统日志误当成 NIM 专用审计 receipt。
+- 缺少可信服务端 principal 返回 `TRUSTED_PRINCIPAL_SNAPSHOT_NOT_READY`；secret 泄漏返回 `DURABLE_AUDIT_STORAGE_INPUT_CONTAINS_FORBIDDEN_SECRET`。
+- 新增 `NimCreateDurableAuditStorageSupportTest`。
+- 新增 `docs/M5_21_FIFTY_FIRST_WAVE_NIM_DURABLE_AUDIT_STORAGE_CANDIDATE_AUDIT_20260607.md`，并更新 M5.21 波次索引和项目记忆。
+
+**安全**
+- 本批不连接 Elasticsearch，不调用 `ISysLogService`，不写 `sys_log`，不访问真实 `8100`，不调用 `POST /api/{orgId}/deployment`。
+- `sys_log` 是候选持久化证据，不是 release credential。
+- `nim_create` 继续保持 `httpMethod=NONE + PLACEHOLDER + requiresConfirmation=true`。
+
 ## [M5.21-50] - 第五十批 NIM durable write executor 报告门禁审计
 
 **交付**: `NimCreateStateMachineSupport` 现在显式要求 durable write executor 报告；当前 M5.21-49 shell 报告即使形状合法，也只能证明执行器仍在 `IMPLEMENTATION_HOLD`，不能释放真实写入。
