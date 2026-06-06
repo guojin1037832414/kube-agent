@@ -57,7 +57,12 @@
   - `UploadStatusListTool` now uses mature `GET /api/{orgId}/download/status/{id}`.
   - Tool schema now requires `id` and no longer exposes `page/limit/keyword`.
   - Operation metadata is `SENSITIVE_READ + requiresConfirmation=true`.
-  - Download start/pause/resume/progress/delete remain HOLD.
+  - Download start/pause/resume/delete remain HOLD.
+- M5.21-32 download task progress read alignment is implemented and targeted tests passed:
+  - Added `DownloadTaskProgressTool` for mature `GET /api/{orgId}/download/progress/{id}`.
+  - Added `DownloadTaskQuerySupport` for shared task ID schema and URL path validation.
+  - Operation metadata is `SENSITIVE_READ + requiresConfirmation=true`.
+  - Download start/pause/resume/delete remain HOLD.
 
 ## Files Changed By This Continuation
 
@@ -74,6 +79,10 @@
   - `src/main/java/com/atlas/mcp/McpToolManifestService.java`
 - M5.21-31 tool implementation fixes:
   - `src/main/java/com/atlas/tool/impl/UploadStatusListTool.java`
+- M5.21-32 tool implementation fixes:
+  - `src/main/java/com/atlas/tool/impl/DownloadTaskProgressTool.java`
+  - `src/main/java/com/atlas/tool/impl/DownloadTaskQuerySupport.java`
+  - `src/main/java/com/atlas/tool/impl/UploadStatusListTool.java`
 - Tests:
   - `src/test/java/com/atlas/contract/M511AtlasToolHttpContractTest.java`
   - `src/test/java/com/atlas/http/KubeManagerHttpClientTokenFallbackSecurityTest.java`
@@ -81,6 +90,7 @@
   - `src/test/java/com/atlas/tool/impl/ListToolParameterSpecContractTest.java`
   - `src/test/java/com/atlas/tool/impl/MigConfigReadToolHttpContractTest.java`
   - `src/test/java/com/atlas/tool/impl/DownloadTaskStatusToolHttpContractTest.java`
+  - `src/test/java/com/atlas/tool/impl/DownloadTaskProgressToolHttpContractTest.java`
   - `src/test/java/com/atlas/mcp/M520McpManifestSafetyContractTest.java`
 - Intent config:
   - `src/main/resources/intents.yml`
@@ -88,6 +98,7 @@
   - `docs/M5_21_TWENTY_NINTH_WAVE_LEGACY_GET_METADATA_AUDIT_20260606.md`
   - `docs/M5_21_THIRTIETH_WAVE_MIG_CONFIG_READ_AUDIT_20260606.md`
   - `docs/M5_21_THIRTY_FIRST_WAVE_DOWNLOAD_STATUS_READ_AUDIT_20260606.md`
+  - `docs/M5_21_THIRTY_SECOND_WAVE_DOWNLOAD_PROGRESS_READ_AUDIT_20260606.md`
   - `docs/M5_21_WAVE_INDEX_20260606.md`
   - `CHANGELOG.md`
   - `docs/SESSION_PROGRESS_20260606_M521_29.md`
@@ -120,6 +131,12 @@
   - `git -c safe.directory=F:/gitProject/kube-agent diff --check`
   - Static secret scan found no real credentials; matches were only documentation/config comments about avoiding api-key/password in source.
   - `mvn -q test`
+- M5.21-32 targeted verification passed:
+  - `mvn -q "-Dtest=DownloadTaskProgressToolHttpContractTest,DownloadTaskStatusToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest" test`
+- M5.21-32 final pre-commit verification passed:
+  - `git -c safe.directory=F:/gitProject/kube-agent diff --check`
+  - Static secret scan found no real credentials; matches were only documentation/config comments about avoiding api-key/password in source.
+  - `mvn -q test`
 
 ## Final M5.21-29 Decisions
 
@@ -134,13 +151,13 @@
   - `ExperimentTemplateListTool`
   - RBAC/organization/quota approval sensitive management lists protected by `SensitiveListToolHoldContractTest`
 - `MigConfigListTool` moved out of HOLD for read-only `GET /api/mig/{gpuId}` only; `POST/PUT/DELETE /api/mig` remain HOLD.
-- `UploadStatusListTool` moved out of HOLD for sensitive read-only `GET /api/{orgId}/download/status/{id}` only; download start/pause/resume/progress/delete remain HOLD.
+- `UploadStatusListTool` moved out of HOLD for sensitive read-only `GET /api/{orgId}/download/status/{id}` only; download start/pause/resume/delete remain HOLD.
+- `DownloadTaskProgressTool` added for sensitive read-only `GET /api/{orgId}/download/progress/{id}`; download start/pause/resume/delete remain HOLD.
 
 ## Next Step
 
 Pick the next M5.21 mature kube-manager Tool alignment wave. Prefer a narrow evidence-backed slice, likely one of:
 - Registry/repository path migration after deciding `/api/registry` vs `/api/{orgId}/repository`.
-- Download progress read migration requiring task `id`.
 - Another mature GET area with clean backend/frontend evidence.
 
 ## Recovery Reminder

@@ -325,6 +325,7 @@ class M511AtlasToolHttpContractTest {
             new ExpectedEndpoint("FileListTool.java", "file_list", "/api/{orgId}/file"),
             new ExpectedEndpoint("DownloadTaskListTool.java", "download_task_list", "/api/{orgId}/download"),
             new ExpectedEndpoint("UploadStatusListTool.java", "upload_status_list", "/api/{orgId}/download/status/{id}"),
+            new ExpectedEndpoint("DownloadTaskProgressTool.java", "download_task_progress", "/api/{orgId}/download/progress/{id}"),
             new ExpectedEndpoint("FileMaterialListTool.java", "file_material_list", "/api/{orgId}/material/folders"),
             new ExpectedEndpoint("InboxMessageListTool.java", "inbox_message_list", "/api/{orgId}/inbox-message")
         );

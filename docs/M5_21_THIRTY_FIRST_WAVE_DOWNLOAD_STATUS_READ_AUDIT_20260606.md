@@ -59,7 +59,7 @@
 
 ## HOLD 清单
 
-- `GET /api/{orgId}/download/progress/{id}`: 进度读取可以后续单独接入，需决定是否复用状态 Tool 或新增更清晰 Tool。
+- `GET /api/{orgId}/download/progress/{id}`: M5.21-31 时仍需单独接入；已在 M5.21-32 新增 `download_task_progress`。
 - `POST /api/{orgId}/download/start`: 开始下载任务，改变后端状态，暂不接入。
 - `POST /api/{orgId}/download/pause/{id}`: 暂停下载任务，改变后端状态，暂不接入。
 - `POST /api/{orgId}/download/resume/{id}`: 恢复下载任务，改变后端状态，暂不接入。

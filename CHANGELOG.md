@@ -7,6 +7,22 @@
 ---
 
 
+## [M5.21-32] - 第三十二批 下载任务进度按任务 ID 敏感只读审计
+
+**交付**: 新增 `DownloadTaskProgressTool`，对齐成熟 kube-manager 的 `GET /api/{orgId}/download/progress/{id}`，让 Agent 可以在找到下载任务后单独读取实时进度。
+
+**变更**
+- 新增 `DownloadTaskProgressTool`，只暴露必填下载任务 `id`，不接受 `page/limit/keyword`。
+- 新增 `DownloadTaskQuerySupport`，统一下载任务状态/进度 Tool 的 ID schema 与 URL path 正整数校验。
+- `UploadStatusListTool` 改为复用 `DownloadTaskQuerySupport`，保持状态与进度的路径注入防护一致。
+- 新增 `DownloadTaskProgressToolHttpContractTest`，覆盖成熟路径、空 query、非法 `id` 短路、参数 schema 和风险元数据。
+- 更新 `M511AtlasToolHttpContractTest` 与 `intents.yml`，新增 `download_task_progress`。
+- 新增 `docs/M5_21_THIRTY_SECOND_WAVE_DOWNLOAD_PROGRESS_READ_AUDIT_20260606.md`，并更新 M5.21 波次索引。
+
+**安全**
+- 本批没有调用真实 `8100`，没有接入下载任务开始、暂停、恢复或删除。
+- 任务进度可能包含任务状态、已下载大小和总大小，仍按 `SENSITIVE_READ + requiresConfirmation=true` 处理。
+
 ## [M5.21-31] - 第三十一批 下载任务状态按任务 ID 敏感只读对齐审计
 
 **交付**: 将 `UploadStatusListTool` 从不存在的伪分页状态列表对齐为成熟 kube-manager 的 `GET /api/{orgId}/download/status/{id}`，保留旧 intentId 兼容，但 Tool Schema 明确要求下载任务 `id`。
@@ -22,6 +38,7 @@
 **安全**
 - 本批没有调用真实 `8100`，没有接入下载任务开始、暂停、恢复、进度读取或删除。
 - 任务状态可能包含文件路径、任务归属、大小和状态元数据，因此按敏感读取走人工确认。
+- 后续 M5.21-32 已单独接入 `GET /api/{orgId}/download/progress/{id}` 进度读取；下载任务开始、暂停、恢复和删除仍 HOLD。
 
 ## [M5.21-30] - 第三十批 MIG 配置按 GPU ID 只读对齐审计
 

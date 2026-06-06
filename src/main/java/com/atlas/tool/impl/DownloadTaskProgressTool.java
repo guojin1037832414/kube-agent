@@ -14,30 +14,30 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * 查询下载任务状态 Tool — 接入真实 kube-manager API。
+ * 查询下载任务进度 Tool — 接入真实 kube-manager API。
  *
- * <p>意图映射: {@code intentId = "upload_status_list"}</p>
+ * <p>意图映射: {@code intentId = "download_task_progress"}</p>
  * <p>Agent归属: storage | 安全级别: P3</p>
- * <p>API路径: GET /api/{orgId}/download/status/{id}</p>
+ * <p>API路径: GET /api/{orgId}/download/progress/{id}</p>
  */
 @Component
 @AtlasToolMapping(
-    name = "upload_status_list",
+    name = "download_task_progress",
     agent = "storage",
-    intentId = "upload_status_list",
-    description = "查询指定下载任务的状态",
+    intentId = "download_task_progress",
+    description = "查询指定下载任务的实时进度",
     httpMethod = "GET",
-    apiEndpoints = {"/api/{orgId}/download/status/{id}"},
+    apiEndpoints = {"/api/{orgId}/download/progress/{id}"},
     operationType = AtlasToolMapping.OperationType.SENSITIVE_READ,
     requiresConfirmation = true
 )
 @ToolPermission(ToolPermission.Policy.PUBLIC)
-public class UploadStatusListTool extends BaseTool {
+public class DownloadTaskProgressTool extends BaseTool {
 
     private final KubeManagerHttpClient httpClient;
 
-    public UploadStatusListTool(KubeManagerHttpClient httpClient) {
-        super("upload_status_list", "查询指定下载任务的状态");
+    public DownloadTaskProgressTool(KubeManagerHttpClient httpClient) {
+        super("download_task_progress", "查询指定下载任务的实时进度");
         this.httpClient = httpClient;
     }
 
@@ -47,9 +47,7 @@ public class UploadStatusListTool extends BaseTool {
     }
 
     /**
-     * 成熟 kube-manager 的状态接口必须按任务 id 定位。
-     *
-     * <p>下载任务列表由 {@code download_task_list} 负责，本 Tool 只读取某个任务的当前状态。</p>
+     * 下载进度接口必须按任务 id 定位，不接受分页或关键词筛选。
      */
     @Override
     public List<ToolParameterSpec> getParameterSpecs() {
@@ -61,16 +59,16 @@ public class UploadStatusListTool extends BaseTool {
         try {
             String orgId = resolveOrganizationId(params);
             String id = DownloadTaskQuerySupport.positiveTaskId(params);
-            String path = "/api/" + orgId + "/download/status/" + id;
+            String path = "/api/" + orgId + "/download/progress/" + id;
 
             Map<String, Object> response = httpClient.get(path, Map.of());
             Object data = extractData(response);
-            return AtlasToolResult.ok("查询指定下载任务状态完成", data);
+            return AtlasToolResult.ok("查询指定下载任务进度完成", data);
         } catch (AtlasToolValidationException e) {
             throw e;
         } catch (Exception e) {
-            log.error("[upload_status_list] 调用 kube-manager API 失败", e);
-            return AtlasToolResult.fail("查询指定下载任务状态失败: " + e.getMessage());
+            log.error("[download_task_progress] 调用 kube-manager API 失败", e);
+            return AtlasToolResult.fail("查询指定下载任务进度失败: " + e.getMessage());
         }
     }
 }

@@ -79,15 +79,17 @@ Current track:
 
 Recently completed:
 
-`M5.21-31 download task status read alignment by task ID`
+`M5.21-32 download task progress read alignment by task ID`
 
 Latest checkpoint:
 
-- Date: 2026-06-06 20:23 Asia/Shanghai.
+- Date: 2026-06-06 20:35 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-31 was committed and pushed:
+  - Commit: `e25738a fix(M5.21): align download task status read tool`
 - M5.21-30 was committed and pushed:
   - Commit: `b5d4132 fix(M5.21): align MIG config read tool`
-- Verification passed for M5.21-30 before commit:
+- Verification passed for M5.21-31 before commit:
   - `mvn -q test`
   - `git -c safe.directory=F:/gitProject/kube-agent diff --check`
   - Static secret scan found no real credentials; only documentation/config comments mention api-key/password terms.
@@ -95,13 +97,13 @@ Latest checkpoint:
 
 Latest in-progress/completed chunk after checkpoint:
 
-- Date: 2026-06-06 20:30 Asia/Shanghai.
-- M5.21-31 completed implementation and targeted verification:
-  - `UploadStatusListTool` now calls mature `GET /api/{orgId}/download/status/{id}` instead of old `/api/{orgId}/download/status`.
-  - It requires explicit positive integer `id`, exposes no `page/limit/keyword`, and is `SENSITIVE_READ + requiresConfirmation=true`.
-  - `DownloadTaskListTool` remains the correct Tool for paginated download task search.
-  - Added `DownloadTaskStatusToolHttpContractTest`.
-  - Targeted test passed: `mvn -q "-Dtest=DownloadTaskStatusToolHttpContractTest,ListToolParameterPassThroughContractTest,ListToolParameterSpecContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest" test`.
+- Date: 2026-06-06 20:38 Asia/Shanghai.
+- M5.21-32 completed implementation and targeted verification:
+  - Added `DownloadTaskProgressTool` for mature `GET /api/{orgId}/download/progress/{id}`.
+  - Added `DownloadTaskQuerySupport` so status and progress Tools share the same task ID schema and URL path validation.
+  - `download_task_progress` requires explicit positive integer `id`, exposes no `page/limit/keyword`, and is `SENSITIVE_READ + requiresConfirmation=true`.
+  - Added `DownloadTaskProgressToolHttpContractTest`.
+  - Targeted test passed: `mvn -q "-Dtest=DownloadTaskProgressToolHttpContractTest,DownloadTaskStatusToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest" test`.
   - Full test passed: `mvn -q test`.
   - Static secret scan found no real credentials; only documentation/config comments mention api-key/password terms.
 
@@ -110,5 +112,4 @@ Recommended next work:
 - Continue with a narrow mature evidence-backed Tool alignment wave.
 - Good candidates:
   - Registry/repository path migration after resolving `/api/registry` vs `/api/{orgId}/repository`.
-  - Download progress read migration requiring task `id`, after deciding whether to add a separate progress Tool.
   - Another mature GET area with clean backend/frontend evidence.

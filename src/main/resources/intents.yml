@@ -1444,6 +1444,21 @@ intents:
         required: true
         description: "下载任务 ID，必须来自 download_task_list 返回的数字 ID"
 
+  # --- 下载任务进度 ---
+  download_task_progress:
+    description: "查询指定下载任务的实时进度"
+    agent: "storage"
+    level: "p3"
+    keywords: ["下载任务进度", "下载进度", "上传进度", "progress", "已下载大小", "下载百分比"]
+    examples:
+      - "查询下载任务 42 的进度"
+      - "查看任务 id 42 下载了多少"
+    parameters:
+      - name: "id"
+        type: "integer"
+        required: true
+        description: "下载任务 ID，必须来自 download_task_list 返回的数字 ID"
+
   # --- 资源使用列表 ---
   resource_usage_list:
     description: "查询资源使用列表"
