@@ -81,9 +81,45 @@ Current track:
 
 Recently completed:
 
-`M5.21-41 NIM trusted policy provider contract`
+`M5.21-42 NIM mock-first audit writer receipt contract`
 
 Latest checkpoint:
+
+- Date: 2026-06-07 00:25 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-42 implemented and verified; recovery sync, commit, and push are the remaining completion steps:
+  - Added `NimCreateAuditWriterSupport` as a mock-first audit writer receipt contract.
+  - `buildMockReceipt(...)` returns:
+    - `auditReceiptPrepared`
+    - `receiptStatus=MOCK_PREPARED|REJECTED`
+    - `sideEffect=NONE`
+    - `storageMode=MOCK_CONTRACT_ONLY`
+    - `durable=false`
+    - `realStorageTouched=false`
+    - `releaseEligible=false`
+    - `requiredFutureStorage=DURABLE_AUDIT_LOG`
+    - `eventDigestAlgorithm=SHA-256`
+    - `eventDigest`
+    - `receiptId`
+    - audit identity fields.
+  - Mock receipt is intentionally not a production release credential.
+  - `NimCreateStateMachineSupport.ReadinessRequest` now includes `auditReceipt`.
+  - State machine now requires a durable audit receipt before future controlled write:
+    - missing receipt -> `AUDIT_RECEIPT_NOT_READY`;
+    - mock/non-durable/mismatched receipt -> `AUDIT_RECEIPT_NOT_DURABLE`;
+    - receipt containing secrets -> `AUDIT_RECEIPT_CONTAINS_FORBIDDEN_SECRET`.
+  - Future green fixture must use `receiptStatus=DURABLE_RECORDED`, `storageMode=DURABLE_AUDIT_LOG`, `durable=true`, `realStorageTouched=true`, `releaseEligible=true`.
+  - Added `NimCreateAuditWriterSupportTest`.
+  - Updated `NimCreateStateMachineSupportTest` and `NimCreateAuditReadinessSupportTest`.
+  - Added `docs/M5_21_FORTY_SECOND_WAVE_NIM_AUDIT_WRITER_RECEIPT_AUDIT_20260607.md`.
+  - Verification already passed:
+    - `mvn -q "-Dtest=NimCreateAuditWriterSupportTest,NimCreateStateMachineSupportTest,NimCreateAuditReadinessSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateAuditWriterSupportTest,NimCreateStateMachineSupportTest,NimCreateAuditReadinessSupportTest,NimTrustedPolicyProviderSupportTest,NimCreationGateSupportTest,NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest,HighRiskMutationToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest" test`
+    - `git -c safe.directory=F:/gitProject/kube-agent diff --check`
+    - Real secret-pattern static scan found 0 matches.
+    - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+  - No real `8100` access; no real audit table write; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
 
 - Date: 2026-06-07 00:04 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.

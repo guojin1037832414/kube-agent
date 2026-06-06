@@ -43,6 +43,7 @@ class NimCreateStateMachineSupportTest {
         assertHasBlocker(blockers, "DEPLOYMENT_BODY_PREVIEW_MISSING");
         assertHasBlocker(blockers, "HITL_CONFIRMATION_NOT_TRUSTED");
         assertHasBlocker(blockers, "AUDIT_CONTEXT_NOT_READY");
+        assertHasBlocker(blockers, "AUDIT_RECEIPT_NOT_READY");
         assertHasBlocker(blockers, "READINESS_PLAN_NOT_READY");
         assertHasBlocker(blockers, "WRITE_BODY_PROVENANCE_NOT_TRUSTED");
     }
@@ -69,6 +70,7 @@ class NimCreateStateMachineSupportTest {
             completePreview(),
             HitlConfirmation.human("thread-1", "nim_create"),
             completeAuditContext(),
+            completeAuditReceipt(),
             completeReadinessPlan(),
             NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
             true
@@ -107,6 +109,7 @@ class NimCreateStateMachineSupportTest {
             completePreview(),
             HitlConfirmation.human("thread-1", "nim_create"),
             completeAuditContext(),
+            completeAuditReceipt(),
             completeReadinessPlan(),
             NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
             true
@@ -130,6 +133,7 @@ class NimCreateStateMachineSupportTest {
             preview,
             HitlConfirmation.human("thread-1", "nim_create"),
             completeAuditContext(),
+            completeAuditReceipt(),
             completeReadinessPlan(),
             "PREVIEW_BODY_DIRECT_REUSE",
             true
@@ -150,6 +154,7 @@ class NimCreateStateMachineSupportTest {
             completePreview(),
             HitlConfirmation.human("thread-1", "deploy_create_instance"),
             completeAuditContext(),
+            completeAuditReceipt(),
             completeReadinessPlan(),
             NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
             true
@@ -174,6 +179,7 @@ class NimCreateStateMachineSupportTest {
             completePreview(),
             HitlConfirmation.human("thread-1", "nim_create"),
             audit,
+            completeAuditReceipt(),
             readiness,
             NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
             true
@@ -194,6 +200,7 @@ class NimCreateStateMachineSupportTest {
             completePreview(),
             HitlConfirmation.human("thread-1", "nim_create"),
             completeAuditContext(),
+            completeAuditReceipt(),
             completeReadinessPlan(),
             NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
             true
@@ -204,6 +211,48 @@ class NimCreateStateMachineSupportTest {
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> blockers = (List<Map<String, Object>>) guard.get("blockedBy");
         assertTrue(blockers.isEmpty());
+    }
+
+    @Test
+    void stateMachine_shouldRejectMockOrMismatchedAuditReceipt() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> mockReceipt = NimCreateAuditWriterSupport.buildMockReceipt(audit);
+
+        Map<String, Object> mockGuard = NimCreateStateMachineSupport.evaluate(new NimCreateStateMachineSupport.ReadinessRequest(
+            Map.of("name", "nim-mock-receipt"),
+            openGate(),
+            completePreview(),
+            HitlConfirmation.human("thread-1", "nim_create"),
+            audit,
+            mockReceipt,
+            completeReadinessPlan(),
+            NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
+            true
+        ));
+
+        assertEquals("HELD", mockGuard.get("state"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> mockBlockers = (List<Map<String, Object>>) mockGuard.get("blockedBy");
+        assertHasBlocker(mockBlockers, "AUDIT_RECEIPT_NOT_DURABLE");
+
+        Map<String, Object> mismatchedReceipt = new java.util.LinkedHashMap<>(completeAuditReceipt());
+        mismatchedReceipt.put("organizationId", "100003");
+        Map<String, Object> mismatchedGuard = NimCreateStateMachineSupport.evaluate(new NimCreateStateMachineSupport.ReadinessRequest(
+            Map.of("name", "nim-mismatch-receipt"),
+            openGate(),
+            completePreview(),
+            HitlConfirmation.human("thread-1", "nim_create"),
+            audit,
+            mismatchedReceipt,
+            completeReadinessPlan(),
+            NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
+            true
+        ));
+
+        assertEquals("HELD", mismatchedGuard.get("state"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> mismatchedBlockers = (List<Map<String, Object>>) mismatchedGuard.get("blockedBy");
+        assertHasBlocker(mismatchedBlockers, "AUDIT_RECEIPT_NOT_DURABLE");
     }
 
     private Map<String, Object> openGate() {
@@ -249,6 +298,27 @@ class NimCreateStateMachineSupportTest {
             "writeBodyProvenance", NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
             "secretRedactionApplied", true,
             "apiKeyHandling", NimCreateStateMachineSupport.API_KEY_POLICY
+        );
+    }
+
+    private Map<String, Object> completeAuditReceipt() {
+        return Map.ofEntries(
+            entry("auditReceiptPrepared", true),
+            entry("receiptStatus", NimCreateStateMachineSupport.REQUIRED_AUDIT_RECEIPT_STATUS),
+            entry("storageMode", NimCreateStateMachineSupport.REQUIRED_AUDIT_STORAGE_MODE),
+            entry("durable", true),
+            entry("realStorageTouched", true),
+            entry("releaseEligible", true),
+            entry("eventDigestAlgorithm", NimCreateAuditWriterSupport.DIGEST_ALGORITHM),
+            entry("eventDigest", "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"),
+            entry("receiptId", "nim-audit-durable-req-1"),
+            entry("auditEventType", "NIM_CREATE_REQUEST"),
+            entry("requestId", "req-1"),
+            entry("conversationId", "conv-1"),
+            entry("userId", "user-1"),
+            entry("organizationId", "100002"),
+            entry("targetTool", "nim_create"),
+            entry("writeBodyProvenance", NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE)
         );
     }
 

@@ -7,6 +7,28 @@
 ---
 
 
+## [M5.21-42] - 第四十二批 NIM mock-first 审计写入 receipt 契约审计
+
+**交付**: 新增 `NimCreateAuditWriterSupport`，把未来 `nim_create` 写入前的“审计上下文准备好”与“审计 writer 已接收并持久化”分离；本批只生成 mock receipt 契约，不连接真实持久化，不开放真实创建。
+
+**变更**
+- 新增 `NimCreateAuditWriterSupport`。
+- `buildMockReceipt(...)` 输出 `storageMode=MOCK_CONTRACT_ONLY`、`durable=false`、`realStorageTouched=false`、`releaseEligible=false` 和 SHA-256 `eventDigest`。
+- mock writer 对未准备好的 audit context 或含 token/API Key/secret 的 audit context 返回 `REJECTED`。
+- `NimCreateStateMachineSupport.ReadinessRequest` 新增 `auditReceipt`。
+- 状态机新增 `validateAuditReceipt(...)`:
+  - 缺 receipt 返回 `AUDIT_RECEIPT_NOT_READY`。
+  - mock receipt、非 durable receipt、身份字段不匹配或 digest 不合法返回 `AUDIT_RECEIPT_NOT_DURABLE`。
+  - receipt 含 secret 返回 `AUDIT_RECEIPT_CONTAINS_FORBIDDEN_SECRET`。
+- 状态机未来放行 fixture 必须使用 `receiptStatus=DURABLE_RECORDED`、`storageMode=DURABLE_AUDIT_LOG`、`durable=true`、`realStorageTouched=true`、`releaseEligible=true`。
+- 新增 `NimCreateAuditWriterSupportTest`，更新 `NimCreateStateMachineSupportTest` 与 `NimCreateAuditReadinessSupportTest`。
+- 新增 `docs/M5_21_FORTY_SECOND_WAVE_NIM_AUDIT_WRITER_RECEIPT_AUDIT_20260607.md`，并更新 M5.21 波次索引和项目记忆。
+
+**安全**
+- mock receipt 明确不是生产放行凭据；状态机仍拒绝 `MOCK_CONTRACT_ONLY`。
+- 本批不新增 Tool/Controller，不写真实审计表，不访问真实 `8100`，不调用 `POST /api/{orgId}/deployment`。
+- `nim_create` 继续保持 `httpMethod=NONE + PLACEHOLDER + requiresConfirmation=true`。
+
 ## [M5.21-41] - 第四十一批 NIM 可信策略提供器契约审计
 
 **交付**: 新增 `NimTrustedPolicyProviderSupport`，把未来后端可信链路读取到的 NVAIE license、当前用户角色和当前组织事实转换为 `NimTrustedPolicySnapshot`；本批仍不开放真实创建。

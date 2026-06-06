@@ -64,6 +64,7 @@ class NimCreateAuditReadinessSupportTest {
             preview,
             confirmation,
             audit,
+            durableAuditReceipt(audit),
             readiness,
             NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
             true
@@ -130,6 +131,7 @@ class NimCreateAuditReadinessSupportTest {
             preview,
             confirmation,
             audit,
+            durableAuditReceipt(audit),
             readiness,
             NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
             true
@@ -203,5 +205,26 @@ class NimCreateAuditReadinessSupportTest {
                 "memLimits", 2048
             ))
         ));
+    }
+
+    private Map<String, Object> durableAuditReceipt(Map<String, Object> audit) {
+        return Map.ofEntries(
+            entry("auditReceiptPrepared", true),
+            entry("receiptStatus", NimCreateStateMachineSupport.REQUIRED_AUDIT_RECEIPT_STATUS),
+            entry("storageMode", NimCreateStateMachineSupport.REQUIRED_AUDIT_STORAGE_MODE),
+            entry("durable", true),
+            entry("realStorageTouched", true),
+            entry("releaseEligible", true),
+            entry("eventDigestAlgorithm", NimCreateAuditWriterSupport.DIGEST_ALGORITHM),
+            entry("eventDigest", "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"),
+            entry("receiptId", "nim-audit-durable-req-1"),
+            entry("auditEventType", audit.get("auditEventType")),
+            entry("requestId", audit.get("requestId")),
+            entry("conversationId", audit.get("conversationId")),
+            entry("userId", audit.get("userId")),
+            entry("organizationId", audit.get("organizationId")),
+            entry("targetTool", audit.get("targetTool")),
+            entry("writeBodyProvenance", audit.get("writeBodyProvenance"))
+        );
     }
 }

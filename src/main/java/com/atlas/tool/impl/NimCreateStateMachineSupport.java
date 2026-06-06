@@ -22,6 +22,8 @@ final class NimCreateStateMachineSupport {
     static final String TRUSTED_POLICY_PASSED = "TRUSTED_PASSED";
     static final String TRUSTED_BODY_PROVENANCE = "SERVER_REBUILT_FROM_AUDITED_NIM_STATE";
     static final String API_KEY_POLICY = "NEVER_GENERATE_STORE_OR_DISPLAY";
+    static final String REQUIRED_AUDIT_STORAGE_MODE = "DURABLE_AUDIT_LOG";
+    static final String REQUIRED_AUDIT_RECEIPT_STATUS = "DURABLE_RECORDED";
 
     private static final Set<String> REQUIRED_AUDIT_FIELDS = Set.of(
         "requestId",
@@ -58,6 +60,7 @@ final class NimCreateStateMachineSupport {
             null,
             Map.of(),
             Map.of(),
+            Map.of(),
             "",
             false
         ));
@@ -78,6 +81,7 @@ final class NimCreateStateMachineSupport {
         validatePreview(safeRequest.deploymentBodyPreview(), blockers);
         validateHitlConfirmation(safeRequest.hitlConfirmation(), blockers);
         validateAuditContext(safeRequest.auditContext(), blockers);
+        validateAuditReceipt(safeRequest.auditContext(), safeRequest.auditReceipt(), blockers);
         validateReadinessPlan(safeRequest.readinessPlan(), blockers);
         validateWriteBodyProvenance(safeRequest.writeBodyProvenance(), blockers);
         validateNoFallbackWrite(safeRequest.params(), safeRequest.creationGate(), blockers);
@@ -235,6 +239,48 @@ final class NimCreateStateMachineSupport {
         }
     }
 
+    private static void validateAuditReceipt(Map<String, Object> auditContext,
+                                             Map<String, Object> auditReceipt,
+                                             List<Map<String, Object>> blockers) {
+        if (auditReceipt.isEmpty()) {
+            blockers.add(blocker(
+                "AUDIT_RECEIPT_NOT_READY",
+                "缺少可信审计 writer 返回的 durable audit receipt；不能只凭 auditContext 进入真实写入。",
+                "audit"
+            ));
+            return;
+        }
+
+        boolean contractValid = Boolean.TRUE.equals(auditReceipt.get("auditReceiptPrepared"))
+            && REQUIRED_AUDIT_RECEIPT_STATUS.equals(text(auditReceipt.get("receiptStatus")))
+            && REQUIRED_AUDIT_STORAGE_MODE.equals(text(auditReceipt.get("storageMode")))
+            && Boolean.TRUE.equals(auditReceipt.get("durable"))
+            && Boolean.TRUE.equals(auditReceipt.get("realStorageTouched"))
+            && Boolean.TRUE.equals(auditReceipt.get("releaseEligible"))
+            && auditDigestAlgorithmValid(text(auditReceipt.get("eventDigestAlgorithm")))
+            && text(auditReceipt.get("eventDigest")).matches("[a-f0-9]{64}")
+            && hasText(auditReceipt.get("receiptId"))
+            && TARGET_TOOL.equals(text(auditReceipt.get("targetTool")))
+            && NimCreateAuditReadinessSupport.AUDIT_EVENT_TYPE.equals(text(auditReceipt.get("auditEventType")))
+            && TRUSTED_BODY_PROVENANCE.equals(text(auditReceipt.get("writeBodyProvenance")))
+            && sameAuditIdentity(auditContext, auditReceipt);
+
+        if (!contractValid) {
+            blockers.add(blocker(
+                "AUDIT_RECEIPT_NOT_DURABLE",
+                "NIM 创建必须拿到真实持久化审计 receipt；mock receipt 或身份字段不匹配不能放行。",
+                "audit"
+            ));
+        }
+        if (containsForbiddenSecretMaterial(auditReceipt)) {
+            blockers.add(blocker(
+                "AUDIT_RECEIPT_CONTAINS_FORBIDDEN_SECRET",
+                "审计 receipt 不得携带 token、password、secret 或真实 NGC/NIM API Key。",
+                "audit"
+            ));
+        }
+    }
+
     private static void validateReadinessPlan(Map<String, Object> readinessPlan,
                                               List<Map<String, Object>> blockers) {
         if (readinessPlan.isEmpty()
@@ -312,6 +358,10 @@ final class NimCreateStateMachineSupport {
             "creationGate",
             "trustedPolicySnapshot",
             "auditPrepared",
+            "auditReceipt",
+            "auditReceiptPrepared",
+            "receiptStatus",
+            "receiptId",
             "licenseValid",
             "nvaieLicenseValid",
             "nvaieLicenseVerified",
@@ -346,6 +396,7 @@ final class NimCreateStateMachineSupport {
             "creationGate 必须由后端状态机进入 READY_FOR_SERVER_CONFIRMED_WRITE",
             "HITLController 必须注入 target=nim_create 的服务端 HitlConfirmation",
             "写入前必须准备完整审计上下文",
+            "审计上下文必须先被持久化审计 writer 接收，并返回 durable audit receipt",
             "POST body 必须由受控 NIM 状态机重新构建，不能直接复用 preview bodyDraft",
             "创建后 readiness 只能只读轮询，不生成、不保存、不展示真实 API Key",
             "nim_create 代码级 release 开关必须显式打开"
@@ -370,6 +421,28 @@ final class NimCreateStateMachineSupport {
             actualTargets.add(text(target));
         }
         return actualTargets.containsAll(requiredTargets);
+    }
+
+    private static boolean sameAuditIdentity(Map<String, Object> auditContext,
+                                             Map<String, Object> auditReceipt) {
+        for (String key : List.of(
+            "auditEventType",
+            "requestId",
+            "conversationId",
+            "userId",
+            "organizationId",
+            "targetTool",
+            "writeBodyProvenance"
+        )) {
+            if (!text(auditContext.get(key)).equals(text(auditReceipt.get(key)))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean auditDigestAlgorithmValid(String algorithm) {
+        return NimCreateAuditWriterSupport.DIGEST_ALGORITHM.equals(algorithm);
     }
 
     private static boolean readinessStepsAreReadOnly(Object rawSteps) {
@@ -453,6 +526,7 @@ final class NimCreateStateMachineSupport {
         Map<String, Object> deploymentBodyPreview,
         HitlConfirmation hitlConfirmation,
         Map<String, Object> auditContext,
+        Map<String, Object> auditReceipt,
         Map<String, Object> readinessPlan,
         String writeBodyProvenance,
         boolean nimCreateReleased
@@ -462,6 +536,7 @@ final class NimCreateStateMachineSupport {
             creationGate = creationGate == null ? Map.of() : objectMap(creationGate);
             deploymentBodyPreview = deploymentBodyPreview == null ? Map.of() : objectMap(deploymentBodyPreview);
             auditContext = auditContext == null ? Map.of() : objectMap(auditContext);
+            auditReceipt = auditReceipt == null ? Map.of() : objectMap(auditReceipt);
             readinessPlan = readinessPlan == null ? Map.of() : objectMap(readinessPlan);
             writeBodyProvenance = writeBodyProvenance == null ? "" : writeBodyProvenance.trim();
         }
@@ -472,6 +547,7 @@ final class NimCreateStateMachineSupport {
                 Map.of(),
                 Map.of(),
                 null,
+                Map.of(),
                 Map.of(),
                 Map.of(),
                 "",

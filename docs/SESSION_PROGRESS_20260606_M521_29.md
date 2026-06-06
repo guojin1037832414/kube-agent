@@ -357,6 +357,22 @@
   - Added `docs/M5_21_FORTY_FIRST_WAVE_NIM_TRUSTED_POLICY_PROVIDER_AUDIT_20260606.md`.
   - External recovery docs synced and hash-verified to `H:\codex重要文件\kube-agent`.
   - Implementation commit: `1078985 feat(M5.21): add NIM trusted policy provider`.
+- M5.21-42 targeted verification passed:
+  - `mvn -q "-Dtest=NimCreateAuditWriterSupportTest,NimCreateStateMachineSupportTest,NimCreateAuditReadinessSupportTest" test`
+- M5.21-42 wide NIM/contract verification passed:
+  - `mvn -q "-Dtest=NimCreateAuditWriterSupportTest,NimCreateStateMachineSupportTest,NimCreateAuditReadinessSupportTest,NimTrustedPolicyProviderSupportTest,NimCreationGateSupportTest,NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest,HighRiskMutationToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest" test`
+- M5.21-42 final pre-commit verification passed:
+  - `git -c safe.directory=F:/gitProject/kube-agent diff --check`
+  - Real secret-pattern static scan found 0 matches.
+  - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+- M5.21-42 work summary:
+  - Added `NimCreateAuditWriterSupport` as mock-first audit writer receipt contract.
+  - Mock receipt uses `storageMode=MOCK_CONTRACT_ONLY`, `durable=false`, `realStorageTouched=false`, `releaseEligible=false`.
+  - State machine now requires `auditReceipt` in `ReadinessRequest`.
+  - Missing receipt returns `AUDIT_RECEIPT_NOT_READY`; mock/non-durable/mismatched receipt returns `AUDIT_RECEIPT_NOT_DURABLE`; receipt secret leakage returns `AUDIT_RECEIPT_CONTAINS_FORBIDDEN_SECRET`.
+  - Future release fixture requires `DURABLE_RECORDED + DURABLE_AUDIT_LOG`.
+  - Added `docs/M5_21_FORTY_SECOND_WAVE_NIM_AUDIT_WRITER_RECEIPT_AUDIT_20260607.md`.
 
 ## Final M5.21-29 Decisions
 
@@ -380,12 +396,13 @@
 - `NimCreateStateMachineSupport` added for future `nim_create` write readiness; current state remains `HELD`, direct preview body reuse and fallback writes are forbidden, and exact server `HitlConfirmation` + trusted policy + audit + readiness are required before any real POST can be considered.
 - `NimCreateAuditReadinessSupport` added for future `nim_create` audit context and readiness plan; it models mature frontend readback by Deployment name plus GET `/v1/health/live` and GET `/v1/models`, while forbidding real API Key material and POST readiness steps.
 - `NimTrustedPolicyProviderSupport` added for future trusted policy provider wiring; only backend-trusted facts can produce `TRUSTED_PASSED`, forged Tool params remain ignored, and `nim_create` remains HOLD.
+- `NimCreateAuditWriterSupport` added for mock-first audit writer receipt contract; mock receipt is not release-eligible, and future real write requires durable audit receipt.
 
 ## Next Step
 
 Continue NIM orchestration only through safe slices:
-- design a mock-first audit writer interface for NIM create requests without connecting real persistence yet,
 - design a creation-aftercare readiness executor/Tool that only executes the approved GET/derived steps from `NimCreateAuditReadinessSupport`,
+- later design a real durable audit writer adapter only after the true audit table/log backend is identified,
 - later wire `NimTrustedPolicyProviderSupport` to real backend license/user/org readers only after mock-first contracts are complete,
 - or pick another mature GET area with clean backend/frontend evidence.
 
