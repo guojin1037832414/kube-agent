@@ -111,7 +111,8 @@ Latest checkpoint:
 Latest in-progress/completed chunk after checkpoint:
 
 - Date: 2026-06-06 21:16 Asia/Shanghai.
-- M5.21-34 implemented and targeted verification passed:
+- M5.21-34 implemented, committed, and pushed:
+  - Commit: `404d80e feat(M5.21): add repository catalog read tools`
   - Added `RepositoryCatalogListTool` for mature `GET /api/{orgId}/repository`.
   - Added `RepositoryCatalogCategoryListTool` for `GET /api/{orgId}/repository/category`.
   - Added `RepositoryCatalogTagListTool` for `GET /api/{orgId}/repository/tags`, requiring explicit `repository`.

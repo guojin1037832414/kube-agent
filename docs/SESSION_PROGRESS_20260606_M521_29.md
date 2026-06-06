@@ -44,7 +44,8 @@
 
 ## Current Status
 
-- M5.21-34 repository catalog/tag sensitive read alignment is implemented and targeted tests passed:
+- M5.21-34 repository catalog/tag sensitive read alignment is implemented, committed, and pushed:
+  - Commit: `404d80e feat(M5.21): add repository catalog read tools`.
   - Added `RepositoryCatalogListTool`, `RepositoryCatalogCategoryListTool`, `RepositoryCatalogTagListTool`, and `RepositoryCatalogNimTagListTool`.
   - Added `RepositoryCatalogQuerySupport` to keep product/application repository catalog semantics separate from site registry config and ordinary image repository list.
   - Tool schema supports mature `RepositoryParamDTO` fields for catalog list and requires explicit `repository` for tag reads.
