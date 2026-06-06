@@ -63,7 +63,7 @@
 - `POST /api/{orgId}/download/pause/{id}`: 暂停下载任务，改变后端状态，暂不接入。
 - `POST /api/{orgId}/download/resume/{id}`: 恢复下载任务，改变后端状态，暂不接入。
 - `DELETE /api/{orgId}/download/{id}`: 删除任务且可删除文件，暂不接入。
-- `RegistryListTool`: 仍需单独确认 `/api/registry` 与 `/api/{orgId}/repository` 的产品语义。
+- `RegistryListTool`: M5.21-32 时仍需单独确认 `/api/registry` 与 `/api/{orgId}/repository` 的产品语义；已在 M5.21-33 对齐为站点级 `GET /api/registry`。
 - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: 继续等待后端边界证据。
 
 ## 验证

@@ -42,7 +42,6 @@ class ListToolParameterSpecContractTest {
         assertListQueryContract(new DataSetListTool(null), "data_set_list");
         assertListQueryContract(new ModelListTool(null), "model_list");
         assertListQueryContract(new FileListTool(null), "file_list");
-        assertListQueryContract(new RegistryListTool(null), "registry_list");
         assertListQueryContract(new TensorBoardListTool(null), "tensorboard_list");
         assertListQueryContract(new JobTemplateListTool(null), "job_template_list");
         assertListQueryContract(new TemplateListTool(null), "template_list");

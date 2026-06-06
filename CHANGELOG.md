@@ -7,6 +7,22 @@
 ---
 
 
+## [M5.21-33] - 第三十三批 镜像注册处站点级敏感只读对齐审计
+
+**交付**: 将 `RegistryListTool` 从不存在的组织路径 `/api/{orgId}/registry` 对齐为成熟 kube-manager 的站点级 `GET /api/registry`，并明确它查询的是镜像注册处配置，不是组织内产品 repository 目录。
+
+**变更**
+- `RegistryListTool` 路径从 `/api/{orgId}/registry` 改为 `/api/registry`。
+- `RegistryListTool` 移除 `page/limit/keyword` 标准列表契约，只暴露成熟后端可选 `keyWord`。
+- `RegistryListTool` 元数据标记为 `SENSITIVE_READ + requiresConfirmation=true`。
+- 新增 `RegistrySiteToolHttpContractTest`，覆盖站点路径、`keyWord` 透传、`keyword` alias 兼容、无分页 schema 和风险元数据。
+- 更新 `M511AtlasToolHttpContractTest`、`ListToolParameterPassThroughContractTest`、`ListToolParameterSpecContractTest` 与 `intents.yml`。
+- 新增 `docs/M5_21_THIRTY_THIRD_WAVE_REGISTRY_SITE_READ_AUDIT_20260606.md`，并更新 M5.21 波次索引。
+
+**安全**
+- 本批没有调用真实 `8100`，没有接入 registry 新增、更新、删除或 repo-tag 外部枚举。
+- `RegistrySiteDTO` 返回注册处 URL 与 username，按站点级敏感读取走人工确认。
+
 ## [M5.21-32] - 第三十二批 下载任务进度按任务 ID 敏感只读审计
 
 **交付**: 新增 `DownloadTaskProgressTool`，对齐成熟 kube-manager 的 `GET /api/{orgId}/download/progress/{id}`，让 Agent 可以在找到下载任务后单独读取实时进度。

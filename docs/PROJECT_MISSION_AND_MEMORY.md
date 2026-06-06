@@ -79,17 +79,30 @@ Current track:
 
 Recently completed:
 
-`M5.21-32 download task progress read alignment by task ID`
+`M5.21-33 registry site read alignment`
 
 Latest checkpoint:
 
-- Date: 2026-06-06 20:35 Asia/Shanghai.
+- Date: 2026-06-06 21:01 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-33 was completed and is ready for commit/push:
+  - Commit pending at the time this memory was updated.
+  - `RegistryListTool` now uses `GET /api/registry`, optional `keyWord`, and `SENSITIVE_READ + requiresConfirmation=true`.
+  - Registry create/update/delete and `/api/registry/repo-tag` remain HOLD.
+  - Verification passed:
+    - `mvn -q "-Dtest=RegistrySiteToolHttpContractTest,ListToolParameterPassThroughContractTest,ListToolParameterSpecContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest" test`
+    - `git -c safe.directory=F:/gitProject/kube-agent diff --check`
+    - Static secret scan found no real credentials; only documentation/config comments mention api-key/password terms.
+    - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+  - External recovery docs were synced to `H:\codex重要文件\kube-agent`.
+- M5.21-32 was committed and pushed:
+  - Commit: `2825387 feat(M5.21): add download task progress read tool`
 - M5.21-31 was committed and pushed:
   - Commit: `e25738a fix(M5.21): align download task status read tool`
 - M5.21-30 was committed and pushed:
   - Commit: `b5d4132 fix(M5.21): align MIG config read tool`
-- Verification passed for M5.21-31 before commit:
+- Verification passed for M5.21-32 before commit:
   - `mvn -q test`
   - `git -c safe.directory=F:/gitProject/kube-agent diff --check`
   - Static secret scan found no real credentials; only documentation/config comments mention api-key/password terms.
@@ -97,19 +110,18 @@ Latest checkpoint:
 
 Latest in-progress/completed chunk after checkpoint:
 
-- Date: 2026-06-06 20:38 Asia/Shanghai.
-- M5.21-32 completed implementation and targeted verification:
-  - Added `DownloadTaskProgressTool` for mature `GET /api/{orgId}/download/progress/{id}`.
-  - Added `DownloadTaskQuerySupport` so status and progress Tools share the same task ID schema and URL path validation.
-  - `download_task_progress` requires explicit positive integer `id`, exposes no `page/limit/keyword`, and is `SENSITIVE_READ + requiresConfirmation=true`.
-  - Added `DownloadTaskProgressToolHttpContractTest`.
-  - Targeted test passed: `mvn -q "-Dtest=DownloadTaskProgressToolHttpContractTest,DownloadTaskStatusToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest" test`.
-  - Full test passed: `mvn -q test`.
-  - Static secret scan found no real credentials; only documentation/config comments mention api-key/password terms.
+- Date: 2026-06-06 20:50 Asia/Shanghai.
+- M5.21-33 completed implementation and targeted verification:
+  - `RegistryListTool` now calls mature site endpoint `GET /api/registry` instead of old `/api/{orgId}/registry`.
+  - It exposes optional `keyWord` only, with `keyword` as alias, and no longer exposes `page/limit`.
+  - It is `SENSITIVE_READ + requiresConfirmation=true` because registry site DTO returns URL and username.
+  - `GET /api/{orgId}/repository` is recorded as a separate product/application repository catalog candidate, not mixed into registry.
+  - Added `RegistrySiteToolHttpContractTest`.
+  - Targeted test passed: `mvn -q "-Dtest=RegistrySiteToolHttpContractTest,ListToolParameterPassThroughContractTest,ListToolParameterSpecContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest" test`.
 
 Recommended next work:
 
 - Continue with a narrow mature evidence-backed Tool alignment wave.
 - Good candidates:
-  - Registry/repository path migration after resolving `/api/registry` vs `/api/{orgId}/repository`.
+  - Repository catalog/category/tag read migration for `/api/{orgId}/repository`, `/category`, `/tags`, `/nim/tags`.
   - Another mature GET area with clean backend/frontend evidence.

@@ -52,7 +52,6 @@ class ListToolParameterPassThroughContractTest {
         assertPassThrough(DataSetListTool::new, "/api/100002/data-set");
         assertPassThrough(ModelListTool::new, "/api/100002/model");
         assertPassThrough(FileListTool::new, "/api/100002/file");
-        assertPassThrough(RegistryListTool::new, "/api/100002/registry");
         assertPassThrough(TensorBoardListTool::new, "/api/100002/tensorboard");
         assertPassThrough(JobTemplateListTool::new, "/api/100002/train-job-template");
         assertPassThrough(TemplateListTool::new, "/api/100002/template");

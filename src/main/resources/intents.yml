@@ -1338,16 +1338,20 @@ intents:
       - "查看文件下载"
     parameters: []
 
-  # --- 镜像仓库列表 ---
+  # --- 镜像注册处列表 ---
   registry_list:
-    description: "查询镜像仓库列表"
+    description: "查询镜像注册处列表"
     agent: "query"
     level: "p3"
-    keywords: ["镜像仓库", "registry", "harbor", "仓库列表"]
+    keywords: ["镜像注册处", "镜像仓库配置", "registry", "harbor", "私有镜像仓库"]
     examples:
-      - "镜像仓库列表"
-      - "查看registry"
-    parameters: []
+      - "镜像注册处列表"
+      - "查看 registry 配置"
+    parameters:
+      - name: "keyWord"
+        type: "string"
+        required: false
+        description: "镜像注册处名称、地址或关键字筛选条件"
 
   # --- 模板列表 ---
   template_list:

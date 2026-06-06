@@ -63,6 +63,12 @@
   - Added `DownloadTaskQuerySupport` for shared task ID schema and URL path validation.
   - Operation metadata is `SENSITIVE_READ + requiresConfirmation=true`.
   - Download start/pause/resume/delete remain HOLD.
+- M5.21-33 registry site read alignment is implemented and targeted tests passed:
+  - `RegistryListTool` now uses mature site endpoint `GET /api/registry`.
+  - Tool schema now exposes optional `keyWord` only; `page/limit` are removed.
+  - Operation metadata is `SENSITIVE_READ + requiresConfirmation=true`.
+  - Registry create/update/delete and `/api/registry/repo-tag` remain HOLD.
+  - `/api/{orgId}/repository` is a separate product/application repository catalog candidate, not mixed into `registry_list`.
 
 ## Files Changed By This Continuation
 
@@ -83,6 +89,8 @@
   - `src/main/java/com/atlas/tool/impl/DownloadTaskProgressTool.java`
   - `src/main/java/com/atlas/tool/impl/DownloadTaskQuerySupport.java`
   - `src/main/java/com/atlas/tool/impl/UploadStatusListTool.java`
+- M5.21-33 tool implementation fixes:
+  - `src/main/java/com/atlas/tool/impl/RegistryListTool.java`
 - Tests:
   - `src/test/java/com/atlas/contract/M511AtlasToolHttpContractTest.java`
   - `src/test/java/com/atlas/http/KubeManagerHttpClientTokenFallbackSecurityTest.java`
@@ -91,6 +99,7 @@
   - `src/test/java/com/atlas/tool/impl/MigConfigReadToolHttpContractTest.java`
   - `src/test/java/com/atlas/tool/impl/DownloadTaskStatusToolHttpContractTest.java`
   - `src/test/java/com/atlas/tool/impl/DownloadTaskProgressToolHttpContractTest.java`
+  - `src/test/java/com/atlas/tool/impl/RegistrySiteToolHttpContractTest.java`
   - `src/test/java/com/atlas/mcp/M520McpManifestSafetyContractTest.java`
 - Intent config:
   - `src/main/resources/intents.yml`
@@ -99,6 +108,7 @@
   - `docs/M5_21_THIRTIETH_WAVE_MIG_CONFIG_READ_AUDIT_20260606.md`
   - `docs/M5_21_THIRTY_FIRST_WAVE_DOWNLOAD_STATUS_READ_AUDIT_20260606.md`
   - `docs/M5_21_THIRTY_SECOND_WAVE_DOWNLOAD_PROGRESS_READ_AUDIT_20260606.md`
+  - `docs/M5_21_THIRTY_THIRD_WAVE_REGISTRY_SITE_READ_AUDIT_20260606.md`
   - `docs/M5_21_WAVE_INDEX_20260606.md`
   - `CHANGELOG.md`
   - `docs/SESSION_PROGRESS_20260606_M521_29.md`
@@ -137,6 +147,14 @@
   - `git -c safe.directory=F:/gitProject/kube-agent diff --check`
   - Static secret scan found no real credentials; matches were only documentation/config comments about avoiding api-key/password in source.
   - `mvn -q test`
+- M5.21-33 targeted verification passed:
+  - `mvn -q "-Dtest=RegistrySiteToolHttpContractTest,ListToolParameterPassThroughContractTest,ListToolParameterSpecContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest" test`
+- M5.21-33 final pre-commit verification passed:
+  - `git -c safe.directory=F:/gitProject/kube-agent diff --check`
+  - Static secret scan found no real credentials; matches were only documentation/config comments about avoiding api-key/password in source.
+  - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+  - External recovery docs synced to `H:\codex重要文件\kube-agent`.
 
 ## Final M5.21-29 Decisions
 
@@ -146,18 +164,18 @@
   - `FileMaterialListTool`: `/api/{orgId}/material/folders`
   - `InboxMessageListTool`: `/api/{orgId}/inbox-message`
 - Continued HOLD:
-  - `RegistryListTool`
   - `ExperimentInstanceListTool`
   - `ExperimentTemplateListTool`
   - RBAC/organization/quota approval sensitive management lists protected by `SensitiveListToolHoldContractTest`
 - `MigConfigListTool` moved out of HOLD for read-only `GET /api/mig/{gpuId}` only; `POST/PUT/DELETE /api/mig` remain HOLD.
 - `UploadStatusListTool` moved out of HOLD for sensitive read-only `GET /api/{orgId}/download/status/{id}` only; download start/pause/resume/delete remain HOLD.
 - `DownloadTaskProgressTool` added for sensitive read-only `GET /api/{orgId}/download/progress/{id}`; download start/pause/resume/delete remain HOLD.
+- `RegistryListTool` moved out of HOLD for sensitive read-only `GET /api/registry` only; registry create/update/delete and repo-tag remain HOLD.
 
 ## Next Step
 
 Pick the next M5.21 mature kube-manager Tool alignment wave. Prefer a narrow evidence-backed slice, likely one of:
-- Registry/repository path migration after deciding `/api/registry` vs `/api/{orgId}/repository`.
+- Repository catalog/category/tag read migration for `/api/{orgId}/repository`.
 - Another mature GET area with clean backend/frontend evidence.
 
 ## Recovery Reminder
