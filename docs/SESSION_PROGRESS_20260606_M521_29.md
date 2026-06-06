@@ -338,7 +338,7 @@
   - `mvn -q test`
   - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
   - External recovery docs synced and hash-verified to `H:\codex重要文件\kube-agent`.
-  - Implementation commit: `46a601b feat(M5.21): add NIM audit readiness plan`.
+  - Implementation commit: `34b40ae feat(M5.21): add NIM audit readiness plan`.
 
 ## Final M5.21-29 Decisions
 
