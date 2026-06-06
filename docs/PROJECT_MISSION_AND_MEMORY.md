@@ -81,9 +81,54 @@ Current track:
 
 Recently completed:
 
-`M5.21-43 NIM readiness read-only executor contract`
+`M5.21-44 NIM readiness execution report gate`
 
 Latest checkpoint:
+
+- Date: 2026-06-07 00:55 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-44 implemented, verified:
+  - Tightened `NimCreateStateMachineSupport` so future `nim_create` release requires a READY readiness executor report, not just a readiness plan.
+  - `ReadinessRequest` now includes `readinessExecutionReport`.
+  - State-machine output includes `readinessExecutionRequired=true`.
+  - `validateReadinessExecutionReport(...)` requires:
+    - `readinessExecutor=NIM_CREATE_READINESS_EXECUTOR`
+    - `sideEffect=NONE`
+    - `readOnly=true`
+    - `pollOnly=true`
+    - `apiKeyHandling=NEVER_GENERATE_STORE_OR_DISPLAY`
+    - `apiKeyPlaceholderOnly=true`
+    - `forbiddenActionsEnforced=true`
+    - `ready=true`
+    - `state=READY`
+    - `blockedBy=[]`
+    - `deployment.matched=true`
+    - `service.serviceUrlReady=true`
+    - `health.live=true`
+    - `nextPoll.prepared=false`.
+  - Missing report returns `READINESS_EXECUTION_REPORT_NOT_READY`.
+  - PENDING/BLOCKED/REJECTED/TIMEOUT or blocked report cannot become a write-release credential.
+  - Report secret leakage returns `READINESS_EXECUTION_REPORT_CONTAINS_FORBIDDEN_SECRET`.
+  - Caller-forged readiness claims are now explicitly ignored:
+    - `readinessExecutionReport`
+    - `readinessExecutor`
+    - `readinessReady`
+    - `readinessState`.
+  - Strengthened state-machine secret detection to reject real Bearer/API-key-shaped values while allowing the mature frontend placeholder.
+  - Updated tests:
+    - `NimCreateStateMachineSupportTest`
+    - `NimCreateAuditReadinessSupportTest`
+    - `NimCreateAuditWriterSupportTest`.
+  - Added `docs/M5_21_FORTY_FOURTH_WAVE_NIM_READINESS_REPORT_GATE_AUDIT_20260607.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateStateMachineSupportTest,NimCreateAuditReadinessSupportTest,NimCreateAuditWriterSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateReadinessExecutorSupportTest,NimCreateStateMachineSupportTest,NimCreateAuditReadinessSupportTest,NimCreateAuditWriterSupportTest,NimTrustedPolicyProviderSupportTest,NimCreationGateSupportTest,NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest,HighRiskMutationToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest,M510ArchitectureBoundaryTest" test`
+    - `git -c safe.directory=F:/gitProject/kube-agent diff --check`
+    - Real secret-pattern static scan found 0 matches.
+    - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+  - External recovery docs synced and hash-verified to `H:\codex重要文件\kube-agent`.
+  - No real `8100` access; no real NIM polling; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
 
 - Date: 2026-06-07 00:41 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.

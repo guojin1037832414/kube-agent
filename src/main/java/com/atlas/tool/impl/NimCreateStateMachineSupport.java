@@ -61,6 +61,7 @@ final class NimCreateStateMachineSupport {
             Map.of(),
             Map.of(),
             Map.of(),
+            Map.of(),
             "",
             false
         ));
@@ -83,6 +84,7 @@ final class NimCreateStateMachineSupport {
         validateAuditContext(safeRequest.auditContext(), blockers);
         validateAuditReceipt(safeRequest.auditContext(), safeRequest.auditReceipt(), blockers);
         validateReadinessPlan(safeRequest.readinessPlan(), blockers);
+        validateReadinessExecutionReport(safeRequest.readinessExecutionReport(), blockers);
         validateWriteBodyProvenance(safeRequest.writeBodyProvenance(), blockers);
         validateNoFallbackWrite(safeRequest.params(), safeRequest.creationGate(), blockers);
 
@@ -99,6 +101,7 @@ final class NimCreateStateMachineSupport {
         result.put("requiredStages", requiredStages());
         result.put("directPreviewReuseAllowed", false);
         result.put("fallbackWriteAllowed", false);
+        result.put("readinessExecutionRequired", true);
         result.put("apiKeyPolicy", API_KEY_POLICY);
         return result;
     }
@@ -305,6 +308,70 @@ final class NimCreateStateMachineSupport {
         }
     }
 
+    private static void validateReadinessExecutionReport(Map<String, Object> readinessExecutionReport,
+                                                         List<Map<String, Object>> blockers) {
+        if (readinessExecutionReport.isEmpty()) {
+            blockers.add(blocker(
+                "READINESS_EXECUTION_REPORT_NOT_READY",
+                "缺少创建后 readiness 只读执行器报告；未来真实写入不能只凭 readiness 计划放行。",
+                "readiness"
+            ));
+            return;
+        }
+
+        Map<String, Object> deployment = objectMap(readinessExecutionReport.get("deployment"));
+        Map<String, Object> service = objectMap(readinessExecutionReport.get("service"));
+        Map<String, Object> health = objectMap(readinessExecutionReport.get("health"));
+        Map<String, Object> nextPoll = objectMap(readinessExecutionReport.get("nextPoll"));
+
+        boolean contractValid = NimCreateReadinessExecutorSupport.EXECUTOR_NAME.equals(text(readinessExecutionReport.get("readinessExecutor")))
+            && "NONE".equals(text(readinessExecutionReport.get("sideEffect")))
+            && Boolean.TRUE.equals(readinessExecutionReport.get("readOnly"))
+            && Boolean.TRUE.equals(readinessExecutionReport.get("pollOnly"))
+            && API_KEY_POLICY.equals(text(readinessExecutionReport.get("apiKeyHandling")))
+            && Boolean.TRUE.equals(readinessExecutionReport.get("apiKeyPlaceholderOnly"))
+            && Boolean.TRUE.equals(readinessExecutionReport.get("forbiddenActionsEnforced"))
+            && Boolean.TRUE.equals(deployment.get("matched"))
+            && Boolean.TRUE.equals(service.get("serviceUrlReady"))
+            && Boolean.TRUE.equals(health.get("live"))
+            && Boolean.FALSE.equals(nextPoll.get("prepared"));
+
+        if (!contractValid) {
+            blockers.add(blocker(
+                "READINESS_EXECUTION_REPORT_CONTRACT_INVALID",
+                "readiness 执行器报告必须来自受控只读执行器，且声明 readOnly/pollOnly/sideEffect=NONE/API Key 策略和 deployment/service/health 已就绪。",
+                "readiness"
+            ));
+        }
+
+        boolean ready = Boolean.TRUE.equals(readinessExecutionReport.get("ready"))
+            && "READY".equals(text(readinessExecutionReport.get("state")))
+            && listOfMaps(readinessExecutionReport.get("blockedBy")).isEmpty();
+        if (!ready) {
+            blockers.add(blocker(
+                "READINESS_EXECUTION_REPORT_NOT_READY",
+                "readiness 执行器报告尚未进入 READY，不能把 PENDING/TIMEOUT/BLOCKED/REJECTED 结果用于真实写入放行。",
+                "readiness"
+            ));
+        }
+
+        if (reportHasBlockingState(readinessExecutionReport)) {
+            blockers.add(blocker(
+                "READINESS_EXECUTION_REPORT_BLOCKED",
+                "readiness 执行器报告包含阻断态或阻断原因，必须先解决后才能考虑真实 NIM 创建写入。",
+                "readiness"
+            ));
+        }
+
+        if (containsForbiddenSecretMaterial(readinessExecutionReport)) {
+            blockers.add(blocker(
+                "READINESS_EXECUTION_REPORT_CONTAINS_FORBIDDEN_SECRET",
+                "readiness 执行器报告不得携带 Authorization、token、password、secret 或真实 NGC/NIM API Key。",
+                "readiness"
+            ));
+        }
+    }
+
     private static void validateWriteBodyProvenance(String writeBodyProvenance,
                                                     List<Map<String, Object>> blockers) {
         String provenance = text(writeBodyProvenance);
@@ -362,6 +429,10 @@ final class NimCreateStateMachineSupport {
             "auditReceiptPrepared",
             "receiptStatus",
             "receiptId",
+            "readinessExecutionReport",
+            "readinessExecutor",
+            "readinessReady",
+            "readinessState",
             "licenseValid",
             "nvaieLicenseValid",
             "nvaieLicenseVerified",
@@ -398,7 +469,8 @@ final class NimCreateStateMachineSupport {
             "写入前必须准备完整审计上下文",
             "审计上下文必须先被持久化审计 writer 接收，并返回 durable audit receipt",
             "POST body 必须由受控 NIM 状态机重新构建，不能直接复用 preview bodyDraft",
-            "创建后 readiness 只能只读轮询，不生成、不保存、不展示真实 API Key",
+            "创建后 readiness 只能只读轮询，且必须由受控 readiness executor 返回 READY 报告",
+            "readiness executor 报告不得生成、保存、展示或携带真实 API Key",
             "nim_create 代码级 release 开关必须显式打开"
         );
     }
@@ -468,6 +540,27 @@ final class NimCreateStateMachineSupport {
         return hasDeploymentRead && hasNimHealthRead;
     }
 
+    private static boolean reportHasBlockingState(Map<String, Object> report) {
+        if (!listOfMaps(report.get("blockedBy")).isEmpty()) {
+            return true;
+        }
+        return List.of("BLOCKED", "REJECTED", "TIMEOUT").contains(text(report.get("state")));
+    }
+
+    private static List<Map<String, Object>> listOfMaps(Object value) {
+        if (!(value instanceof List<?> list)) {
+            return List.of();
+        }
+        List<Map<String, Object>> items = new ArrayList<>();
+        for (Object item : list) {
+            Map<String, Object> map = objectMap(item);
+            if (!map.isEmpty()) {
+                items.add(map);
+            }
+        }
+        return items;
+    }
+
     private static boolean containsForbiddenSecretMaterial(Map<String, Object> map) {
         for (Map.Entry<String, Object> entry : map.entrySet()) {
             String normalizedKey = entry.getKey() == null
@@ -477,6 +570,9 @@ final class NimCreateStateMachineSupport {
                 return true;
             }
             Object value = entry.getValue();
+            if (value instanceof String textValue && looksLikeSecretValue(textValue)) {
+                return true;
+            }
             if (value instanceof Map<?, ?> nested && containsForbiddenSecretMaterial(objectMap(nested))) {
                 return true;
             }
@@ -485,10 +581,28 @@ final class NimCreateStateMachineSupport {
                     if (item instanceof Map<?, ?> nestedItem && containsForbiddenSecretMaterial(objectMap(nestedItem))) {
                         return true;
                     }
+                    if (item instanceof String textItem && looksLikeSecretValue(textItem)) {
+                        return true;
+                    }
                 }
             }
         }
         return false;
+    }
+
+    private static boolean looksLikeSecretValue(String value) {
+        String trimmed = value.trim();
+        if (NimCreateReadinessExecutorSupport.API_KEY_PLACEHOLDER.equals(trimmed)) {
+            return false;
+        }
+        if (trimmed.startsWith("Bearer ") && trimmed.length() > "Bearer ".length()) {
+            return true;
+        }
+        return trimmed.matches("sk-[A-Za-z0-9]{20,}")
+            || trimmed.matches("AKIA[0-9A-Z]{16}")
+            || trimmed.matches("AIza[0-9A-Za-z_-]{35}")
+            || trimmed.matches("ghp_[A-Za-z0-9]{36}")
+            || trimmed.matches("xox[baprs]-[A-Za-z0-9-]{10,}");
     }
 
     private static Map<String, Object> blocker(String code, String message, String source) {
@@ -528,9 +642,33 @@ final class NimCreateStateMachineSupport {
         Map<String, Object> auditContext,
         Map<String, Object> auditReceipt,
         Map<String, Object> readinessPlan,
+        Map<String, Object> readinessExecutionReport,
         String writeBodyProvenance,
         boolean nimCreateReleased
     ) {
+        ReadinessRequest(Map<String, Object> params,
+                         Map<String, Object> creationGate,
+                         Map<String, Object> deploymentBodyPreview,
+                         HitlConfirmation hitlConfirmation,
+                         Map<String, Object> auditContext,
+                         Map<String, Object> auditReceipt,
+                         Map<String, Object> readinessPlan,
+                         String writeBodyProvenance,
+                         boolean nimCreateReleased) {
+            this(
+                params,
+                creationGate,
+                deploymentBodyPreview,
+                hitlConfirmation,
+                auditContext,
+                auditReceipt,
+                readinessPlan,
+                Map.of(),
+                writeBodyProvenance,
+                nimCreateReleased
+            );
+        }
+
         ReadinessRequest {
             params = params == null ? Map.of() : objectMap(params);
             creationGate = creationGate == null ? Map.of() : objectMap(creationGate);
@@ -538,6 +676,7 @@ final class NimCreateStateMachineSupport {
             auditContext = auditContext == null ? Map.of() : objectMap(auditContext);
             auditReceipt = auditReceipt == null ? Map.of() : objectMap(auditReceipt);
             readinessPlan = readinessPlan == null ? Map.of() : objectMap(readinessPlan);
+            readinessExecutionReport = readinessExecutionReport == null ? Map.of() : objectMap(readinessExecutionReport);
             writeBodyProvenance = writeBodyProvenance == null ? "" : writeBodyProvenance.trim();
         }
 
@@ -547,6 +686,7 @@ final class NimCreateStateMachineSupport {
                 Map.of(),
                 Map.of(),
                 null,
+                Map.of(),
                 Map.of(),
                 Map.of(),
                 Map.of(),

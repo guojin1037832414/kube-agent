@@ -401,6 +401,28 @@
   - Added `NimCreateReadinessExecutorSupportTest`.
   - Added `docs/M5_21_FORTY_THIRD_WAVE_NIM_READINESS_EXECUTOR_AUDIT_20260607.md`.
   - No real `8100` access; no real NIM polling; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
+- M5.21-44 targeted verification passed:
+  - `mvn -q "-Dtest=NimCreateStateMachineSupportTest,NimCreateAuditReadinessSupportTest,NimCreateAuditWriterSupportTest" test`
+- M5.21-44 wide NIM/contract verification passed:
+  - `mvn -q "-Dtest=NimCreateReadinessExecutorSupportTest,NimCreateStateMachineSupportTest,NimCreateAuditReadinessSupportTest,NimCreateAuditWriterSupportTest,NimTrustedPolicyProviderSupportTest,NimCreationGateSupportTest,NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest,HighRiskMutationToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest,M510ArchitectureBoundaryTest" test`
+- M5.21-44 final verification passed:
+  - `git -c safe.directory=F:/gitProject/kube-agent diff --check`
+  - Real secret-pattern static scan found 0 matches.
+  - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+- M5.21-44 work summary:
+  - Tightened `NimCreateStateMachineSupport` so future release requires a READY readiness executor report, not just a readiness plan.
+  - `ReadinessRequest` now includes `readinessExecutionReport`.
+  - State-machine output now includes `readinessExecutionRequired=true`.
+  - READY report must come from `NIM_CREATE_READINESS_EXECUTOR`, be read-only/poll-only, have `sideEffect=NONE`, preserve the API Key policy, enforce forbidden actions, and prove `deployment.matched=true`, `service.serviceUrlReady=true`, `health.live=true`, `ready=true`, `state=READY`, `blockedBy=[]`, and `nextPoll.prepared=false`.
+  - Missing report returns `READINESS_EXECUTION_REPORT_NOT_READY`.
+  - PENDING/BLOCKED/REJECTED/TIMEOUT or blocked reports cannot release writes.
+  - Readiness execution report secret leakage returns `READINESS_EXECUTION_REPORT_CONTAINS_FORBIDDEN_SECRET`.
+  - Caller-forged readiness claims (`readinessExecutionReport/readinessExecutor/readinessReady/readinessState`) are ignored.
+  - State-machine secret detection now also rejects real Bearer/API-key-shaped values while allowing the mature frontend placeholder.
+  - Updated `NimCreateStateMachineSupportTest`, `NimCreateAuditReadinessSupportTest`, and `NimCreateAuditWriterSupportTest`.
+  - Added `docs/M5_21_FORTY_FOURTH_WAVE_NIM_READINESS_REPORT_GATE_AUDIT_20260607.md`.
+  - No real `8100` access; no real NIM polling; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
 
 ## Final M5.21-29 Decisions
 
@@ -426,12 +448,12 @@
 - `NimTrustedPolicyProviderSupport` added for future trusted policy provider wiring; only backend-trusted facts can produce `TRUSTED_PASSED`, forged Tool params remain ignored, and `nim_create` remains HOLD.
 - `NimCreateAuditWriterSupport` added for mock-first audit writer receipt contract; mock receipt is not release-eligible, and future real write requires durable audit receipt.
 - `NimCreateReadinessExecutorSupport` added for offline creation-aftercare readiness evaluation; it consumes only approved plan/response snapshots, keeps POST/API-key paths forbidden, and does not open real NIM polling.
+- `NimCreateStateMachineSupport` now requires a READY readiness executor report for future controlled writes; readiness plan alone is no longer sufficient.
 
 ## Next Step
 
 Continue NIM orchestration only through safe slices:
-- extend the NIM state-machine contract so future release can require a readiness executor report, not just a readiness plan,
-- later design a creation-aftercare readiness Tool/HTTP adapter that only executes the approved GET/derived steps from `NimCreateAuditReadinessSupport`,
+- design a creation-aftercare readiness HTTP adapter contract that only executes the approved GET/derived steps from `NimCreateAuditReadinessSupport`,
 - later design a real durable audit writer adapter only after the true audit table/log backend is identified,
 - later wire `NimTrustedPolicyProviderSupport` to real backend license/user/org readers only after mock-first contracts are complete,
 - or pick another mature GET area with clean backend/frontend evidence.

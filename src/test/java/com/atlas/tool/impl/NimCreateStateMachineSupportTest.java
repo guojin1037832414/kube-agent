@@ -45,6 +45,7 @@ class NimCreateStateMachineSupportTest {
         assertHasBlocker(blockers, "AUDIT_CONTEXT_NOT_READY");
         assertHasBlocker(blockers, "AUDIT_RECEIPT_NOT_READY");
         assertHasBlocker(blockers, "READINESS_PLAN_NOT_READY");
+        assertHasBlocker(blockers, "READINESS_EXECUTION_REPORT_NOT_READY");
         assertHasBlocker(blockers, "WRITE_BODY_PROVENANCE_NOT_TRUSTED");
     }
 
@@ -72,6 +73,7 @@ class NimCreateStateMachineSupportTest {
             completeAuditContext(),
             completeAuditReceipt(),
             completeReadinessPlan(),
+            completeReadinessExecutionReport(),
             NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
             true
         ));
@@ -111,6 +113,7 @@ class NimCreateStateMachineSupportTest {
             completeAuditContext(),
             completeAuditReceipt(),
             completeReadinessPlan(),
+            completeReadinessExecutionReport(),
             NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
             true
         ));
@@ -135,6 +138,7 @@ class NimCreateStateMachineSupportTest {
             completeAuditContext(),
             completeAuditReceipt(),
             completeReadinessPlan(),
+            completeReadinessExecutionReport(),
             "PREVIEW_BODY_DIRECT_REUSE",
             true
         ));
@@ -156,6 +160,7 @@ class NimCreateStateMachineSupportTest {
             completeAuditContext(),
             completeAuditReceipt(),
             completeReadinessPlan(),
+            completeReadinessExecutionReport(),
             NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
             true
         ));
@@ -181,6 +186,7 @@ class NimCreateStateMachineSupportTest {
             audit,
             completeAuditReceipt(),
             readiness,
+            completeReadinessExecutionReport(),
             NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
             true
         ));
@@ -202,6 +208,7 @@ class NimCreateStateMachineSupportTest {
             completeAuditContext(),
             completeAuditReceipt(),
             completeReadinessPlan(),
+            completeReadinessExecutionReport(),
             NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
             true
         ));
@@ -226,6 +233,7 @@ class NimCreateStateMachineSupportTest {
             audit,
             mockReceipt,
             completeReadinessPlan(),
+            completeReadinessExecutionReport(),
             NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
             true
         ));
@@ -245,6 +253,7 @@ class NimCreateStateMachineSupportTest {
             audit,
             mismatchedReceipt,
             completeReadinessPlan(),
+            completeReadinessExecutionReport(),
             NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
             true
         ));
@@ -253,6 +262,69 @@ class NimCreateStateMachineSupportTest {
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> mismatchedBlockers = (List<Map<String, Object>>) mismatchedGuard.get("blockedBy");
         assertHasBlocker(mismatchedBlockers, "AUDIT_RECEIPT_NOT_DURABLE");
+    }
+
+    @Test
+    void stateMachine_shouldRequireReadyReadinessExecutionReportForFutureWrite() {
+        Map<String, Object> pendingReport = new java.util.LinkedHashMap<>(completeReadinessExecutionReport());
+        pendingReport.put("state", "PENDING");
+        pendingReport.put("ready", false);
+        pendingReport.put("pendingBy", List.of(Map.of("code", "NIM_HEALTH_NOT_LIVE")));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> health = (Map<String, Object>) pendingReport.get("health");
+        health.put("state", "PENDING_NOT_LIVE");
+        health.put("live", false);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> nextPoll = (Map<String, Object>) pendingReport.get("nextPoll");
+        nextPoll.put("prepared", true);
+
+        Map<String, Object> guard = NimCreateStateMachineSupport.evaluate(new NimCreateStateMachineSupport.ReadinessRequest(
+            Map.of("name", "nim-pending-readiness"),
+            openGate(),
+            completePreview(),
+            HitlConfirmation.human("thread-1", "nim_create"),
+            completeAuditContext(),
+            completeAuditReceipt(),
+            completeReadinessPlan(),
+            pendingReport,
+            NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
+            true
+        ));
+
+        assertEquals("HELD", guard.get("state"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) guard.get("blockedBy");
+        assertHasBlocker(blockers, "READINESS_EXECUTION_REPORT_CONTRACT_INVALID");
+        assertHasBlocker(blockers, "READINESS_EXECUTION_REPORT_NOT_READY");
+    }
+
+    @Test
+    void stateMachine_shouldRejectReadinessExecutionReportWithSecretsOrBlockingState() {
+        Map<String, Object> rejectedReport = new java.util.LinkedHashMap<>(completeReadinessExecutionReport());
+        rejectedReport.put("state", "REJECTED");
+        rejectedReport.put("ready", false);
+        rejectedReport.put("Authorization", "Bearer real-key-material");
+        rejectedReport.put("blockedBy", List.of(Map.of("code", "READINESS_CONTAINS_FORBIDDEN_SECRET")));
+
+        Map<String, Object> guard = NimCreateStateMachineSupport.evaluate(new NimCreateStateMachineSupport.ReadinessRequest(
+            Map.of("name", "nim-secret-readiness"),
+            openGate(),
+            completePreview(),
+            HitlConfirmation.human("thread-1", "nim_create"),
+            completeAuditContext(),
+            completeAuditReceipt(),
+            completeReadinessPlan(),
+            rejectedReport,
+            NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
+            true
+        ));
+
+        assertEquals("HELD", guard.get("state"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) guard.get("blockedBy");
+        assertHasBlocker(blockers, "READINESS_EXECUTION_REPORT_NOT_READY");
+        assertHasBlocker(blockers, "READINESS_EXECUTION_REPORT_BLOCKED");
+        assertHasBlocker(blockers, "READINESS_EXECUTION_REPORT_CONTAINS_FORBIDDEN_SECRET");
     }
 
     private Map<String, Object> openGate() {
@@ -335,6 +407,50 @@ class NimCreateStateMachineSupportTest {
                 Map.of("target", "nim-health", "method", "GET", "endpoint", "{nimApiBasePath}/v1/health/live"),
                 Map.of("target", "nim-models", "method", "GET", "endpoint", "{nimApiBasePath}/v1/models")
             )
+        );
+    }
+
+    private Map<String, Object> completeReadinessExecutionReport() {
+        return Map.ofEntries(
+            entry("readinessExecutor", NimCreateReadinessExecutorSupport.EXECUTOR_NAME),
+            entry("executionMode", "OFFLINE_CONTRACT_EVALUATION"),
+            entry("sideEffect", "NONE"),
+            entry("readOnly", true),
+            entry("pollOnly", true),
+            entry("apiKeyHandling", NimCreateStateMachineSupport.API_KEY_POLICY),
+            entry("apiKeyPlaceholderOnly", true),
+            entry("apiKeyPlaceholder", NimCreateReadinessExecutorSupport.API_KEY_PLACEHOLDER),
+            entry("state", "READY"),
+            entry("ready", true),
+            entry("deployment", new java.util.LinkedHashMap<>(Map.of(
+                "state", "MATCHED",
+                "matched", true,
+                "matchCount", 1
+            ))),
+            entry("service", new java.util.LinkedHashMap<>(Map.of(
+                "state", "SERVICE_URL_READY",
+                "serviceUrlReady", true,
+                "entranceSource", "http",
+                "nimApiBasePath", "/nim"
+            ))),
+            entry("health", new java.util.LinkedHashMap<>(Map.of(
+                "state", "LIVE",
+                "live", true
+            ))),
+            entry("models", Map.of(
+                "state", "MODEL_FOUND",
+                "modelName", "llama"
+            )),
+            entry("blockedBy", List.of()),
+            entry("pendingBy", List.of()),
+            entry("nextPoll", new java.util.LinkedHashMap<>(Map.of(
+                "prepared", false,
+                "pollOnly", true,
+                "afterSeconds", 0,
+                "nextAttempt", 3,
+                "maxAttempts", 120
+            ))),
+            entry("forbiddenActionsEnforced", true)
         );
     }
 

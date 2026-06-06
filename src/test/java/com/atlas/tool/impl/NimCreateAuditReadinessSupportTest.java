@@ -66,6 +66,7 @@ class NimCreateAuditReadinessSupportTest {
             audit,
             durableAuditReceipt(audit),
             readiness,
+            readinessExecutionReport(),
             NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
             true
         ));
@@ -133,6 +134,7 @@ class NimCreateAuditReadinessSupportTest {
             audit,
             durableAuditReceipt(audit),
             readiness,
+            readinessExecutionReport(),
             NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
             true
         ));
@@ -225,6 +227,29 @@ class NimCreateAuditReadinessSupportTest {
             entry("organizationId", audit.get("organizationId")),
             entry("targetTool", audit.get("targetTool")),
             entry("writeBodyProvenance", audit.get("writeBodyProvenance"))
+        );
+    }
+
+    private Map<String, Object> readinessExecutionReport() {
+        return Map.ofEntries(
+            entry("readinessExecutor", NimCreateReadinessExecutorSupport.EXECUTOR_NAME),
+            entry("executionMode", "OFFLINE_CONTRACT_EVALUATION"),
+            entry("sideEffect", "NONE"),
+            entry("readOnly", true),
+            entry("pollOnly", true),
+            entry("apiKeyHandling", NimCreateStateMachineSupport.API_KEY_POLICY),
+            entry("apiKeyPlaceholderOnly", true),
+            entry("apiKeyPlaceholder", NimCreateReadinessExecutorSupport.API_KEY_PLACEHOLDER),
+            entry("state", "READY"),
+            entry("ready", true),
+            entry("deployment", Map.of("state", "MATCHED", "matched", true, "matchCount", 1)),
+            entry("service", Map.of("state", "SERVICE_URL_READY", "serviceUrlReady", true, "entranceSource", "http", "nimApiBasePath", "/nim")),
+            entry("health", Map.of("state", "LIVE", "live", true)),
+            entry("models", Map.of("state", "MODEL_FOUND", "modelName", "llama")),
+            entry("blockedBy", List.of()),
+            entry("pendingBy", List.of()),
+            entry("nextPoll", Map.of("prepared", false, "pollOnly", true, "afterSeconds", 0, "nextAttempt", 1, "maxAttempts", 120)),
+            entry("forbiddenActionsEnforced", true)
         );
     }
 }

@@ -7,6 +7,33 @@
 ---
 
 
+## [M5.21-44] - 第四十四批 NIM readiness 执行报告门禁审计
+
+**交付**: 加严 `NimCreateStateMachineSupport`，未来 `nim_create` 真实写入不再只要求 readiness plan，还必须要求受控 `NimCreateReadinessExecutorSupport` 返回 READY 执行报告；本批仍不开放真实创建。
+
+**变更**
+- `NimCreateStateMachineSupport.ReadinessRequest` 新增 `readinessExecutionReport`。
+- 状态机输出新增 `readinessExecutionRequired=true`。
+- 新增 `validateReadinessExecutionReport(...)`，要求 report 声明:
+  - `readinessExecutor=NIM_CREATE_READINESS_EXECUTOR`
+  - `sideEffect=NONE`
+  - `readOnly=true`
+  - `pollOnly=true`
+  - `apiKeyHandling=NEVER_GENERATE_STORE_OR_DISPLAY`
+  - `apiKeyPlaceholderOnly=true`
+  - `forbiddenActionsEnforced=true`
+- READY report 必须满足 `ready=true`、`state=READY`、`blockedBy=[]`、`deployment.matched=true`、`service.serviceUrlReady=true`、`health.live=true`、`nextPoll.prepared=false`。
+- PENDING/BLOCKED/REJECTED/TIMEOUT report 或含 `blockedBy` 的 report 不能用于写入放行。
+- 状态机现在拒绝 readiness execution report 中的真实 Bearer/API Key/secret-shaped 值，同时允许成熟前端占位 API Key 文本。
+- ignored caller claims 扩展覆盖 `readinessExecutionReport/readinessExecutor/readinessReady/readinessState`。
+- 更新 `NimCreateStateMachineSupportTest`、`NimCreateAuditReadinessSupportTest`、`NimCreateAuditWriterSupportTest`。
+- 新增 `docs/M5_21_FORTY_FOURTH_WAVE_NIM_READINESS_REPORT_GATE_AUDIT_20260607.md`，并更新 M5.21 波次索引和项目记忆。
+
+**安全**
+- 本批不新增 Tool/Controller，不发真实 HTTP，不访问真实 `8100`，不调用 `POST /api/{orgId}/deployment`。
+- readiness plan 不是观测结果；未来放行必须看到受控 readiness executor READY report。
+- `nim_create` 继续保持 `httpMethod=NONE + PLACEHOLDER + requiresConfirmation=true`。
+
 ## [M5.21-43] - 第四十三批 NIM readiness 只读执行器契约审计
 
 **交付**: 新增 `NimCreateReadinessExecutorSupport`，把 M5.21-40 的 readiness plan 转换为可离线评估的只读执行器契约；本批只消费 mock/离线响应快照，不注册 Tool，不发 HTTP，不访问真实 `8100` 或 NIM 服务。
