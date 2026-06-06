@@ -6,6 +6,26 @@
 
 ---
 
+## [M5.21-47] - 第四十七批 NIM 受控 POST request spec 适配器审计
+
+**交付**: 新增 `NimCreateWriteRequestSpecAdapterSupport`，把未来 `nim_create` 真实 POST 前的 HTTP 请求规格独立合同化；本批仍不执行真实网络写入。
+
+**变更**
+- 新增 `NimCreateWriteRequestSpecAdapterSupport`，纯函数消费 `creationGate`、`auditContext`、`auditReceipt`、`writeBodyRebuildReport`。
+- `compile(...)` 输出 `writeRequestSpecAdapter=NIM_CREATE_WRITE_REQUEST_SPEC_ADAPTER`、`executionMode=POST_REQUEST_SPEC_CONTRACT_ONLY`、`networkAccess=NOT_PERFORMED`、`sideEffect=NONE`、`writeRequestPrepared`、`requestSpec`、`requestSpecDigest` 和 `blockedBy`。
+- request spec 固定为未来 `POST /api/{orgId}/deployment` 形态，但 `sideEffect=NONE`，并要求 `bodySource=CONTROLLED_REBUILDER_BODY_COPY`、`callerHeadersAllowed=false`、`authorizationHeaderFromCallerAllowed=false`、`realApiKeyAllowed=false`。
+- `NimCreateStateMachineSupport.ReadinessRequest` 新增 `writeRequestSpecReport`。
+- 状态机输出新增 `writeRequestSpecRequired=true`。
+- 缺少 request spec 报告返回 `WRITE_REQUEST_SPEC_REPORT_NOT_READY`；合约不合法、digest/body/receipt/audit identity 不匹配返回 `WRITE_REQUEST_SPEC_REPORT_CONTRACT_INVALID`；secret 泄漏返回 `WRITE_REQUEST_SPEC_REPORT_CONTAINS_FORBIDDEN_SECRET`。
+- 状态机会复算 `requestSpecDigest`，并确认 request body 与 rebuilder body 完全一致。
+- 新增 `NimCreateWriteRequestSpecAdapterSupportTest`，并更新状态机、body rebuilder、audit readiness 的未来绿色 fixture。
+- 新增 `docs/M5_21_FORTY_SEVENTH_WAVE_NIM_WRITE_REQUEST_SPEC_ADAPTER_AUDIT_20260607.md`，并更新 M5.21 波次索引和项目记忆。
+
+**安全**
+- 本批不新增 Tool/Controller，不持有 HTTP client，不访问真实 `8100`，不调用 `POST /api/{orgId}/deployment`。
+- request spec 报告不是 release credential，不能替代 trusted policy、HITL、durable audit receipt、READY readiness executor 或 release switch。
+- `nim_create` 继续保持 `httpMethod=NONE + PLACEHOLDER + requiresConfirmation=true`。
+
 ## [M5.21-46] - 第四十六批 NIM 受控写入 body 重建契约审计
 
 **交付**: 新增 `NimCreateWriteBodyRebuilderSupport`，把未来 `nim_create` 真实 POST 前的 DeploymentDTO 从“provenance 字符串”升级为可检查的受控 body 重建报告；本批仍不开放真实创建。

@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-46, NIM controlled write body rebuilder contract.
+- Current latest wave: M5.21-47, NIM controlled POST request spec adapter contract.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -46,6 +46,30 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-47 NIM controlled POST request spec adapter contract is implemented and verified:
+  - Added `NimCreateWriteRequestSpecAdapterSupport`.
+  - It is a pure/mock-first adapter that consumes `creationGate`, `auditContext`, `auditReceipt`, and `writeBodyRebuildReport`.
+  - It outputs `writeRequestSpecAdapter=NIM_CREATE_WRITE_REQUEST_SPEC_ADAPTER`, `executionMode=POST_REQUEST_SPEC_CONTRACT_ONLY`, `networkAccess=NOT_PERFORMED`, `sideEffect=NONE`, `writeRequestPrepared`, `requestSpec`, `requestSpecDigest`, and `blockedBy`.
+  - Request spec is fixed to future `POST /api/{orgId}/deployment` shape, but no HTTP client is held and no network request is performed.
+  - Caller headers, Authorization, real API keys, token/password/secret, query payloads, and body mutation are forbidden.
+  - `NimCreateStateMachineSupport.ReadinessRequest` now includes `writeRequestSpecReport`.
+  - State-machine output now includes `writeRequestSpecRequired=true`.
+  - New blockers:
+    - `WRITE_REQUEST_SPEC_REPORT_NOT_READY`
+    - `WRITE_REQUEST_SPEC_REPORT_CONTRACT_INVALID`
+    - `WRITE_REQUEST_SPEC_REPORT_CONTAINS_FORBIDDEN_SECRET`
+  - State machine recomputes `requestSpecDigest` and verifies request body equals the rebuilder body.
+  - Added `NimCreateWriteRequestSpecAdapterSupportTest`.
+  - Added `docs/M5_21_FORTY_SEVENTH_WAVE_NIM_WRITE_REQUEST_SPEC_ADAPTER_AUDIT_20260607.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateWriteRequestSpecAdapterSupportTest,NimCreateStateMachineSupportTest,NimCreateWriteBodyRebuilderSupportTest,NimCreateAuditReadinessSupportTest,NimCreateAuditWriterSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateWriteRequestSpecAdapterSupportTest,NimCreateWriteBodyRebuilderSupportTest,NimCreateReadinessHttpAdapterSupportTest,NimCreateReadinessExecutorSupportTest,NimCreateStateMachineSupportTest,NimCreateAuditReadinessSupportTest,NimCreateAuditWriterSupportTest,NimTrustedPolicyProviderSupportTest,NimCreationGateSupportTest,NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest,HighRiskMutationToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest,M510ArchitectureBoundaryTest" test`
+    - `git -c safe.directory=F:/gitProject/kube-agent diff --check`
+    - Real secret-pattern static scan found 0 matches.
+    - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+  - No real `8100` access; no real audit table write; no real NIM polling; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
 
 - M5.21-38 NIM trusted policy snapshot is implemented and verified:
   - Added `NimTrustedPolicySnapshot`.

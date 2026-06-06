@@ -30,6 +30,7 @@ class NimCreateAuditReadinessSupportTest {
         Map<String, Object> readiness = NimCreateAuditReadinessSupport.buildReadinessPlan(input);
         Map<String, Object> receipt = durableAuditReceipt(audit);
         Map<String, Object> bodyReport = writeBodyRebuildReport(gate, preview, audit, receipt);
+        Map<String, Object> requestSpecReport = writeRequestSpecReport(gate, audit, receipt, bodyReport);
 
         assertEquals(true, audit.get("auditPrepared"));
         assertEquals("NIM_CREATE_REQUEST", audit.get("auditEventType"));
@@ -68,6 +69,7 @@ class NimCreateAuditReadinessSupportTest {
             audit,
             receipt,
             bodyReport,
+            requestSpecReport,
             readiness,
             readinessExecutionReport(),
             NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
@@ -243,6 +245,20 @@ class NimCreateAuditReadinessSupportTest {
                 preview,
                 audit,
                 receipt
+            )
+        );
+    }
+
+    private Map<String, Object> writeRequestSpecReport(Map<String, Object> gate,
+                                                       Map<String, Object> audit,
+                                                       Map<String, Object> receipt,
+                                                       Map<String, Object> bodyReport) {
+        return NimCreateWriteRequestSpecAdapterSupport.compile(
+            new NimCreateWriteRequestSpecAdapterSupport.WriteRequestSpecInput(
+                gate,
+                audit,
+                receipt,
+                bodyReport
             )
         );
     }

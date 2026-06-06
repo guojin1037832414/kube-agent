@@ -94,3 +94,22 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - WSL Mirrored模式: `localhost:8100` 直连Windows主机
 - 检查状态: `curl http://localhost:8100/api/login -X POST ...`
 - CLOSE_WAIT风暴 = 后端线程池耗尽，不是网络问题
+
+---
+
+## NIM 写链路安全门学习笔记
+
+`nim_create` 当前仍然保持 `httpMethod=NONE + PLACEHOLDER + requiresConfirmation=true`，不得在审计波次中直接访问真实 kube-manager `8100` 或执行 `POST /api/{orgId}/deployment`。
+
+未来真正开放 NIM 创建前，至少需要连续满足这些服务端可信关卡：
+
+- trusted policy provider 读取真实 license、角色和组织事实，且不能相信 Tool 入参里的自报权限。
+- creation gate 进入 `READY_FOR_SERVER_CONFIRMED_WRITE`，并明确禁止 preflight preview 或 fallback Tool 直通写入。
+- HITLController 注入 target 精确为 `nim_create` 的服务端确认，调用方参数里的 `confirmed=true` 不可信。
+- audit context 先被 durable audit writer 持久化，并返回 `DURABLE_RECORDED + DURABLE_AUDIT_LOG` receipt。
+- write body rebuilder 只能从已审计 NIM 状态重建白名单 DeploymentDTO，不得复用 preview body 引用。
+- POST request spec adapter 只能从 body rebuild report 编译 `POST /api/{orgId}/deployment` 规格，且 `sideEffect=NONE`、无调用方 header、无 Authorization、无真实 NGC/NIM API Key。
+- readiness executor 必须只读轮询并返回 READY，不能在 readiness 阶段调用 chat/embedding 写接口。
+- 最后还需要代码级 release switch 显式打开，才能考虑接入真实 durable write executor。
+
+这条链路的教学重点是：顶级 Agent 不靠“相信中间对象已经安全”来放行，而是把每一段证据都变成可测试、可复算、可审计的契约。

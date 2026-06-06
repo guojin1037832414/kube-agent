@@ -81,9 +81,59 @@ Current track:
 
 Recently completed:
 
-`M5.21-46 NIM controlled write body rebuilder contract`
+`M5.21-47 NIM controlled POST request spec adapter contract`
 
 Latest checkpoint:
+
+- Date: 2026-06-07 05:10 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-47 implemented and verified:
+  - Added `NimCreateWriteRequestSpecAdapterSupport` as a pure/mock-first POST request spec adapter contract.
+  - It consumes:
+    - `creationGate`
+    - `auditContext`
+    - `auditReceipt`
+    - `writeBodyRebuildReport`
+  - It returns:
+    - `writeRequestSpecAdapter=NIM_CREATE_WRITE_REQUEST_SPEC_ADAPTER`
+    - `executionMode=POST_REQUEST_SPEC_CONTRACT_ONLY`
+    - `networkAccess=NOT_PERFORMED`
+    - `sideEffect=NONE`
+    - `writeRequestPrepared`
+    - `backendEndpoint=POST /api/{orgId}/deployment`
+    - `pathTemplate=/api/{orgId}/deployment`
+    - `clientBoundary=KUBE_MANAGER_HTTP_GATEWAY`
+    - `callerHeadersAllowed=false`
+    - `authorizationHeaderFromCallerAllowed=false`
+    - `realApiKeyAllowed=false`
+    - `bodySource=CONTROLLED_REBUILDER_BODY_COPY`
+    - `bodyCopiedByValue=true`
+    - `bodyMutationAllowed=false`
+    - `requestSpec`
+    - `requestSpecDigest`
+    - `blockedBy`.
+  - Request spec is fixed to future `POST /api/{orgId}/deployment` shape but performs no network access and reports `sideEffect=NONE`.
+  - Request spec requires a durable-audit-bound body rebuild report, forbids caller headers/API keys, and keeps kube-manager auth inside the future HTTP client context.
+  - `NimCreateStateMachineSupport.ReadinessRequest` now includes `writeRequestSpecReport`.
+  - State-machine output now includes `writeRequestSpecRequired=true`.
+  - Missing report returns `WRITE_REQUEST_SPEC_REPORT_NOT_READY`.
+  - Invalid or body/digest/audit-receipt-mismatched report returns `WRITE_REQUEST_SPEC_REPORT_CONTRACT_INVALID`.
+  - Secret leakage in the report returns `WRITE_REQUEST_SPEC_REPORT_CONTAINS_FORBIDDEN_SECRET`.
+  - State machine recomputes `requestSpecDigest` and verifies request body equals the rebuilder body.
+  - Added `NimCreateWriteRequestSpecAdapterSupportTest`.
+  - Added `docs/M5_21_FORTY_SEVENTH_WAVE_NIM_WRITE_REQUEST_SPEC_ADAPTER_AUDIT_20260607.md`.
+  - Multi-expert review notes:
+    - Architecture: future write execution must not jump from rebuilt body directly to HTTP client; request spec is its own audited gate.
+    - Security: request spec output is not a release credential and cannot replace trusted policy, HITL, durable audit receipt, READY readiness executor, or release switch.
+    - Test: future green state-machine fixtures must carry both rebuilder report and request spec report.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateWriteRequestSpecAdapterSupportTest,NimCreateStateMachineSupportTest,NimCreateWriteBodyRebuilderSupportTest,NimCreateAuditReadinessSupportTest,NimCreateAuditWriterSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateWriteRequestSpecAdapterSupportTest,NimCreateWriteBodyRebuilderSupportTest,NimCreateReadinessHttpAdapterSupportTest,NimCreateReadinessExecutorSupportTest,NimCreateStateMachineSupportTest,NimCreateAuditReadinessSupportTest,NimCreateAuditWriterSupportTest,NimTrustedPolicyProviderSupportTest,NimCreationGateSupportTest,NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest,HighRiskMutationToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest,M510ArchitectureBoundaryTest" test`
+    - `git -c safe.directory=F:/gitProject/kube-agent diff --check`
+    - Real secret-pattern static scan found 0 matches.
+    - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+  - No real `8100` access; no real audit table write; no real NIM polling; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
 
 - Date: 2026-06-07 04:45 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.

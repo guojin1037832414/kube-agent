@@ -202,6 +202,8 @@ class NimCreateStateMachineSupportTest {
     void stateMachine_shouldPermitOnlyWhenEveryFuturePrerequisiteIsPresent() {
         Map<String, Object> audit = completeAuditContext();
         Map<String, Object> receipt = completeAuditReceipt();
+        Map<String, Object> bodyReport = completeWriteBodyRebuildReport(audit, receipt);
+        Map<String, Object> requestSpecReport = completeWriteRequestSpecReport(audit, receipt, bodyReport);
         Map<String, Object> guard = NimCreateStateMachineSupport.evaluate(new NimCreateStateMachineSupport.ReadinessRequest(
             Map.of("name", "nim-ready"),
             openGate(),
@@ -209,7 +211,8 @@ class NimCreateStateMachineSupportTest {
             HitlConfirmation.human("thread-1", "nim_create"),
             audit,
             receipt,
-            completeWriteBodyRebuildReport(audit, receipt),
+            bodyReport,
+            requestSpecReport,
             completeReadinessPlan(),
             completeReadinessExecutionReport(),
             NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
@@ -405,6 +408,19 @@ class NimCreateStateMachineSupportTest {
                 completePreview(),
                 audit,
                 receipt
+            )
+        );
+    }
+
+    private Map<String, Object> completeWriteRequestSpecReport(Map<String, Object> audit,
+                                                               Map<String, Object> receipt,
+                                                               Map<String, Object> bodyReport) {
+        return NimCreateWriteRequestSpecAdapterSupport.compile(
+            new NimCreateWriteRequestSpecAdapterSupport.WriteRequestSpecInput(
+                openGate(),
+                audit,
+                receipt,
+                bodyReport
             )
         );
     }

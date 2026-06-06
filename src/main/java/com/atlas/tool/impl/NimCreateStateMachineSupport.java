@@ -2,11 +2,16 @@ package com.atlas.tool.impl;
 
 import com.atlas.hitl.HitlConfirmation;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 /**
  * NIM 创建写入状态机守卫。
@@ -47,7 +52,10 @@ final class NimCreateStateMachineSupport {
         "nvaieapikey",
         "token",
         "secret",
-        "password"
+        "password",
+        "authorization",
+        "authheader",
+        "bearertoken"
     );
 
     private NimCreateStateMachineSupport() {
@@ -59,6 +67,7 @@ final class NimCreateStateMachineSupport {
             Map.of(),
             Map.of(),
             null,
+            Map.of(),
             Map.of(),
             Map.of(),
             Map.of(),
@@ -91,6 +100,13 @@ final class NimCreateStateMachineSupport {
             safeRequest.writeBodyRebuildReport(),
             blockers
         );
+        validateWriteRequestSpecReport(
+            safeRequest.auditContext(),
+            safeRequest.auditReceipt(),
+            safeRequest.writeBodyRebuildReport(),
+            safeRequest.writeRequestSpecReport(),
+            blockers
+        );
         validateReadinessPlan(safeRequest.readinessPlan(), blockers);
         validateReadinessExecutionReport(safeRequest.readinessExecutionReport(), blockers);
         validateWriteBodyProvenance(safeRequest.writeBodyProvenance(), blockers);
@@ -110,6 +126,7 @@ final class NimCreateStateMachineSupport {
         result.put("directPreviewReuseAllowed", false);
         result.put("fallbackWriteAllowed", false);
         result.put("writeBodyRebuildRequired", true);
+        result.put("writeRequestSpecRequired", true);
         result.put("readinessExecutionRequired", true);
         result.put("apiKeyPolicy", API_KEY_POLICY);
         return result;
@@ -438,6 +455,70 @@ final class NimCreateStateMachineSupport {
         }
     }
 
+    private static void validateWriteRequestSpecReport(Map<String, Object> auditContext,
+                                                       Map<String, Object> auditReceipt,
+                                                       Map<String, Object> writeBodyRebuildReport,
+                                                       Map<String, Object> writeRequestSpecReport,
+                                                       List<Map<String, Object>> blockers) {
+        if (writeRequestSpecReport.isEmpty()) {
+            blockers.add(blocker(
+                "WRITE_REQUEST_SPEC_REPORT_NOT_READY",
+                "缺少受控 POST request spec 报告；未来真实写入不能从 body 重建报告直接跳到 HTTP client。",
+                "write-request-spec"
+            ));
+            return;
+        }
+
+        Map<String, Object> requestSpec = objectMap(writeRequestSpecReport.get("requestSpec"));
+        Map<String, Object> requestBody = objectMap(requestSpec.get("body"));
+        boolean contractValid = NimCreateWriteRequestSpecAdapterSupport.ADAPTER_NAME.equals(text(writeRequestSpecReport.get("writeRequestSpecAdapter")))
+            && NimCreateWriteRequestSpecAdapterSupport.EXECUTION_MODE.equals(text(writeRequestSpecReport.get("executionMode")))
+            && "NOT_PERFORMED".equals(text(writeRequestSpecReport.get("networkAccess")))
+            && "NONE".equals(text(writeRequestSpecReport.get("sideEffect")))
+            && Boolean.TRUE.equals(writeRequestSpecReport.get("writeRequestPrepared"))
+            && TARGET_TOOL.equals(text(writeRequestSpecReport.get("targetTool")))
+            && "POST".equals(text(writeRequestSpecReport.get("httpMethod")))
+            && NimCreateAuditReadinessSupport.BACKEND_ENDPOINT.equals(text(writeRequestSpecReport.get("backendEndpoint")))
+            && "/api/{orgId}/deployment".equals(text(writeRequestSpecReport.get("pathTemplate")))
+            && text(auditContext.get("organizationId")).equals(text(writeRequestSpecReport.get("organizationId")))
+            && NimCreateWriteRequestSpecAdapterSupport.CLIENT_BOUNDARY.equals(text(writeRequestSpecReport.get("clientBoundary")))
+            && API_KEY_POLICY.equals(text(writeRequestSpecReport.get("apiKeyHandling")))
+            && Boolean.FALSE.equals(writeRequestSpecReport.get("releaseCredential"))
+            && Boolean.FALSE.equals(writeRequestSpecReport.get("callerHeadersAllowed"))
+            && Boolean.FALSE.equals(writeRequestSpecReport.get("authorizationHeaderFromCallerAllowed"))
+            && Boolean.FALSE.equals(writeRequestSpecReport.get("realApiKeyAllowed"))
+            && Boolean.TRUE.equals(writeRequestSpecReport.get("bodyCopiedByValue"))
+            && Boolean.FALSE.equals(writeRequestSpecReport.get("bodyMutationAllowed"))
+            && NimCreateWriteBodyRebuilderSupport.BODY_DIGEST_ALGORITHM.equals(text(writeRequestSpecReport.get("bodyDigestAlgorithm")))
+            && text(writeBodyRebuildReport.get("bodyDigest")).equals(text(writeRequestSpecReport.get("bodyDigest")))
+            && NimCreateWriteBodyRebuilderSupport.REBUILDER_NAME.equals(text(writeRequestSpecReport.get("sourceWriteBodyRebuilder")))
+            && text(auditReceipt.get("receiptId")).equals(text(writeRequestSpecReport.get("sourceAuditReceiptId")))
+            && text(auditReceipt.get("eventDigest")).equals(text(writeRequestSpecReport.get("sourceAuditEventDigest")))
+            && text(auditContext.get("requestId")).equals(text(writeRequestSpecReport.get("sourceRequestId")))
+            && text(auditContext.get("conversationId")).equals(text(writeRequestSpecReport.get("sourceConversationId")))
+            && text(auditContext.get("userId")).equals(text(writeRequestSpecReport.get("sourceUserId")))
+            && NimCreateWriteRequestSpecAdapterSupport.REQUEST_SPEC_DIGEST_ALGORITHM.equals(text(writeRequestSpecReport.get("requestSpecDigestAlgorithm")))
+            && text(writeRequestSpecReport.get("requestSpecDigest")).matches("[a-f0-9]{64}")
+            && text(writeRequestSpecReport.get("requestSpecDigest")).equals(digestFor(requestSpec))
+            && listOfMaps(writeRequestSpecReport.get("blockedBy")).isEmpty()
+            && requestSpecContractValid(auditContext, writeBodyRebuildReport, requestSpec, requestBody);
+
+        if (!contractValid) {
+            blockers.add(blocker(
+                "WRITE_REQUEST_SPEC_REPORT_CONTRACT_INVALID",
+                "受控 POST request spec 报告必须来自 NIM_CREATE_WRITE_REQUEST_SPEC_ADAPTER，绑定 audit receipt/body digest，并禁止调用方 header 和密钥。",
+                "write-request-spec"
+            ));
+        }
+        if (containsForbiddenSecretMaterial(writeRequestSpecReport)) {
+            blockers.add(blocker(
+                "WRITE_REQUEST_SPEC_REPORT_CONTAINS_FORBIDDEN_SECRET",
+                "受控 POST request spec 报告不得携带 Authorization、token、password、secret 或真实 NGC/NIM API Key。",
+                "write-request-spec"
+            ));
+        }
+    }
+
     private static void validateWriteBodyProvenance(String writeBodyProvenance,
                                                     List<Map<String, Object>> blockers) {
         String provenance = text(writeBodyProvenance);
@@ -493,6 +574,13 @@ final class NimCreateStateMachineSupport {
             "writeBodyPrepared",
             "bodyDigest",
             "rebuiltBody",
+            "writeRequestSpecReport",
+            "writeRequestSpecAdapter",
+            "writeRequestPrepared",
+            "requestSpec",
+            "requestSpecDigest",
+            "Authorization",
+            "headers",
             "creationGate",
             "trustedPolicySnapshot",
             "auditPrepared",
@@ -606,6 +694,85 @@ final class NimCreateStateMachineSupport {
             && !body.containsKey("Authorization")
             && !body.containsKey("password")
             && !body.containsKey("secret");
+    }
+
+    private static boolean requestSpecContractValid(Map<String, Object> auditContext,
+                                                    Map<String, Object> writeBodyRebuildReport,
+                                                    Map<String, Object> requestSpec,
+                                                    Map<String, Object> requestBody) {
+        String organizationId = text(auditContext.get("organizationId"));
+        return !requestSpec.isEmpty()
+            && "deployment-create".equals(text(requestSpec.get("target")))
+            && "POST".equals(text(requestSpec.get("method")))
+            && "/api/{orgId}/deployment".equals(text(requestSpec.get("endpoint")))
+            && "/api/{orgId}/deployment".equals(text(requestSpec.get("pathTemplate")))
+            && ("/api/" + organizationId + "/deployment").equals(text(requestSpec.get("resolvedPath")))
+            && NimCreateWriteRequestSpecAdapterSupport.CLIENT_BOUNDARY.equals(text(requestSpec.get("clientBoundary")))
+            && Boolean.FALSE.equals(requestSpec.get("queryAllowed"))
+            && objectMap(requestSpec.get("query")).isEmpty()
+            && Boolean.TRUE.equals(requestSpec.get("bodyAllowed"))
+            && Boolean.TRUE.equals(requestSpec.get("bodyRequired"))
+            && "CONTROLLED_REBUILDER_BODY_COPY".equals(text(requestSpec.get("bodySource")))
+            && NimCreateWriteBodyRebuilderSupport.BODY_DIGEST_ALGORITHM.equals(text(requestSpec.get("bodyDigestAlgorithm")))
+            && text(writeBodyRebuildReport.get("bodyDigest")).equals(text(requestSpec.get("bodyDigest")))
+            && Boolean.FALSE.equals(requestSpec.get("callerHeadersAllowed"))
+            && Boolean.FALSE.equals(requestSpec.get("authorizationHeaderFromCallerAllowed"))
+            && "KUBE_MANAGER_HTTP_CLIENT_CONTEXT_ONLY".equals(text(requestSpec.get("kubeManagerAuthBoundary")))
+            && Boolean.FALSE.equals(requestSpec.get("realApiKeyAllowed"))
+            && API_KEY_POLICY.equals(text(requestSpec.get("apiKeyHandling")))
+            && Boolean.TRUE.equals(requestSpec.get("idempotencyKeyRequiredBeforeExecution"))
+            && "FUTURE_DURABLE_WRITE_EXECUTOR".equals(text(requestSpec.get("executionAdapterRequired")))
+            && "NONE".equals(text(requestSpec.get("sideEffect")))
+            && NimCreateAuditReadinessSupport.BACKEND_ENDPOINT.equals(text(requestSpec.get("futureSideEffectIfExecuted")))
+            && requestBody.equals(objectMap(writeBodyRebuildReport.get("body")))
+            && writeBodyContractValid(requestBody);
+    }
+
+    private static String digestFor(Map<String, Object> value) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance(NimCreateWriteRequestSpecAdapterSupport.REQUEST_SPEC_DIGEST_ALGORITHM);
+            return HexFormat.of().formatHex(digest.digest(canonical(value).getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IllegalStateException("JDK 缺少 SHA-256 摘要算法", ex);
+        }
+    }
+
+    private static String canonical(Object value) {
+        if (value == null) {
+            return "null";
+        }
+        if (value instanceof Map<?, ?> map) {
+            Map<String, Object> sorted = new TreeMap<>();
+            map.forEach((key, item) -> sorted.put(String.valueOf(key), item));
+            StringBuilder builder = new StringBuilder("{");
+            boolean first = true;
+            for (Map.Entry<String, Object> entry : sorted.entrySet()) {
+                if (!first) {
+                    builder.append(",");
+                }
+                first = false;
+                builder.append(escape(entry.getKey())).append("=").append(canonical(entry.getValue()));
+            }
+            return builder.append("}").toString();
+        }
+        if (value instanceof List<?> list) {
+            StringBuilder builder = new StringBuilder("[");
+            for (int i = 0; i < list.size(); i++) {
+                if (i > 0) {
+                    builder.append(",");
+                }
+                builder.append(canonical(list.get(i)));
+            }
+            return builder.append("]").toString();
+        }
+        return escape(value.toString());
+    }
+
+    private static String escape(String value) {
+        return value.replace("\\", "\\\\")
+            .replace("\n", "\\n")
+            .replace("\r", "\\r")
+            .replace("\t", "\\t");
     }
 
     private static boolean readinessStepsAreReadOnly(Object rawSteps) {
@@ -737,11 +904,39 @@ final class NimCreateStateMachineSupport {
         Map<String, Object> auditContext,
         Map<String, Object> auditReceipt,
         Map<String, Object> writeBodyRebuildReport,
+        Map<String, Object> writeRequestSpecReport,
         Map<String, Object> readinessPlan,
         Map<String, Object> readinessExecutionReport,
         String writeBodyProvenance,
         boolean nimCreateReleased
     ) {
+        ReadinessRequest(Map<String, Object> params,
+                         Map<String, Object> creationGate,
+                         Map<String, Object> deploymentBodyPreview,
+                         HitlConfirmation hitlConfirmation,
+                         Map<String, Object> auditContext,
+                         Map<String, Object> auditReceipt,
+                         Map<String, Object> writeBodyRebuildReport,
+                         Map<String, Object> readinessPlan,
+                         Map<String, Object> readinessExecutionReport,
+                         String writeBodyProvenance,
+                         boolean nimCreateReleased) {
+            this(
+                params,
+                creationGate,
+                deploymentBodyPreview,
+                hitlConfirmation,
+                auditContext,
+                auditReceipt,
+                writeBodyRebuildReport,
+                Map.of(),
+                readinessPlan,
+                readinessExecutionReport,
+                writeBodyProvenance,
+                nimCreateReleased
+            );
+        }
+
         ReadinessRequest(Map<String, Object> params,
                          Map<String, Object> creationGate,
                          Map<String, Object> deploymentBodyPreview,
@@ -759,6 +954,7 @@ final class NimCreateStateMachineSupport {
                 hitlConfirmation,
                 auditContext,
                 auditReceipt,
+                Map.of(),
                 Map.of(),
                 readinessPlan,
                 readinessExecutionReport,
@@ -784,6 +980,7 @@ final class NimCreateStateMachineSupport {
                 auditContext,
                 auditReceipt,
                 Map.of(),
+                Map.of(),
                 readinessPlan,
                 Map.of(),
                 writeBodyProvenance,
@@ -798,6 +995,7 @@ final class NimCreateStateMachineSupport {
             auditContext = auditContext == null ? Map.of() : objectMap(auditContext);
             auditReceipt = auditReceipt == null ? Map.of() : objectMap(auditReceipt);
             writeBodyRebuildReport = writeBodyRebuildReport == null ? Map.of() : objectMap(writeBodyRebuildReport);
+            writeRequestSpecReport = writeRequestSpecReport == null ? Map.of() : objectMap(writeRequestSpecReport);
             readinessPlan = readinessPlan == null ? Map.of() : objectMap(readinessPlan);
             readinessExecutionReport = readinessExecutionReport == null ? Map.of() : objectMap(readinessExecutionReport);
             writeBodyProvenance = writeBodyProvenance == null ? "" : writeBodyProvenance.trim();
