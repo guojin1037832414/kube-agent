@@ -81,13 +81,43 @@ Current track:
 
 Recently completed:
 
-`M5.21-37 NIM creation gate and HITL card draft`
+`M5.21-38 NIM trusted policy snapshot`
 
 Latest checkpoint:
 
+- Date: 2026-06-06 23:12 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-38 implemented, verified, and recovery-sync ready:
+  - Added `NimTrustedPolicySnapshot` as the pure value object for trusted NIM creation policy facts.
+  - `creationGate` now returns `trustedPolicySnapshot`.
+  - Public `nim_deployment_preflight` defaults policy state to `UNVERIFIED`; Tool params cannot self-attest license/RBAC success.
+  - Trusted policy snapshot states:
+    - `UNVERIFIED`
+    - `TRUSTED_PASSED`
+    - `TRUSTED_BLOCKED`
+  - Trusted snapshot separates:
+    - `nvaieLicense`
+    - `callerOrgPolicy`
+    - `evidence`
+  - Forged caller fields such as `licenseValid`, `isSysOrg`, `sysAdmin`, and `role` remain ignored caller claims.
+  - If trusted policy fails, blockers become explicit:
+    - `NVAIE_LICENSE_TRUSTED_CHECK_FAILED`
+    - `CALLER_ORG_POLICY_TRUSTED_CHECK_FAILED`
+  - If trusted policy passes, license/RBAC unverified blockers are removed, but gate remains `CLOSED` because `nim_create`, HITL marker, audit logging, and readiness flow are still HOLD.
+  - No new Tool or HTTP endpoint was added; no real `8100` access; no POST create.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreationGateSupportTest,NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest" test`
+    - `mvn -q "-Dtest=NimCreationGateSupportTest,NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest" test`
+    - `git -c safe.directory=F:/gitProject/kube-agent diff --check`
+    - Static secret scan found 0 matches.
+    - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+  - Commit and push will be completed after external recovery sync.
+
 - Date: 2026-06-06 23:00 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
-- M5.21-37 implemented, verified, and recovery-sync ready:
+- M5.21-37 implemented, verified, committed, pushed, and recovery-synced:
+  - Commit: `89be95f feat(M5.21): add NIM creation gate`.
   - Added `NimCreationGateSupport` for a structured, fail-closed NIM creation gate.
   - `nim_deployment_preflight` now returns `creationGate` alongside `deploymentBodyPreview`.
   - `creationGate` always returns `gateState=CLOSED`, `allowedToCreateNow=false`, and `sideEffect=NONE`.
@@ -104,7 +134,8 @@ Latest checkpoint:
     - Static secret scan found 0 matches.
     - `mvn -q test`
   - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
-  - Commit and push will be completed after external recovery sync.
+  - External recovery docs synced and hash-verified to `H:\codex重要文件\kube-agent`.
+  - Push status: pushed to origin before M5.21-38 began.
 
 - Date: 2026-06-06 22:38 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
@@ -201,7 +232,7 @@ Latest in-progress/completed chunk after checkpoint:
 Recommended next work:
 
 - Continue NIM orchestration through safe slices:
-  - design trusted NVAIE license and SYS_ADMIN/system org policy checks in the Agent execution chain,
+  - design `NimTrustedPolicyProvider` to fill `NimTrustedPolicySnapshot` from real backend license/user/org evidence,
   - add future `nim_create` state-machine contract tests requiring server-generated `HitlConfirmation`, audit context, and an open trusted gate before any write,
   - design creation-aftercare readiness polling as a separate sensitive read path that never generates, stores, or displays real API keys,
   - or pick another mature GET area with clean backend/frontend evidence.

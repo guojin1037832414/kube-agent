@@ -44,6 +44,15 @@ class NimCreationGateSupportTest {
         assertEquals("NONE", gate.get("sideEffect"));
 
         @SuppressWarnings("unchecked")
+        Map<String, Object> trustedPolicySnapshot = (Map<String, Object>) gate.get("trustedPolicySnapshot");
+        assertEquals("UNVERIFIED", trustedPolicySnapshot.get("snapshotState"));
+        assertEquals(false, trustedPolicySnapshot.get("authoritative"));
+        assertEquals(true, trustedPolicySnapshot.get("protectedFromCallerParams"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> license = (Map<String, Object>) trustedPolicySnapshot.get("nvaieLicense");
+        assertEquals("UNVERIFIED", license.get("status"));
+
+        @SuppressWarnings("unchecked")
         List<Map<String, Object>> blockers = (List<Map<String, Object>>) gate.get("blockedBy");
         assertTrue(blockers.stream().anyMatch(item -> "NIM_CREATE_TOOL_HOLD".equals(item.get("code"))));
         assertTrue(blockers.stream().anyMatch(item -> "HITL_CONFIRMATION_NOT_ISSUED".equals(item.get("code"))));
@@ -116,6 +125,120 @@ class NimCreationGateSupportTest {
         List<Map<String, Object>> blockers = (List<Map<String, Object>>) gate.get("blockedBy");
         assertTrue(blockers.stream().anyMatch(item -> "GPU_MAP_UNRESOLVED".equals(item.get("code"))));
         assertTrue(blockers.stream().anyMatch(item -> "DEPLOYMENT_BODY_PREVIEW_INCOMPLETE".equals(item.get("code"))));
+    }
+
+    @Test
+    void gate_shouldKeepTrustedPolicySnapshotSeparateFromForgedCallerClaims() {
+        Map<String, Object> preview = NimTemplateMergeSupport.buildDeploymentBodyPreview(
+            Map.of("serviceName", "nim-policy"),
+            "nvcr.io/nim/policy:1.0",
+            Map.of("id", 101, "cpuLimits", 1000, "memLimits", 2048, "gpuPercentLimits", 0)
+        );
+
+        Map<String, Object> gate = NimCreationGateSupport.buildCreationGate(
+            Map.ofEntries(
+                entry("serviceName", "nim-policy"),
+                entry("licenseValid", true),
+                entry("isSysOrg", false),
+                entry("role", "USER")
+            ),
+            "nvcr.io/nim/policy:1.0",
+            Map.of("id", 101, "templateType", "NIM"),
+            preview
+        );
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> trustedPolicySnapshot = (Map<String, Object>) gate.get("trustedPolicySnapshot");
+        assertEquals("UNVERIFIED", trustedPolicySnapshot.get("snapshotState"));
+        assertEquals(false, trustedPolicySnapshot.get("authoritative"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> ignoredClaims = (List<Map<String, Object>>) gate.get("ignoredCallerClaims");
+        assertTrue(ignoredClaims.stream().anyMatch(item -> "licenseValid".equals(item.get("key"))));
+        assertTrue(ignoredClaims.stream().anyMatch(item -> "isSysOrg".equals(item.get("key"))));
+        assertTrue(ignoredClaims.stream().anyMatch(item -> "role".equals(item.get("key"))));
+    }
+
+    @Test
+    void gate_shouldRemovePolicyUnverifiedBlockersWhenTrustedPolicyPassedButStillStayClosed() {
+        Map<String, Object> preview = NimTemplateMergeSupport.buildDeploymentBodyPreview(
+            Map.of("serviceName", "nim-trusted"),
+            "nvcr.io/nim/trusted:1.0",
+            Map.of("id", 102, "cpuLimits", 1000, "memLimits", 2048, "gpuPercentLimits", 0)
+        );
+
+        Map<String, Object> gate = NimCreationGateSupport.buildCreationGate(
+            Map.of("serviceName", "nim-trusted"),
+            "nvcr.io/nim/trusted:1.0",
+            Map.of("id", 102, "templateType", "NIM"),
+            preview,
+            NimTrustedPolicySnapshot.fromTrustedChecks(
+                true,
+                false,
+                false,
+                "ORG_USER",
+                "100002",
+                "trusted-backend-policy-test",
+                List.of("license-expiration-read", "current-user-role-read", "organization-id-read")
+            )
+        );
+
+        assertEquals("CLOSED", gate.get("gateState"));
+        assertEquals(false, gate.get("allowedToCreateNow"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> trustedPolicySnapshot = (Map<String, Object>) gate.get("trustedPolicySnapshot");
+        assertEquals("TRUSTED_PASSED", trustedPolicySnapshot.get("snapshotState"));
+        assertEquals(true, trustedPolicySnapshot.get("authoritative"));
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) gate.get("blockedBy");
+        assertFalse(blockers.stream().anyMatch(item -> "NVAIE_LICENSE_NOT_VERIFIED".equals(item.get("code"))));
+        assertFalse(blockers.stream().anyMatch(item -> "CALLER_ORG_POLICY_NOT_VERIFIED".equals(item.get("code"))));
+        assertTrue(blockers.stream().anyMatch(item -> "NIM_CREATE_TOOL_HOLD".equals(item.get("code"))));
+        assertTrue(blockers.stream().anyMatch(item -> "HITL_CONFIRMATION_NOT_ISSUED".equals(item.get("code"))));
+        assertTrue(blockers.stream().anyMatch(item -> "AUDIT_AND_STATUS_FLOW_NOT_READY".equals(item.get("code"))));
+    }
+
+    @Test
+    void gate_shouldExposeTrustedPolicyFailureBlockers() {
+        Map<String, Object> preview = NimTemplateMergeSupport.buildDeploymentBodyPreview(
+            Map.of("serviceName", "nim-blocked"),
+            "nvcr.io/nim/blocked:1.0",
+            Map.of("id", 103, "cpuLimits", 1000, "memLimits", 2048, "gpuPercentLimits", 0)
+        );
+
+        Map<String, Object> gate = NimCreationGateSupport.buildCreationGate(
+            Map.of("serviceName", "nim-blocked"),
+            "nvcr.io/nim/blocked:1.0",
+            Map.of("id", 103, "templateType", "NIM"),
+            preview,
+            NimTrustedPolicySnapshot.fromTrustedChecks(
+                false,
+                true,
+                true,
+                "SYS_ADMIN",
+                "100001",
+                "trusted-backend-policy-test",
+                List.of("expired-nvaie-license", "system-organization")
+            )
+        );
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> trustedPolicySnapshot = (Map<String, Object>) gate.get("trustedPolicySnapshot");
+        assertEquals("TRUSTED_BLOCKED", trustedPolicySnapshot.get("snapshotState"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> callerOrgPolicy = (Map<String, Object>) trustedPolicySnapshot.get("callerOrgPolicy");
+        assertEquals("BLOCKED", callerOrgPolicy.get("status"));
+        assertEquals(true, callerOrgPolicy.get("callerSysAdmin"));
+        assertEquals(true, callerOrgPolicy.get("systemOrganization"));
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) gate.get("blockedBy");
+        assertTrue(blockers.stream().anyMatch(item -> "NVAIE_LICENSE_TRUSTED_CHECK_FAILED".equals(item.get("code"))));
+        assertTrue(blockers.stream().anyMatch(item -> "CALLER_ORG_POLICY_TRUSTED_CHECK_FAILED".equals(item.get("code"))));
+        @SuppressWarnings("unchecked")
+        List<String> actions = (List<String>) gate.get("nextBestActions");
+        assertTrue(actions.stream().anyMatch(item -> item.contains("NVAIE license")));
+        assertTrue(actions.stream().anyMatch(item -> item.contains("SYS_ADMIN")));
     }
 
     @Test

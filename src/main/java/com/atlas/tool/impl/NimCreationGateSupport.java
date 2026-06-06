@@ -25,11 +25,28 @@ final class NimCreationGateSupport {
                                                  String image,
                                                  Map<String, Object> selectedTemplate,
                                                  Map<String, Object> deploymentBodyPreview) {
+        return buildCreationGate(
+            params,
+            image,
+            selectedTemplate,
+            deploymentBodyPreview,
+            NimTrustedPolicySnapshot.unverified()
+        );
+    }
+
+    static Map<String, Object> buildCreationGate(Map<String, Object> params,
+                                                 String image,
+                                                 Map<String, Object> selectedTemplate,
+                                                 Map<String, Object> deploymentBodyPreview,
+                                                 NimTrustedPolicySnapshot trustedPolicySnapshot) {
+        NimTrustedPolicySnapshot policySnapshot = trustedPolicySnapshot == null
+            ? NimTrustedPolicySnapshot.unverified()
+            : trustedPolicySnapshot;
         Map<String, Object> bodyDraft = objectMap(deploymentBodyPreview.get("bodyDraft"));
         Map<String, Object> gpuResolution = objectMap(deploymentBodyPreview.get("gpuResolution"));
 
         List<Map<String, Object>> blockers = new ArrayList<>();
-        addStandingHoldBlockers(blockers);
+        addStandingHoldBlockers(blockers, policySnapshot);
         addDynamicBlockers(blockers, deploymentBodyPreview, bodyDraft, gpuResolution);
 
         Map<String, Object> gate = new LinkedHashMap<>();
@@ -38,29 +55,22 @@ final class NimCreationGateSupport {
         gate.put("sideEffect", "NONE");
         gate.put("blockedBy", blockers);
         gate.put("ignoredCallerClaims", detectIgnoredCallerClaims(params));
+        gate.put("trustedPolicySnapshot", policySnapshot.toMap());
         gate.put("requiredTrustedChecks", requiredTrustedChecks());
         gate.put("hitlCardDraft", buildHitlCardDraft(image, selectedTemplate, bodyDraft, gpuResolution));
         gate.put("futureWritePath", futureWritePath());
-        gate.put("nextBestActions", nextBestActions(deploymentBodyPreview, bodyDraft, gpuResolution));
+        gate.put("nextBestActions", nextBestActions(deploymentBodyPreview, bodyDraft, gpuResolution, policySnapshot));
         return gate;
     }
 
-    private static void addStandingHoldBlockers(List<Map<String, Object>> blockers) {
+    private static void addStandingHoldBlockers(List<Map<String, Object>> blockers,
+                                                NimTrustedPolicySnapshot policySnapshot) {
         blockers.add(blocker(
             "NIM_CREATE_TOOL_HOLD",
             "nim_create 当前仍是 PLACEHOLDER，未开放真实写操作编排。",
             "agent-safety"
         ));
-        blockers.add(blocker(
-            "NVAIE_LICENSE_NOT_VERIFIED",
-            "尚未在 Agent 后端执行链中完成 NVAIE license 可信校验。",
-            "backend-policy"
-        ));
-        blockers.add(blocker(
-            "CALLER_ORG_POLICY_NOT_VERIFIED",
-            "尚未在 Agent 执行链中可信确认调用者不是 SYS_ADMIN 且当前组织不是系统组织。",
-            "rbac"
-        ));
+        addTrustedPolicyBlockers(blockers, policySnapshot);
         blockers.add(blocker(
             "HITL_CONFIRMATION_NOT_ISSUED",
             "尚未生成服务端 HitlConfirmation marker；LLM/参数里的确认字段一律不可信。",
@@ -71,6 +81,37 @@ final class NimCreationGateSupport {
             "NIM 创建审计日志、创建后 Deployment/Service/NIM readiness 轮询尚未完成。",
             "observability"
         ));
+    }
+
+    private static void addTrustedPolicyBlockers(List<Map<String, Object>> blockers,
+                                                 NimTrustedPolicySnapshot policySnapshot) {
+        if (!policySnapshot.nvaieLicenseVerified()) {
+            blockers.add(blocker(
+                "NVAIE_LICENSE_NOT_VERIFIED",
+                "尚未在 Agent 后端执行链中完成 NVAIE license 可信校验。",
+                "backend-policy"
+            ));
+        } else if (!policySnapshot.nvaieLicenseValid()) {
+            blockers.add(blocker(
+                "NVAIE_LICENSE_TRUSTED_CHECK_FAILED",
+                "可信后端策略检查显示 NVAIE license 不可用于创建 NIM 服务。",
+                "backend-policy"
+            ));
+        }
+
+        if (!policySnapshot.callerOrgPolicyVerified()) {
+            blockers.add(blocker(
+                "CALLER_ORG_POLICY_NOT_VERIFIED",
+                "尚未在 Agent 执行链中可信确认调用者不是 SYS_ADMIN 且当前组织不是系统组织。",
+                "rbac"
+            ));
+        } else if (!policySnapshot.callerOrgPolicyAllowed()) {
+            blockers.add(blocker(
+                "CALLER_ORG_POLICY_TRUSTED_CHECK_FAILED",
+                "可信后端策略检查显示当前调用者或组织不允许创建 NIM 服务。",
+                "rbac"
+            ));
+        }
     }
 
     private static void addDynamicBlockers(List<Map<String, Object>> blockers,
@@ -206,8 +247,19 @@ final class NimCreationGateSupport {
 
     private static List<String> nextBestActions(Map<String, Object> deploymentBodyPreview,
                                                 Map<String, Object> bodyDraft,
-                                                Map<String, Object> gpuResolution) {
+                                                Map<String, Object> gpuResolution,
+                                                NimTrustedPolicySnapshot policySnapshot) {
         List<String> actions = new ArrayList<>();
+        if (!policySnapshot.nvaieLicenseVerified()) {
+            actions.add("由后端可信策略读取并校验 NVAIE license，不接受 Tool 入参自报 licenseValid。");
+        } else if (!policySnapshot.nvaieLicenseValid()) {
+            actions.add("先联系管理员更新或修复 NVAIE license，再重新生成创建前门禁。");
+        }
+        if (!policySnapshot.callerOrgPolicyVerified()) {
+            actions.add("由后端可信上下文确认当前用户角色和组织类型，不接受 Tool 入参自报 sysAdmin/isSysOrg。");
+        } else if (!policySnapshot.callerOrgPolicyAllowed()) {
+            actions.add("切换到允许创建的普通组织和非 SYS_ADMIN 执行上下文后，再重新预检。");
+        }
         if (!hasText(bodyDraft.get("displayName"))) {
             actions.add("先让用户确认 NIM 服务展示名称 displayName。");
         }

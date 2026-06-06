@@ -7,6 +7,23 @@
 ---
 
 
+## [M5.21-38] - 第三十八批 NIM 可信策略快照审计
+
+**交付**: 新增 `NimTrustedPolicySnapshot`，把 NIM 创建前必须由后端可信来源完成的 NVAIE license、SYS_ADMIN、system org 检查建模成结构化策略快照，并接入 `creationGate`；本批仍不开放 `nim_create`。
+
+**变更**
+- 新增 `NimTrustedPolicySnapshot`，输出 `snapshotState`、`authoritative`、`source`、`protectedFromCallerParams`、`nvaieLicense`、`callerOrgPolicy` 和 `evidence`。
+- `NimCreationGateSupport` 新增带 policy snapshot 的重载；公开 preflight 默认使用 `UNVERIFIED` 快照。
+- `creationGate` 新增 `trustedPolicySnapshot`，区分未校验、可信通过和可信失败。
+- `NimCreationGateSupportTest` 新增策略快照场景，覆盖伪造调用方声明不能变成可信通过、可信策略通过仍保持 gate 关闭、可信策略失败产生明确 blocker。
+- 新增 `docs/M5_21_THIRTY_EIGHTH_WAVE_NIM_TRUSTED_POLICY_SNAPSHOT_AUDIT_20260606.md`，并更新 M5.21 波次索引和项目记忆。
+
+**安全**
+- `trustedPolicySnapshot` 不是授权凭证；即使 `TRUSTED_PASSED`，`gateState` 仍为 `CLOSED` 且 `allowedToCreateNow=false`。
+- 公开 `nim_deployment_preflight` 不从 Tool 入参构造可信通过态；`licenseValid/isSysOrg/sysAdmin/role` 等自报字段仍只进入 `ignoredCallerClaims`。
+- 可信失败会返回 `NVAIE_LICENSE_TRUSTED_CHECK_FAILED` / `CALLER_ORG_POLICY_TRUSTED_CHECK_FAILED`，避免把“已检查且失败”和“尚未检查”混在一起。
+- 本批不新增 HTTP endpoint，不访问真实 `8100`，不调用 `POST /api/{orgId}/deployment`。
+
 ## [M5.21-37] - 第三十七批 NIM 创建门禁与 HITL 卡片草案审计
 
 **交付**: 新增 `NimCreationGateSupport`，在 `nim_deployment_preflight` 的离线预览结果中返回结构化 `creationGate`，明确说明 NIM 创建为什么仍被阻断、哪些调用方声明被忽略，以及未来 HITL 确认卡片需要展示哪些字段；本批仍不开放 `nim_create`。

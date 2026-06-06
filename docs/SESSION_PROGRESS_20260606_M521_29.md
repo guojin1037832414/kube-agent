@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-37, NIM creation gate and HITL card draft.
+- Current latest wave: M5.21-38, NIM trusted policy snapshot.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -47,7 +47,32 @@
 
 ## Current Status
 
-- M5.21-37 NIM creation gate and HITL card draft is implemented and verified:
+- M5.21-38 NIM trusted policy snapshot is implemented and verified:
+  - Added `NimTrustedPolicySnapshot`.
+  - `NimCreationGateSupport` now returns `trustedPolicySnapshot`.
+  - Public preflight default policy state remains `UNVERIFIED`.
+  - Trusted snapshot states:
+    - `UNVERIFIED`
+    - `TRUSTED_PASSED`
+    - `TRUSTED_BLOCKED`
+  - `trustedPolicySnapshot.protectedFromCallerParams=true` documents that license/RBAC facts cannot come from Tool params.
+  - Forged caller claims such as `licenseValid`, `isSysOrg`, `sysAdmin`, and `role` remain in `ignoredCallerClaims`.
+  - Trusted policy pass removes license/RBAC unverified blockers but does not open creation; gate remains `CLOSED`.
+  - Trusted policy failure adds explicit blockers:
+    - `NVAIE_LICENSE_TRUSTED_CHECK_FAILED`
+    - `CALLER_ORG_POLICY_TRUSTED_CHECK_FAILED`
+  - No Tool, HTTP endpoint, real `8100` access, POST create, HITL marker generation, audit write, or API-key handling was added.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreationGateSupportTest,NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest" test`
+    - `mvn -q "-Dtest=NimCreationGateSupportTest,NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest" test`
+    - `git -c safe.directory=F:/gitProject/kube-agent diff --check`
+    - Static secret scan found 0 matches.
+    - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+  - Remaining before this chunk is closed: external recovery sync, commit, and push.
+
+- M5.21-37 NIM creation gate and HITL card draft is implemented, verified, committed, recovery-synced, and pushed:
+  - Commit: `89be95f feat(M5.21): add NIM creation gate`.
   - Added `NimCreationGateSupport`.
   - `NimDeploymentPreflightSupport` now attaches a `creationGate` to the NIM preflight plan.
   - Added `NimCreationGateSupportTest`.
@@ -69,7 +94,6 @@
     - Static secret scan found 0 matches.
     - `mvn -q test`
   - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
-  - Remaining before this chunk is closed: external recovery sync, commit, and push.
 
 - M5.21-36 NIM template merge preview is implemented, verified, committed, recovery-synced, and pushed:
   - Commit: `815f7da feat(M5.21): add NIM template merge preview`.
@@ -162,6 +186,14 @@
   - `src/test/java/com/atlas/tool/impl/NimCreationGateSupportTest.java`
   - `src/test/java/com/atlas/tool/impl/NimDeploymentPreflightToolHttpContractTest.java`
   - `docs/M5_21_THIRTY_SEVENTH_WAVE_NIM_CREATION_GATE_AUDIT_20260606.md`
+  - `CHANGELOG.md`
+  - `docs/M5_21_WAVE_INDEX_20260606.md`
+  - `docs/PROJECT_MISSION_AND_MEMORY.md`
+- M5.21-38 NIM trusted policy snapshot implementation and docs:
+  - `src/main/java/com/atlas/tool/impl/NimTrustedPolicySnapshot.java`
+  - `src/main/java/com/atlas/tool/impl/NimCreationGateSupport.java`
+  - `src/test/java/com/atlas/tool/impl/NimCreationGateSupportTest.java`
+  - `docs/M5_21_THIRTY_EIGHTH_WAVE_NIM_TRUSTED_POLICY_SNAPSHOT_AUDIT_20260606.md`
   - `CHANGELOG.md`
   - `docs/M5_21_WAVE_INDEX_20260606.md`
   - `docs/PROJECT_MISSION_AND_MEMORY.md`
@@ -280,6 +312,13 @@
   - Static secret scan found 0 matches.
   - `mvn -q test`
   - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+- M5.21-38 targeted/final verification passed:
+  - `mvn -q "-Dtest=NimCreationGateSupportTest,NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest" test`
+  - `mvn -q "-Dtest=NimCreationGateSupportTest,NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest" test`
+  - `git -c safe.directory=F:/gitProject/kube-agent diff --check`
+  - Static secret scan found 0 matches.
+  - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
 
 ## Final M5.21-29 Decisions
 
@@ -299,11 +338,12 @@
 - `NimDeploymentPreflightTool` added for sensitive read-only NIM repository/tag/template preflight only; `nim_create` remains HOLD.
 - `NimTemplateMergeSupport` added for NIM template merge and DeploymentDTO offline preview only; preview remains `safeToPost=false`, protects `name/displayName/image`, and does not open POST create.
 - `NimCreationGateSupport` added for an explanatory NIM creation gate and HITL card draft only; gate remains `CLOSED`, forged caller claims are ignored, and preflight output cannot directly trigger `nim_create` or fallback writes.
+- `NimTrustedPolicySnapshot` added for future trusted NVAIE license / SYS_ADMIN / system org policy facts; public preflight remains `UNVERIFIED`, and trusted pass still does not authorize creation.
 
 ## Next Step
 
 Continue NIM orchestration only through safe slices:
-- design trusted NVAIE license and SYS_ADMIN/system org policy checks in the Agent execution chain,
+- design `NimTrustedPolicyProvider` to fill `NimTrustedPolicySnapshot` from real backend license/user/org evidence,
 - add `nim_create` future state-machine contract tests that require a server-generated `HitlConfirmation`, audit context, and an open trusted gate before any write,
 - design creation-aftercare readiness polling as a separate sensitive read path that never generates, stores, or displays real API keys,
 - or pick another mature GET area with clean backend/frontend evidence.
