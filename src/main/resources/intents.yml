@@ -274,10 +274,10 @@ intents:
 
   # --- NIM服务 ---
   nim_create:
-    description: "创建NIM服务"
+    description: "创建NIM服务（当前为安全占位，不直接执行创建）"
     agent: "deploy"
     level: "p1"
-    keywords: ["NIM", "创建NIM", "部署NIM"]
+    keywords: ["创建NIM", "部署NIM"]
     examples:
       - "创建一个NIM服务"
       - "部署NIM"
@@ -295,6 +295,37 @@ intents:
         required: false
         default: 100
         description: "GPU显存百分比"
+
+  nim_deployment_preflight:
+    description: "NIM 部署前只读预检，查询一键部署目录、NIM tag 和 NIM 模板，不创建服务"
+    agent: "deploy"
+    level: "p2"
+    keywords: ["NIM预检", "NIM部署规划", "NIM一键部署准备", "NIM template", "NIM镜像规划"]
+    examples:
+      - "部署 NIM 前先帮我预检资源和模板"
+      - "帮我规划 llama NIM 一键部署，不要创建"
+      - "检查这个 NIM repository 有没有可用 tag 和模板"
+    parameters:
+      - name: "repository"
+        type: "string"
+        required: false
+        description: "NIM repository/resourceId，来自 repository_catalog_list 返回值"
+      - name: "displayName"
+        type: "string"
+        required: false
+        description: "NIM 展示名称或模型名称筛选"
+      - name: "industryCategory"
+        type: "string"
+        required: false
+        description: "NIM 行业或场景分类"
+      - name: "tag"
+        type: "string"
+        required: false
+        description: "期望使用的镜像 tag"
+      - name: "serviceName"
+        type: "string"
+        required: false
+        description: "期望创建的服务名称，仅用于预检摘要"
 
   # --- 分布式计算 ---
   distributed_create:
@@ -2686,7 +2717,7 @@ intents:
     parameters: []
 
   # ═══════════════════════════════════════════════════════════
-  # 意图总数: 113个意图 (含兜底)
-  # 查询类: 96个 | 操作类: 10个 (POST 5 + DELETE 4 + 停止 1) | 兜底: 1个
-  # Phase 3 新增: +77个
+  # 意图总数: 187个意图 (含兜底，2026-06-06 脚本统计)
+  # 分类统计以各 intent.agent / intent.level 及 Tool @AtlasToolMapping 元数据为准。
+  # 历史 Phase 统计已不再单独维护，避免与持续迁移批次漂移。
   # ═══════════════════════════════════════════════════════════

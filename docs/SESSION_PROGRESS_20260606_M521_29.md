@@ -13,6 +13,8 @@
 - After each completed chunk, update this project progress/memory and sync it to `H:\codex重要文件\kube-agent`.
 - Do not revert unrelated dirty worktree changes.
 - Use cautious, evidence-based Tool migration; do not call real kube-manager/8100.
+- The user clarified the ultimate mission is not just a production-grade Agent, but a top-tier Agent and learning project that helps the owner progress from Agent beginner to Agent master.
+- Continue using latest reasonable Agent engineering patterns, multi-expert/multi-round review, Chinese comments and technical docs, and commit/push after each completed chunk.
 
 ## Completed In This Continuation
 
@@ -43,6 +45,27 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-35 NIM deployment preflight sensitive read orchestration is implemented and final verification passed:
+  - Added `NimDeploymentPreflightTool`.
+  - Added `NimDeploymentPreflightSupport`.
+  - Added `NimDeploymentPreflightToolHttpContractTest`.
+  - Updated `M511AtlasToolHttpContractTest` so a reviewed read-only orchestration Tool can declare multiple mature GET endpoints.
+  - Updated `intents.yml` with `nim_deployment_preflight` and clarified `nim_create` remains a safety placeholder.
+  - Added `docs/M5_21_THIRTY_FIFTH_WAVE_NIM_DEPLOYMENT_PREFLIGHT_AUDIT_20260606.md`.
+  - Updated `CHANGELOG.md`, `docs/M5_21_WAVE_INDEX_20260606.md`, and project memory.
+  - The Tool reads only:
+    - `GET /api/{orgId}/repository`
+    - `GET /api/{orgId}/repository/nim/tags`
+    - `GET /api/{orgId}/template`
+  - It does not call `POST /api/{orgId}/deployment`, does not create NIM services, and returns `sideEffect=NONE`.
+  - `nim_create` remains HOLD until license/system-org policy, NIM template merge, GPU/defaults, HITL card, status polling, and audit logging are designed and tested.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimDeploymentPreflightToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest" test`
+    - `git -c safe.directory=F:/gitProject/kube-agent diff --check`
+    - Static secret scan found 0 matches.
+    - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
 
 - M5.21-34 repository catalog/tag sensitive read alignment is implemented, committed, and pushed:
   - Commit: `404d80e feat(M5.21): add repository catalog read tools`.
@@ -106,6 +129,9 @@
   - `src/main/java/com/atlas/tool/impl/RepositoryCatalogCategoryListTool.java`
   - `src/main/java/com/atlas/tool/impl/RepositoryCatalogTagListTool.java`
   - `src/main/java/com/atlas/tool/impl/RepositoryCatalogNimTagListTool.java`
+- M5.21-35 tool implementation fixes:
+  - `src/main/java/com/atlas/tool/impl/NimDeploymentPreflightSupport.java`
+  - `src/main/java/com/atlas/tool/impl/NimDeploymentPreflightTool.java`
 - Tests:
   - `src/test/java/com/atlas/contract/M511AtlasToolHttpContractTest.java`
   - `src/test/java/com/atlas/http/KubeManagerHttpClientTokenFallbackSecurityTest.java`
@@ -116,6 +142,7 @@
   - `src/test/java/com/atlas/tool/impl/DownloadTaskProgressToolHttpContractTest.java`
   - `src/test/java/com/atlas/tool/impl/RegistrySiteToolHttpContractTest.java`
   - `src/test/java/com/atlas/tool/impl/RepositoryCatalogToolHttpContractTest.java`
+  - `src/test/java/com/atlas/tool/impl/NimDeploymentPreflightToolHttpContractTest.java`
   - `src/test/java/com/atlas/mcp/M520McpManifestSafetyContractTest.java`
 - Intent config:
   - `src/main/resources/intents.yml`
@@ -126,6 +153,7 @@
   - `docs/M5_21_THIRTY_SECOND_WAVE_DOWNLOAD_PROGRESS_READ_AUDIT_20260606.md`
   - `docs/M5_21_THIRTY_THIRD_WAVE_REGISTRY_SITE_READ_AUDIT_20260606.md`
   - `docs/M5_21_THIRTY_FOURTH_WAVE_REPOSITORY_CATALOG_READ_AUDIT_20260606.md`
+  - `docs/M5_21_THIRTY_FIFTH_WAVE_NIM_DEPLOYMENT_PREFLIGHT_AUDIT_20260606.md`
   - `docs/M5_21_WAVE_INDEX_20260606.md`
   - `CHANGELOG.md`
   - `docs/SESSION_PROGRESS_20260606_M521_29.md`
@@ -180,6 +208,13 @@
   - `mvn -q test`
   - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
   - External recovery docs synced to `H:\codex重要文件\kube-agent`.
+- M5.21-35 targeted verification passed:
+  - `mvn -q "-Dtest=NimDeploymentPreflightToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest" test`
+- M5.21-35 final pre-commit verification passed:
+  - `git -c safe.directory=F:/gitProject/kube-agent diff --check`
+  - Static secret scan found 0 matches.
+  - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
 
 ## Final M5.21-29 Decisions
 
@@ -196,12 +231,13 @@
 - `UploadStatusListTool` moved out of HOLD for sensitive read-only `GET /api/{orgId}/download/status/{id}` only; download start/pause/resume/delete remain HOLD.
 - `DownloadTaskProgressTool` added for sensitive read-only `GET /api/{orgId}/download/progress/{id}`; download start/pause/resume/delete remain HOLD.
 - `RegistryListTool` moved out of HOLD for sensitive read-only `GET /api/registry` only; registry create/update/delete and repo-tag remain HOLD.
+- `NimDeploymentPreflightTool` added for sensitive read-only NIM repository/tag/template preflight only; `nim_create` remains HOLD.
 
 ## Next Step
 
-Pick the next M5.21 mature kube-manager Tool alignment wave. Prefer a narrow evidence-backed slice, likely one of:
-- Final verification, H: drive sync, commit, and push for M5.21-34.
-- Another mature GET area with clean backend/frontend evidence.
+Commit and push M5.21-35 if not already done. Then continue NIM orchestration only through safe slices:
+- design NIM HITL card and DTO merge tests,
+- or pick another mature GET area with clean backend/frontend evidence.
 
 ## Recovery Reminder
 

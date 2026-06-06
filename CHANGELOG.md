@@ -7,6 +7,23 @@
 ---
 
 
+## [M5.21-35] - 第三十五批 NIM 部署只读预检编排审计
+
+**交付**: 新增 `nim_deployment_preflight`，按 mature `vue-kube-manager` NIM 一键部署流程读取一键部署目录、NIM tag 与 `templateType=NIM` 模板，形成可审计部署规划草案，但不创建 Deployment。
+
+**变更**
+- 新增 `NimDeploymentPreflightTool`，连续调用 `GET /api/{orgId}/repository`、`GET /api/{orgId}/repository/nim/tags`、`GET /api/{orgId}/template`。
+- 新增 `NimDeploymentPreflightSupport`，集中处理 repository/tag/image/template 查询参数、候选选择和只读规划结果。
+- 新增 `NimDeploymentPreflightToolHttpContractTest`，覆盖三段 GET、可信 orgId、显式 repository/tag、非法 repository fail-closed、无模板 fail-closed 与风险元数据。
+- `M511AtlasToolHttpContractTest` 支持一个只读编排 Tool 声明多个 endpoint，并将 `nim_deployment_preflight` 加入白名单。
+- 更新 `intents.yml`，新增 `nim_deployment_preflight`，并明确 `nim_create` 当前仍是安全占位。
+- 新增 `docs/M5_21_THIRTY_FIFTH_WAVE_NIM_DEPLOYMENT_PREFLIGHT_AUDIT_20260606.md`，并更新 M5.21 波次索引。
+
+**安全**
+- `nim_deployment_preflight` 为 `AUTHENTICATED + SENSITIVE_READ + requiresConfirmation=true`，不会导出到 MCP safe manifest。
+- 本批不调用真实 `8100`，不调用 `POST /api/{orgId}/deployment`，不创建 NIM 服务，不轮询服务状态，不读取或保存 API Key。
+- `nim_create` 继续 HOLD，等待 license、系统组织限制、模板合并、GPU/defaults、HITL 卡片和状态轮询全部完成审计。
+
 ## [M5.21-34] - 第三十四批 产品/应用镜像目录敏感只读审计
 
 **交付**: 新增 organization-scoped repository catalog 只读能力，对齐 mature kube-manager 的 `GET /api/{orgId}/repository`、`/category`、`/tags`、`/nim/tags`，明确它们服务 NGC/NV AIE/NIM 产品/应用镜像目录，而不是站点级 registry 配置或普通组织镜像仓库列表。

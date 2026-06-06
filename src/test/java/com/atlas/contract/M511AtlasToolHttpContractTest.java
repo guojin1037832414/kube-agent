@@ -331,6 +331,8 @@ class M511AtlasToolHttpContractTest {
             new ExpectedEndpoint("RepositoryCatalogCategoryListTool.java", "repository_catalog_category_list", "/api/{orgId}/repository/category"),
             new ExpectedEndpoint("RepositoryCatalogTagListTool.java", "repository_catalog_tag_list", "/api/{orgId}/repository/tags"),
             new ExpectedEndpoint("RepositoryCatalogNimTagListTool.java", "repository_catalog_nim_tag_list", "/api/{orgId}/repository/nim/tags"),
+            new ExpectedEndpoint("NimDeploymentPreflightTool.java", "nim_deployment_preflight",
+                "/api/{orgId}/repository,/api/{orgId}/repository/nim/tags,/api/{orgId}/template"),
             new ExpectedEndpoint("FileMaterialListTool.java", "file_material_list", "/api/{orgId}/material/folders"),
             new ExpectedEndpoint("InboxMessageListTool.java", "inbox_message_list", "/api/{orgId}/inbox-message")
         );
@@ -651,7 +653,10 @@ class M511AtlasToolHttpContractTest {
                 .collect(Collectors.toSet());
             Set<String> expectedEndpoints = expected.endpoint().isBlank()
                 ? Set.of()
-                : Set.of(expected.endpoint());
+                : Arrays.stream(expected.endpoint().split(","))
+                    .map(String::strip)
+                    .filter(endpoint -> !endpoint.isBlank())
+                    .collect(Collectors.toSet());
             if (!actualEndpoints.equals(expectedEndpoints)) {
                 violations.add(format(path, milestone + "_ENDPOINT_MISMATCH",
                     "tool=" + expected.toolName() + ", expected=[" + expected.endpoint()

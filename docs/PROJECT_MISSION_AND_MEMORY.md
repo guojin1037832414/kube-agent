@@ -6,6 +6,8 @@
 
 The target is to build a top-tier, near-perfect Kubernetes/cloud/HPC Agent on top of the existing mature `kube-manager` and `vue-kube-manager` capabilities.
 
+The owner explicitly clarified on 2026-06-06 that the target is higher than a normal production-grade Agent: this should become a top-tier learning project for mastering Agent development. Implementation should therefore prefer modern, evidence-backed Agent patterns, strong safety boundaries, rich Chinese documentation/comments, and multi-expert iterative review, while still staying grounded in mature `kube-manager` / `vue-kube-manager` behavior.
+
 ## Product Direction
 
 - Use `kube-manager` backend and `vue-kube-manager` frontend as the primary capability evidence.
@@ -79,9 +81,28 @@ Current track:
 
 Recently completed:
 
-`M5.21-34 repository catalog/tag sensitive read alignment`
+`M5.21-35 NIM deployment preflight sensitive read orchestration`
 
 Latest checkpoint:
+
+- Date: 2026-06-06 21:36 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-35 implemented, verified, synced, and ready to commit:
+  - Added `NimDeploymentPreflightTool` for read-only NIM deployment planning.
+  - Added `NimDeploymentPreflightSupport` for safe repository/tag/image/template selection.
+  - The Tool calls only mature GET endpoints:
+    - `GET /api/{orgId}/repository`
+    - `GET /api/{orgId}/repository/nim/tags`
+    - `GET /api/{orgId}/template`
+  - It returns `sideEffect=NONE` and `preflightOnly=true`, with catalog/tag/template candidates and next HITL requirements.
+  - `nim_create` remains fail-closed HOLD and does not call deployment create.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimDeploymentPreflightToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest" test`
+    - `git -c safe.directory=F:/gitProject/kube-agent diff --check`
+    - Static secret scan found 0 matches.
+    - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+  - External recovery docs were synced to `H:\codex重要文件\kube-agent`.
 
 - Date: 2026-06-06 21:16 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
@@ -136,7 +157,7 @@ Latest in-progress/completed chunk after checkpoint:
 
 Recommended next work:
 
-- Continue with a narrow mature evidence-backed Tool alignment wave.
-- Good candidates:
-  - Final verification, H: drive sync, commit, and push for M5.21-34.
-  - After that, continue with another mature GET area with clean backend/frontend evidence or start NIM read-only orchestration planning.
+- Commit and push M5.21-35 if not already done.
+- Continue NIM orchestration through safe slices:
+  - design NIM HITL card and audited DTO merge,
+  - or pick another mature GET area with clean backend/frontend evidence.
