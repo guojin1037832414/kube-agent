@@ -69,6 +69,7 @@
   - Operation metadata is `SENSITIVE_READ + requiresConfirmation=true`.
   - Registry create/update/delete and `/api/registry/repo-tag` remain HOLD.
   - `/api/{orgId}/repository` is a separate product/application repository catalog candidate, not mixed into `registry_list`.
+  - Implementation commit pushed: `e5ba040 fix(M5.21): align registry site read tool`.
 
 ## Files Changed By This Continuation
 

@@ -85,8 +85,8 @@ Latest checkpoint:
 
 - Date: 2026-06-06 21:01 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
-- M5.21-33 was completed and is ready for commit/push:
-  - Commit pending at the time this memory was updated.
+- M5.21-33 was completed, committed, and pushed:
+  - Commit: `e5ba040 fix(M5.21): align registry site read tool`
   - `RegistryListTool` now uses `GET /api/registry`, optional `keyWord`, and `SENSITIVE_READ + requiresConfirmation=true`.
   - Registry create/update/delete and `/api/registry/repo-tag` remain HOLD.
   - Verification passed:
