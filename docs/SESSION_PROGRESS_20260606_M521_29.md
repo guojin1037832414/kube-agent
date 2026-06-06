@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-38, NIM trusted policy snapshot.
+- Current latest wave: M5.21-45, NIM readiness HTTP adapter request spec contract.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -197,6 +197,15 @@
   - `CHANGELOG.md`
   - `docs/M5_21_WAVE_INDEX_20260606.md`
   - `docs/PROJECT_MISSION_AND_MEMORY.md`
+- M5.21-45 NIM readiness HTTP adapter request spec contract:
+  - `src/main/java/com/atlas/tool/impl/NimCreateReadinessHttpAdapterSupport.java`
+  - `src/main/java/com/atlas/tool/impl/NimCreateStateMachineSupport.java`
+  - `src/test/java/com/atlas/tool/impl/NimCreateReadinessHttpAdapterSupportTest.java`
+  - `docs/M5_21_FORTY_FIFTH_WAVE_NIM_READINESS_HTTP_ADAPTER_AUDIT_20260607.md`
+  - `CHANGELOG.md`
+  - `docs/M5_21_WAVE_INDEX_20260606.md`
+  - `docs/PROJECT_MISSION_AND_MEMORY.md`
+  - `docs/SESSION_PROGRESS_20260606_M521_29.md`
 - M5.21-32 tool implementation fixes:
   - `src/main/java/com/atlas/tool/impl/DownloadTaskProgressTool.java`
   - `src/main/java/com/atlas/tool/impl/DownloadTaskQuerySupport.java`
@@ -423,6 +432,26 @@
   - Updated `NimCreateStateMachineSupportTest`, `NimCreateAuditReadinessSupportTest`, and `NimCreateAuditWriterSupportTest`.
   - Added `docs/M5_21_FORTY_FOURTH_WAVE_NIM_READINESS_REPORT_GATE_AUDIT_20260607.md`.
   - No real `8100` access; no real NIM polling; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
+- M5.21-45 targeted verification passed:
+  - `mvn -q "-Dtest=NimCreateReadinessHttpAdapterSupportTest,NimCreateStateMachineSupportTest,NimCreateReadinessExecutorSupportTest" test`
+- M5.21-45 wide NIM/contract verification passed:
+  - `mvn -q "-Dtest=NimCreateReadinessHttpAdapterSupportTest,NimCreateReadinessExecutorSupportTest,NimCreateStateMachineSupportTest,NimCreateAuditReadinessSupportTest,NimCreateAuditWriterSupportTest,NimTrustedPolicyProviderSupportTest,NimCreationGateSupportTest,NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest,HighRiskMutationToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest,M510ArchitectureBoundaryTest" test`
+- M5.21-45 final verification passed:
+  - `git -c safe.directory=F:/gitProject/kube-agent diff --check`
+  - Real secret-pattern static scan found no real secrets; matches were only test sentinel values.
+  - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+- M5.21-45 work summary:
+  - Added `NimCreateReadinessHttpAdapterSupport` as a mock-first pure request spec compiler between readiness plan and readiness executor.
+  - Adapter output includes `readinessHttpAdapter=NIM_CREATE_READINESS_HTTP_ADAPTER`, `executionMode=REQUEST_SPEC_CONTRACT_ONLY`, `networkAccess=NOT_PERFORMED`, `sideEffect=NONE`, `readOnly=true`, `pollOnly=true`, `apiKeyHeaderPolicy=DO_NOT_SEND_REAL_API_KEY`, `requestSpecs`, `derivedSteps`, `executorHandoff`, `pendingBy`, and `blockedBy`.
+  - Adapter only accepts the four audited readiness steps: deployment GET, service derived from Deployment response, NIM health GET, and NIM models GET.
+  - Adapter only emits deployment/health/models GET request specs; service remains a derived step and never becomes a network call.
+  - Adapter rejects POST/unknown target/unapproved GET endpoint, unsafe deployment query, unsafe service URL, localhost/127/8100, path traversal, and real Bearer/API-key-shaped values.
+  - `NimCreateStateMachineSupport` now also requires `nim-models` in readiness plan targets and steps, keeping state-machine requirements aligned with the executor.
+  - Added `NimCreateReadinessHttpAdapterSupportTest`.
+  - Added `docs/M5_21_FORTY_FIFTH_WAVE_NIM_READINESS_HTTP_ADAPTER_AUDIT_20260607.md`.
+  - Multi-expert notes: adapter is not a real HTTP client, not a release gate, and cannot replace READY readiness executor report.
+  - No real `8100` access; no real NIM polling; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
 
 ## Final M5.21-29 Decisions
 
@@ -449,13 +478,14 @@
 - `NimCreateAuditWriterSupport` added for mock-first audit writer receipt contract; mock receipt is not release-eligible, and future real write requires durable audit receipt.
 - `NimCreateReadinessExecutorSupport` added for offline creation-aftercare readiness evaluation; it consumes only approved plan/response snapshots, keeps POST/API-key paths forbidden, and does not open real NIM polling.
 - `NimCreateStateMachineSupport` now requires a READY readiness executor report for future controlled writes; readiness plan alone is no longer sufficient.
+- `NimCreateReadinessHttpAdapterSupport` added for request spec compilation only; it does not execute HTTP, does not hold an HTTP client, rejects unsafe service URLs and unknown readiness endpoints, and cannot be used as a write-release credential.
 
 ## Next Step
 
 Continue NIM orchestration only through safe slices:
-- design a creation-aftercare readiness HTTP adapter contract that only executes the approved GET/derived steps from `NimCreateAuditReadinessSupport`,
-- later design a real durable audit writer adapter only after the true audit table/log backend is identified,
+- design durable audit writer adapter replacement points after identifying the true audit table/log backend,
 - later wire `NimTrustedPolicyProviderSupport` to real backend license/user/org readers only after mock-first contracts are complete,
+- design controlled POST body rebuild contract so future writes never reuse preflight preview bodies directly,
 - or pick another mature GET area with clean backend/frontend evidence.
 
 ## Recovery Reminder

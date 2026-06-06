@@ -81,9 +81,55 @@ Current track:
 
 Recently completed:
 
-`M5.21-44 NIM readiness execution report gate`
+`M5.21-45 NIM readiness HTTP adapter request spec contract`
 
 Latest checkpoint:
+
+- Date: 2026-06-07 01:16 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-45 implemented and verified:
+  - Added `NimCreateReadinessHttpAdapterSupport` as a pure/mock-first request spec compiler.
+  - It consumes:
+    - `readinessPlan`
+    - `serviceApiUrl`
+    - `attempt`
+  - It returns:
+    - `readinessHttpAdapter=NIM_CREATE_READINESS_HTTP_ADAPTER`
+    - `executionMode=REQUEST_SPEC_CONTRACT_ONLY`
+    - `networkAccess=NOT_PERFORMED`
+    - `sideEffect=NONE`
+    - `readOnly=true`
+    - `pollOnly=true`
+    - `apiKeyHandling=NEVER_GENERATE_STORE_OR_DISPLAY`
+    - `apiKeyHeaderPolicy=DO_NOT_SEND_REAL_API_KEY`
+    - `requestSpecs`
+    - `derivedSteps`
+    - `executorHandoff`
+    - `pendingBy`
+    - `blockedBy`.
+  - Adapter only accepts the four audited readiness steps:
+    - deployment `GET /api/{orgId}/deployment`;
+    - service `EXTRACT_FROM_DEPLOYMENT_RESPONSE deployment.entranceMap.http|http1`;
+    - NIM health `GET {nimApiBasePath}/v1/health/live`;
+    - NIM models `GET {nimApiBasePath}/v1/models`.
+  - Adapter only emits request specs for deployment, NIM health, and NIM models; service remains a derived step.
+  - Adapter rejects POST/unknown targets/unapproved GET endpoints, unsafe deployment query, unsafe service URLs, localhost/127/8100, path traversal, and real Bearer/API-key-shaped values.
+  - Tightened `NimCreateStateMachineSupport` so readiness plan must cover `deployment/service/nim-health/nim-models`, matching the executor contract.
+  - Added `NimCreateReadinessHttpAdapterSupportTest`.
+  - Added `docs/M5_21_FORTY_FIFTH_WAVE_NIM_READINESS_HTTP_ADAPTER_AUDIT_20260607.md`.
+  - Multi-expert review notes:
+    - Architecture: adapter is not a real HTTP client and must not depend on `KubeManagerHttpClient`, `RestClient`, `java.net`, okhttp, feign, or Apache HTTP.
+    - Security: adapter output is not a release credential and cannot replace READY executor report.
+    - Test: request specs must prove no body, no headers, no Authorization, no real 8100, and no unknown readiness endpoints.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateReadinessHttpAdapterSupportTest,NimCreateStateMachineSupportTest,NimCreateReadinessExecutorSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateReadinessHttpAdapterSupportTest,NimCreateReadinessExecutorSupportTest,NimCreateStateMachineSupportTest,NimCreateAuditReadinessSupportTest,NimCreateAuditWriterSupportTest,NimTrustedPolicyProviderSupportTest,NimCreationGateSupportTest,NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest,HighRiskMutationToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest,M510ArchitectureBoundaryTest" test`
+    - `git -c safe.directory=F:/gitProject/kube-agent diff --check`
+    - Real secret-pattern static scan found no real secrets; matches were only test sentinel values.
+    - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+  - External recovery docs synced and hash-verified to `H:\codex重要文件\kube-agent`.
+  - No real `8100` access; no real NIM polling; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
 
 - Date: 2026-06-07 00:55 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.

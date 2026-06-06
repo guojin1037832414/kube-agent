@@ -37,7 +37,8 @@ final class NimCreateStateMachineSupport {
     private static final Set<String> REQUIRED_READINESS_TARGETS = Set.of(
         "deployment",
         "service",
-        "nim-health"
+        "nim-health",
+        "nim-models"
     );
 
     private static final Set<String> FORBIDDEN_SECRET_KEYS = Set.of(
@@ -523,6 +524,7 @@ final class NimCreateStateMachineSupport {
         }
         boolean hasDeploymentRead = false;
         boolean hasNimHealthRead = false;
+        boolean hasNimModelsRead = false;
         for (Object item : steps) {
             Map<String, Object> step = objectMap(item);
             String target = text(step.get("target"));
@@ -536,8 +538,11 @@ final class NimCreateStateMachineSupport {
             if ("nim-health".equals(target) && "GET".equals(method)) {
                 hasNimHealthRead = true;
             }
+            if ("nim-models".equals(target) && "GET".equals(method)) {
+                hasNimModelsRead = true;
+            }
         }
-        return hasDeploymentRead && hasNimHealthRead;
+        return hasDeploymentRead && hasNimHealthRead && hasNimModelsRead;
     }
 
     private static boolean reportHasBlockingState(Map<String, Object> report) {

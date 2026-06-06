@@ -6,6 +6,25 @@
 
 ---
 
+## [M5.21-45] - 第四十五批 NIM readiness HTTP adapter 契约审计
+
+**交付**: 新增 `NimCreateReadinessHttpAdapterSupport`，把 NIM 创建后的 readiness plan 编译为只读 HTTP request specs；本批仍然只做 mock-first/纯数据契约，不注册 Tool、不持有 HTTP client、不访问真实 `8100` 或 NIM 服务。
+
+**变更**
+- 新增 `NimCreateReadinessHttpAdapterSupport`。
+- `compile(...)` 输出 `readinessHttpAdapter=NIM_CREATE_READINESS_HTTP_ADAPTER`、`executionMode=REQUEST_SPEC_CONTRACT_ONLY`、`networkAccess=NOT_PERFORMED`、`sideEffect=NONE`、`readOnly=true`、`pollOnly=true`、`apiKeyHeaderPolicy=DO_NOT_SEND_REAL_API_KEY`、`requestSpecs`、`derivedSteps`、`executorHandoff`、`pendingBy/blockedBy`。
+- adapter 只接受已审计的四段 readiness plan: deployment GET、service 派生、NIM health GET、NIM models GET。
+- adapter 只生成 deployment GET、NIM health GET、NIM models GET 三类 request specs；service 仍是派生步骤，不发 HTTP。
+- 加固 fail-closed: POST/未知 target/未审计 GET endpoint、不安全 Deployment query、不安全 service URL、真实 Bearer/API Key/secret-shaped 值全部拒绝，且不产出 request specs。
+- `NimCreateStateMachineSupport` 的 readiness plan 目标收紧为必须覆盖 `deployment/service/nim-health/nim-models`，与 executor 契约保持一致。
+- 新增 `NimCreateReadinessHttpAdapterSupportTest`，覆盖正向规格、缺服务 URL pending、POST/未知 GET/未准备计划/不安全 query/secret/不安全 service URL、state-machine 缺 models plan fail-closed。
+- 新增 `docs/M5_21_FORTY_FIFTH_WAVE_NIM_READINESS_HTTP_ADAPTER_AUDIT_20260607.md`，并更新 M5.21 波次索引和项目记忆。
+
+**安全**
+- 本批不新增 Tool/Controller，不引入 `KubeManagerHttpClient`、`RestClient`、`java.net` 或任何真实 HTTP 客户端。
+- 本批不访问真实 `8100`，不调用 `POST /api/{orgId}/deployment`，不轮询真实 NIM 服务，不发送、保存或展示真实 API Key。
+- adapter 输出不能作为 `readinessExecutionReport` 或 `nim_create` 写入放行凭据；状态机仍要求 trusted policy、HITL、durable audit receipt、READY executor report、受控 body 重建和 release 开关。
+
 
 ## [M5.21-44] - 第四十四批 NIM readiness 执行报告门禁审计
 
