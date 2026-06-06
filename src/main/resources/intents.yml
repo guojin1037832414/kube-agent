@@ -1429,16 +1429,20 @@ intents:
       - "查看表"
     parameters: []
 
-  # --- 上传状态列表 ---
+  # --- 下载任务状态 ---
   upload_status_list:
-    description: "查询上传状态列表"
+    description: "查询指定下载任务的状态"
     agent: "storage"
     level: "p3"
-    keywords: ["上传状态", "上传进度", "upload", "文件上传状态"]
+    keywords: ["下载任务状态", "上传状态", "上传进度", "upload", "文件上传状态", "下载状态", "任务状态"]
     examples:
-      - "上传状态列表"
-      - "查看上传进度"
-    parameters: []
+      - "查询下载任务 42 的状态"
+      - "查看任务 id 42 当前是否下载完成"
+    parameters:
+      - name: "id"
+        type: "integer"
+        required: true
+        description: "下载任务 ID，必须来自 download_task_list 返回的数字 ID"
 
   # --- 资源使用列表 ---
   resource_usage_list:

@@ -71,7 +71,6 @@ class ListToolParameterPassThroughContractTest {
         assertPassThrough(TableListTool::new, "/api/100002/table");
         assertPassThrough(SlurmNodeListTool::new, "/api/100002/slurm-node");
         assertPassThrough(SlurmClusterListTool::new, "/api/100002/bcm/slurm-cluster");
-        assertPassThrough(UploadStatusListTool::new, "/api/100002/download/status");
         assertPassThrough(ResourceUsageListTool::new, "/api/100002/resource");
         assertPassThrough(QuotaMyListTool::new, "/api/100002/quota/my");
         assertPassThrough(CurrencyQueryListTool::new, "/api/100002/currency");
@@ -137,7 +136,6 @@ class ListToolParameterPassThroughContractTest {
         assertInvalidPagination(CoursewareListTool::new, "/api/100002/courseware/list", "page", "0", "VALUE_OUT_OF_RANGE");
         assertInvalidPagination(DownloadTaskListTool::new, "/api/100002/download", "limit", 1.5D, "TYPE_MISMATCH");
         assertInvalidPagination(SlurmClusterListTool::new, "/api/100002/bcm/slurm-cluster", "page", "abc", "TYPE_MISMATCH");
-        assertInvalidPagination(UploadStatusListTool::new, "/api/100002/download/status", "limit", "0", "VALUE_OUT_OF_RANGE");
         assertInvalidPagination(ResourceUsageListTool::new, "/api/100002/resource", "page", "0", "VALUE_OUT_OF_RANGE");
         assertInvalidPagination(QuotaMyListTool::new, "/api/100002/quota/my", "limit", 1.5D, "TYPE_MISMATCH");
         assertInvalidPagination(CurrencyQueryListTool::new, "/api/100002/currency", "page", "0", "VALUE_OUT_OF_RANGE");

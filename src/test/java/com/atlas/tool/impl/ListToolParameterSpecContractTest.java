@@ -61,7 +61,6 @@ class ListToolParameterSpecContractTest {
         assertListQueryContract(new TableListTool(null), "table_list");
         assertListQueryContract(new SlurmNodeListTool(null), "slurm_node_list");
         assertListQueryContract(new SlurmClusterListTool(null), "slurm_cluster_list");
-        assertListQueryContract(new UploadStatusListTool(null), "upload_status_list");
         assertListQueryContract(new ResourceUsageListTool(null), "resource_usage_list");
         assertListQueryContract(new QuotaMyListTool(null), "quota_my_list");
         assertListQueryContract(new CurrencyQueryListTool(null), "currency_query_list");

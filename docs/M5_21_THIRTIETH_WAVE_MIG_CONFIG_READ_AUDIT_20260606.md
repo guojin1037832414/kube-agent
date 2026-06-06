@@ -60,7 +60,7 @@
 - `PUT /api/mig`: 修改 MIG 配置，`SYS_ADMIN_ONLY`，暂不接入。
 - `DELETE /api/mig/{id}`: 删除 MIG 配置，`SYS_ADMIN_ONLY`，暂不接入。
 - `RegistryListTool`: 仍需单独确认 `/api/registry` 与 `/api/{orgId}/repository` 的产品语义。
-- `UploadStatusListTool`: 仍需从伪列表改为按任务 `id` 查询下载/上传状态。
+- `UploadStatusListTool`: M5.21-30 时仍需从伪列表改为按任务 `id` 查询；已在 M5.21-31 对齐为 `GET /api/{orgId}/download/status/{id}`。
 - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: 继续等待后端边界证据。
 
 ## 验证

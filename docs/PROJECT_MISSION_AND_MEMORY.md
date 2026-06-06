@@ -79,34 +79,36 @@ Current track:
 
 Recently completed:
 
-`M5.21-30 MIG config read alignment by GPU ID`
+`M5.21-31 download task status read alignment by task ID`
 
 Latest checkpoint:
 
 - Date: 2026-06-06 20:23 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
-- Verification passed for M5.21-30:
+- M5.21-30 was committed and pushed:
+  - Commit: `b5d4132 fix(M5.21): align MIG config read tool`
+- Verification passed for M5.21-30 before commit:
   - `mvn -q test`
   - `git -c safe.directory=F:/gitProject/kube-agent diff --check`
   - Static secret scan found no real credentials; only documentation/config comments mention api-key/password terms.
 - External recovery docs were synced to `H:\codex重要文件\kube-agent`.
-- The current M5.21-30 wave set is ready to commit and push as a recovery checkpoint.
 
 Latest in-progress/completed chunk after checkpoint:
 
-- Date: 2026-06-06 20:23 Asia/Shanghai.
-- M5.21-30 completed implementation and targeted verification:
-  - `MigConfigListTool` now calls mature `GET /api/mig/{gpuId}` instead of old `/api/{orgId}/migConfig`.
-  - It requires explicit positive integer `gpuId`, exposes no `page/limit/keyword`, and is `AUTHENTICATED + READ`.
-  - Added `MigConfigReadToolHttpContractTest`.
-  - Targeted test passed: `mvn -q "-Dtest=MigConfigReadToolHttpContractTest,ListToolParameterPassThroughContractTest,ListToolParameterSpecContractTest,M511AtlasToolHttpContractTest" test`.
+- Date: 2026-06-06 20:30 Asia/Shanghai.
+- M5.21-31 completed implementation and targeted verification:
+  - `UploadStatusListTool` now calls mature `GET /api/{orgId}/download/status/{id}` instead of old `/api/{orgId}/download/status`.
+  - It requires explicit positive integer `id`, exposes no `page/limit/keyword`, and is `SENSITIVE_READ + requiresConfirmation=true`.
+  - `DownloadTaskListTool` remains the correct Tool for paginated download task search.
+  - Added `DownloadTaskStatusToolHttpContractTest`.
+  - Targeted test passed: `mvn -q "-Dtest=DownloadTaskStatusToolHttpContractTest,ListToolParameterPassThroughContractTest,ListToolParameterSpecContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest" test`.
   - Full test passed: `mvn -q test`.
-  - MCP manifest export was tightened to `PUBLIC + READ + requiresConfirmation=false + declared endpoint`, so authenticated read Tools such as `mig_config_list` are not exported to the external MCP safe manifest.
+  - Static secret scan found no real credentials; only documentation/config comments mention api-key/password terms.
 
 Recommended next work:
 
 - Continue with a narrow mature evidence-backed Tool alignment wave.
 - Good candidates:
   - Registry/repository path migration after resolving `/api/registry` vs `/api/{orgId}/repository`.
-  - Download status/progress migration requiring task `id`.
+  - Download progress read migration requiring task `id`, after deciding whether to add a separate progress Tool.
   - Another mature GET area with clean backend/frontend evidence.
