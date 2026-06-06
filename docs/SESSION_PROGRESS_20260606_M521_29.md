@@ -373,6 +373,8 @@
   - Missing receipt returns `AUDIT_RECEIPT_NOT_READY`; mock/non-durable/mismatched receipt returns `AUDIT_RECEIPT_NOT_DURABLE`; receipt secret leakage returns `AUDIT_RECEIPT_CONTAINS_FORBIDDEN_SECRET`.
   - Future release fixture requires `DURABLE_RECORDED + DURABLE_AUDIT_LOG`.
   - Added `docs/M5_21_FORTY_SECOND_WAVE_NIM_AUDIT_WRITER_RECEIPT_AUDIT_20260607.md`.
+  - External recovery docs synced and hash-verified to `H:\codex重要文件\kube-agent`.
+  - Implementation commit: `df4bdf6 feat(M5.21): add NIM audit writer receipt contract`.
 
 ## Final M5.21-29 Decisions
 

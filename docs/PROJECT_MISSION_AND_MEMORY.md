@@ -87,7 +87,7 @@ Latest checkpoint:
 
 - Date: 2026-06-07 00:25 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
-- M5.21-42 implemented and verified; recovery sync, commit, and push are the remaining completion steps:
+- M5.21-42 implemented, verified, recovery-synced, committed, and pushed:
   - Added `NimCreateAuditWriterSupport` as a mock-first audit writer receipt contract.
   - `buildMockReceipt(...)` returns:
     - `auditReceiptPrepared`
@@ -119,6 +119,8 @@ Latest checkpoint:
     - Real secret-pattern static scan found 0 matches.
     - `mvn -q test`
   - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+  - External recovery docs synced and hash-verified to `H:\codex重要文件\kube-agent`.
+  - Implementation commit: `df4bdf6 feat(M5.21): add NIM audit writer receipt contract`.
   - No real `8100` access; no real audit table write; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
 
 - Date: 2026-06-07 00:04 Asia/Shanghai.
