@@ -328,7 +328,7 @@
   - `mvn -q test`
   - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
   - External recovery docs synced and hash-verified to `H:\codex重要文件\kube-agent`.
-  - Implementation commit: `b9c2b10 feat(M5.21): add NIM create state machine guard`.
+  - Implementation commit: `2f63d3f feat(M5.21): add NIM create state machine guard`.
 
 ## Final M5.21-29 Decisions
 
