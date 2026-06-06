@@ -159,10 +159,19 @@ final class NimCreationGateSupport {
             "licenseValid",
             "isLicenseValid",
             "nvaieLicenseValid",
+            "nvaieLicenseVerified",
             "isSysOrg",
             "sysAdmin",
             "role",
-            "userRole"
+            "roles",
+            "userRole",
+            "callerRole",
+            "callerRoles",
+            "organizationId",
+            "orgId",
+            "trustedPolicySnapshot",
+            "trustedPolicySource",
+            "authoritative"
         );
         List<Map<String, Object>> ignored = new ArrayList<>();
         for (String key : riskyKeys) {

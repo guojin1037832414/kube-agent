@@ -339,6 +339,22 @@
   - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
   - External recovery docs synced and hash-verified to `H:\codex重要文件\kube-agent`.
   - Implementation commit: `34b40ae feat(M5.21): add NIM audit readiness plan`.
+- M5.21-41 targeted verification passed:
+  - `mvn -q "-Dtest=NimTrustedPolicyProviderSupportTest,NimCreationGateSupportTest,NimCreateStateMachineSupportTest" test`
+- M5.21-41 final pre-commit verification passed:
+  - `mvn -q "-Dtest=NimTrustedPolicyProviderSupportTest,NimCreationGateSupportTest,NimCreateStateMachineSupportTest,NimCreateAuditReadinessSupportTest,NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest,HighRiskMutationToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest" test`
+  - `git -c safe.directory=F:/gitProject/kube-agent diff --check`
+  - Real secret-pattern static scan found 0 matches.
+  - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+- M5.21-41 work summary:
+  - Added `NimTrustedPolicyProviderSupport` and `TrustedPolicyFacts` to convert backend-trusted NVAIE license / caller roles / organization facts into `NimTrustedPolicySnapshot`.
+  - Normal org + non-`SYS_ADMIN` + valid NVAIE license can produce `TRUSTED_PASSED`.
+  - `organizationId=100001`, `SYS_ADMIN`, or invalid license produces `TRUSTED_BLOCKED`.
+  - Missing trusted source/evidence/user/org/roles/license verification falls back to `UNVERIFIED`.
+  - Provider report exposes ignored caller claims and never treats Tool params as trusted facts.
+  - Creation gate and state-machine ignored caller claim detection now also covers `organizationId/orgId/roles/nvaieLicenseVerified/trustedPolicySource/authoritative`.
+  - Added `docs/M5_21_FORTY_FIRST_WAVE_NIM_TRUSTED_POLICY_PROVIDER_AUDIT_20260606.md`.
 
 ## Final M5.21-29 Decisions
 
@@ -361,13 +377,14 @@
 - `NimTrustedPolicySnapshot` added for future trusted NVAIE license / SYS_ADMIN / system org policy facts; public preflight remains `UNVERIFIED`, and trusted pass still does not authorize creation.
 - `NimCreateStateMachineSupport` added for future `nim_create` write readiness; current state remains `HELD`, direct preview body reuse and fallback writes are forbidden, and exact server `HitlConfirmation` + trusted policy + audit + readiness are required before any real POST can be considered.
 - `NimCreateAuditReadinessSupport` added for future `nim_create` audit context and readiness plan; it models mature frontend readback by Deployment name plus GET `/v1/health/live` and GET `/v1/models`, while forbidding real API Key material and POST readiness steps.
+- `NimTrustedPolicyProviderSupport` added for future trusted policy provider wiring; only backend-trusted facts can produce `TRUSTED_PASSED`, forged Tool params remain ignored, and `nim_create` remains HOLD.
 
 ## Next Step
 
 Continue NIM orchestration only through safe slices:
-- design `NimTrustedPolicyProvider` to fill `NimTrustedPolicySnapshot` from real backend license/user/org evidence,
 - design a mock-first audit writer interface for NIM create requests without connecting real persistence yet,
 - design a creation-aftercare readiness executor/Tool that only executes the approved GET/derived steps from `NimCreateAuditReadinessSupport`,
+- later wire `NimTrustedPolicyProviderSupport` to real backend license/user/org readers only after mock-first contracts are complete,
 - or pick another mature GET area with clean backend/frontend evidence.
 
 ## Recovery Reminder

@@ -314,9 +314,15 @@ final class NimCreateStateMachineSupport {
             "auditPrepared",
             "licenseValid",
             "nvaieLicenseValid",
+            "nvaieLicenseVerified",
             "isSysOrg",
             "sysAdmin",
             "role",
+            "roles",
+            "organizationId",
+            "orgId",
+            "trustedPolicySource",
+            "authoritative",
             "fallbackTool",
             "useFallback"
         );

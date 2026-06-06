@@ -7,6 +7,26 @@
 ---
 
 
+## [M5.21-41] - 第四十一批 NIM 可信策略提供器契约审计
+
+**交付**: 新增 `NimTrustedPolicyProviderSupport`，把未来后端可信链路读取到的 NVAIE license、当前用户角色和当前组织事实转换为 `NimTrustedPolicySnapshot`；本批仍不开放真实创建。
+
+**变更**
+- 新增 `NimTrustedPolicyProviderSupport` 与 `TrustedPolicyFacts`，只接收可信事实，不从 Tool 入参推断 license/RBAC/organization。
+- 普通组织、非 `SYS_ADMIN`、有效 NVAIE license 可生成 `TRUSTED_PASSED` 策略快照。
+- `organizationId=100001`、`SYS_ADMIN`、无效 license 生成 `TRUSTED_BLOCKED`。
+- 缺少可信来源、userId、organizationId、roles、license verified 或 license/role/organization 证据时回落 `UNVERIFIED`。
+- 新增 `buildProviderReport(...)`，输出 `sideEffect=NONE`、`protectedFromCallerParams=true`、`ignoredCallerClaims` 和策略快照。
+- 加严 `NimCreationGateSupport` / `NimCreateStateMachineSupport` 对 `organizationId/orgId/roles/nvaieLicenseVerified/trustedPolicySource/authoritative` 等伪造字段的忽略声明。
+- 新增 `NimTrustedPolicyProviderSupportTest`，扩展 creation gate 与 state machine 测试。
+- 新增 `docs/M5_21_FORTY_FIRST_WAVE_NIM_TRUSTED_POLICY_PROVIDER_AUDIT_20260606.md`，并更新 M5.21 波次索引和项目记忆。
+
+**安全**
+- 本批不新增 HTTP 调用，不访问真实 `8100`，不调用 `POST /api/{orgId}/deployment`。
+- `TRUSTED_PASSED` 仍不是创建授权；`nim_create` 继续保持 HOLD，还需要服务端 HITL、审计、readiness、受控 body 重建和 release 开关。
+- 明确区分 `SYS_ADMIN` 与 `ORG_ADMIN`；不能用宽泛 admin 判断放行或阻断 NIM 创建。
+- Tool 入参中的 `licenseValid/role/roles/organizationId/trustedPolicySource/authoritative` 只进入 ignored caller claims。
+
 ## [M5.21-40] - 第四十批 NIM 审计上下文与 readiness 计划草案审计
 
 **交付**: 新增 `NimCreateAuditReadinessSupport`，把未来 `nim_create` 写入前的审计上下文与创建后 readiness 轮询计划建模为纯数据结构，并强化 `NimCreateStateMachineSupport` 对审计和 readiness 的校验；本批仍不开放真实创建。

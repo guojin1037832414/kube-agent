@@ -81,13 +81,45 @@ Current track:
 
 Recently completed:
 
-`M5.21-40 NIM audit context and readiness plan draft`
+`M5.21-41 NIM trusted policy provider contract`
 
 Latest checkpoint:
 
+- Date: 2026-06-07 00:04 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-41 implemented and verified; recovery sync, commit, and push are the remaining completion steps:
+  - Added `NimTrustedPolicyProviderSupport` as a pure provider contract for future NIM create trusted policy checks.
+  - Added `TrustedPolicyFacts` to represent backend-trusted facts:
+    - `organizationId`
+    - `callerRoles`
+    - `callerUserId`
+    - `nvaieLicenseVerified`
+    - `nvaieLicenseValid`
+    - `source`
+    - `evidence`
+  - Added `TrustedFactSource.KUBE_MANAGER_LICENSE_AND_SESSION`.
+  - `buildSnapshot(...)` now only returns authoritative snapshots when trusted facts are complete, source is known, evidence covers license/role/organization, and NVAIE license was verified.
+  - Normal org + non-`SYS_ADMIN` + valid NVAIE license returns `TRUSTED_PASSED`.
+  - `organizationId=100001`, `SYS_ADMIN`, or invalid license returns `TRUSTED_BLOCKED`.
+  - Missing source/evidence/user/org/roles/license verification returns `UNVERIFIED`.
+  - `buildProviderReport(...)` returns `sideEffect=NONE`, `protectedFromCallerParams=true`, `trustedFactsComplete`, `ignoredCallerClaims`, `requiredTrustedFacts`, and `trustedPolicySnapshot`.
+  - `NimCreationGateSupport` and `NimCreateStateMachineSupport` now also ignore forged `organizationId/orgId/roles/nvaieLicenseVerified/trustedPolicySource/authoritative` claims.
+  - Added `NimTrustedPolicyProviderSupportTest`.
+  - Extended `NimCreationGateSupportTest` and `NimCreateStateMachineSupportTest`.
+  - Added `docs/M5_21_FORTY_FIRST_WAVE_NIM_TRUSTED_POLICY_PROVIDER_AUDIT_20260606.md`.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimTrustedPolicyProviderSupportTest,NimCreationGateSupportTest,NimCreateStateMachineSupportTest" test`
+  - Final verification passed:
+    - `mvn -q "-Dtest=NimTrustedPolicyProviderSupportTest,NimCreationGateSupportTest,NimCreateStateMachineSupportTest,NimCreateAuditReadinessSupportTest,NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest,HighRiskMutationToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest" test`
+    - `git -c safe.directory=F:/gitProject/kube-agent diff --check`
+    - Real secret-pattern static scan found 0 matches.
+    - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+  - No real `8100` access; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
+
 - Date: 2026-06-06 23:55 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
-- M5.21-40 implemented, verified, recovery-synced, and committed; push is the remaining completion step:
+- M5.21-40 implemented, verified, recovery-synced, committed, and pushed:
   - Added `NimCreateAuditReadinessSupport` as a pure support class for future `nim_create` audit context and readiness plan.
   - `buildAuditContext(...)` now creates a state-machine consumable map containing:
     - `auditPrepared`

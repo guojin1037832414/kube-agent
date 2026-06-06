@@ -139,8 +139,12 @@ class NimCreationGateSupportTest {
             Map.ofEntries(
                 entry("serviceName", "nim-policy"),
                 entry("licenseValid", true),
+                entry("nvaieLicenseVerified", true),
                 entry("isSysOrg", false),
-                entry("role", "USER")
+                entry("role", "USER"),
+                entry("roles", List.of("USER")),
+                entry("organizationId", "100002"),
+                entry("trustedPolicySource", "caller-forged")
             ),
             "nvcr.io/nim/policy:1.0",
             Map.of("id", 101, "templateType", "NIM"),
@@ -154,8 +158,12 @@ class NimCreationGateSupportTest {
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> ignoredClaims = (List<Map<String, Object>>) gate.get("ignoredCallerClaims");
         assertTrue(ignoredClaims.stream().anyMatch(item -> "licenseValid".equals(item.get("key"))));
+        assertTrue(ignoredClaims.stream().anyMatch(item -> "nvaieLicenseVerified".equals(item.get("key"))));
         assertTrue(ignoredClaims.stream().anyMatch(item -> "isSysOrg".equals(item.get("key"))));
         assertTrue(ignoredClaims.stream().anyMatch(item -> "role".equals(item.get("key"))));
+        assertTrue(ignoredClaims.stream().anyMatch(item -> "roles".equals(item.get("key"))));
+        assertTrue(ignoredClaims.stream().anyMatch(item -> "organizationId".equals(item.get("key"))));
+        assertTrue(ignoredClaims.stream().anyMatch(item -> "trustedPolicySource".equals(item.get("key"))));
     }
 
     @Test

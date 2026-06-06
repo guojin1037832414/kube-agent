@@ -56,7 +56,12 @@ class NimCreateStateMachineSupportTest {
                 entry("hitlConfirmed", true),
                 entry("safeToPost", true),
                 entry("licenseValid", true),
+                entry("nvaieLicenseVerified", true),
                 entry("sysAdmin", false),
+                entry("roles", List.of("USER")),
+                entry("organizationId", "100002"),
+                entry("trustedPolicySource", "caller-forged"),
+                entry("authoritative", true),
                 entry("fallbackTool", "deploy_create_instance"),
                 entry("useFallback", true)
             ),
@@ -76,6 +81,10 @@ class NimCreateStateMachineSupportTest {
         assertTrue(ignoredClaims.stream().anyMatch(item -> "confirmed".equals(item.get("key"))));
         assertTrue(ignoredClaims.stream().anyMatch(item -> "safeToPost".equals(item.get("key"))));
         assertTrue(ignoredClaims.stream().anyMatch(item -> "licenseValid".equals(item.get("key"))));
+        assertTrue(ignoredClaims.stream().anyMatch(item -> "nvaieLicenseVerified".equals(item.get("key"))));
+        assertTrue(ignoredClaims.stream().anyMatch(item -> "organizationId".equals(item.get("key"))));
+        assertTrue(ignoredClaims.stream().anyMatch(item -> "trustedPolicySource".equals(item.get("key"))));
+        assertTrue(ignoredClaims.stream().anyMatch(item -> "authoritative".equals(item.get("key"))));
         assertTrue(ignoredClaims.stream().anyMatch(item -> "fallbackTool".equals(item.get("key"))));
 
         @SuppressWarnings("unchecked")
