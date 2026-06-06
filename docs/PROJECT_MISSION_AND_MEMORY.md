@@ -81,9 +81,57 @@ Current track:
 
 Recently completed:
 
-`M5.21-42 NIM mock-first audit writer receipt contract`
+`M5.21-43 NIM readiness read-only executor contract`
 
 Latest checkpoint:
+
+- Date: 2026-06-07 00:41 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-43 implemented, verified:
+  - Added `NimCreateReadinessExecutorSupport` as a pure/offline readiness executor contract.
+  - It consumes `readinessPlan`, `deploymentListResponse`, `healthResponse`, `modelsResponse`, and `attempt`.
+  - It returns:
+    - `readinessExecutor=NIM_CREATE_READINESS_EXECUTOR`
+    - `executionMode=OFFLINE_CONTRACT_EVALUATION`
+    - `sideEffect=NONE`
+    - `readOnly=true`
+    - `pollOnly=true`
+    - `apiKeyHandling=NEVER_GENERATE_STORE_OR_DISPLAY`
+    - `apiKeyPlaceholderOnly=true`
+    - `deployment/service/health/models`
+    - `pendingBy`
+    - `blockedBy`
+    - `nextPoll`
+    - `forbiddenActionsEnforced`.
+  - Readiness plan must be prepared, poll-only, placeholder-only, and cover `deployment/service/nim-health/nim-models`.
+  - Readiness steps may only be `GET` or `EXTRACT_FROM_DEPLOYMENT_RESPONSE`.
+  - Deployment readback:
+    - 0 results -> `PENDING` with next poll prepared;
+    - 1 result -> derive service URL from `entranceMap.http/http1`;
+    - more than 1 result -> `DEPLOYMENT_MATCH_AMBIGUOUS`.
+  - Health live signals match mature frontend:
+    - `message=Service is live.`;
+    - `live=true`;
+    - `status=live`.
+  - Model readback matches mature frontend:
+    - `data[0].id`;
+    - `available_models[0]`;
+    - otherwise `fetch failed`, non-fatal after health is live.
+  - Secret/API-key boundary:
+    - rejects `Authorization`, `token`, `apiKey`, `secret`, `password`, real Bearer values, and common real key-shaped strings in plan/responses.
+  - Added `NimCreateReadinessExecutorSupportTest`.
+  - Added `docs/M5_21_FORTY_THIRD_WAVE_NIM_READINESS_EXECUTOR_AUDIT_20260607.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateReadinessExecutorSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateReadinessExecutorSupportTest,NimCreateAuditReadinessSupportTest,NimCreateStateMachineSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateReadinessExecutorSupportTest,NimCreateAuditWriterSupportTest,NimCreateStateMachineSupportTest,NimCreateAuditReadinessSupportTest,NimTrustedPolicyProviderSupportTest,NimCreationGateSupportTest,NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest,HighRiskMutationToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest,M510ArchitectureBoundaryTest" test`
+    - `git -c safe.directory=F:/gitProject/kube-agent diff --check`
+    - Real secret-pattern static scan found 0 matches.
+    - `mvn -q test`
+  - Architecture boundary note: initial `java.net.URI` parsing was caught by `M510ArchitectureBoundaryTest`; implementation now uses constrained string parsing to avoid Tool-layer `java.net..` dependency.
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+  - External recovery docs synced and hash-verified to `H:\codex重要文件\kube-agent`.
+  - No real `8100` access; no real NIM polling; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
 
 - Date: 2026-06-07 00:25 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.

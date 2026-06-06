@@ -375,6 +375,32 @@
   - Added `docs/M5_21_FORTY_SECOND_WAVE_NIM_AUDIT_WRITER_RECEIPT_AUDIT_20260607.md`.
   - External recovery docs synced and hash-verified to `H:\codex重要文件\kube-agent`.
   - Implementation commit: `df4bdf6 feat(M5.21): add NIM audit writer receipt contract`.
+- M5.21-43 targeted verification passed:
+  - `mvn -q "-Dtest=NimCreateReadinessExecutorSupportTest" test`
+  - `mvn -q "-Dtest=NimCreateReadinessExecutorSupportTest,NimCreateAuditReadinessSupportTest,NimCreateStateMachineSupportTest" test`
+- M5.21-43 final verification passed:
+  - `mvn -q "-Dtest=NimCreateReadinessExecutorSupportTest,NimCreateAuditWriterSupportTest,NimCreateStateMachineSupportTest,NimCreateAuditReadinessSupportTest,NimTrustedPolicyProviderSupportTest,NimCreationGateSupportTest,NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest,HighRiskMutationToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest,M510ArchitectureBoundaryTest" test`
+  - `git -c safe.directory=F:/gitProject/kube-agent diff --check`
+  - Real secret-pattern static scan found 0 matches.
+  - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+- M5.21-43 work summary:
+  - Added `NimCreateReadinessExecutorSupport` as a pure/offline NIM creation-aftercare readiness executor contract.
+  - It evaluates the M5.21-40 readiness plan plus offline deployment/health/models response snapshots.
+  - Output includes `readinessExecutor=NIM_CREATE_READINESS_EXECUTOR`, `executionMode=OFFLINE_CONTRACT_EVALUATION`, `sideEffect=NONE`, `readOnly=true`, `pollOnly=true`, `pendingBy`, `blockedBy`, and `nextPoll`.
+  - Plan validation requires prepared poll-only placeholder-only readiness and `deployment/service/nim-health/nim-models` coverage.
+  - Steps are limited to `GET` and `EXTRACT_FROM_DEPLOYMENT_RESPONSE`; POST chat/completion/embedding steps are rejected.
+  - Deployment response handling:
+    - 0 matches -> pending and next poll prepared;
+    - exactly 1 match -> derive service URL from `entranceMap.http/http1`;
+    - multiple matches -> blocked as ambiguous.
+  - Health live signals match mature frontend: `message=Service is live.`, `live=true`, or `status=live`.
+  - Models match mature frontend: `data[0].id` or `available_models[0]`; failures return `fetch failed` and are non-fatal after health is live.
+  - Plan/responses containing `Authorization`, `token`, `apiKey`, `secret`, `password`, real Bearer values, or common real key-shaped strings fail closed.
+  - Initial `java.net.URI` URL parsing was caught by `M510ArchitectureBoundaryTest`; implementation now uses constrained string parsing so Tool-layer code does not depend on `java.net..`.
+  - Added `NimCreateReadinessExecutorSupportTest`.
+  - Added `docs/M5_21_FORTY_THIRD_WAVE_NIM_READINESS_EXECUTOR_AUDIT_20260607.md`.
+  - No real `8100` access; no real NIM polling; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
 
 ## Final M5.21-29 Decisions
 
@@ -399,11 +425,13 @@
 - `NimCreateAuditReadinessSupport` added for future `nim_create` audit context and readiness plan; it models mature frontend readback by Deployment name plus GET `/v1/health/live` and GET `/v1/models`, while forbidding real API Key material and POST readiness steps.
 - `NimTrustedPolicyProviderSupport` added for future trusted policy provider wiring; only backend-trusted facts can produce `TRUSTED_PASSED`, forged Tool params remain ignored, and `nim_create` remains HOLD.
 - `NimCreateAuditWriterSupport` added for mock-first audit writer receipt contract; mock receipt is not release-eligible, and future real write requires durable audit receipt.
+- `NimCreateReadinessExecutorSupport` added for offline creation-aftercare readiness evaluation; it consumes only approved plan/response snapshots, keeps POST/API-key paths forbidden, and does not open real NIM polling.
 
 ## Next Step
 
 Continue NIM orchestration only through safe slices:
-- design a creation-aftercare readiness executor/Tool that only executes the approved GET/derived steps from `NimCreateAuditReadinessSupport`,
+- extend the NIM state-machine contract so future release can require a readiness executor report, not just a readiness plan,
+- later design a creation-aftercare readiness Tool/HTTP adapter that only executes the approved GET/derived steps from `NimCreateAuditReadinessSupport`,
 - later design a real durable audit writer adapter only after the true audit table/log backend is identified,
 - later wire `NimTrustedPolicyProviderSupport` to real backend license/user/org readers only after mock-first contracts are complete,
 - or pick another mature GET area with clean backend/frontend evidence.

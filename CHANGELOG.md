@@ -7,6 +7,27 @@
 ---
 
 
+## [M5.21-43] - 第四十三批 NIM readiness 只读执行器契约审计
+
+**交付**: 新增 `NimCreateReadinessExecutorSupport`，把 M5.21-40 的 readiness plan 转换为可离线评估的只读执行器契约；本批只消费 mock/离线响应快照，不注册 Tool，不发 HTTP，不访问真实 `8100` 或 NIM 服务。
+
+**变更**
+- 新增 `NimCreateReadinessExecutorSupport`。
+- `evaluate(...)` 输出 `readinessExecutor=NIM_CREATE_READINESS_EXECUTOR`、`executionMode=OFFLINE_CONTRACT_EVALUATION`、`sideEffect=NONE`、`readOnly=true`、`pollOnly=true`、`pendingBy`、`blockedBy` 和 `nextPoll`。
+- readiness plan 必须 prepared、pollOnly、API Key placeholder-only，并覆盖 `deployment/service/nim-health/nim-models`。
+- readiness steps 只允许 `GET` 或 `EXTRACT_FROM_DEPLOYMENT_RESPONSE`；出现 POST chat/embedding 立即 `REJECTED`。
+- Deployment 回查 0 个时返回 `PENDING` 并准备下一轮；多个命中时返回 `DEPLOYMENT_MATCH_AMBIGUOUS`。
+- 服务入口只从 `entranceMap.http/http1` 派生，且必须是 http/https URL。
+- health live 信号对齐 mature 前端: `message=Service is live.`、`live=true` 或 `status=live`。
+- models 读取对齐 mature 前端: `data[0].id` 或 `available_models[0]`；读取失败返回 `fetch failed`，不阻断已 live 的服务 ready。
+- 新增 `NimCreateReadinessExecutorSupportTest` 覆盖成功、等待、阻断、超时、POST 步骤与密钥泄漏。
+- 新增 `docs/M5_21_FORTY_THIRD_WAVE_NIM_READINESS_EXECUTOR_AUDIT_20260607.md`，并更新 M5.21 波次索引和项目记忆。
+
+**安全**
+- 本批不新增 Tool/Controller，不发真实 HTTP，不访问真实 `8100`，不调用 `POST /api/{orgId}/deployment`。
+- plan/response 中出现 `Authorization`、`token`、`apiKey`、`secret`、`password` 或真实 Bearer 值时 fail-closed。
+- `nim_create` 继续保持 `httpMethod=NONE + PLACEHOLDER + requiresConfirmation=true`。
+
 ## [M5.21-42] - 第四十二批 NIM mock-first 审计写入 receipt 契约审计
 
 **交付**: 新增 `NimCreateAuditWriterSupport`，把未来 `nim_create` 写入前的“审计上下文准备好”与“审计 writer 已接收并持久化”分离；本批只生成 mock receipt 契约，不连接真实持久化，不开放真实创建。
