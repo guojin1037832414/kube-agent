@@ -87,7 +87,8 @@ Latest checkpoint:
 
 - Date: 2026-06-06 21:36 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
-- M5.21-35 implemented, verified, synced, and ready to commit:
+- M5.21-35 implemented, verified, committed, and pushed:
+  - Commit: `ddb5f9a feat(M5.21): add NIM deployment preflight tool`.
   - Added `NimDeploymentPreflightTool` for read-only NIM deployment planning.
   - Added `NimDeploymentPreflightSupport` for safe repository/tag/image/template selection.
   - The Tool calls only mature GET endpoints:
@@ -157,7 +158,6 @@ Latest in-progress/completed chunk after checkpoint:
 
 Recommended next work:
 
-- Commit and push M5.21-35 if not already done.
 - Continue NIM orchestration through safe slices:
   - design NIM HITL card and audited DTO merge,
   - or pick another mature GET area with clean backend/frontend evidence.

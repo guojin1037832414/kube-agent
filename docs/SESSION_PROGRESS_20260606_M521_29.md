@@ -46,7 +46,8 @@
 
 ## Current Status
 
-- M5.21-35 NIM deployment preflight sensitive read orchestration is implemented and final verification passed:
+- M5.21-35 NIM deployment preflight sensitive read orchestration is implemented, verified, committed, and pushed:
+  - Commit: `ddb5f9a feat(M5.21): add NIM deployment preflight tool`.
   - Added `NimDeploymentPreflightTool`.
   - Added `NimDeploymentPreflightSupport`.
   - Added `NimDeploymentPreflightToolHttpContractTest`.
@@ -235,7 +236,7 @@
 
 ## Next Step
 
-Commit and push M5.21-35 if not already done. Then continue NIM orchestration only through safe slices:
+Continue NIM orchestration only through safe slices:
 - design NIM HITL card and DTO merge tests,
 - or pick another mature GET area with clean backend/frontend evidence.
 

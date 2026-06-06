@@ -87,6 +87,12 @@
 
 > 说明：全量测试中 test profile 尝试下载 embedding model，网络超时后按预期降级，测试进程最终返回成功。
 
+## 提交与同步
+
+- 实现提交已推送:
+  - `ddb5f9a feat(M5.21): add NIM deployment preflight tool`
+- 已同步恢复文档到 `H:\codex重要文件\kube-agent`。
+
 ## 是否访问真实 8100
 
 否。本批只使用 mature 源码证据、前端调用证据和 mock HTTP client 契约测试。
