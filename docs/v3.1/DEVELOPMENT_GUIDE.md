@@ -41,7 +41,7 @@ java -jar target/kube-agent-3.1.0-SNAPSHOT.jar \
 
 ```bash
 # 方式1: 环境变量 (推荐)
-export ATLAS_LLM_API_KEY="sk-T5BnkBXiizu15sO3OSq8csiVEFL0Oypjcgiw1lWx21aZBGhw"
+export ATLAS_LLM_API_KEY="sk-REPLACE_WITH_YOUR_KEY"
 
 # 方式2: 启动参数
 --spring.ai.openai.api-key=sk-...

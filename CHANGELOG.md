@@ -6,6 +6,26 @@
 
 ---
 
+## [M5.21-46] - 第四十六批 NIM 受控写入 body 重建契约审计
+
+**交付**: 新增 `NimCreateWriteBodyRebuilderSupport`，把未来 `nim_create` 真实 POST 前的 DeploymentDTO 从“provenance 字符串”升级为可检查的受控 body 重建报告；本批仍不开放真实创建。
+
+**变更**
+- 新增 `NimCreateWriteBodyRebuilderSupport`，纯函数消费 `creationGate`、`deploymentBodyPreview`、`auditContext`、`auditReceipt`。
+- `rebuild(...)` 输出 `writeBodyRebuilder=NIM_CREATE_WRITE_BODY_REBUILDER`、`executionMode=CONTROLLED_BODY_CONTRACT_ONLY`、`networkAccess=NOT_PERFORMED`、`sideEffect=NONE`、`writeBodyPrepared`、`body`、`bodyDigest`、`sourceAuditReceiptId/sourceAuditEventDigest` 和 `blockedBy`。
+- 重建 body 只复制 DeploymentDTO 白名单字段，剥离 `organizationId/orgId/userId/conversationId/token` 等执行上下文和密钥字段。
+- rebuilder 要求 `creationGate=READY_FOR_SERVER_CONFIRMED_WRITE`、trusted policy passed、preview complete 且 `safeToPost=false`、完整 audit context、durable audit receipt，并校验 receipt 身份与 audit context 匹配。
+- `NimCreateStateMachineSupport.ReadinessRequest` 新增 `writeBodyRebuildReport`。
+- 状态机输出新增 `writeBodyRebuildRequired=true`。
+- 缺少重建报告返回 `WRITE_BODY_REBUILD_REPORT_NOT_READY`；report 合约不合法或未绑定 audit receipt 返回 `WRITE_BODY_REBUILD_REPORT_CONTRACT_INVALID`；report 含 secret 返回 `WRITE_BODY_REBUILD_REPORT_CONTAINS_FORBIDDEN_SECRET`。
+- 新增 `NimCreateWriteBodyRebuilderSupportTest`，更新相关状态机绿灯 fixture。
+- 新增 `docs/M5_21_FORTY_SIXTH_WAVE_NIM_WRITE_BODY_REBUILDER_AUDIT_20260607.md`，并更新 M5.21 波次索引和项目记忆。
+
+**安全**
+- 本批不新增 Tool/Controller，不发真实 HTTP，不访问真实 `8100`，不调用 `POST /api/{orgId}/deployment`。
+- 重建报告 `releaseCredential=false`，不能替代 trusted policy、HITL、durable audit receipt、READY readiness executor 或 release 开关。
+- `nim_create` 继续保持 `httpMethod=NONE + PLACEHOLDER + requiresConfirmation=true`。
+
 ## [M5.21-45] - 第四十五批 NIM readiness HTTP adapter 契约审计
 
 **交付**: 新增 `NimCreateReadinessHttpAdapterSupport`，把 NIM 创建后的 readiness plan 编译为只读 HTTP request specs；本批仍然只做 mock-first/纯数据契约，不注册 Tool、不持有 HTTP client、不访问真实 `8100` 或 NIM 服务。

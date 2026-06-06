@@ -81,9 +81,57 @@ Current track:
 
 Recently completed:
 
-`M5.21-45 NIM readiness HTTP adapter request spec contract`
+`M5.21-46 NIM controlled write body rebuilder contract`
 
 Latest checkpoint:
+
+- Date: 2026-06-07 04:45 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-46 implemented and verified:
+  - Added `NimCreateWriteBodyRebuilderSupport` as a pure/mock-first controlled write body rebuilder contract.
+  - It consumes:
+    - `creationGate`
+    - `deploymentBodyPreview`
+    - `auditContext`
+    - `auditReceipt`
+  - It returns:
+    - `writeBodyRebuilder=NIM_CREATE_WRITE_BODY_REBUILDER`
+    - `executionMode=CONTROLLED_BODY_CONTRACT_ONLY`
+    - `networkAccess=NOT_PERFORMED`
+    - `sideEffect=NONE`
+    - `writeBodyPrepared`
+    - `backendEndpoint=POST /api/{orgId}/deployment`
+    - `writeBodyProvenance=SERVER_REBUILT_FROM_AUDITED_NIM_STATE`
+    - `directPreviewReuseAllowed=false`
+    - `previewBodyReferenceUsed=false`
+    - `fieldWhitelistApplied=true`
+    - `protectedContextStripped=true`
+    - `body`
+    - `bodyDigest`
+    - `sourceAuditReceiptId/sourceAuditEventDigest`
+    - `blockedBy`.
+  - Rebuilder only copies DeploymentDTO allowlisted fields and strips protected context such as `organizationId/orgId/userId/conversationId/token`.
+  - Rebuilder requires open server creation gate, trusted policy passed, complete preview with `safeToPost=false`, complete audit context, and durable audit receipt bound to the same audit identity.
+  - `NimCreateStateMachineSupport.ReadinessRequest` now includes `writeBodyRebuildReport`.
+  - State-machine output now includes `writeBodyRebuildRequired=true`.
+  - Missing report returns `WRITE_BODY_REBUILD_REPORT_NOT_READY`.
+  - Invalid or audit-receipt-mismatched report returns `WRITE_BODY_REBUILD_REPORT_CONTRACT_INVALID`.
+  - Secret leakage in the report returns `WRITE_BODY_REBUILD_REPORT_CONTAINS_FORBIDDEN_SECRET`.
+  - Added `NimCreateWriteBodyRebuilderSupportTest`.
+  - Added `docs/M5_21_FORTY_SIXTH_WAVE_NIM_WRITE_BODY_REBUILDER_AUDIT_20260607.md`.
+  - Multi-expert review notes:
+    - Architecture: provenance is not enough; future writes need an explicit, testable body rebuild report.
+    - Security: the report is not a release credential and cannot replace trusted policy, HITL, durable audit receipt, READY readiness executor, or release switch.
+    - Test: future green state-machine fixtures must carry the rebuilder report.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateWriteBodyRebuilderSupportTest,NimCreateStateMachineSupportTest,NimCreateAuditReadinessSupportTest,NimCreateAuditWriterSupportTest,NimCreateReadinessHttpAdapterSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateWriteBodyRebuilderSupportTest,NimCreateReadinessHttpAdapterSupportTest,NimCreateReadinessExecutorSupportTest,NimCreateStateMachineSupportTest,NimCreateAuditReadinessSupportTest,NimCreateAuditWriterSupportTest,NimTrustedPolicyProviderSupportTest,NimCreationGateSupportTest,NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest,HighRiskMutationToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest,M510ArchitectureBoundaryTest" test`
+    - `mvn -q "-Dtest=NimCreateWriteBodyRebuilderSupportTest,NimCreateStateMachineSupportTest" test`
+    - `git -c safe.directory=F:/gitProject/kube-agent diff --check`
+    - Real secret-pattern static scan found 0 matches after replacing a historical docs example key in `docs/v3.1/DEVELOPMENT_GUIDE.md` with `sk-REPLACE_WITH_YOUR_KEY`.
+    - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+  - No real `8100` access; no real audit table write; no real NIM polling; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
 
 - Date: 2026-06-07 01:16 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.

@@ -28,6 +28,8 @@ class NimCreateAuditReadinessSupportTest {
 
         Map<String, Object> audit = NimCreateAuditReadinessSupport.buildAuditContext(input);
         Map<String, Object> readiness = NimCreateAuditReadinessSupport.buildReadinessPlan(input);
+        Map<String, Object> receipt = durableAuditReceipt(audit);
+        Map<String, Object> bodyReport = writeBodyRebuildReport(gate, preview, audit, receipt);
 
         assertEquals(true, audit.get("auditPrepared"));
         assertEquals("NIM_CREATE_REQUEST", audit.get("auditEventType"));
@@ -64,7 +66,8 @@ class NimCreateAuditReadinessSupportTest {
             preview,
             confirmation,
             audit,
-            durableAuditReceipt(audit),
+            receipt,
+            bodyReport,
             readiness,
             readinessExecutionReport(),
             NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
@@ -227,6 +230,20 @@ class NimCreateAuditReadinessSupportTest {
             entry("organizationId", audit.get("organizationId")),
             entry("targetTool", audit.get("targetTool")),
             entry("writeBodyProvenance", audit.get("writeBodyProvenance"))
+        );
+    }
+
+    private Map<String, Object> writeBodyRebuildReport(Map<String, Object> gate,
+                                                       Map<String, Object> preview,
+                                                       Map<String, Object> audit,
+                                                       Map<String, Object> receipt) {
+        return NimCreateWriteBodyRebuilderSupport.rebuild(
+            new NimCreateWriteBodyRebuilderSupport.WriteBodyRebuildInput(
+                gate,
+                preview,
+                audit,
+                receipt
+            )
         );
     }
 

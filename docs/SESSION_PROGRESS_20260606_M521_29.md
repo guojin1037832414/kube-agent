@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-45, NIM readiness HTTP adapter request spec contract.
+- Current latest wave: M5.21-46, NIM controlled write body rebuilder contract.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -202,6 +202,17 @@
   - `src/main/java/com/atlas/tool/impl/NimCreateStateMachineSupport.java`
   - `src/test/java/com/atlas/tool/impl/NimCreateReadinessHttpAdapterSupportTest.java`
   - `docs/M5_21_FORTY_FIFTH_WAVE_NIM_READINESS_HTTP_ADAPTER_AUDIT_20260607.md`
+  - `CHANGELOG.md`
+  - `docs/M5_21_WAVE_INDEX_20260606.md`
+  - `docs/PROJECT_MISSION_AND_MEMORY.md`
+  - `docs/SESSION_PROGRESS_20260606_M521_29.md`
+- M5.21-46 NIM controlled write body rebuilder contract:
+  - `src/main/java/com/atlas/tool/impl/NimCreateWriteBodyRebuilderSupport.java`
+  - `src/main/java/com/atlas/tool/impl/NimCreateStateMachineSupport.java`
+  - `src/test/java/com/atlas/tool/impl/NimCreateWriteBodyRebuilderSupportTest.java`
+  - `src/test/java/com/atlas/tool/impl/NimCreateStateMachineSupportTest.java`
+  - `src/test/java/com/atlas/tool/impl/NimCreateAuditReadinessSupportTest.java`
+  - `docs/M5_21_FORTY_SIXTH_WAVE_NIM_WRITE_BODY_REBUILDER_AUDIT_20260607.md`
   - `CHANGELOG.md`
   - `docs/M5_21_WAVE_INDEX_20260606.md`
   - `docs/PROJECT_MISSION_AND_MEMORY.md`
@@ -452,6 +463,26 @@
   - Added `docs/M5_21_FORTY_FIFTH_WAVE_NIM_READINESS_HTTP_ADAPTER_AUDIT_20260607.md`.
   - Multi-expert notes: adapter is not a real HTTP client, not a release gate, and cannot replace READY readiness executor report.
   - No real `8100` access; no real NIM polling; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
+- M5.21-46 targeted verification passed:
+  - `mvn -q "-Dtest=NimCreateWriteBodyRebuilderSupportTest,NimCreateStateMachineSupportTest,NimCreateAuditReadinessSupportTest,NimCreateAuditWriterSupportTest,NimCreateReadinessHttpAdapterSupportTest" test`
+- M5.21-46 wide NIM/contract verification passed:
+  - `mvn -q "-Dtest=NimCreateWriteBodyRebuilderSupportTest,NimCreateReadinessHttpAdapterSupportTest,NimCreateReadinessExecutorSupportTest,NimCreateStateMachineSupportTest,NimCreateAuditReadinessSupportTest,NimCreateAuditWriterSupportTest,NimTrustedPolicyProviderSupportTest,NimCreationGateSupportTest,NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest,HighRiskMutationToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest,M510ArchitectureBoundaryTest" test`
+- M5.21-46 final verification passed:
+  - `mvn -q "-Dtest=NimCreateWriteBodyRebuilderSupportTest,NimCreateStateMachineSupportTest" test`
+  - `git -c safe.directory=F:/gitProject/kube-agent diff --check`
+  - Real secret-pattern static scan found 0 matches after replacing a historical docs example key in `docs/v3.1/DEVELOPMENT_GUIDE.md` with `sk-REPLACE_WITH_YOUR_KEY`.
+  - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+- M5.21-46 work summary:
+  - Added `NimCreateWriteBodyRebuilderSupport` as a pure controlled body rebuild contract.
+  - The rebuilder consumes `creationGate`, `deploymentBodyPreview`, `auditContext`, and `auditReceipt`.
+  - It outputs `writeBodyRebuilder=NIM_CREATE_WRITE_BODY_REBUILDER`, `executionMode=CONTROLLED_BODY_CONTRACT_ONLY`, `networkAccess=NOT_PERFORMED`, `sideEffect=NONE`, `writeBodyPrepared`, `backendEndpoint=POST /api/{orgId}/deployment`, `body`, `bodyDigest`, `sourceAuditReceiptId/sourceAuditEventDigest`, and `blockedBy`.
+  - It only copies DeploymentDTO allowlisted fields and strips protected context / secret-like fields.
+  - It requires an open server gate, trusted policy passed, complete `safeToPost=false` preview, complete audit context, and durable receipt bound to the same audit identity.
+  - `NimCreateStateMachineSupport` now requires `writeBodyRebuildReport` and exposes `writeBodyRebuildRequired=true`.
+  - Missing report returns `WRITE_BODY_REBUILD_REPORT_NOT_READY`; invalid or receipt-mismatched report returns `WRITE_BODY_REBUILD_REPORT_CONTRACT_INVALID`; secret leakage returns `WRITE_BODY_REBUILD_REPORT_CONTAINS_FORBIDDEN_SECRET`.
+  - Added `docs/M5_21_FORTY_SIXTH_WAVE_NIM_WRITE_BODY_REBUILDER_AUDIT_20260607.md`.
+  - No real `8100` access; no real audit table write; no real NIM polling; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
 
 ## Final M5.21-29 Decisions
 
@@ -479,6 +510,7 @@
 - `NimCreateReadinessExecutorSupport` added for offline creation-aftercare readiness evaluation; it consumes only approved plan/response snapshots, keeps POST/API-key paths forbidden, and does not open real NIM polling.
 - `NimCreateStateMachineSupport` now requires a READY readiness executor report for future controlled writes; readiness plan alone is no longer sufficient.
 - `NimCreateReadinessHttpAdapterSupport` added for request spec compilation only; it does not execute HTTP, does not hold an HTTP client, rejects unsafe service URLs and unknown readiness endpoints, and cannot be used as a write-release credential.
+- `NimCreateWriteBodyRebuilderSupport` added for controlled write body rebuilding only; it creates a testable, audit-receipt-bound DeploymentDTO contract and prevents preview body direct reuse.
 
 ## Next Step
 
@@ -486,6 +518,7 @@ Continue NIM orchestration only through safe slices:
 - design durable audit writer adapter replacement points after identifying the true audit table/log backend,
 - later wire `NimTrustedPolicyProviderSupport` to real backend license/user/org readers only after mock-first contracts are complete,
 - design controlled POST body rebuild contract so future writes never reuse preflight preview bodies directly,
+- later design a fail-closed POST request spec adapter that consumes the rebuilt body contract without executing real HTTP,
 - or pick another mature GET area with clean backend/frontend evidence.
 
 ## Recovery Reminder
