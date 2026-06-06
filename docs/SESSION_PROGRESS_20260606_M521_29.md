@@ -319,6 +319,16 @@
   - Static secret scan found 0 matches.
   - `mvn -q test`
   - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+- M5.21-39 targeted verification passed:
+  - `mvn -q "-Dtest=NimCreateStateMachineSupportTest,HighRiskMutationToolHttpContractTest" test`
+  - `mvn -q "-Dtest=NimCreateStateMachineSupportTest,NimCreationGateSupportTest,NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest,HighRiskMutationToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest" test`
+- M5.21-39 final pre-commit verification passed:
+  - `git -c safe.directory=F:/gitProject/kube-agent diff --check`
+  - Real secret-pattern static scan found 0 matches.
+  - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+  - External recovery docs synced and hash-verified to `H:\codex重要文件\kube-agent`.
+  - Implementation commit: `b9c2b10 feat(M5.21): add NIM create state machine guard`.
 
 ## Final M5.21-29 Decisions
 
@@ -339,12 +349,13 @@
 - `NimTemplateMergeSupport` added for NIM template merge and DeploymentDTO offline preview only; preview remains `safeToPost=false`, protects `name/displayName/image`, and does not open POST create.
 - `NimCreationGateSupport` added for an explanatory NIM creation gate and HITL card draft only; gate remains `CLOSED`, forged caller claims are ignored, and preflight output cannot directly trigger `nim_create` or fallback writes.
 - `NimTrustedPolicySnapshot` added for future trusted NVAIE license / SYS_ADMIN / system org policy facts; public preflight remains `UNVERIFIED`, and trusted pass still does not authorize creation.
+- `NimCreateStateMachineSupport` added for future `nim_create` write readiness; current state remains `HELD`, direct preview body reuse and fallback writes are forbidden, and exact server `HitlConfirmation` + trusted policy + audit + readiness are required before any real POST can be considered.
 
 ## Next Step
 
 Continue NIM orchestration only through safe slices:
 - design `NimTrustedPolicyProvider` to fill `NimTrustedPolicySnapshot` from real backend license/user/org evidence,
-- add `nim_create` future state-machine contract tests that require a server-generated `HitlConfirmation`, audit context, and an open trusted gate before any write,
+- design NIM audit context and readiness polling objects that can satisfy `NimCreateStateMachineSupport` without carrying token/password/API Key material,
 - design creation-aftercare readiness polling as a separate sensitive read path that never generates, stores, or displays real API keys,
 - or pick another mature GET area with clean backend/frontend evidence.
 

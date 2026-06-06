@@ -7,6 +7,25 @@
 ---
 
 
+## [M5.21-39] - 第三十九批 NIM 创建状态机安全契约审计
+
+**交付**: 新增 `NimCreateStateMachineSupport`，把未来 `nim_create` 真实写入前必须满足的可信策略、服务端 HITL、审计上下文、完整预览、只读 readiness 和禁止 fallback 写入条件固化为纯状态机契约；本批仍不开放真实创建。
+
+**变更**
+- 新增 `NimCreateStateMachineSupport`，输出 `NIM_CREATE_WRITE_GUARD`、`writePermitted`、`blockedBy`、`ignoredCallerClaims`、`requiredStages`、`directPreviewReuseAllowed=false`、`fallbackWriteAllowed=false` 和 API Key 安全策略。
+- `NimCreateTool` 的 fail-closed 占位返回新增 `data.stateMachine`，让用户/LLM 能看到当前 HOLD 的结构化原因，而不是只得到一行失败文本。
+- 新增 `NimCreateStateMachineSupportTest`，覆盖缺少创建门禁、可信策略未通过、HITL target 不匹配、审计/readiness 缺失、预览 body 直接复用、fallback 写入、敏感凭据泄漏和未来全部条件齐全的受控绿灯态。
+- 扩展 `HighRiskMutationToolHttpContractTest`，锁定 `nim_create` 仍不调用 HTTP client，且失败结果携带状态机保护信息。
+- 新增 `docs/M5_21_THIRTY_NINTH_WAVE_NIM_CREATE_STATE_MACHINE_AUDIT_20260606.md`，并更新 M5.21 波次索引和项目记忆。
+
+**安全**
+- 当前 `nim_create` 继续 `httpMethod=NONE + PLACEHOLDER + requiresConfirmation=true`，不访问真实 `8100`，不调用 `POST /api/{orgId}/deployment`。
+- 状态机要求 `creationGate.gateState=READY_FOR_SERVER_CONFIRMED_WRITE`、`allowedToCreateNow=true`，且 `trustedPolicySnapshot.snapshotState=TRUSTED_PASSED`、`authoritative=true`、`protectedFromCallerParams=true`。
+- 只信任 target 精确匹配 `nim_create` 的服务端 `HitlConfirmation`；`confirmed/hitlConfirmed/approved` 等 Tool 入参只进入 `ignoredCallerClaims`。
+- 禁止直接复用 `deploymentBodyPreview.bodyDraft` 作为 POST body；未来写入 body 必须由受控 NIM 状态机重新构建。
+- 禁止从 NIM preflight 降级调用 `deploy_create_instance` 等 fallback 写 Tool。
+- 审计上下文和 readiness 计划不得携带 token、password、secret 或真实 NGC/NIM API Key；创建后只允许只读轮询。
+
 ## [M5.21-38] - 第三十八批 NIM 可信策略快照审计
 
 **交付**: 新增 `NimTrustedPolicySnapshot`，把 NIM 创建前必须由后端可信来源完成的 NVAIE license、SYS_ADMIN、system org 检查建模成结构化策略快照，并接入 `creationGate`；本批仍不开放 `nim_create`。

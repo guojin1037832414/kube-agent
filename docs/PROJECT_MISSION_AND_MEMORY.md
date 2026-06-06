@@ -81,9 +81,54 @@ Current track:
 
 Recently completed:
 
-`M5.21-38 NIM trusted policy snapshot`
+`M5.21-39 NIM create state-machine safety contract`
 
 Latest checkpoint:
+
+- Date: 2026-06-06 23:33 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-39 implemented, verified, recovery-synced, and committed; push is the remaining completion step:
+  - Added `NimCreateStateMachineSupport` as a pure future write guard for `nim_create`.
+  - `NimCreateTool` remains fail-closed `PLACEHOLDER`, but its failure result now includes `data.stateMachine` so the Agent can explain exactly why real NIM creation is still held.
+  - State-machine output includes:
+    - `stateMachine=NIM_CREATE_WRITE_GUARD`
+    - `state=HELD` / `READY_FOR_CONTROLLED_WRITE`
+    - `writePermitted`
+    - `sideEffect=NONE`
+    - `nextSideEffectIfExecuted=POST /api/{orgId}/deployment`
+    - `blockedBy`
+    - `ignoredCallerClaims`
+    - `requiredStages`
+    - `directPreviewReuseAllowed=false`
+    - `fallbackWriteAllowed=false`
+    - `apiKeyPolicy=NEVER_GENERATE_STORE_OR_DISPLAY`
+  - Future write requires all of:
+    - code-level `nim_create` release switch opened,
+    - `creationGate.gateState=READY_FOR_SERVER_CONFIRMED_WRITE`,
+    - `creationGate.allowedToCreateNow=true`,
+    - `trustedPolicySnapshot.snapshotState=TRUSTED_PASSED`,
+    - `trustedPolicySnapshot.authoritative=true`,
+    - `trustedPolicySnapshot.protectedFromCallerParams=true`,
+    - complete DeploymentDTO preview while keeping `safeToPost=false`,
+    - exact server `HitlConfirmation` target `nim_create`,
+    - complete audit context,
+    - trusted write-body provenance `SERVER_REBUILT_FROM_AUDITED_NIM_STATE`,
+    - read-only readiness plan with API Key handling `NEVER_GENERATE_STORE_OR_DISPLAY`,
+    - no fallback write to `deploy_create_instance`.
+  - Tests added/updated:
+    - `NimCreateStateMachineSupportTest`
+    - `HighRiskMutationToolHttpContractTest`
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimCreateStateMachineSupportTest,HighRiskMutationToolHttpContractTest" test`
+    - `mvn -q "-Dtest=NimCreateStateMachineSupportTest,NimCreationGateSupportTest,NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest,HighRiskMutationToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest" test`
+  - Final verification passed:
+    - `git -c safe.directory=F:/gitProject/kube-agent diff --check`
+    - Real secret-pattern static scan found 0 matches.
+    - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+  - External recovery docs synced and hash-verified to `H:\codex重要文件\kube-agent`.
+  - Commit: `b9c2b10 feat(M5.21): add NIM create state machine guard`.
+  - No real `8100` access; no `POST /api/{orgId}/deployment`; no NIM service creation.
 
 - Date: 2026-06-06 23:12 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.

@@ -389,6 +389,12 @@ class HighRiskMutationToolHttpContractTest {
 
         assertEquals(Boolean.FALSE, result.get(AtlasToolResult.KEY_SUCCESS));
         assertEquals("UNSUPPORTED_BACKEND_OPERATION", result.get(AtlasToolResult.KEY_ERROR_CODE));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> data = (Map<String, Object>) result.get(AtlasToolResult.KEY_DATA);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> stateMachine = (Map<String, Object>) data.get("stateMachine");
+        assertEquals("NIM_CREATE_WRITE_GUARD", stateMachine.get("stateMachine"));
+        assertEquals(false, stateMachine.get("writePermitted"));
         verifyNoMoreInteractions(httpClient);
     }
 

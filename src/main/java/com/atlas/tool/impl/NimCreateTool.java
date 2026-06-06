@@ -67,13 +67,17 @@ public class NimCreateTool extends BaseTool {
     @Override
     protected AtlasToolResult doExecute(Map<String, Object> params) {
         String name = params.get("name") == null ? "" : params.get("name").toString().trim();
-        return AtlasToolResult.fail(
+        Map<String, Object> stateMachine = NimCreateStateMachineSupport.evaluateCurrentPlaceholderHold(params);
+        AtlasToolResult result = AtlasToolResult.fail(
             "当前 nim_create 尚未接入成熟前端的 NIM 模板编排链路，已拒绝直接创建: " + name,
             "UNSUPPORTED_BACKEND_OPERATION",
             List.of(
                 "请先接入 NIM repository/tag 查询、NIM 模板合并和 deploy_create_instance 编排后再开放该 Tool",
+                "必须补齐可信策略快照、服务端 HITL、审计上下文和创建后 readiness 计划后，才能考虑打开真实写入",
                 "临时创建 NIM 服务请使用成熟前端的一键部署流程，或由管理员确认模板参数后使用 deployment 创建"
             )
         );
+        result.put(AtlasToolResult.KEY_DATA, Map.of("stateMachine", stateMachine));
+        return result;
     }
 }
