@@ -6,6 +6,19 @@
 
 ---
 
+## [M5.21-61] - NIM state-machine release decision requirement secret coverage hardening
+
+**Delivery**: Hardened the M5.21-60 state-machine release decision report requirement tests by expanding forbidden secret leakage coverage across every contract input and nested evidence shape.
+**Changes**
+- Extended `NimCreateStateMachineReleaseDecisionRequirementSupportTest` with multi-case secret leakage scenarios.
+- Covered top-level `auditContext.token`, nested `auditContext.password`, top-level `trustedPrincipalSnapshot.secret`, nested trusted-principal `Authorization`, top-level `durableAuditReleaseDecisionGateReport.ngcApiKey`, nested `nvaieApiKey`, and list-item `token`.
+- Each case still rejects with `STATE_MACHINE_RELEASE_DECISION_REQUIREMENT_INPUT_CONTAINS_FORBIDDEN_SECRET`.
+- Each case proves `requirementState=REJECTED`, `inputAccepted=false`, empty `stateMachineRequirementPlan`, `writePermitted=false`, `writeExecutionAllowed=false`, and `realHttpExecutionAllowed=false`.
+- Added `docs/M5_21_SIXTY_FIRST_WAVE_NIM_STATE_MACHINE_SECRET_COVERAGE_AUDIT_20260607.md`.
+**Security**
+- This wave changes tests and docs only; it adds no real release decision, no HTTP client, no Elasticsearch, no `ISysLogService`, no `sys_log` write, no real `8100` access, and no `POST /api/{orgId}/deployment`.
+- `nim_create` remains `httpMethod=NONE + PLACEHOLDER + requiresConfirmation=true`.
+
 ## [M5.21-60] - NIM state-machine release decision report requirement contract
 
 **Delivery**: Added a contract-only state-machine release decision report requirement after M5.21-59. It locks the future requirement that `NimCreateStateMachineSupport` must consume and recompute a release decision gate report before any real `writePermitted=true` path can exist, while leaving the current state machine behavior unchanged and held.

@@ -328,6 +328,64 @@ class NimCreateStateMachineReleaseDecisionRequirementSupportTest {
             "STATE_MACHINE_RELEASE_DECISION_REQUIREMENT_INPUT_CONTAINS_FORBIDDEN_SECRET");
     }
 
+    @Test
+    void stateMachineRequirement_shouldRejectSecretLeakageAcrossAllInputsAndNestedEvidence() {
+        List<SecretLeakCase> cases = List.of(
+            leakCase("audit top-level token", (audit, principal, gateReport) ->
+                audit.put("token", "redacted-test-value")),
+            leakCase("audit nested password", (audit, principal, gateReport) ->
+                audit.put("callerMetadata", Map.of("password", "redacted-test-value"))),
+            leakCase("trusted principal top-level secret", (audit, principal, gateReport) ->
+                principal.put("secret", "redacted-test-value")),
+            leakCase("trusted principal nested authorization", (audit, principal, gateReport) ->
+                principal.put("headers", Map.of("Authorization", "redacted-test-value"))),
+            leakCase("gate report top-level ngc api key", (audit, principal, gateReport) ->
+                gateReport.put("ngcApiKey", "redacted-test-value")),
+            leakCase("gate report nested nvaie api key", (audit, principal, gateReport) ->
+                gateReport.put("diagnostics", Map.of("nvaieApiKey", "redacted-test-value"))),
+            leakCase("gate report list item token", (audit, principal, gateReport) ->
+                gateReport.put("diagnosticEvents", List.of(Map.of("token", "redacted-test-value"))))
+        );
+
+        for (SecretLeakCase leakCase : cases) {
+            Map<String, Object> cleanAudit = completeAuditContext();
+            Map<String, Object> cleanPrincipal = trustedPrincipalSnapshot();
+            Map<String, Object> audit = new LinkedHashMap<>(cleanAudit);
+            Map<String, Object> principal = new LinkedHashMap<>(cleanPrincipal);
+            Map<String, Object> gateReport = new LinkedHashMap<>(releaseDecisionGateReport(
+                cleanAudit,
+                cleanPrincipal
+            ));
+            leakCase.mutation().apply(audit, principal, gateReport);
+
+            Map<String, Object> report = NimCreateStateMachineReleaseDecisionRequirementSupport.plan(
+                new NimCreateStateMachineReleaseDecisionRequirementSupport.StateMachineReleaseDecisionRequirementInput(
+                    audit,
+                    principal,
+                    gateReport
+                )
+            );
+
+            assertEquals(NimCreateStateMachineReleaseDecisionRequirementSupport.REJECTED_STATE,
+                report.get("requirementState"), leakCase.name());
+            assertEquals(false, report.get("inputAccepted"), leakCase.name());
+            assertEquals(false, report.get("stateMachineRequirementPlanPrepared"), leakCase.name());
+            assertEquals(false, report.get("writePermitted"), leakCase.name());
+            assertEquals(false, report.get("writeExecutionAllowed"), leakCase.name());
+            assertEquals(false, report.get("realHttpExecutionAllowed"), leakCase.name());
+            @SuppressWarnings("unchecked")
+            Map<String, Object> plan = (Map<String, Object>) report.get("stateMachineRequirementPlan");
+            assertTrue(plan.isEmpty(), leakCase.name());
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+            assertHasBlocker(blockers,
+                "STATE_MACHINE_RELEASE_DECISION_REQUIREMENT_INPUT_CONTAINS_FORBIDDEN_SECRET");
+            assertFalse(blockers.stream().anyMatch(item ->
+                "STATE_MACHINE_RELEASE_DECISION_REQUIREMENT_IMPLEMENTATION_HOLD".equals(item.get("code"))),
+                leakCase.name());
+        }
+    }
+
     private Map<String, Object> releaseDecisionGateReport(Map<String, Object> audit,
                                                           Map<String, Object> principal) {
         return NimCreateDurableAuditReleaseDecisionGateSupport.plan(
@@ -465,5 +523,19 @@ class NimCreateStateMachineReleaseDecisionRequirementSupportTest {
     private void assertHasBlocker(List<Map<String, Object>> blockers, String code) {
         assertTrue(blockers.stream().anyMatch(item -> code.equals(item.get("code"))),
             "expected blocker code: " + code + ", actual blockers: " + blockers);
+    }
+
+    private SecretLeakCase leakCase(String name, SecretLeakMutation mutation) {
+        return new SecretLeakCase(name, mutation);
+    }
+
+    private record SecretLeakCase(String name, SecretLeakMutation mutation) {
+    }
+
+    @FunctionalInterface
+    private interface SecretLeakMutation {
+        void apply(Map<String, Object> audit,
+                   Map<String, Object> principal,
+                   Map<String, Object> gateReport);
     }
 }

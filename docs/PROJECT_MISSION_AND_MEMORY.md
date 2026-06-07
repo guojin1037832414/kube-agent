@@ -81,9 +81,45 @@ Current track:
 
 Recently completed:
 
-`M5.21-60 NIM state-machine release decision report requirement contract`
+`M5.21-61 NIM state-machine release decision requirement secret coverage hardening`
 
 Latest checkpoint:
+
+- Date: 2026-06-07 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+  - M5.21-61 implemented:
+  - Strengthened `NimCreateStateMachineReleaseDecisionRequirementSupportTest` after multi-expert review identified a low-risk gap in secret leakage test breadth.
+  - This wave changes tests and docs only; it does not modify `NimCreateStateMachineReleaseDecisionRequirementSupport` production code or `NimCreateStateMachineSupport` release logic.
+  - Added multi-case secret leakage coverage across all three M5.21-60 contract inputs:
+    - `auditContext`
+    - `trustedPrincipalSnapshot`
+    - `durableAuditReleaseDecisionGateReport`
+  - New cases cover top-level forbidden keys, nested map forbidden keys, and list-item forbidden keys:
+    - `token`
+    - `password`
+    - `secret`
+    - `Authorization`
+    - `ngcApiKey`
+    - `nvaieApiKey`
+  - Every case uses redacted test values, not real credential-shaped values.
+  - Every case proves fail-closed output:
+    - `requirementState=REJECTED`
+    - `inputAccepted=false`
+    - `stateMachineRequirementPlanPrepared=false`
+    - empty `stateMachineRequirementPlan`
+    - `writePermitted=false`
+    - `writeExecutionAllowed=false`
+    - `realHttpExecutionAllowed=false`
+    - blocker `STATE_MACHINE_RELEASE_DECISION_REQUIREMENT_INPUT_CONTAINS_FORBIDDEN_SECRET`
+    - no `STATE_MACHINE_RELEASE_DECISION_REQUIREMENT_IMPLEMENTATION_HOLD` after rejected input
+  - Added `docs/M5_21_SIXTY_FIRST_WAVE_NIM_STATE_MACHINE_SECRET_COVERAGE_AUDIT_20260607.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateStateMachineReleaseDecisionRequirementSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateStateMachineReleaseDecisionRequirementSupportTest,NimCreateDurableAuditReleaseDecisionGateSupportTest,NimCreateDurableAuditValidationResultMigrationSupportTest,NimCreateDurableAuditReceiptValidationGateSupportTest,NimCreateDurableAuditReceiptSchemaSupportTest" test`
+    - `mvn -q test`
+    - Full test note: `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0; this remains an accepted degraded-test-path signal, not an M5.21-61 failure.
+  - Security invariant: no real `8100` access; no HTTP client; no Elasticsearch connection; no `ISysLogService` call; no `sys_log` write; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
+  - Learning note: test breadth is part of the security boundary. A contract shell is only useful when tests prove dangerous material is rejected at every input surface, including nested evidence.
 
 - Date: 2026-06-07 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.

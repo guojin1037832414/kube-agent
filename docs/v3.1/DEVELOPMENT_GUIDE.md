@@ -151,3 +151,11 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - The state machine must recompute the release decision gate plan digest and then bind validation result digest, release decision digest, trusted principal, write-chain digests, audit receipt id, server-derived idempotency key, and code release switch.
 - Current requirement output remains `IMPLEMENTATION_HOLD`; `stateMachineCanSetWritePermittedNow=false`, `writePermitted=false`, `writeExecutionAllowed=false`, and `realHttpExecutionAllowed=false`.
 - The gate report is a future state-machine input contract, not a release credential. Caller supplied `releaseDecision`, `validationResult`, legacy `auditReceipt.releaseEligible=true`, or executor success claims remain forged release claims.
+
+### M5.21-61 secret coverage learning note
+
+- Secret rejection must be proven at every state-machine gate input surface, not only at the most obvious `auditContext.Authorization` path.
+- `NimCreateStateMachineReleaseDecisionRequirementSupportTest` now covers top-level, nested map, and list-item forbidden keys across audit context, trusted principal, and release decision gate report inputs.
+- Covered keys include `token`, `password`, `secret`, `Authorization`, `ngcApiKey`, and `nvaieApiKey`.
+- A rejected secret case must never fall through to the positive HOLD path; it must return `REJECTED`, empty `stateMachineRequirementPlan`, `writePermitted=false`, `writeExecutionAllowed=false`, and `realHttpExecutionAllowed=false`.
+- Test data should use redacted values when key-name detection is enough; avoid embedding credential-shaped fake tokens unless a test specifically needs value-pattern detection.
