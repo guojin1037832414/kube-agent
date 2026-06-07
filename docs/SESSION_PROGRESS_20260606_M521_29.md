@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-59, NIM durable audit release decision gate contract.
+- Current latest wave: M5.21-60, NIM state-machine release decision report requirement contract.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -46,6 +46,33 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-60 NIM state-machine release decision report requirement contract is implemented and verified:
+  - Added `NimCreateStateMachineReleaseDecisionRequirementSupport`.
+  - It consumes `auditContext`, `trustedPrincipalSnapshot`, and `durableAuditReleaseDecisionGateReport` from M5.21-59.
+  - It outputs `stateMachineReleaseDecisionReportRequirement=NIM_CREATE_STATE_MACHINE_RELEASE_DECISION_REPORT_REQUIREMENT`, `executionMode=STATE_MACHINE_RELEASE_DECISION_REQUIREMENT_CONTRACT_ONLY`, `requirementState=IMPLEMENTATION_HOLD|REJECTED`, `requiredFutureStateMachineInput=durableAuditReleaseDecisionGateReport`, and `futureReadinessRequestField=releaseDecisionGateReport`.
+  - Positive input creates:
+    - `stateMachineRequirementSequence`
+    - `requiredFutureStateMachineEvidence`
+    - `stateMachineFieldMigration`
+    - `currentDenyTemplate`
+    - `failureContract`
+    - `forbiddenShortcuts`
+  - Current state explicitly remains `realStateMachineReleaseDecisionGateReportAccepted=false`, `releaseDecisionGateDigestVerified=false`, `validationResultDigestVerified=false`, `releaseDecisionDigestVerified=false`, `trustedPrincipalValidated=false`, `codeReleaseSwitchVerified=false`, `stateMachineReleaseGateImplemented=false`, `stateMachineReleaseBound=false`, `stateMachineReleaseDecisionRequirementBound=false`, `stateMachineCanSetWritePermittedNow=false`, `legacyAuditReceiptReleaseEligibleTrusted=false`, `fallbackToAuditReceiptReleaseEligibleAllowed=false`, `fallbackToCallerReleaseDecisionAllowed=false`, `fallbackToMigrationPlanAllowed=false`, `releaseEligible=false`, `writePermitted=false`, `writeExecutionAllowed=false`, and `realHttpExecutionAllowed=false`.
+  - The plan binds the M5.21-59 release decision gate plan digest, M5.21-58 migration digest, validation/schema digests, source audit event digest, trusted server principal, future validation result digest, future release decision digest, write-chain digests, audit receipt id, server-derived idempotency key, and code release switch.
+  - Positive input remains blocked by `STATE_MACHINE_RELEASE_DECISION_REQUIREMENT_IMPLEMENTATION_HOLD`.
+  - Missing release decision gate report returns `RELEASE_DECISION_GATE_REPORT_NOT_READY_FOR_STATE_MACHINE`.
+  - Tampered gate digest or audit digest returns `RELEASE_DECISION_GATE_REPORT_INVALID_FOR_STATE_MACHINE`.
+  - Forged release decision, validation result, legacy `auditReceipt.releaseEligible`, write permission, or executor success claims return `STATE_MACHINE_RELEASE_DECISION_REQUIREMENT_FORGED_RELEASE_CLAIM`; even an empty caller-supplied `releaseDecision` is rejected.
+  - Secret leakage returns `STATE_MACHINE_RELEASE_DECISION_REQUIREMENT_INPUT_CONTAINS_FORBIDDEN_SECRET`.
+  - Added `NimCreateStateMachineReleaseDecisionRequirementSupportTest`.
+  - Added `docs/M5_21_SIXTIETH_WAVE_NIM_STATE_MACHINE_RELEASE_DECISION_REQUIREMENT_AUDIT_20260607.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateStateMachineReleaseDecisionRequirementSupportTest,NimCreateDurableAuditReleaseDecisionGateSupportTest,NimCreateDurableAuditValidationResultMigrationSupportTest,NimCreateDurableAuditReceiptValidationGateSupportTest,NimCreateDurableAuditReceiptSchemaSupportTest" test`
+    - `mvn -q test`
+    - Full test note: `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0; this is expected for the current local test environment and does not indicate an M5.21-60 regression.
+  - No real `8100` access; no Elasticsearch connection; no `ISysLogService` call; no `sys_log` write; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
+  - Recovery note: the release decision gate report is a future state-machine input contract, not a release credential. Future state machine work must add and verify this input before `writePermitted=true` can ever be considered.
 
 - M5.21-59 NIM durable audit release decision gate contract is implemented and verified:
   - Added `NimCreateDurableAuditReleaseDecisionGateSupport`.

@@ -81,9 +81,39 @@ Current track:
 
 Recently completed:
 
-`M5.21-59 NIM durable audit release decision gate contract`
+`M5.21-60 NIM state-machine release decision report requirement contract`
 
 Latest checkpoint:
+
+- Date: 2026-06-07 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+  - M5.21-60 implemented and verified:
+  - Added `NimCreateStateMachineReleaseDecisionRequirementSupport` as a pure contract-only requirement shell for the future `NimCreateStateMachineSupport` release decision gate report input.
+  - It consumes:
+    - `auditContext`
+    - `trustedPrincipalSnapshot`
+    - `durableAuditReleaseDecisionGateReport` from M5.21-59
+  - It returns `stateMachineReleaseDecisionReportRequirement=NIM_CREATE_STATE_MACHINE_RELEASE_DECISION_REPORT_REQUIREMENT`, `executionMode=STATE_MACHINE_RELEASE_DECISION_REQUIREMENT_CONTRACT_ONLY`, and `requirementState=IMPLEMENTATION_HOLD|REJECTED`.
+  - It explicitly declares the future state-machine input gap:
+    - `requiredFutureStateMachineInput=durableAuditReleaseDecisionGateReport`
+    - `futureReadinessRequestField=releaseDecisionGateReport`
+    - `releaseDecisionGateReportRequired=true`
+  - Positive input produces `stateMachineRequirementPlan.stateMachineRequirementSequence`, `requiredFutureStateMachineEvidence`, `stateMachineFieldMigration`, `currentDenyTemplate`, `failureContract`, and `forbiddenShortcuts`.
+  - The plan binds M5.21-59 `releaseDecisionGatePlanDigest`, M5.21-58 migration digest, validation/schema digests, source audit event digest, trusted server principal, future validation result digest, future release decision digest, write-chain digests, audit receipt id, server-derived idempotency key, and code release switch.
+  - Current state explicitly remains `realStateMachineReleaseDecisionGateReportAccepted=false`, `releaseDecisionGateDigestVerified=false`, `validationResultDigestVerified=false`, `releaseDecisionDigestVerified=false`, `trustedPrincipalValidated=false`, `codeReleaseSwitchVerified=false`, `realReleaseDecisionLoaded=false`, `realReleaseDecisionAccepted=false`, `stateMachineReleaseGateImplemented=false`, `stateMachineReleaseBound=false`, `stateMachineReleaseDecisionRequirementBound=false`, `stateMachineCanSetWritePermittedNow=false`, `legacyAuditReceiptReleaseEligibleTrusted=false`, `fallbackToAuditReceiptReleaseEligibleAllowed=false`, `fallbackToCallerReleaseDecisionAllowed=false`, `fallbackToMigrationPlanAllowed=false`, `releaseEligible=false`, `writePermitted=false`, `writeExecutionAllowed=false`, and `realHttpExecutionAllowed=false`.
+  - Positive input remains blocked by `STATE_MACHINE_RELEASE_DECISION_REQUIREMENT_IMPLEMENTATION_HOLD`.
+  - Missing release decision gate report is rejected with `RELEASE_DECISION_GATE_REPORT_NOT_READY_FOR_STATE_MACHINE`.
+  - Tampered gate plan digest or audit event digest is rejected with `RELEASE_DECISION_GATE_REPORT_INVALID_FOR_STATE_MACHINE`.
+  - Forged release decision, validation result, legacy `auditReceipt.releaseEligible`, write permission, or executor success claims are rejected with `STATE_MACHINE_RELEASE_DECISION_REQUIREMENT_FORGED_RELEASE_CLAIM`; even an empty caller-supplied `releaseDecision` is rejected.
+  - Secret leakage is rejected with `STATE_MACHINE_RELEASE_DECISION_REQUIREMENT_INPUT_CONTAINS_FORBIDDEN_SECRET`.
+  - Added `NimCreateStateMachineReleaseDecisionRequirementSupportTest`.
+  - Added `docs/M5_21_SIXTIETH_WAVE_NIM_STATE_MACHINE_RELEASE_DECISION_REQUIREMENT_AUDIT_20260607.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateStateMachineReleaseDecisionRequirementSupportTest,NimCreateDurableAuditReleaseDecisionGateSupportTest,NimCreateDurableAuditValidationResultMigrationSupportTest,NimCreateDurableAuditReceiptValidationGateSupportTest,NimCreateDurableAuditReceiptSchemaSupportTest" test`
+    - `mvn -q test`
+    - Full test note: `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0; this is an accepted degraded-test-path signal, not an M5.21-60 failure.
+  - No real `8100` access; no Elasticsearch connection; no `ISysLogService` call; no `sys_log` write; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
+  - Learning note: future state machine must consume and recompute release decision gate report evidence; the gate report is a future state-machine input contract, not a release credential.
 
 - Date: 2026-06-07 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.

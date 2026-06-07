@@ -143,3 +143,11 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Future release evidence must also bind the write chain: `bodyDigest`, `requestSpecDigest`, `handoffDigest`, audit receipt id/event digest, and server-derived idempotency key.
 - Current gate output remains `IMPLEMENTATION_HOLD`; `releaseEligible=false`, `writePermitted=false`, `writeExecutionAllowed=false`, and `realHttpExecutionAllowed=false`.
 - Caller supplied release decisions, validation results, legacy `auditReceipt.releaseEligible=true`, or executor success claims are forged release claims until a reviewed server-side gate exists.
+
+### M5.21-60 state-machine release decision report requirement note
+
+- `NimCreateStateMachineReleaseDecisionRequirementSupport` defines the future requirement that the state machine must receive a server-generated release decision gate report; it does not change `NimCreateStateMachineSupport` release behavior yet.
+- The future state-machine input is explicitly named as `durableAuditReleaseDecisionGateReport`, with a future `ReadinessRequest` field named `releaseDecisionGateReport`.
+- The state machine must recompute the release decision gate plan digest and then bind validation result digest, release decision digest, trusted principal, write-chain digests, audit receipt id, server-derived idempotency key, and code release switch.
+- Current requirement output remains `IMPLEMENTATION_HOLD`; `stateMachineCanSetWritePermittedNow=false`, `writePermitted=false`, `writeExecutionAllowed=false`, and `realHttpExecutionAllowed=false`.
+- The gate report is a future state-machine input contract, not a release credential. Caller supplied `releaseDecision`, `validationResult`, legacy `auditReceipt.releaseEligible=true`, or executor success claims remain forged release claims.

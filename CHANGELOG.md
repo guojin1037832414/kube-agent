@@ -6,6 +6,22 @@
 
 ---
 
+## [M5.21-60] - NIM state-machine release decision report requirement contract
+
+**Delivery**: Added a contract-only state-machine release decision report requirement after M5.21-59. It locks the future requirement that `NimCreateStateMachineSupport` must consume and recompute a release decision gate report before any real `writePermitted=true` path can exist, while leaving the current state machine behavior unchanged and held.
+**Changes**
+- Added `NimCreateStateMachineReleaseDecisionRequirementSupport`, consuming only `auditContext`, `trustedPrincipalSnapshot`, and `durableAuditReleaseDecisionGateReport`.
+- Output includes `stateMachineReleaseDecisionReportRequirement=NIM_CREATE_STATE_MACHINE_RELEASE_DECISION_REPORT_REQUIREMENT`, `executionMode=STATE_MACHINE_RELEASE_DECISION_REQUIREMENT_CONTRACT_ONLY`, and `requirementState=IMPLEMENTATION_HOLD|REJECTED`.
+- Positive input prepares `stateMachineRequirementSequence`, `requiredFutureStateMachineEvidence`, `stateMachineFieldMigration`, `currentDenyTemplate`, `failureContract`, and `forbiddenShortcuts`.
+- The requirement plan binds the M5.21-59 release decision gate plan digest, migration/validation/schema digests, source audit event digest, trusted principal, and future state-machine evidence for validation result digest, release decision digest, body/request/handoff digests, audit receipt id, server-derived idempotency key, and code release switch.
+- Current state remains `realStateMachineReleaseDecisionGateReportAccepted=false`, `releaseDecisionGateDigestVerified=false`, `validationResultDigestVerified=false`, `releaseDecisionDigestVerified=false`, `stateMachineReleaseGateImplemented=false`, `stateMachineReleaseBound=false`, `stateMachineCanSetWritePermittedNow=false`, `legacyAuditReceiptReleaseEligibleTrusted=false`, `writePermitted=false`, `writeExecutionAllowed=false`, and `realHttpExecutionAllowed=false`.
+- Forged `releaseDecision`, `validationResult`, legacy `auditReceipt.releaseEligible`, write permission, or executor success claims are rejected with `STATE_MACHINE_RELEASE_DECISION_REQUIREMENT_FORGED_RELEASE_CLAIM`; even an empty caller-supplied `releaseDecision` is rejected.
+- Added `NimCreateStateMachineReleaseDecisionRequirementSupportTest`.
+- Added `docs/M5_21_SIXTIETH_WAVE_NIM_STATE_MACHINE_RELEASE_DECISION_REQUIREMENT_AUDIT_20260607.md`.
+**Security**
+- This wave adds no real Java release decision/validator/release gate, no Spring Bean, no Elasticsearch, no `ISysLogService`, no `sys_log` write, no HTTP client, no real `8100` access, and no `POST /api/{orgId}/deployment`.
+- The requirement plan is not a release decision or release credential; `nim_create` remains `httpMethod=NONE + PLACEHOLDER + requiresConfirmation=true`.
+
 ## [M5.21-59] - NIM durable audit release decision gate contract
 
 **Delivery**: Added a contract-only release decision gate plan after M5.21-58. It describes how a future server-issued `NimDurableAuditReleaseDecision` must bind back into both the state machine and durable write executor, while still issuing no real release credential and performing no I/O.
