@@ -96,6 +96,17 @@ final class NimCreateStateMachineReleaseDecisionRequirementSupport {
         result.put("inputAccepted", inputAccepted);
         result.put("stateMachineRequirementPlanPrepared", inputAccepted);
         result.put("releaseDecisionGateReportAccepted", inputAccepted);
+        result.put("releaseDecisionGateReportAcceptedFieldIsCompatibilityOnly", true);
+        result.put("releaseDecisionGateReportAcceptedIsAuthoritative", false);
+        result.put("releaseDecisionGateReportAcceptedStandaloneConsumptionAllowed", false);
+        result.put("releaseDecisionGateReportAcceptedRequiredCompanionSignals", List.of(
+            "releaseDecisionGateReportAcceptanceScope="
+                + (inputAccepted ? "CONTRACT_INPUT_SHAPE_ONLY" : "NOT_ACCEPTED"),
+            "realStateMachineReleaseDecisionGateReportAccepted=false",
+            "releaseDecisionGateDigestVerified=false",
+            "releaseDecisionDigestVerified=false",
+            "stateMachineCanSetWritePermittedNow=false"
+        ));
         result.put("releaseDecisionGateReportAcceptanceScope", inputAccepted
             ? "CONTRACT_INPUT_SHAPE_ONLY"
             : "NOT_ACCEPTED");
@@ -566,6 +577,9 @@ final class NimCreateStateMachineReleaseDecisionRequirementSupport {
     private static Map<String, Object> stateMachineFieldMigration() {
         Map<String, Object> migration = new LinkedHashMap<>();
         migration.put("currentLegacyAuditReceiptReleaseEligibleTrusted", false);
+        migration.put("currentReleaseDecisionGateReportAcceptedAuthoritative", false);
+        migration.put("releaseDecisionGateReportAcceptedStandaloneConsumptionAllowed", false);
+        migration.put("releaseDecisionGateReportAcceptanceScopeRequired", true);
         migration.put("futureReleaseDecisionGateReportRequired", true);
         migration.put("futureValidationResultDigestRequired", true);
         migration.put("futureReleaseDecisionDigestRequired", true);
@@ -593,6 +607,7 @@ final class NimCreateStateMachineReleaseDecisionRequirementSupport {
     private static Map<String, Object> stateMachineFailureContract() {
         Map<String, Object> contract = new LinkedHashMap<>();
         contract.put("failClosed", true);
+        contract.put("fallbackToReleaseDecisionGateReportAcceptedAllowed", false);
         contract.put("fallbackToLegacyAuditReceiptFlagAllowed", false);
         contract.put("fallbackToMigrationPlanAllowed", false);
         contract.put("fallbackToReleaseDecisionGatePlanAllowed", false);
@@ -604,6 +619,7 @@ final class NimCreateStateMachineReleaseDecisionRequirementSupport {
             "RELEASE_DECISION_GATE_REPORT_DIGEST_MISMATCH",
             "VALIDATION_RESULT_DIGEST_MISSING",
             "RELEASE_DECISION_DIGEST_MISSING",
+            "RELEASE_DECISION_GATE_REPORT_ACCEPTED_FLAG_NOT_AUTHORITATIVE",
             "CODE_RELEASE_SWITCH_NOT_OPEN",
             "LEGACY_AUDIT_RECEIPT_RELEASE_FLAG_NOT_TRUSTED",
             "FORGED_RELEASE_DECISION_CLAIM",
@@ -615,6 +631,7 @@ final class NimCreateStateMachineReleaseDecisionRequirementSupport {
     private static List<String> stateMachineForbiddenShortcuts() {
         return List.of(
             "adding releaseDecision to ReadinessRequest without a server-issued digest contract",
+            "treating releaseDecisionGateReportAccepted=true as release approval",
             "accepting release decision gate plan as a release credential",
             "accepting caller-supplied validationResult or releaseDecision",
             "trusting legacy auditReceipt.releaseEligible=true as writePermitted",

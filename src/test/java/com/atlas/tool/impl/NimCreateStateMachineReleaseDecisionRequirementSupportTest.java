@@ -51,6 +51,19 @@ class NimCreateStateMachineReleaseDecisionRequirementSupportTest {
         assertEquals(true, report.get("inputAccepted"));
         assertEquals(true, report.get("stateMachineRequirementPlanPrepared"));
         assertEquals(true, report.get("releaseDecisionGateReportAccepted"));
+        assertEquals(true, report.get("releaseDecisionGateReportAcceptedFieldIsCompatibilityOnly"));
+        assertEquals(false, report.get("releaseDecisionGateReportAcceptedIsAuthoritative"));
+        assertEquals(false, report.get("releaseDecisionGateReportAcceptedStandaloneConsumptionAllowed"));
+        @SuppressWarnings("unchecked")
+        List<String> acceptanceCompanionSignals =
+            (List<String>) report.get("releaseDecisionGateReportAcceptedRequiredCompanionSignals");
+        assertTrue(acceptanceCompanionSignals.contains(
+            "releaseDecisionGateReportAcceptanceScope=CONTRACT_INPUT_SHAPE_ONLY"));
+        assertTrue(acceptanceCompanionSignals.contains(
+            "realStateMachineReleaseDecisionGateReportAccepted=false"));
+        assertTrue(acceptanceCompanionSignals.contains("releaseDecisionGateDigestVerified=false"));
+        assertTrue(acceptanceCompanionSignals.contains("releaseDecisionDigestVerified=false"));
+        assertTrue(acceptanceCompanionSignals.contains("stateMachineCanSetWritePermittedNow=false"));
         assertEquals("CONTRACT_INPUT_SHAPE_ONLY", report.get("releaseDecisionGateReportAcceptanceScope"));
         assertEquals(false, report.get("releaseDecisionGateReportAcceptanceIsRealStateMachineRelease"));
         assertEquals(false, report.get("releaseDecisionGateReportAcceptanceCanEnableWrite"));
@@ -146,6 +159,9 @@ class NimCreateStateMachineReleaseDecisionRequirementSupportTest {
         @SuppressWarnings("unchecked")
         Map<String, Object> migration = (Map<String, Object>) plan.get("stateMachineFieldMigration");
         assertEquals(false, migration.get("currentLegacyAuditReceiptReleaseEligibleTrusted"));
+        assertEquals(false, migration.get("currentReleaseDecisionGateReportAcceptedAuthoritative"));
+        assertEquals(false, migration.get("releaseDecisionGateReportAcceptedStandaloneConsumptionAllowed"));
+        assertEquals(true, migration.get("releaseDecisionGateReportAcceptanceScopeRequired"));
         assertEquals(true, migration.get("futureReleaseDecisionGateReportRequired"));
         assertEquals(true, migration.get("futureValidationResultDigestRequired"));
         assertEquals(true, migration.get("futureReleaseDecisionDigestRequired"));
@@ -158,6 +174,7 @@ class NimCreateStateMachineReleaseDecisionRequirementSupportTest {
         @SuppressWarnings("unchecked")
         Map<String, Object> failure = (Map<String, Object>) plan.get("failureContract");
         assertEquals(true, failure.get("failClosed"));
+        assertEquals(false, failure.get("fallbackToReleaseDecisionGateReportAcceptedAllowed"));
         assertEquals(false, failure.get("fallbackToLegacyAuditReceiptFlagAllowed"));
         assertEquals(false, failure.get("fallbackToMigrationPlanAllowed"));
         assertEquals(false, failure.get("fallbackToReleaseDecisionGatePlanAllowed"));
@@ -184,6 +201,15 @@ class NimCreateStateMachineReleaseDecisionRequirementSupportTest {
             report.get("requirementState"));
         assertEquals(false, report.get("inputAccepted"));
         assertEquals(false, report.get("stateMachineRequirementPlanPrepared"));
+        assertEquals(false, report.get("releaseDecisionGateReportAccepted"));
+        assertEquals(true, report.get("releaseDecisionGateReportAcceptedFieldIsCompatibilityOnly"));
+        assertEquals(false, report.get("releaseDecisionGateReportAcceptedIsAuthoritative"));
+        assertEquals(false, report.get("releaseDecisionGateReportAcceptedStandaloneConsumptionAllowed"));
+        @SuppressWarnings("unchecked")
+        List<String> rejectedAcceptanceCompanionSignals =
+            (List<String>) report.get("releaseDecisionGateReportAcceptedRequiredCompanionSignals");
+        assertTrue(rejectedAcceptanceCompanionSignals.contains(
+            "releaseDecisionGateReportAcceptanceScope=NOT_ACCEPTED"));
         assertEquals("NOT_ACCEPTED", report.get("releaseDecisionGateReportAcceptanceScope"));
         assertEquals(false, report.get("releaseDecisionGateReportAcceptanceIsRealStateMachineRelease"));
         assertEquals(false, report.get("releaseDecisionGateReportAcceptanceCanEnableWrite"));

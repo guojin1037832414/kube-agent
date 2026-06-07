@@ -6,6 +6,20 @@
 
 ---
 
+## [M5.21-64] - NIM accepted boolean non-authoritative contract
+
+**Delivery**: Made the legacy `releaseDecisionGateReportAccepted` boolean explicitly non-authoritative so it cannot be consumed alone as a release approval signal.
+**Changes**
+- Added `releaseDecisionGateReportAcceptedFieldIsCompatibilityOnly=true`.
+- Added `releaseDecisionGateReportAcceptedIsAuthoritative=false`.
+- Added `releaseDecisionGateReportAcceptedStandaloneConsumptionAllowed=false`.
+- Added required companion signals for scope, real state-machine acceptance, digest verification, and write permission status.
+- Extended `stateMachineFieldMigration`, `failureContract`, and `forbiddenShortcuts` to ban fallback to the legacy accepted boolean.
+- Added `docs/M5_21_SIXTY_FOURTH_WAVE_NIM_ACCEPTED_BOOLEAN_NON_AUTHORITATIVE_CONTRACT_AUDIT_20260607.md`.
+**Security**
+- This wave does not modify `NimCreateStateMachineSupport` real release logic and does not enable writes.
+- `nim_create` remains `httpMethod=NONE + PLACEHOLDER + requiresConfirmation=true`, with no real `8100`, no `POST /api/{orgId}/deployment`, no Elasticsearch, no `ISysLogService`, and no `sys_log` write.
+
 ## [M5.21-63] - NIM state-machine gate report acceptance semantics
 
 **Delivery**: Clarified the M5.21-60 state-machine release decision gate report acceptance semantics so future implementers cannot confuse contract input-shape acceptance with real state-machine release acceptance.

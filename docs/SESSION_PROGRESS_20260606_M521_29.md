@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-63, NIM state-machine gate report acceptance semantics.
+- Current latest wave: M5.21-64, NIM accepted boolean non-authoritative contract.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -46,6 +46,28 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-64 NIM accepted boolean non-authoritative contract is implemented:
+  - Updated `NimCreateStateMachineReleaseDecisionRequirementSupport`.
+  - Added explicit non-authoritative compatibility semantics for the legacy accepted boolean:
+    - `releaseDecisionGateReportAcceptedFieldIsCompatibilityOnly=true`
+    - `releaseDecisionGateReportAcceptedIsAuthoritative=false`
+    - `releaseDecisionGateReportAcceptedStandaloneConsumptionAllowed=false`
+    - `releaseDecisionGateReportAcceptedRequiredCompanionSignals`
+  - Extended `stateMachineFieldMigration`, `failureContract`, and `forbiddenShortcuts`.
+  - Future state-machine code must not treat `releaseDecisionGateReportAccepted=true` as release approval or consume it without scope/digest/code-switch companion evidence.
+  - Updated `NimCreateStateMachineReleaseDecisionRequirementSupportTest`.
+  - Valid contract input proves the compatibility field may be true while still non-authoritative; rejected missing gate report proves `NOT_ACCEPTED` and standalone consumption remains forbidden.
+  - Added `docs/M5_21_SIXTY_FOURTH_WAVE_NIM_ACCEPTED_BOOLEAN_NON_AUTHORITATIVE_CONTRACT_AUDIT_20260607.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateStateMachineReleaseDecisionRequirementSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateStateMachineReleaseDecisionRequirementSupportTest,NimCreateDurableAuditReleaseDecisionGateSupportTest,NimCreateDurableAuditValidationResultMigrationSupportTest,NimCreateDurableAuditReceiptValidationGateSupportTest,NimCreateDurableAuditReceiptSchemaSupportTest" test`
+    - `mvn -q test`
+    - Full test note: `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0; this is expected for the current local test environment and does not indicate an M5.21-64 regression.
+    - Final closure also included `git diff --check`, boundary import scan, static secret scan, H-drive SHA256 sync verification, commit, and push.
+  - No real `8100` access; no HTTP client; no Elasticsearch connection; no `ISysLogService`; no `sys_log` write; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
+  - Red/green note: first attempt made the M5.21-59 upstream gate report validator require M5.21-64 fields and caused the positive path to become `REJECTED`; the fix keeps this wave scoped to this layer's output and future plan only.
+  - Recovery note: future release code must read the new non-authoritative/standalone-consumption fields before interpreting legacy `releaseDecisionGateReportAccepted`.
 
 - M5.21-63 NIM state-machine gate report acceptance semantics is implemented:
   - Updated `NimCreateStateMachineReleaseDecisionRequirementSupport`.

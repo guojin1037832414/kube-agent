@@ -173,3 +173,10 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - The explicit scope is `releaseDecisionGateReportAcceptanceScope=CONTRACT_INPUT_SHAPE_ONLY`; rejected inputs use `NOT_ACCEPTED`.
 - `releaseDecisionGateReportAcceptanceIsRealStateMachineRelease=false` and `releaseDecisionGateReportAcceptanceCanEnableWrite=false` must remain false until a reviewed real state-machine release gate exists.
 - In safety-critical Agent state machines, every boolean `accepted` field should have a scope, otherwise future code can accidentally treat a planning artifact as permission.
+
+### M5.21-64 non-authoritative boolean note
+
+- `releaseDecisionGateReportAccepted` is now explicitly a compatibility/readability field, not an authoritative release signal.
+- Future state-machine code must not consume it alone; `releaseDecisionGateReportAcceptedStandaloneConsumptionAllowed=false` is part of the contract.
+- The release path must require scope, digest verification, trusted principal binding, code release switch, and durable executor re-check before any write permission can be considered.
+- Prefer machine-readable "not authoritative" flags for compatibility booleans instead of relying only on prose documentation.

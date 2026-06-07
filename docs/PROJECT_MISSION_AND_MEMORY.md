@@ -81,9 +81,34 @@ Current track:
 
 Recently completed:
 
-`M5.21-63 NIM state-machine gate report acceptance semantics`
+`M5.21-64 NIM accepted boolean non-authoritative contract`
 
 Latest checkpoint:
+
+- Date: 2026-06-07 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+  - M5.21-64 implemented:
+  - Continued M5.21-63 by making the legacy `releaseDecisionGateReportAccepted` boolean explicitly non-authoritative.
+  - Added output fields:
+    - `releaseDecisionGateReportAcceptedFieldIsCompatibilityOnly=true`
+    - `releaseDecisionGateReportAcceptedIsAuthoritative=false`
+    - `releaseDecisionGateReportAcceptedStandaloneConsumptionAllowed=false`
+    - `releaseDecisionGateReportAcceptedRequiredCompanionSignals`
+  - Extended `stateMachineFieldMigration`, `failureContract`, and `forbiddenShortcuts` so future state-machine code cannot fallback to `releaseDecisionGateReportAccepted=true` as release approval.
+  - Updated `NimCreateStateMachineReleaseDecisionRequirementSupportTest`:
+    - valid contract input now proves the compatibility boolean is true but non-authoritative
+    - rejected missing gate report proves the compatibility boolean remains non-authoritative and not accepted
+    - state-machine migration/failure contracts assert standalone consumption is forbidden
+  - Added `docs/M5_21_SIXTY_FOURTH_WAVE_NIM_ACCEPTED_BOOLEAN_NON_AUTHORITATIVE_CONTRACT_AUDIT_20260607.md`.
+  - No real `8100` access; no HTTP client; no Elasticsearch connection; no `ISysLogService` call; no `sys_log` write; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateStateMachineReleaseDecisionRequirementSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateStateMachineReleaseDecisionRequirementSupportTest,NimCreateDurableAuditReleaseDecisionGateSupportTest,NimCreateDurableAuditValidationResultMigrationSupportTest,NimCreateDurableAuditReceiptValidationGateSupportTest,NimCreateDurableAuditReceiptSchemaSupportTest" test`
+    - `mvn -q test`
+    - Full test note: `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0; this remains an accepted degraded-test-path signal, not an M5.21-64 failure.
+    - Final closure also included `git diff --check`, boundary import scan, static secret scan, H-drive SHA256 sync verification, commit, and push.
+  - Red/green learning note: first implementation accidentally tightened M5.21-59 upstream gate-report validation with M5.21-64 fields and turned the positive fixture `REJECTED`; this was corrected so M5.21-64 only constrains this layer's output and future plan, not historical upstream contracts.
+  - Learning note: compatibility booleans should carry machine-readable non-authoritative markers. Prose alone is too weak when future release code may search for `accepted=true`.
 
 - Date: 2026-06-07 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
