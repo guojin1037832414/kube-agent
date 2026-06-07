@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-68, NIM receipt validation probe result binding contract.
+- Current latest wave: M5.21-69, NIM validation result probe binding migration contract.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -46,6 +46,39 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-69 NIM validation result probe binding migration contract is implemented:
+  - Added `NimCreateDurableAuditValidationResultProbeBindingMigrationSupport`.
+  - Added `NimCreateDurableAuditValidationResultProbeBindingMigrationSupportTest`.
+  - Added `docs/M5_21_SIXTY_NINTH_WAVE_NIM_DURABLE_AUDIT_VALIDATION_RESULT_PROBE_BINDING_MIGRATION_AUDIT_20260607.md`.
+  - The contract shell defines a future bridge between:
+    - M5.21-68 `durableAuditReceiptValidationProbeResultBindingReport`
+    - M5.21-58 `durableAuditValidationResultMigrationReport`
+  - It binds:
+    - M5.21-68 `bindingPlanDigest`
+    - M5.21-68 `sourceProbeResultContractDigest`
+    - M5.21-58 `migrationPlanDigest`
+    - source audit event digest
+    - receipt schema / validation plan / interface spec / writer boundary / writer plan / availability plan digests
+    - trusted principal digest
+  - Valid inputs still return `IMPLEMENTATION_HOLD`; M5.21-58 migration report alone remains forbidden as release evidence.
+  - All validation/release/write states remain false:
+    - `probeBindingBoundToValidationResultMigration=false`
+    - `realValidationResultCreated=false`
+    - `realReleaseDecisionCreated=false`
+    - `storageProbeResultBoundForValidation=false`
+    - `serverIssuedProbeResultAccepted=false`
+    - `durableReceiptValidationPassed=false`
+    - `releaseEligible=false`
+    - `writeExecutionAllowed=false`
+  - Rejected cases now include missing M5.21-68 report, missing M5.21-58 report, tampered binding digest, digest-chain mismatch, forged probe binding success claims, caller release evidence, and secret-bearing inputs.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateDurableAuditValidationResultProbeBindingMigrationSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateDurableAuditValidationResultProbeBindingMigrationSupportTest,NimCreateDurableAuditValidationResultMigrationSupportTest,NimCreateDurableAuditReceiptValidationProbeResultBindingSupportTest,NimCreateDurableAuditStorageProbeResultSupportTest,NimCreateDurableAuditReceiptValidationGateSupportTest,NimCreateDurableAuditReceiptSchemaSupportTest" test`
+  - Full test note: `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0; this is expected for the current local test environment and does not indicate an M5.21-69 regression.
+  - Final closure included `mvn -q test`, `git diff --check`, production boundary import scan, static secret scan, H-drive SHA256 sync verification, commit, and push.
+  - No real `8100` access; no HTTP client; no Elasticsearch connection; no `ISysLogService`; no `sys_log` write; no real `POST /api/{orgId}/deployment` execution; `nim_create` remains HOLD.
+  - Recovery note: future validation/release code must consume M5.21-68 `bindingPlanDigest` and probe result contract digest. It must not jump from M5.21-58 `migrationPlanDigest` directly to PASS or `ALLOW_WRITE_EXECUTION`.
 
 - M5.21-68 NIM receipt validation probe result binding contract is implemented:
   - Added `NimCreateDurableAuditReceiptValidationProbeResultBindingSupport`.

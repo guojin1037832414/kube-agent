@@ -6,6 +6,20 @@
 
 ---
 
+## [M5.21-69] - NIM validation result probe binding migration contract
+
+**Delivery**: Added a contract-only bridge requiring future durable audit validation result and release decision migration to bind the M5.21-68 receipt validation probe-result-binding report before any validation PASS or release decision can exist.
+**Changes**
+- Added `NimCreateDurableAuditValidationResultProbeBindingMigrationSupport`.
+- Added `NimCreateDurableAuditValidationResultProbeBindingMigrationSupportTest`.
+- Binds M5.21-68 `bindingPlanDigest`, M5.21-68 `sourceProbeResultContractDigest`, M5.21-58 `migrationPlanDigest`, source audit event, receipt schema, validation plan, interface spec, writer boundary, writer plan, availability plan, and trusted principal digest.
+- Rejects missing M5.21-68 binding report, missing M5.21-58 migration report, tampered binding digests, cross-report digest mismatches, forged probe binding success claims, caller-supplied validation/release/probe/audit receipt evidence, and secret-bearing inputs.
+- Keeps `legacyMigrationReportAloneAllowed=false`, `probeBindingRequiredBeforeValidationResult=true`, `realValidationResultCreated=false`, `realReleaseDecisionCreated=false`, `releaseEligible=false`, and `writeExecutionAllowed=false`.
+- Added `docs/M5_21_SIXTY_NINTH_WAVE_NIM_DURABLE_AUDIT_VALIDATION_RESULT_PROBE_BINDING_MIGRATION_AUDIT_20260607.md`.
+**Security**
+- This wave does not create a real validator, validation result, release decision, DTO, Spring Bean, storage client, release credential, Tool registration, Controller, or write path.
+- `nim_create` remains `httpMethod=NONE + PLACEHOLDER + requiresConfirmation=true`, with no real `8100`, no real deployment POST execution, no Elasticsearch, no `ISysLogService`, and no `sys_log` write.
+
 ## [M5.21-68] - NIM receipt validation probe result binding contract
 
 **Delivery**: Added a contract-only binding layer requiring future durable receipt validation to bind the M5.21-67 storage probe result contract before any receipt validation can run.

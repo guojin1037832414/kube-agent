@@ -81,9 +81,40 @@ Current track:
 
 Recently completed:
 
-`M5.21-68 NIM receipt validation probe result binding contract`
+`M5.21-69 NIM validation result probe binding migration contract`
 
 Latest checkpoint:
+
+- Date: 2026-06-07 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+  - M5.21-69 implemented:
+  - Added `NimCreateDurableAuditValidationResultProbeBindingMigrationSupport` as an independent contract-only bridge between M5.21-68 probe-result-binding report and M5.21-58 validation result / release decision migration report.
+  - Added `NimCreateDurableAuditValidationResultProbeBindingMigrationSupportTest`.
+  - The support class consumes:
+    - `auditContext`
+    - `trustedPrincipalSnapshot`
+    - `durableAuditReceiptValidationProbeResultBindingReport` from M5.21-68
+    - `durableAuditValidationResultMigrationReport` from M5.21-58
+    - optional caller `callerReleaseEvidence`, which is always non-authoritative in this wave
+  - It binds M5.21-68 `bindingPlanDigest`, M5.21-68 `sourceProbeResultContractDigest`, M5.21-58 `migrationPlanDigest`, source audit event, receipt schema, validation plan, interface spec, writer boundary, writer plan, availability plan, and trusted principal digest.
+  - It rejects missing M5.21-68 binding report, missing M5.21-58 migration report, tampered `bindingPlanDigest`, digest-chain mismatch between M5.21-68 and M5.21-58, forged probe-binding success claims, caller-supplied validation/release/probe/audit receipt evidence, and secret-bearing inputs.
+  - Current success states remain false:
+    - `probeBindingBoundToValidationResultMigration=false`
+    - `realValidationResultCreated=false`
+    - `realReleaseDecisionCreated=false`
+    - `storageProbeResultBoundForValidation=false`
+    - `serverIssuedProbeResultAccepted=false`
+    - `durableReceiptValidationPassed=false`
+    - `releaseEligible=false`
+    - `writeExecutionAllowed=false`
+  - Added `docs/M5_21_SIXTY_NINTH_WAVE_NIM_DURABLE_AUDIT_VALIDATION_RESULT_PROBE_BINDING_MIGRATION_AUDIT_20260607.md`.
+  - No real `8100` access; no HTTP client; no Elasticsearch connection; no `ISysLogService` call; no `sys_log` write; no real `POST /api/{orgId}/deployment` execution; `nim_create` remains HOLD.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateDurableAuditValidationResultProbeBindingMigrationSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateDurableAuditValidationResultProbeBindingMigrationSupportTest,NimCreateDurableAuditValidationResultMigrationSupportTest,NimCreateDurableAuditReceiptValidationProbeResultBindingSupportTest,NimCreateDurableAuditStorageProbeResultSupportTest,NimCreateDurableAuditReceiptValidationGateSupportTest,NimCreateDurableAuditReceiptSchemaSupportTest" test`
+  - Full test note: `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0; this remains an accepted degraded-test-path signal, not an M5.21-69 failure.
+  - Final closure included `mvn -q test`, `git diff --check`, production boundary import scan, static secret scan, H-drive SHA256 sync verification, commit, and push.
+  - Learning note: M5.21-58 migration report is a future migration plan, not a validation PASS or release credential. Future release work must bind M5.21-68 `bindingPlanDigest` and probe result contract digest before constructing any server-issued validation result or release decision.
 
 - Date: 2026-06-07 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.

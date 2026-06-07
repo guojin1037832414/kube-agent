@@ -210,3 +210,12 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Current output remains `IMPLEMENTATION_HOLD`; `storageProbeResultBoundForValidation=false`, `serverIssuedProbeResultAccepted=false`, `validationCanRunNow=false`, `durableReceiptValidationPassed=false`, `releaseEligible=false`, and `writeExecutionAllowed=false`.
 - Schema-only validation and validation-gate-only shortcuts are forbidden. Caller supplied probe result, storage receipt, validation result, or release decision remains non-authoritative.
 - Learning distinction: M5.21-57 `requiredEvidence` describes future evidence rules, while M5.21-68 requires those rules to be bound to a server-issued probe result contract before any real receipt validator can pass.
+
+### M5.21-69 validation result probe binding migration note
+
+- `NimCreateDurableAuditValidationResultProbeBindingMigrationSupport` defines the bridge requiring future validation result / release decision migration to consume both M5.21-58 and M5.21-68.
+- M5.21-58 `migrationPlanDigest` is a migration-plan digest, not a validation PASS, release decision, or release credential.
+- Future validation result must bind M5.21-68 `bindingPlanDigest`, `sourceProbeResultContractDigest`, M5.21-58 `migrationPlanDigest`, receipt schema, validation plan, pre/post durable ack digests, trusted principal, and audit event.
+- Future release decision must bind the probe binding digest, probe result contract digest, validation result digest, schema/validation plan digest, audit event, trusted principal, and code release switch.
+- Current output remains `IMPLEMENTATION_HOLD`; `legacyMigrationReportAloneAllowed=false`, `realValidationResultCreated=false`, `realReleaseDecisionCreated=false`, `releaseEligible=false`, and `writeExecutionAllowed=false`.
+- Learning distinction: never let an intermediate plan object become a permission credential. A future release path that consumes M5.21-58 without M5.21-68 must fail closed.
