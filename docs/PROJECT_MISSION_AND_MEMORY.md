@@ -82,12 +82,39 @@ Current track:
 
 Recently completed:
 
-`M5.21-75 NIM code release switch runtime source guard matrix`
+`M5.21-76 NIM code release switch runtime source guard report binding`
 
 Latest checkpoint:
 
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-76 implemented:
+  - `NimCreateDurableWriteExecutorSupport` now consumes `codeReleaseSwitchRuntimeSourceGuardReport`.
+  - `NimCreateStateMachineSupport` now consumes and independently validates the same source guard report.
+  - The durable executor requires M5.21-75 source guard evidence before accepting controlled handoff/request-spec/switch-contract input.
+  - The durable executor emits `codeReleaseSwitchRuntimeSourceGuardReportRequired=true`, `sourceGuardMatrixDigest`, `sourceRuntimeBindingContractDigest`, and false source/source-release flags.
+  - A legal durable executor shell remains `IMPLEMENTATION_HOLD` with:
+    - `DURABLE_WRITE_EXECUTOR_IMPLEMENTATION_HOLD`
+    - `CODE_RELEASE_SWITCH_RUNTIME_SOURCE_GUARD_IMPLEMENTATION_HOLD`
+  - The state machine checks the executor echoes the same source guard digest and runtime-binding digest.
+  - A legal full state-machine shell remains `HELD` with:
+    - `DURABLE_WRITE_EXECUTOR_IMPLEMENTATION_HOLD`
+    - `CODE_RELEASE_SWITCH_CONTRACT_REPORT_IMPLEMENTATION_HOLD`
+    - `CODE_RELEASE_SWITCH_RUNTIME_SOURCE_GUARD_IMPLEMENTATION_HOLD`
+  - Added tests for missing source guard, tampered source guard digest, forged source release claims, `llmJsonSourceAllowed=true`, backend readback release claims, `deploymentId`, and source guard secret leakage.
+  - Added `docs/M5_21_SEVENTY_SIXTH_WAVE_NIM_CODE_RELEASE_SWITCH_RUNTIME_SOURCE_GUARD_REPORT_BINDING_AUDIT_20260608.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateDurableWriteExecutorSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateStateMachineSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateDurableWriteExecutorSupportTest,NimCreateStateMachineSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupportTest,M521NimCodeReleaseSwitchRuntimeSourceGuardContractTest,NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupportTest,NimCreateDurableAuditCodeReleaseSwitchContractSupportTest,NimCreateStateMachineSupportTest,NimCreateDurableWriteExecutorSupportTest" test`
+    - `mvn -q test`
+    - `git diff --check`
+    - production-boundary and success-true shortcut scans on the changed main files
+  - Full test note: `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0; this remains an accepted degraded-test-path signal, not an M5.21-76 failure.
+  - No real `8100` access; no HTTP client; no Spring Bean/Controller/Tool registration; no Elasticsearch; no `ISysLogService`; no `sys_log`; no real deployment POST.
+  - Learning note: M5.21-76 turns source governance into an enforced shell input. A valid source guard report is mandatory evidence, but still only means "checked and held"; it does not release writes.
+- Previous checkpoint:
 - M5.21-75 implemented:
   - Added `NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport`.
   - Added `NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupportTest`.

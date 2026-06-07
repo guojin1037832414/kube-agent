@@ -6,6 +6,21 @@
 
 ---
 
+## [M5.21-76] - NIM runtime source guard report binding
+
+**Delivery**: Bound the M5.21-75 `codeReleaseSwitchRuntimeSourceGuardReport` into the current state-machine and durable-executor shells as mandatory fail-closed evidence, while keeping `nim_create` held.
+**Changes**
+- `NimCreateDurableWriteExecutorSupport` now requires the runtime source-guard report before accepting a controlled handoff/request-spec/switch-contract input.
+- `NimCreateStateMachineSupport` now accepts and independently validates the same source-guard report, and cross-checks the durable executor report echoes the same source guard/runtime-binding digests.
+- Legal executor shell output remains `IMPLEMENTATION_HOLD` with both `DURABLE_WRITE_EXECUTOR_IMPLEMENTATION_HOLD` and `CODE_RELEASE_SWITCH_RUNTIME_SOURCE_GUARD_IMPLEMENTATION_HOLD`.
+- Legal state-machine full-shell output remains `HELD` with executor HOLD, switch-contract HOLD, and source-guard HOLD.
+- Added tests for missing source guard, tampered `sourceGuardMatrixDigest`, forged source release claims, `llmJsonSourceAllowed=true`, backend readback claims, `deploymentId`, and source guard secret leakage.
+- Added `docs/M5_21_SEVENTY_SIXTH_WAVE_NIM_CODE_RELEASE_SWITCH_RUNTIME_SOURCE_GUARD_REPORT_BINDING_AUDIT_20260608.md`.
+**Security**
+- A valid source-guard report is required evidence only; it is not a release credential.
+- No real switch, release credential, HTTP client, Spring Bean, Controller, Tool registration, Elasticsearch, `ISysLogService`, `sys_log` write, kube-manager `8100` call, or real `POST /api/{orgId}/deployment` was added.
+- `writePermitted`, `writeExecutionAllowed`, `realHttpExecutionAllowed`, `writeAttempted`, `writeExecuted`, and `postWriteReadinessTriggered` remain false.
+
 ## [M5.21-75] - NIM code release switch runtime source guard matrix
 
 **Delivery**: Added a contract-only runtime source-guard matrix after M5.21-73 so future `nim_create` release code cannot confuse planning evidence, runtime flags, readback data, or executor success with a reviewed open switch.

@@ -244,10 +244,12 @@ class NimCreateStateMachineSupportTest {
         Map<String, Object> requestSpecReport = completeWriteRequestSpecReport(audit, receipt, bodyReport);
         Map<String, Object> handoffReport = completeWriteExecutionHandoffReport(audit, receipt, bodyReport, requestSpecReport);
         Map<String, Object> codeSwitchReport = completeCodeReleaseSwitchContractReport(audit);
+        Map<String, Object> sourceGuardReport = completeCodeReleaseSwitchRuntimeSourceGuardReport(audit);
         Map<String, Object> executorReport = completeDurableWriteExecutorReport(
             handoffReport,
             requestSpecReport,
-            codeSwitchReport
+            codeSwitchReport,
+            sourceGuardReport
         );
 
         Map<String, Object> guard = NimCreateStateMachineSupport.evaluate(new NimCreateStateMachineSupport.ReadinessRequest(
@@ -261,6 +263,7 @@ class NimCreateStateMachineSupportTest {
             requestSpecReport,
             handoffReport,
             codeSwitchReport,
+            sourceGuardReport,
             executorReport,
             completeReadinessPlan(),
             completeReadinessExecutionReport(),
@@ -272,16 +275,25 @@ class NimCreateStateMachineSupportTest {
         assertEquals(false, guard.get("writePermitted"));
         assertEquals(true, guard.get("codeReleaseSwitchRuntimeBindingRequired"));
         assertEquals(true, guard.get("codeReleaseSwitchContractReportRequired"));
+        assertEquals(true, guard.get("codeReleaseSwitchRuntimeSourceGuardReportRequired"));
         assertEquals(false, guard.get("codeReleaseSwitchRuntimeBindingInstalled"));
         assertEquals(false, guard.get("codeReleaseSwitchContractReportAcceptedForRelease"));
+        assertEquals(false, guard.get("codeReleaseSwitchRuntimeSourceGuardAcceptedForRelease"));
+        assertEquals(false, guard.get("sourceGuardInstalled"));
+        assertEquals(false, guard.get("candidateSourceEvidenceAuthoritative"));
+        assertEquals(false, guard.get("backendQuerySourceAllowedForRelease"));
+        assertEquals(false, guard.get("sysLogBackfillSourceAllowed"));
         assertEquals(codeSwitchReport.get("codeReleaseSwitchContractDigest"),
             guard.get("sourceCodeReleaseSwitchContractDigest"));
+        assertEquals(sourceGuardReport.get("sourceGuardMatrixDigest"),
+            guard.get("sourceGuardMatrixDigest"));
         assertEquals(false, guard.get("legacyNimCreateReleasedBooleanAuthoritative"));
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> blockers = (List<Map<String, Object>>) guard.get("blockedBy");
         assertHasBlocker(blockers, "DURABLE_WRITE_EXECUTOR_IMPLEMENTATION_HOLD");
         assertHasBlocker(blockers, "CODE_RELEASE_SWITCH_CONTRACT_REPORT_IMPLEMENTATION_HOLD");
-        assertEquals(2, blockers.size());
+        assertHasBlocker(blockers, "CODE_RELEASE_SWITCH_RUNTIME_SOURCE_GUARD_IMPLEMENTATION_HOLD");
+        assertEquals(3, blockers.size());
     }
 
     @Test
@@ -292,10 +304,12 @@ class NimCreateStateMachineSupportTest {
         Map<String, Object> requestSpecReport = completeWriteRequestSpecReport(audit, receipt, bodyReport);
         Map<String, Object> handoffReport = completeWriteExecutionHandoffReport(audit, receipt, bodyReport, requestSpecReport);
         Map<String, Object> codeSwitchReport = completeCodeReleaseSwitchContractReport(audit);
+        Map<String, Object> sourceGuardReport = completeCodeReleaseSwitchRuntimeSourceGuardReport(audit);
         Map<String, Object> forgedExecutorReport = new java.util.LinkedHashMap<>(completeDurableWriteExecutorReport(
             handoffReport,
             requestSpecReport,
-            codeSwitchReport
+            codeSwitchReport,
+            sourceGuardReport
         ));
         forgedExecutorReport.put("executorImplementationAvailable", true);
         forgedExecutorReport.put("writeAttempted", true);
@@ -314,6 +328,7 @@ class NimCreateStateMachineSupportTest {
             requestSpecReport,
             handoffReport,
             codeSwitchReport,
+            sourceGuardReport,
             forgedExecutorReport,
             completeReadinessPlan(),
             completeReadinessExecutionReport(),
@@ -338,10 +353,12 @@ class NimCreateStateMachineSupportTest {
         Map<String, Object> handoffReport = completeWriteExecutionHandoffReport(audit, receipt, bodyReport, requestSpecReport);
         Map<String, Object> codeSwitchReport = new java.util.LinkedHashMap<>(completeCodeReleaseSwitchContractReport(audit));
         codeSwitchReport.put("codeReleaseSwitchContractDigest", "a".repeat(64));
+        Map<String, Object> sourceGuardReport = completeCodeReleaseSwitchRuntimeSourceGuardReport(audit);
         Map<String, Object> executorReport = completeDurableWriteExecutorReport(
             handoffReport,
             requestSpecReport,
-            completeCodeReleaseSwitchContractReport(audit)
+            completeCodeReleaseSwitchContractReport(audit),
+            sourceGuardReport
         );
 
         Map<String, Object> guard = NimCreateStateMachineSupport.evaluate(new NimCreateStateMachineSupport.ReadinessRequest(
@@ -355,6 +372,7 @@ class NimCreateStateMachineSupportTest {
             requestSpecReport,
             handoffReport,
             codeSwitchReport,
+            sourceGuardReport,
             executorReport,
             completeReadinessPlan(),
             completeReadinessExecutionReport(),
@@ -381,10 +399,12 @@ class NimCreateStateMachineSupportTest {
         codeSwitchReport.put("writePermitted", true);
         codeSwitchReport.put("writeExecutionAllowed", true);
         codeSwitchReport.put("codeReleaseSwitchDigestVerified", true);
+        Map<String, Object> sourceGuardReport = completeCodeReleaseSwitchRuntimeSourceGuardReport(audit);
         Map<String, Object> executorReport = completeDurableWriteExecutorReport(
             handoffReport,
             requestSpecReport,
-            completeCodeReleaseSwitchContractReport(audit)
+            completeCodeReleaseSwitchContractReport(audit),
+            sourceGuardReport
         );
 
         Map<String, Object> guard = NimCreateStateMachineSupport.evaluate(new NimCreateStateMachineSupport.ReadinessRequest(
@@ -398,6 +418,7 @@ class NimCreateStateMachineSupportTest {
             requestSpecReport,
             handoffReport,
             codeSwitchReport,
+            sourceGuardReport,
             executorReport,
             completeReadinessPlan(),
             completeReadinessExecutionReport(),
@@ -411,6 +432,183 @@ class NimCreateStateMachineSupportTest {
         List<Map<String, Object>> blockers = (List<Map<String, Object>>) guard.get("blockedBy");
         assertHasBlocker(blockers, "CODE_RELEASE_SWITCH_CONTRACT_REPORT_CONTRACT_INVALID");
         assertHasBlocker(blockers, "CODE_RELEASE_SWITCH_CONTRACT_RELEASE_CLAIM_NOT_TRUSTED");
+    }
+
+    @Test
+    void stateMachine_shouldRequireCodeReleaseSwitchRuntimeSourceGuardReport() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> receipt = completeAuditReceipt();
+        Map<String, Object> bodyReport = completeWriteBodyRebuildReport(audit, receipt);
+        Map<String, Object> requestSpecReport = completeWriteRequestSpecReport(audit, receipt, bodyReport);
+        Map<String, Object> handoffReport = completeWriteExecutionHandoffReport(audit, receipt, bodyReport, requestSpecReport);
+        Map<String, Object> codeSwitchReport = completeCodeReleaseSwitchContractReport(audit);
+
+        Map<String, Object> guard = NimCreateStateMachineSupport.evaluate(new NimCreateStateMachineSupport.ReadinessRequest(
+            Map.of("name", "nim-missing-source-guard"),
+            openGate(),
+            completePreview(),
+            HitlConfirmation.human("thread-1", "nim_create"),
+            audit,
+            receipt,
+            bodyReport,
+            requestSpecReport,
+            handoffReport,
+            codeSwitchReport,
+            Map.of(),
+            completeReadinessPlan(),
+            completeReadinessExecutionReport(),
+            NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
+            true
+        ));
+
+        assertEquals("HELD", guard.get("state"));
+        assertEquals(false, guard.get("writePermitted"));
+        assertEquals(true, guard.get("codeReleaseSwitchRuntimeSourceGuardReportRequired"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) guard.get("blockedBy");
+        assertHasBlocker(blockers, "CODE_RELEASE_SWITCH_RUNTIME_SOURCE_GUARD_REPORT_NOT_READY");
+    }
+
+    @Test
+    void stateMachine_shouldRejectTamperedRuntimeSourceGuardDigest() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> receipt = completeAuditReceipt();
+        Map<String, Object> bodyReport = completeWriteBodyRebuildReport(audit, receipt);
+        Map<String, Object> requestSpecReport = completeWriteRequestSpecReport(audit, receipt, bodyReport);
+        Map<String, Object> handoffReport = completeWriteExecutionHandoffReport(audit, receipt, bodyReport, requestSpecReport);
+        Map<String, Object> codeSwitchReport = completeCodeReleaseSwitchContractReport(audit);
+        Map<String, Object> sourceGuardReport = new java.util.LinkedHashMap<>(
+            completeCodeReleaseSwitchRuntimeSourceGuardReport(audit)
+        );
+        sourceGuardReport.put("sourceGuardMatrixDigest", "b".repeat(64));
+        Map<String, Object> executorReport = completeDurableWriteExecutorReport(
+            handoffReport,
+            requestSpecReport,
+            codeSwitchReport,
+            completeCodeReleaseSwitchRuntimeSourceGuardReport(audit)
+        );
+
+        Map<String, Object> guard = NimCreateStateMachineSupport.evaluate(new NimCreateStateMachineSupport.ReadinessRequest(
+            Map.of("name", "nim-tampered-source-guard"),
+            openGate(),
+            completePreview(),
+            HitlConfirmation.human("thread-1", "nim_create"),
+            audit,
+            receipt,
+            bodyReport,
+            requestSpecReport,
+            handoffReport,
+            codeSwitchReport,
+            sourceGuardReport,
+            executorReport,
+            completeReadinessPlan(),
+            completeReadinessExecutionReport(),
+            NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
+            true
+        ));
+
+        assertEquals("HELD", guard.get("state"));
+        assertEquals(false, guard.get("writePermitted"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) guard.get("blockedBy");
+        assertHasBlocker(blockers, "CODE_RELEASE_SWITCH_RUNTIME_SOURCE_GUARD_REPORT_CONTRACT_INVALID");
+        assertHasBlocker(blockers, "DURABLE_WRITE_EXECUTOR_REPORT_CONTRACT_INVALID");
+    }
+
+    @Test
+    void stateMachine_shouldRejectForgedRuntimeSourceGuardReleaseClaims() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> receipt = completeAuditReceipt();
+        Map<String, Object> bodyReport = completeWriteBodyRebuildReport(audit, receipt);
+        Map<String, Object> requestSpecReport = completeWriteRequestSpecReport(audit, receipt, bodyReport);
+        Map<String, Object> handoffReport = completeWriteExecutionHandoffReport(audit, receipt, bodyReport, requestSpecReport);
+        Map<String, Object> codeSwitchReport = completeCodeReleaseSwitchContractReport(audit);
+        Map<String, Object> sourceGuardReport = new java.util.LinkedHashMap<>(
+            completeCodeReleaseSwitchRuntimeSourceGuardReport(audit)
+        );
+        sourceGuardReport.put("sourceGuardInstalled", true);
+        sourceGuardReport.put("llmJsonSourceAllowed", true);
+        sourceGuardReport.put("backendQuerySourceAllowedForRelease", true);
+        sourceGuardReport.put("deploymentId", "dep-forged");
+        Map<String, Object> executorReport = completeDurableWriteExecutorReport(
+            handoffReport,
+            requestSpecReport,
+            codeSwitchReport,
+            completeCodeReleaseSwitchRuntimeSourceGuardReport(audit)
+        );
+
+        Map<String, Object> guard = NimCreateStateMachineSupport.evaluate(new NimCreateStateMachineSupport.ReadinessRequest(
+            Map.of("name", "nim-forged-source-guard"),
+            openGate(),
+            completePreview(),
+            HitlConfirmation.human("thread-1", "nim_create"),
+            audit,
+            receipt,
+            bodyReport,
+            requestSpecReport,
+            handoffReport,
+            codeSwitchReport,
+            sourceGuardReport,
+            executorReport,
+            completeReadinessPlan(),
+            completeReadinessExecutionReport(),
+            NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
+            true
+        ));
+
+        assertEquals("HELD", guard.get("state"));
+        assertEquals(false, guard.get("writePermitted"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) guard.get("blockedBy");
+        assertHasBlocker(blockers, "CODE_RELEASE_SWITCH_RUNTIME_SOURCE_GUARD_REPORT_CONTRACT_INVALID");
+        assertHasBlocker(blockers, "CODE_RELEASE_SWITCH_RUNTIME_SOURCE_GUARD_RELEASE_CLAIM_NOT_TRUSTED");
+        assertHasBlocker(blockers, "DURABLE_WRITE_EXECUTOR_IMPLEMENTATION_HOLD");
+    }
+
+    @Test
+    void stateMachine_shouldRejectRuntimeSourceGuardSecretLeakage() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> receipt = completeAuditReceipt();
+        Map<String, Object> bodyReport = completeWriteBodyRebuildReport(audit, receipt);
+        Map<String, Object> requestSpecReport = completeWriteRequestSpecReport(audit, receipt, bodyReport);
+        Map<String, Object> handoffReport = completeWriteExecutionHandoffReport(audit, receipt, bodyReport, requestSpecReport);
+        Map<String, Object> codeSwitchReport = completeCodeReleaseSwitchContractReport(audit);
+        Map<String, Object> sourceGuardReport = new java.util.LinkedHashMap<>(
+            completeCodeReleaseSwitchRuntimeSourceGuardReport(audit)
+        );
+        sourceGuardReport.put("Authorization", "Bearer real-key-material");
+        Map<String, Object> executorReport = completeDurableWriteExecutorReport(
+            handoffReport,
+            requestSpecReport,
+            codeSwitchReport,
+            completeCodeReleaseSwitchRuntimeSourceGuardReport(audit)
+        );
+
+        Map<String, Object> guard = NimCreateStateMachineSupport.evaluate(new NimCreateStateMachineSupport.ReadinessRequest(
+            Map.of("name", "nim-secret-source-guard"),
+            openGate(),
+            completePreview(),
+            HitlConfirmation.human("thread-1", "nim_create"),
+            audit,
+            receipt,
+            bodyReport,
+            requestSpecReport,
+            handoffReport,
+            codeSwitchReport,
+            sourceGuardReport,
+            executorReport,
+            completeReadinessPlan(),
+            completeReadinessExecutionReport(),
+            NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
+            true
+        ));
+
+        assertEquals("HELD", guard.get("state"));
+        assertEquals(false, guard.get("writePermitted"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) guard.get("blockedBy");
+        assertHasBlocker(blockers, "CODE_RELEASE_SWITCH_RUNTIME_SOURCE_GUARD_REPORT_CONTAINS_FORBIDDEN_SECRET");
+        assertHasBlocker(blockers, "DURABLE_WRITE_EXECUTOR_IMPLEMENTATION_HOLD");
     }
 
     @Test
@@ -635,18 +833,58 @@ class NimCreateStateMachineSupportTest {
 
     private Map<String, Object> completeDurableWriteExecutorReport(Map<String, Object> handoffReport,
                                                                    Map<String, Object> requestSpecReport,
-                                                                   Map<String, Object> codeSwitchReport) {
+                                                                   Map<String, Object> codeSwitchReport,
+                                                                   Map<String, Object> sourceGuardReport) {
         return NimCreateDurableWriteExecutorSupport.prepare(
             new NimCreateDurableWriteExecutorSupport.WriteExecutionInput(
                 handoffReport,
                 requestSpecReport,
-                codeSwitchReport
+                codeSwitchReport,
+                sourceGuardReport
             )
         );
     }
 
     private Map<String, Object> completeCodeReleaseSwitchContractReport(Map<String, Object> audit) {
         Map<String, Object> principal = trustedPrincipalSnapshot(audit);
+        return NimCreateDurableAuditCodeReleaseSwitchContractSupport.plan(
+            new NimCreateDurableAuditCodeReleaseSwitchContractSupport.CodeReleaseSwitchContractInput(
+                audit,
+                principal,
+                releaseDecisionContractReport(audit, principal),
+                Map.of()
+            )
+        );
+    }
+
+    private Map<String, Object> completeCodeReleaseSwitchRuntimeSourceGuardReport(Map<String, Object> audit) {
+        Map<String, Object> principal = trustedPrincipalSnapshot(audit);
+        return NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport.plan(
+            new NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport.RuntimeSourceGuardInput(
+                audit,
+                principal,
+                completeCodeReleaseSwitchRuntimeBindingReport(audit, principal),
+                Map.of()
+            )
+        );
+    }
+
+    private Map<String, Object> completeCodeReleaseSwitchRuntimeBindingReport(Map<String, Object> audit,
+                                                                              Map<String, Object> principal) {
+        return NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport.plan(
+            new NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport
+                .CodeReleaseSwitchRuntimeBindingInput(
+                audit,
+                principal,
+                completeCodeReleaseSwitchContractReport(audit, principal),
+                Map.of(),
+                Map.of()
+            )
+        );
+    }
+
+    private Map<String, Object> completeCodeReleaseSwitchContractReport(Map<String, Object> audit,
+                                                                        Map<String, Object> principal) {
         return NimCreateDurableAuditCodeReleaseSwitchContractSupport.plan(
             new NimCreateDurableAuditCodeReleaseSwitchContractSupport.CodeReleaseSwitchContractInput(
                 audit,

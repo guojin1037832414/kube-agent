@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-75, NIM code release switch runtime source guard matrix.
+- Current latest wave: M5.21-76, NIM code release switch runtime source guard report binding.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -48,6 +48,34 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-76 NIM code release switch runtime source guard report binding is implemented:
+  - Updated `NimCreateDurableWriteExecutorSupport` to require `codeReleaseSwitchRuntimeSourceGuardReport`.
+  - Updated `NimCreateStateMachineSupport` to require and independently validate the same source guard report.
+  - Durable executor now rejects missing/tampered/forged/secret-bearing source guard input before any write attempt.
+  - Durable executor legal shell remains `IMPLEMENTATION_HOLD`, `inputAccepted=true`, with blocker codes:
+    - `DURABLE_WRITE_EXECUTOR_IMPLEMENTATION_HOLD`
+    - `CODE_RELEASE_SWITCH_RUNTIME_SOURCE_GUARD_IMPLEMENTATION_HOLD`
+  - State machine legal full shell remains `HELD`, `writePermitted=false`, with blocker codes:
+    - `DURABLE_WRITE_EXECUTOR_IMPLEMENTATION_HOLD`
+    - `CODE_RELEASE_SWITCH_CONTRACT_REPORT_IMPLEMENTATION_HOLD`
+    - `CODE_RELEASE_SWITCH_RUNTIME_SOURCE_GUARD_IMPLEMENTATION_HOLD`
+  - Added durable executor tests for missing source guard, tampered `sourceGuardMatrixDigest`, forged release/source claims (`sourceGuardInstalled`, `llmJsonSourceAllowed`, backend readback, `deploymentId`), and source guard secret leakage.
+  - Added state machine tests for missing source guard, tampered digest, forged release/source claims, and source guard secret leakage.
+  - Added `docs/M5_21_SEVENTY_SIXTH_WAVE_NIM_CODE_RELEASE_SWITCH_RUNTIME_SOURCE_GUARD_REPORT_BINDING_AUDIT_20260608.md`.
+  - Updated `CHANGELOG.md`, `docs/M5_21_WAVE_INDEX_20260606.md`, `docs/PROJECT_MISSION_AND_MEMORY.md`, and `docs/v3.1/DEVELOPMENT_GUIDE.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateDurableWriteExecutorSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateStateMachineSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateDurableWriteExecutorSupportTest,NimCreateStateMachineSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupportTest,M521NimCodeReleaseSwitchRuntimeSourceGuardContractTest,NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupportTest,NimCreateDurableAuditCodeReleaseSwitchContractSupportTest,NimCreateStateMachineSupportTest,NimCreateDurableWriteExecutorSupportTest" test`
+    - `mvn -q test`
+    - `git diff --check`
+    - boundary scans on changed main files
+  - Full test note: `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0; accepted degraded local test signal.
+  - No real `8100`; no HTTP client; no Spring Bean/Controller/Tool registration; no Elasticsearch; no `ISysLogService`; no `sys_log`; no real `POST /api/{orgId}/deployment`.
+  - Recovery note: M5.21-75 source guard is now a required shell input. It remains guard evidence only and cannot become a release credential.
+  - Learning note: source-governed evidence can still be a HOLD. The correct mental model is "validated source, no reviewed open switch yet."
 
 - M5.21-75 NIM code release switch runtime source guard matrix is implemented:
   - Added `NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport`.

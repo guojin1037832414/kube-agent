@@ -265,3 +265,11 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Caller/LLM JSON, environment variables, runtime flags, legacy `nimCreateReleased`, state-machine `writePermitted`, durable executor success, backend readback, and storage backfills remain forbidden release sources.
 - The matrix tracks dangerous field names such as `codeReleaseSwitchContractReportAcceptedForRelease`, `codeReleaseSwitchDigestVerified`, `writeExecuted`, `deploymentId`, and `writeResult`.
 - Learning distinction: a top-tier Agent write path needs source governance, not only value validation. Evidence can be shaped correctly and still come from the wrong source.
+
+### M5.21-76 source guard report binding note
+
+- `NimCreateStateMachineSupport` and `NimCreateDurableWriteExecutorSupport` now both require the M5.21-75 `codeReleaseSwitchRuntimeSourceGuardReport`.
+- The durable executor recomputes `sourceGuardMatrixDigest`, binds the same M5.21-72 switch contract digest, and still returns `IMPLEMENTATION_HOLD`.
+- The state machine independently validates the same report and checks the durable executor echoes the same source guard/runtime-binding digests.
+- A legal full shell remains held by executor HOLD, switch-contract HOLD, and source-guard HOLD; no report can make `writePermitted`, `writeExecutionAllowed`, `realHttpExecutionAllowed`, `writeAttempted`, or `writeExecuted` true.
+- Learning distinction: source guard binding means "this evidence source has been checked and is still not enough." It is a required fail-closed guard, not a release credential.

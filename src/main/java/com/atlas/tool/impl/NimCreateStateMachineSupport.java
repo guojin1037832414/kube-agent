@@ -76,6 +76,7 @@ final class NimCreateStateMachineSupport {
             Map.of(),
             Map.of(),
             Map.of(),
+            Map.of(),
             "",
             false
         ));
@@ -125,6 +126,7 @@ final class NimCreateStateMachineSupport {
             safeRequest.writeRequestSpecReport(),
             safeRequest.writeExecutionHandoffReport(),
             safeRequest.codeReleaseSwitchContractReport(),
+            safeRequest.codeReleaseSwitchRuntimeSourceGuardReport(),
             safeRequest.durableWriteExecutorReport(),
             blockers
         );
@@ -134,6 +136,12 @@ final class NimCreateStateMachineSupport {
             safeRequest.writeRequestSpecReport(),
             safeRequest.writeExecutionHandoffReport(),
             safeRequest.codeReleaseSwitchContractReport(),
+            blockers
+        );
+        validateCodeReleaseSwitchRuntimeSourceGuardReport(
+            safeRequest.auditContext(),
+            safeRequest.codeReleaseSwitchContractReport(),
+            safeRequest.codeReleaseSwitchRuntimeSourceGuardReport(),
             blockers
         );
         validateReadinessPlan(safeRequest.readinessPlan(), blockers);
@@ -162,11 +170,19 @@ final class NimCreateStateMachineSupport {
         result.put("codeReleaseSwitchContractReportAcceptedForRelease", false);
         result.put("codeReleaseSwitchRuntimeBindingRequired", true);
         result.put("codeReleaseSwitchRuntimeBindingInstalled", false);
+        result.put("codeReleaseSwitchRuntimeSourceGuardReportRequired", true);
+        result.put("codeReleaseSwitchRuntimeSourceGuardAcceptedForRelease", false);
+        result.put("sourceGuardInstalled", false);
+        result.put("candidateSourceEvidenceAuthoritative", false);
+        result.put("backendQuerySourceAllowedForRelease", false);
+        result.put("sysLogBackfillSourceAllowed", false);
         result.put("codeReleaseSwitchDigestVerified", false);
         result.put("releaseDecisionDigestVerified", false);
         result.put("validationResultDigestVerified", false);
         result.put("sourceCodeReleaseSwitchContractDigest",
             text(safeRequest.codeReleaseSwitchContractReport().get("codeReleaseSwitchContractDigest")));
+        result.put("sourceGuardMatrixDigest",
+            text(safeRequest.codeReleaseSwitchRuntimeSourceGuardReport().get("sourceGuardMatrixDigest")));
         result.put("legacyNimCreateReleasedBooleanAuthoritative", false);
         result.put("readinessExecutionRequired", true);
         result.put("apiKeyPolicy", API_KEY_POLICY);
@@ -635,6 +651,7 @@ final class NimCreateStateMachineSupport {
                                                            Map<String, Object> writeRequestSpecReport,
                                                            Map<String, Object> writeExecutionHandoffReport,
                                                            Map<String, Object> codeReleaseSwitchContractReport,
+                                                           Map<String, Object> codeReleaseSwitchRuntimeSourceGuardReport,
                                                            Map<String, Object> durableWriteExecutorReport,
                                                            List<Map<String, Object>> blockers) {
         if (durableWriteExecutorReport.isEmpty()) {
@@ -663,6 +680,15 @@ final class NimCreateStateMachineSupport {
             && Boolean.FALSE.equals(durableWriteExecutorReport.get("writeAttempted"))
             && Boolean.FALSE.equals(durableWriteExecutorReport.get("writeExecuted"))
             && Boolean.FALSE.equals(durableWriteExecutorReport.get("postWriteReadinessTriggered"))
+            && Boolean.TRUE.equals(durableWriteExecutorReport.get("codeReleaseSwitchRuntimeSourceGuardReportRequired"))
+            && text(codeReleaseSwitchRuntimeSourceGuardReport.get("sourceGuardMatrixDigest")).equals(
+                text(durableWriteExecutorReport.get("sourceGuardMatrixDigest")))
+            && text(codeReleaseSwitchRuntimeSourceGuardReport.get("sourceRuntimeBindingContractDigest")).equals(
+                text(durableWriteExecutorReport.get("sourceRuntimeBindingContractDigest")))
+            && Boolean.FALSE.equals(durableWriteExecutorReport.get("sourceGuardInstalled"))
+            && Boolean.FALSE.equals(durableWriteExecutorReport.get("candidateSourceEvidenceAuthoritative"))
+            && Boolean.FALSE.equals(durableWriteExecutorReport.get("backendQuerySourceAllowedForRelease"))
+            && Boolean.FALSE.equals(durableWriteExecutorReport.get("sysLogBackfillSourceAllowed"))
             && text(writeExecutionHandoffReport.get("handoffDigest")).equals(text(durableWriteExecutorReport.get("sourceHandoffDigest")))
             && text(writeRequestSpecReport.get("requestSpecDigest")).equals(text(durableWriteExecutorReport.get("sourceRequestSpecDigest")))
             && text(writeBodyRebuildReport.get("bodyDigest")).equals(text(durableWriteExecutorReport.get("sourceBodyDigest")))
@@ -676,7 +702,11 @@ final class NimCreateStateMachineSupport {
             && Boolean.FALSE.equals(durableWriteExecutorReport.get("releaseDecisionDigestVerified"))
             && Boolean.FALSE.equals(durableWriteExecutorReport.get("validationResultDigestVerified"))
             && Boolean.FALSE.equals(durableWriteExecutorReport.get("fallbackToStateMachineWritePermittedAllowed"))
-            && hasOnlyBlockerCode(durableWriteExecutorReport.get("blockedBy"), "DURABLE_WRITE_EXECUTOR_IMPLEMENTATION_HOLD")
+            && hasOnlyBlockerCodes(durableWriteExecutorReport.get("blockedBy"),
+                List.of(
+                    "DURABLE_WRITE_EXECUTOR_IMPLEMENTATION_HOLD",
+                    "CODE_RELEASE_SWITCH_RUNTIME_SOURCE_GUARD_IMPLEMENTATION_HOLD"
+                ))
             && executionAttemptSpecContractValid(auditContext, auditReceipt, writeBodyRebuildReport, writeRequestSpecReport, writeExecutionHandoffReport, executionAttemptSpec);
 
         if (!shellContractValid) {
@@ -832,6 +862,146 @@ final class NimCreateStateMachineSupport {
                 "CODE_RELEASE_SWITCH_CONTRACT_REPORT_CONTAINS_FORBIDDEN_SECRET",
                 "Code release switch contract report must not contain Authorization, token, password, secret, or real NGC/NIM API key material.",
                 "code-release-switch-contract"
+            ));
+        }
+    }
+
+    private static void validateCodeReleaseSwitchRuntimeSourceGuardReport(Map<String, Object> auditContext,
+                                                                          Map<String, Object> codeSwitchReport,
+                                                                          Map<String, Object> report,
+                                                                          List<Map<String, Object>> blockers) {
+        if (report.isEmpty()) {
+            blockers.add(blocker(
+                "CODE_RELEASE_SWITCH_RUNTIME_SOURCE_GUARD_REPORT_NOT_READY",
+                "Missing M5.21-75 runtime source guard matrix; state machine cannot distinguish planning evidence from release source.",
+                "code-release-switch-runtime-source-guard"
+            ));
+            return;
+        }
+
+        Map<String, Object> contract = objectMap(report.get("sourceGuardContract"));
+        Map<String, Object> acceptanceRules = objectMap(contract.get("acceptanceRules"));
+        Map<String, Object> failure = objectMap(contract.get("failureContract"));
+        List<Map<String, Object>> matrix = listOfMaps(report.get("sourceGuardMatrix"));
+        List<String> planningSources = stringList(report.get("contractShapeSourcesAcceptedForPlanning"));
+        List<String> forbiddenSources = stringList(report.get("forbiddenReleaseSources"));
+        List<String> dangerousFields = stringList(report.get("dangerousReleaseCredentialFieldNames"));
+
+        boolean contractValid = NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport.SOURCE_GUARD_CONTRACT_NAME.equals(
+                text(report.get("codeReleaseSwitchRuntimeSourceGuard")))
+            && NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport.EXECUTION_MODE.equals(
+                text(report.get("executionMode")))
+            && NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport.HOLD_STATE.equals(
+                text(report.get("guardState")))
+            && TARGET_TOOL.equals(text(report.get("targetTool")))
+            && NimCreateAuditReadinessSupport.BACKEND_ENDPOINT.equals(text(report.get("backendEndpoint")))
+            && "/api/{orgId}/deployment".equals(text(report.get("pathTemplate")))
+            && "NOT_PERFORMED".equals(text(report.get("networkAccess")))
+            && "NONE".equals(text(report.get("sideEffect")))
+            && Boolean.TRUE.equals(report.get("inputAccepted"))
+            && Boolean.TRUE.equals(report.get("sourceGuardMatrixPrepared"))
+            && Boolean.TRUE.equals(report.get("runtimeBindingReportRequired"))
+            && Boolean.TRUE.equals(report.get("runtimeBindingDigestRecomputed"))
+            && Boolean.FALSE.equals(report.get("sourceGuardInstalled"))
+            && Boolean.FALSE.equals(report.get("candidateSourceEvidenceAuthoritative"))
+            && Boolean.FALSE.equals(report.get("callerParamSourceAllowed"))
+            && Boolean.FALSE.equals(report.get("llmJsonSourceAllowed"))
+            && Boolean.FALSE.equals(report.get("environmentVariableSourceAllowed"))
+            && Boolean.FALSE.equals(report.get("runtimeFlagSourceAllowed"))
+            && Boolean.FALSE.equals(report.get("stateMachineBooleanSourceAllowed"))
+            && Boolean.FALSE.equals(report.get("durableExecutorSuccessSourceAllowed"))
+            && Boolean.FALSE.equals(report.get("backendQuerySourceAllowedForRelease"))
+            && Boolean.FALSE.equals(report.get("sysLogBackfillSourceAllowed"))
+            && Boolean.TRUE.equals(report.get("serverOwnedOpenSwitchRequired"))
+            && Boolean.TRUE.equals(report.get("reviewedCodeSwitchDigestRequired"))
+            && Boolean.TRUE.equals(report.get("stateMachineDigestRecheckRequired"))
+            && Boolean.TRUE.equals(report.get("durableExecutorDigestRecheckRequired"))
+            && listIsEmpty(report.get("acceptedSourcesForCurrentRelease"))
+            && planningSources.containsAll(List.of(
+                "M5.21-72_CODE_RELEASE_SWITCH_CONTRACT_REPORT",
+                "M5.21-73_RUNTIME_BINDING_REPORT"
+            ))
+            && forbiddenSources.containsAll(List.of(
+                "CALLER_PARAMS_OR_LLM_JSON",
+                "ENVIRONMENT_VARIABLE_OR_RUNTIME_FLAG",
+                "LEGACY_NIM_CREATE_RELEASED_BOOLEAN",
+                "STATE_MACHINE_WRITE_PERMITTED_BOOLEAN",
+                "DURABLE_EXECUTOR_SUCCESS_OR_DEPLOYMENT_ID",
+                "BACKEND_QUERY_OR_READBACK_RESULT",
+                "SYS_LOG_OR_ELASTICSEARCH_BACKFILL",
+                "RELEASE_DECISION_OR_VALIDATION_CONTRACT_REPORT_ONLY"
+            ))
+            && dangerousFields.containsAll(List.of(
+                "codeReleaseSwitchContractReportAcceptedForRelease",
+                "codeReleaseSwitchDigestVerified",
+                "writeExecuted",
+                "deploymentId",
+                "writeResult"
+            ))
+            && text(codeSwitchReport.get("codeReleaseSwitchContractDigest")).equals(
+                text(report.get("sourceCodeReleaseSwitchContractDigest")))
+            && text(report.get("sourceAuditEventDigest")).equals(digestFor(auditContext))
+            && text(report.get("sourceGuardMatrixDigest")).matches("[a-f0-9]{64}")
+            && text(report.get("sourceGuardMatrixDigest")).equals(digestFor(contract))
+            && hasOnlyBlockerCode(report.get("blockedBy"),
+                "CODE_RELEASE_SWITCH_RUNTIME_SOURCE_GUARD_IMPLEMENTATION_HOLD")
+            && "CODE_RELEASE_SWITCH_RUNTIME_SOURCE_GUARD_REQUIRED".equals(text(contract.get("contractBoundary")))
+            && TARGET_TOOL.equals(text(contract.get("targetTool")))
+            && Boolean.TRUE.equals(contract.get("futureOnly"))
+            && Boolean.FALSE.equals(contract.get("instanceAllowedNow"))
+            && "PLANNING_AND_GUARD_ONLY".equals(text(contract.get("currentAcceptedSourceScope")))
+            && listIsEmpty(contract.get("acceptedSourcesForCurrentRelease"))
+            && Boolean.TRUE.equals(acceptanceRules.get("failClosed"))
+            && Integer.valueOf(0).equals(acceptanceRules.get("currentReleaseSourceCount"))
+            && Boolean.FALSE.equals(acceptanceRules.get("contractReportAcceptedForRelease"))
+            && Boolean.FALSE.equals(acceptanceRules.get("runtimeBindingReportAcceptedForRelease"))
+            && Boolean.FALSE.equals(acceptanceRules.get("legacyNimCreateReleasedBooleanAuthoritative"))
+            && Boolean.FALSE.equals(acceptanceRules.get("stateMachineWritePermittedAuthoritativeForExecutor"))
+            && Boolean.FALSE.equals(acceptanceRules.get("executorSuccessAuthoritativeForSwitch"))
+            && Boolean.FALSE.equals(acceptanceRules.get("backendReadbackAllowedAsReleaseSource"))
+            && Boolean.TRUE.equals(acceptanceRules.get("realOpenSwitchIssuerRequired"))
+            && Boolean.TRUE.equals(failure.get("failClosed"))
+            && Boolean.FALSE.equals(failure.get("fallbackToCallerParamAllowed"))
+            && Boolean.FALSE.equals(failure.get("fallbackToLlmJsonAllowed"))
+            && Boolean.FALSE.equals(failure.get("fallbackToEnvironmentVariableAllowed"))
+            && Boolean.FALSE.equals(failure.get("fallbackToRuntimeFlagAllowed"))
+            && Boolean.FALSE.equals(failure.get("fallbackToStateMachineWritePermittedAllowed"))
+            && Boolean.FALSE.equals(failure.get("fallbackToDurableExecutorSuccessAllowed"))
+            && Boolean.FALSE.equals(failure.get("fallbackToBackendQueryResultAllowed"))
+            && Boolean.FALSE.equals(failure.get("fallbackToStorageBackfillAllowed"))
+            && Boolean.FALSE.equals(failure.get("fallbackToContractReportOnlyAllowed"))
+            && matrixContainsSource(matrix, "REVIEWED_SERVER_OWNED_OPEN_SWITCH", true)
+            && matrixContainsSource(matrix, "STATE_MACHINE_WRITE_PERMITTED_BOOLEAN", false)
+            && matrixContainsSource(matrix, "DURABLE_EXECUTOR_SUCCESS_OR_DEPLOYMENT_ID", false)
+            && matrixContainsSource(matrix, "BACKEND_QUERY_OR_READBACK_RESULT", false);
+
+        if (!contractValid) {
+            blockers.add(blocker(
+                "CODE_RELEASE_SWITCH_RUNTIME_SOURCE_GUARD_REPORT_CONTRACT_INVALID",
+                "Runtime source guard report must come from the M5.21-75 HOLD matrix and bind the same switch/audit digest.",
+                "code-release-switch-runtime-source-guard"
+            ));
+        } else {
+            blockers.add(blocker(
+                "CODE_RELEASE_SWITCH_RUNTIME_SOURCE_GUARD_IMPLEMENTATION_HOLD",
+                "Runtime source guard matrix is accepted as required guard evidence only; no reviewed open switch source exists yet.",
+                "code-release-switch-runtime-source-guard"
+            ));
+        }
+
+        if (runtimeSourceGuardClaimsRelease(report)) {
+            blockers.add(blocker(
+                "CODE_RELEASE_SWITCH_RUNTIME_SOURCE_GUARD_RELEASE_CLAIM_NOT_TRUSTED",
+                "Source guard matrix cannot claim installed guard, accepted release source, write permission, executor success, readback release, or storage backfill release.",
+                "code-release-switch-runtime-source-guard"
+            ));
+        }
+
+        if (containsForbiddenSecretMaterial(report)) {
+            blockers.add(blocker(
+                "CODE_RELEASE_SWITCH_RUNTIME_SOURCE_GUARD_REPORT_CONTAINS_FORBIDDEN_SECRET",
+                "Runtime source guard report must not contain Authorization, token, password, secret, or real NGC/NIM API key material.",
+                "code-release-switch-runtime-source-guard"
             ));
         }
     }
@@ -1146,6 +1316,43 @@ final class NimCreateStateMachineSupport {
             || !objectMap(durableWriteExecutorReport.get("writeResult")).isEmpty();
     }
 
+    private static boolean matrixContainsSource(List<Map<String, Object>> matrix,
+                                                String source,
+                                                boolean futureAuthoritativeCandidate) {
+        for (Map<String, Object> row : matrix) {
+            if (source.equals(text(row.get("source")))
+                && Boolean.valueOf(futureAuthoritativeCandidate).equals(row.get("futureAuthoritativeCandidate"))
+                && Boolean.FALSE.equals(row.get("authoritativeForReleaseNow"))
+                && Boolean.FALSE.equals(row.get("writePermittedAllowedNow"))
+                && Boolean.FALSE.equals(row.get("writeExecutionAllowedNow"))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean runtimeSourceGuardClaimsRelease(Map<String, Object> report) {
+        return Boolean.TRUE.equals(report.get("sourceGuardInstalled"))
+            || Boolean.TRUE.equals(report.get("candidateSourceEvidenceAuthoritative"))
+            || Boolean.TRUE.equals(report.get("callerParamSourceAllowed"))
+            || Boolean.TRUE.equals(report.get("llmJsonSourceAllowed"))
+            || Boolean.TRUE.equals(report.get("environmentVariableSourceAllowed"))
+            || Boolean.TRUE.equals(report.get("runtimeFlagSourceAllowed"))
+            || Boolean.TRUE.equals(report.get("stateMachineBooleanSourceAllowed"))
+            || Boolean.TRUE.equals(report.get("durableExecutorSuccessSourceAllowed"))
+            || Boolean.TRUE.equals(report.get("backendQuerySourceAllowedForRelease"))
+            || Boolean.TRUE.equals(report.get("sysLogBackfillSourceAllowed"))
+            || Boolean.TRUE.equals(report.get("releaseDecisionContractReportSourceAllowed"))
+            || Boolean.TRUE.equals(report.get("validationResultContractReportSourceAllowed"))
+            || !listIsEmpty(report.get("acceptedSourcesForCurrentRelease"))
+            || Boolean.TRUE.equals(report.get("writePermitted"))
+            || Boolean.TRUE.equals(report.get("writeExecutionAllowed"))
+            || Boolean.TRUE.equals(report.get("writeExecuted"))
+            || hasText(report.get("deploymentId"))
+            || hasText(report.get("deploymentUid"))
+            || !objectMap(report.get("writeResult")).isEmpty();
+    }
+
     private static boolean codeReleaseSwitchStatesRemainFalse(Map<String, Object> report) {
         return Boolean.FALSE.equals(report.get("realCodeReleaseSwitchCreated"))
             && Boolean.FALSE.equals(report.get("realCodeReleaseSwitchOpened"))
@@ -1235,6 +1442,22 @@ final class NimCreateStateMachineSupport {
     private static boolean hasOnlyBlockerCode(Object rawBlockers, String code) {
         List<Map<String, Object>> blockers = listOfMaps(rawBlockers);
         return blockers.size() == 1 && code.equals(text(blockers.get(0).get("code")));
+    }
+
+    private static boolean hasOnlyBlockerCodes(Object rawBlockers, List<String> expectedCodes) {
+        List<Map<String, Object>> blockers = listOfMaps(rawBlockers);
+        if (blockers.size() != expectedCodes.size()) {
+            return false;
+        }
+        List<String> actualCodes = new ArrayList<>();
+        for (Map<String, Object> blocker : blockers) {
+            actualCodes.add(text(blocker.get("code")));
+        }
+        return actualCodes.containsAll(expectedCodes);
+    }
+
+    private static boolean listIsEmpty(Object value) {
+        return value instanceof List<?> list && list.isEmpty();
     }
 
     private static String digestFor(Map<String, Object> value) {
@@ -1416,6 +1639,7 @@ final class NimCreateStateMachineSupport {
         Map<String, Object> writeRequestSpecReport,
         Map<String, Object> writeExecutionHandoffReport,
         Map<String, Object> codeReleaseSwitchContractReport,
+        Map<String, Object> codeReleaseSwitchRuntimeSourceGuardReport,
         Map<String, Object> durableWriteExecutorReport,
         Map<String, Object> readinessPlan,
         Map<String, Object> readinessExecutionReport,
@@ -1447,6 +1671,42 @@ final class NimCreateStateMachineSupport {
                 writeExecutionHandoffReport,
                 Map.of(),
                 Map.of(),
+                Map.of(),
+                readinessPlan,
+                readinessExecutionReport,
+                writeBodyProvenance,
+                nimCreateReleased
+            );
+        }
+
+        ReadinessRequest(Map<String, Object> params,
+                         Map<String, Object> creationGate,
+                         Map<String, Object> deploymentBodyPreview,
+                         HitlConfirmation hitlConfirmation,
+                         Map<String, Object> auditContext,
+                         Map<String, Object> auditReceipt,
+                         Map<String, Object> writeBodyRebuildReport,
+                         Map<String, Object> writeRequestSpecReport,
+                         Map<String, Object> writeExecutionHandoffReport,
+                         Map<String, Object> codeReleaseSwitchContractReport,
+                         Map<String, Object> durableWriteExecutorReport,
+                         Map<String, Object> readinessPlan,
+                         Map<String, Object> readinessExecutionReport,
+                         String writeBodyProvenance,
+                         boolean nimCreateReleased) {
+            this(
+                params,
+                creationGate,
+                deploymentBodyPreview,
+                hitlConfirmation,
+                auditContext,
+                auditReceipt,
+                writeBodyRebuildReport,
+                writeRequestSpecReport,
+                writeExecutionHandoffReport,
+                codeReleaseSwitchContractReport,
+                Map.of(),
+                durableWriteExecutorReport,
                 readinessPlan,
                 readinessExecutionReport,
                 writeBodyProvenance,
@@ -1478,6 +1738,7 @@ final class NimCreateStateMachineSupport {
                 writeBodyRebuildReport,
                 writeRequestSpecReport,
                 writeExecutionHandoffReport,
+                Map.of(),
                 Map.of(),
                 durableWriteExecutorReport,
                 readinessPlan,
@@ -1511,6 +1772,7 @@ final class NimCreateStateMachineSupport {
                 Map.of(),
                 Map.of(),
                 Map.of(),
+                Map.of(),
                 readinessPlan,
                 readinessExecutionReport,
                 writeBodyProvenance,
@@ -1541,6 +1803,7 @@ final class NimCreateStateMachineSupport {
                 Map.of(),
                 Map.of(),
                 Map.of(),
+                Map.of(),
                 readinessPlan,
                 readinessExecutionReport,
                 writeBodyProvenance,
@@ -1570,6 +1833,7 @@ final class NimCreateStateMachineSupport {
                 Map.of(),
                 Map.of(),
                 Map.of(),
+                Map.of(),
                 readinessPlan,
                 readinessExecutionReport,
                 writeBodyProvenance,
@@ -1598,6 +1862,7 @@ final class NimCreateStateMachineSupport {
                 Map.of(),
                 Map.of(),
                 Map.of(),
+                Map.of(),
                 readinessPlan,
                 Map.of(),
                 writeBodyProvenance,
@@ -1615,6 +1880,9 @@ final class NimCreateStateMachineSupport {
             writeRequestSpecReport = writeRequestSpecReport == null ? Map.of() : objectMap(writeRequestSpecReport);
             writeExecutionHandoffReport = writeExecutionHandoffReport == null ? Map.of() : objectMap(writeExecutionHandoffReport);
             codeReleaseSwitchContractReport = codeReleaseSwitchContractReport == null ? Map.of() : objectMap(codeReleaseSwitchContractReport);
+            codeReleaseSwitchRuntimeSourceGuardReport = codeReleaseSwitchRuntimeSourceGuardReport == null
+                ? Map.of()
+                : objectMap(codeReleaseSwitchRuntimeSourceGuardReport);
             durableWriteExecutorReport = durableWriteExecutorReport == null ? Map.of() : objectMap(durableWriteExecutorReport);
             readinessPlan = readinessPlan == null ? Map.of() : objectMap(readinessPlan);
             readinessExecutionReport = readinessExecutionReport == null ? Map.of() : objectMap(readinessExecutionReport);
