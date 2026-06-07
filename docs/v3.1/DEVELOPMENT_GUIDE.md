@@ -180,3 +180,9 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Future state-machine code must not consume it alone; `releaseDecisionGateReportAcceptedStandaloneConsumptionAllowed=false` is part of the contract.
 - The release path must require scope, digest verification, trusted principal binding, code release switch, and durable executor re-check before any write permission can be considered.
 - Prefer machine-readable "not authoritative" flags for compatibility booleans instead of relying only on prose documentation.
+
+### M5.21-65 source guard note
+
+- `M521NimAcceptedBooleanSourceContractTest` scans production source so future code cannot directly read `releaseDecisionGateReportAccepted` as a standalone signal.
+- The only allowed production occurrences are the contract shell outputs and the explicit forbidden-shortcut wording.
+- Use source-level contract tests when a dangerous compatibility field is easy to search for and easy to misuse later.

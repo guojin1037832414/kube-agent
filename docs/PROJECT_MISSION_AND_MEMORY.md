@@ -81,9 +81,29 @@ Current track:
 
 Recently completed:
 
-`M5.21-64 NIM accepted boolean non-authoritative contract`
+`M5.21-65 NIM accepted boolean source guard`
 
 Latest checkpoint:
+
+- Date: 2026-06-07 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+  - M5.21-65 implemented:
+  - Added `M521NimAcceptedBooleanSourceContractTest` as a source-level regression guard for the legacy `releaseDecisionGateReportAccepted` boolean.
+  - This wave is test/docs-only and does not modify production release logic.
+  - The source contract scans `src/main/java` and rejects standalone production reads such as:
+    - `get("releaseDecisionGateReportAccepted")`
+    - `containsKey("releaseDecisionGateReportAccepted")`
+    - boolean checks that could treat the compatibility field as release approval
+  - The contract allows only the M5.21-64 contract shell outputs and explicit forbidden-shortcut wording.
+  - Added `docs/M5_21_SIXTY_FIFTH_WAVE_NIM_ACCEPTED_BOOLEAN_SOURCE_GUARD_AUDIT_20260607.md`.
+  - No real `8100` access; no HTTP client; no Elasticsearch connection; no `ISysLogService` call; no `sys_log` write; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
+  - Verification passed:
+    - `mvn -q "-Dtest=M521NimAcceptedBooleanSourceContractTest" test`
+    - `mvn -q "-Dtest=M521NimAcceptedBooleanSourceContractTest,NimCreateStateMachineReleaseDecisionRequirementSupportTest" test`
+    - `mvn -q test`
+    - Full test note: `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0; this remains an accepted degraded-test-path signal, not an M5.21-65 failure.
+    - Final closure also included `git diff --check`, boundary import scan, static secret scan, H-drive SHA256 sync verification, commit, and push.
+  - Learning note: for dangerous compatibility fields, use source-level regression tests to ban future standalone consumption; data contracts and prose are necessary but not sufficient.
 
 - Date: 2026-06-07 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.

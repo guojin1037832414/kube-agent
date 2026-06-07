@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-64, NIM accepted boolean non-authoritative contract.
+- Current latest wave: M5.21-65, NIM accepted boolean source guard.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -46,6 +46,21 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-65 NIM accepted boolean source guard is implemented:
+  - Added `M521NimAcceptedBooleanSourceContractTest`.
+  - This wave is test/docs-only and does not change production release behavior.
+  - The source contract scans `src/main/java` and rejects future standalone production reads of `releaseDecisionGateReportAccepted`.
+  - Allowed production occurrences remain limited to the contract shell output fields and explicit forbidden-shortcut wording.
+  - Added `docs/M5_21_SIXTY_FIFTH_WAVE_NIM_ACCEPTED_BOOLEAN_SOURCE_GUARD_AUDIT_20260607.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=M521NimAcceptedBooleanSourceContractTest" test`
+    - `mvn -q "-Dtest=M521NimAcceptedBooleanSourceContractTest,NimCreateStateMachineReleaseDecisionRequirementSupportTest" test`
+    - `mvn -q test`
+    - Full test note: `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0; this is expected for the current local test environment and does not indicate an M5.21-65 regression.
+    - Final closure also included `git diff --check`, boundary import scan, static secret scan, H-drive SHA256 sync verification, commit, and push.
+  - No real `8100` access; no HTTP client; no Elasticsearch connection; no `ISysLogService`; no `sys_log` write; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
+  - Recovery note: future code that wants to use release approval must bind scope, digest verification, trusted principal, code release switch, and durable executor re-check; direct reads of `releaseDecisionGateReportAccepted` are now a test failure.
 
 - M5.21-64 NIM accepted boolean non-authoritative contract is implemented:
   - Updated `NimCreateStateMachineReleaseDecisionRequirementSupport`.

@@ -6,6 +6,18 @@
 
 ---
 
+## [M5.21-65] - NIM accepted boolean source guard
+
+**Delivery**: Added a source-level regression guard so future production code cannot consume `releaseDecisionGateReportAccepted` alone as a release approval signal.
+**Changes**
+- Added `M521NimAcceptedBooleanSourceContractTest`.
+- Scans `src/main/java` and rejects standalone reads such as `get("releaseDecisionGateReportAccepted")` or `containsKey("releaseDecisionGateReportAccepted")`.
+- Keeps the contract shell allowed to write the compatibility field and its required non-authoritative companion signals.
+- Added `docs/M5_21_SIXTY_FIFTH_WAVE_NIM_ACCEPTED_BOOLEAN_SOURCE_GUARD_AUDIT_20260607.md`.
+**Security**
+- This wave is test/docs-only and does not modify production release logic.
+- `nim_create` remains `httpMethod=NONE + PLACEHOLDER + requiresConfirmation=true`, with no real `8100`, no `POST /api/{orgId}/deployment`, no Elasticsearch, no `ISysLogService`, and no `sys_log` write.
+
 ## [M5.21-64] - NIM accepted boolean non-authoritative contract
 
 **Delivery**: Made the legacy `releaseDecisionGateReportAccepted` boolean explicitly non-authoritative so it cannot be consumed alone as a release approval signal.
