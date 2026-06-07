@@ -6,6 +6,20 @@
 
 ---
 
+## [M5.21-68] - NIM receipt validation probe result binding contract
+
+**Delivery**: Added a contract-only binding layer requiring future durable receipt validation to bind the M5.21-67 storage probe result contract before any receipt validation can run.
+**Changes**
+- Added `NimCreateDurableAuditReceiptValidationProbeResultBindingSupport`.
+- Added `NimCreateDurableAuditReceiptValidationProbeResultBindingSupportTest`.
+- Binds M5.21-67 `probeResultContractDigest`, M5.21-57 `validationPlanDigest`, source audit event, typed schema, interface spec, writer boundary, writer plan, availability plan, probe executor plan, and trusted principal digest.
+- Rejects schema-only validation, validation-gate-only shortcuts, caller-supplied probe result / receipt / validation evidence, forged validation pass claims, and cross-report digest mismatches.
+- Keeps `storageProbeResultBoundForValidation=false`, `serverIssuedProbeResultAccepted=false`, `validationCanRunNow=false`, `durableReceiptValidationPassed=false`, `releaseEligible=false`, and `writeExecutionAllowed=false`.
+- Added `docs/M5_21_SIXTY_EIGHTH_WAVE_NIM_DURABLE_AUDIT_RECEIPT_VALIDATION_PROBE_RESULT_BINDING_AUDIT_20260607.md`.
+**Security**
+- This wave does not create a real validator, DTO, Spring Bean, storage client, receipt, validation result, release decision, or write credential.
+- `nim_create` remains `httpMethod=NONE + PLACEHOLDER + requiresConfirmation=true`, with no real `8100`, no real deployment POST execution, no Elasticsearch, no `ISysLogService`, and no `sys_log` write.
+
 ## [M5.21-67] - NIM durable audit storage probe result contract
 
 **Delivery**: Added a contract-only future `NimDurableAuditStorageProbeResult` layer after the M5.21-66 storage probe executor shell.

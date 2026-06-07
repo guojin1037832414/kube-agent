@@ -81,9 +81,38 @@ Current track:
 
 Recently completed:
 
-`M5.21-67 NIM durable audit storage probe result contract`
+`M5.21-68 NIM receipt validation probe result binding contract`
 
 Latest checkpoint:
+
+- Date: 2026-06-07 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+  - M5.21-68 implemented:
+  - Added `NimCreateDurableAuditReceiptValidationProbeResultBindingSupport` as a contract-only migration layer between M5.21-67 storage probe result contract and M5.21-57 receipt validation gate report.
+  - Added `NimCreateDurableAuditReceiptValidationProbeResultBindingSupportTest`.
+  - The support class consumes:
+    - `auditContext`
+    - `trustedPrincipalSnapshot`
+    - `durableAuditStorageProbeResultReport`
+    - `durableAuditReceiptValidationGateReport`
+    - optional caller `callerReceiptEvidence`, which is always non-authoritative in this wave
+  - It binds M5.21-67 `probeResultContractDigest`, M5.21-57 `validationPlanDigest`, source audit event, typed schema, interface spec, writer boundary, writer plan, availability plan, probe executor plan, and trusted principal digest.
+  - It rejects schema-only validation, validation-gate-only shortcuts, caller-supplied probe result / receipt / validation evidence, forged pass claims, and cross-report digest mismatches.
+  - Current success states remain false:
+    - `storageProbeResultBoundForValidation=false`
+    - `serverIssuedProbeResultAccepted=false`
+    - `validationCanRunNow=false`
+    - `storageProbeReceiptValidated=false`
+    - `durableReceiptValidationPassed=false`
+    - `releaseEligible=false`
+    - `writeExecutionAllowed=false`
+  - Added `docs/M5_21_SIXTY_EIGHTH_WAVE_NIM_DURABLE_AUDIT_RECEIPT_VALIDATION_PROBE_RESULT_BINDING_AUDIT_20260607.md`.
+  - No real `8100` access; no HTTP client; no Elasticsearch connection; no `ISysLogService` call; no `sys_log` write; no real `POST /api/{orgId}/deployment` execution; `nim_create` remains HOLD.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateDurableAuditReceiptValidationProbeResultBindingSupportTest" test`
+  - Full test note: `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0; this remains an accepted degraded-test-path signal, not an M5.21-68 failure.
+  - Final closure included `mvn -q test`, `git diff --check`, production boundary import scan, static secret scan, H-drive SHA256 sync verification, commit, and push.
+  - Learning note: M5.21-57 `requiredEvidence` describes future evidence rules, but it is not evidence. Future receipt validation must bind a reviewed server-issued probe result contract before any receipt validator can pass.
 
 - Date: 2026-06-07 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.

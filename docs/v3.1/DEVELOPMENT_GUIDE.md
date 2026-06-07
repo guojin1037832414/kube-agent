@@ -202,3 +202,11 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Current output remains `IMPLEMENTATION_HOLD`; `serverIssuedProbeResultAccepted=false`, `storageAvailable=false`, `storageProbeReceiptIssued=false`, `preWriteAllowed=false`, `writeExecutionAllowed=false`, and `durableReceiptCanBeIssued=false`.
 - Caller supplied `probeResult`, `storageProbeResult`, `NimDurableAuditStorageProbeResult`, or `storageProbeReceipt` is rejected even when the object shape is plausible.
 - Learning distinction: executor plan says what must happen, typed schema says what evidence should look like, but only a reviewed server-issued result can become future evidence.
+
+### M5.21-68 receipt validation probe result binding note
+
+- `NimCreateDurableAuditReceiptValidationProbeResultBindingSupport` defines the future requirement that receipt validation must bind the M5.21-67 storage probe result contract before validating any storage probe receipt or durable ack.
+- The binding contract consumes the M5.21-67 probe result report and the M5.21-57 receipt validation gate report, then cross-checks audit event, schema, interface spec, writer boundary, writer plan, availability plan, and trusted principal digests.
+- Current output remains `IMPLEMENTATION_HOLD`; `storageProbeResultBoundForValidation=false`, `serverIssuedProbeResultAccepted=false`, `validationCanRunNow=false`, `durableReceiptValidationPassed=false`, `releaseEligible=false`, and `writeExecutionAllowed=false`.
+- Schema-only validation and validation-gate-only shortcuts are forbidden. Caller supplied probe result, storage receipt, validation result, or release decision remains non-authoritative.
+- Learning distinction: M5.21-57 `requiredEvidence` describes future evidence rules, while M5.21-68 requires those rules to be bound to a server-issued probe result contract before any real receipt validator can pass.

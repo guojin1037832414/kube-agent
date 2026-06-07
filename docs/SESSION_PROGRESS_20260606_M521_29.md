@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-67, NIM durable audit storage probe result contract.
+- Current latest wave: M5.21-68, NIM receipt validation probe result binding contract.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -46,6 +46,36 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-68 NIM receipt validation probe result binding contract is implemented:
+  - Added `NimCreateDurableAuditReceiptValidationProbeResultBindingSupport`.
+  - Added `NimCreateDurableAuditReceiptValidationProbeResultBindingSupportTest`.
+  - The contract shell defines a future binding requirement between:
+    - M5.21-67 `durableAuditStorageProbeResultReport`
+    - M5.21-57 `durableAuditReceiptValidationGateReport`
+  - It binds:
+    - M5.21-67 `probeResultContractDigest`
+    - M5.21-57 `validationPlanDigest`
+    - source audit event digest
+    - receipt schema / interface spec / writer boundary / writer plan / availability plan digests
+    - probe executor plan digest
+    - trusted principal digest
+  - Valid inputs still return `IMPLEMENTATION_HOLD`; schema-only validation, validation-gate-only shortcuts, and caller-supplied evidence remain non-authoritative.
+  - All validation/release/write states remain false:
+    - `storageProbeResultBoundForValidation=false`
+    - `serverIssuedProbeResultAccepted=false`
+    - `validationCanRunNow=false`
+    - `storageProbeReceiptValidated=false`
+    - `durableReceiptValidationPassed=false`
+    - `releaseEligible=false`
+    - `writeExecutionAllowed=false`
+  - Added `docs/M5_21_SIXTY_EIGHTH_WAVE_NIM_DURABLE_AUDIT_RECEIPT_VALIDATION_PROBE_RESULT_BINDING_AUDIT_20260607.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateDurableAuditReceiptValidationProbeResultBindingSupportTest" test`
+  - Full test note: `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0; this is expected for the current local test environment and does not indicate an M5.21-68 regression.
+  - Final closure included `mvn -q test`, `git diff --check`, production boundary import scan, static secret scan, H-drive SHA256 sync verification, commit, and push.
+  - No real `8100` access; no HTTP client; no Elasticsearch connection; no `ISysLogService`; no `sys_log` write; no real `POST /api/{orgId}/deployment` execution; `nim_create` remains HOLD.
+  - Recovery note: future receipt validation must treat M5.21-57 `requiredEvidence` as rules only; it must bind a reviewed server-issued probe result contract before any pass decision.
 
 - M5.21-67 NIM durable audit storage probe result contract is implemented:
   - Added `NimCreateDurableAuditStorageProbeResultSupport`.
