@@ -1,6 +1,5 @@
 package com.atlas.tool.impl;
 
-import com.atlas.http.KubeManagerHttpClient;
 import com.atlas.tool.annotation.AtlasToolMapping;
 import com.atlas.tool.annotation.ToolPermission;
 import com.atlas.tool.core.AtlasToolResult;
@@ -33,12 +32,8 @@ import java.util.Set;
 @ToolPermission(ToolPermission.Policy.AUTHENTICATED)
 public class NimCreateTool extends BaseTool {
 
-    @SuppressWarnings("unused")
-    private final KubeManagerHttpClient httpClient;
-
-    public NimCreateTool(KubeManagerHttpClient httpClient) {
+    public NimCreateTool() {
         super("nim_create", "创建 NIM 服务");
-        this.httpClient = httpClient;
     }
 
     @Override

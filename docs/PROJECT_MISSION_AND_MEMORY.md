@@ -82,12 +82,30 @@ Current track:
 
 Recently completed:
 
-`M5.21-78 NIM durable audit writer/probe boundary static contract`
+`M5.21-79 NIM create Tool entry no-I/O static contract`
 
 Latest checkpoint:
 
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-79 implemented:
+  - Removed the unused `KubeManagerHttpClient` constructor dependency from `NimCreateTool`.
+  - `NimCreateTool` remains a Spring `@Component`, but now has a no-arg constructor and owns no runtime I/O client.
+  - The public entry still declares `httpMethod=NONE`, `apiEndpoints={}`, `operationType=PLACEHOLDER`, `requiresConfirmation=true`, and authenticated access.
+  - The public entry still calls `NimCreateStateMachineSupport.evaluateCurrentPlaceholderHold(params)` and returns a fail-closed `UNSUPPORTED_BACKEND_OPERATION` with state-machine data.
+  - Added `M521NimCreateToolEntryStaticContractTest` to guard against HTTP/storage/sys_log/8100/runtime shortcut drift in the public Tool entry.
+  - Updated `HighRiskMutationToolHttpContractTest` to construct `new NimCreateTool()` and keep verifying no HTTP interaction.
+  - Added `docs/M5_21_SEVENTY_NINTH_WAVE_NIM_CREATE_TOOL_ENTRY_NO_IO_STATIC_CONTRACT_AUDIT_20260608.md`.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=M521NimCreateToolEntryStaticContractTest,HighRiskMutationToolHttpContractTest,M511AtlasToolHttpContractTest,ToolRegistryPermissionTest" test`
+    - `mvn -q "-Dtest=M521NimCreateToolEntryStaticContractTest,M521NimDurableAuditWriterProbeBoundaryStaticContractTest,M521NimRuntimeSourceGuardBindingContractTest,HighRiskMutationToolHttpContractTest,M511AtlasToolHttpContractTest,ToolRegistryPermissionTest" test`
+    - `git diff --check`
+    - `mvn -q test`
+  - Test note: `ToolRegistryPermissionTest` starts the wider Spring app context and logs local `KubeManagerHttpClient` initialization, but `NimCreateTool` no longer receives or stores that client.
+  - Full test note: `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0; this remains an accepted degraded-test-path signal, not an M5.21-79 failure.
+  - No real durable writer, storage probe, HTTP client in `NimCreateTool`, Spring write executor registration, Elasticsearch, `ISysLogService`, `sys_log`, kube-manager `8100`, durable receipt, release decision, release switch, or deployment POST was added.
+  - Learning note: for high-risk Agent tools, removing unused dangerous dependencies is a safety feature; a placeholder entry should not be injectable as a writer.
+- Previous checkpoint:
 - M5.21-78 implemented:
   - Hardened `NimCreateDedicatedDurableAuditWriterBoundarySupport` so forged success claims are scanned recursively through nested maps and list items.
   - Added behavior coverage for nested `storageAvailable=true` and list-item `receiptStatus=DURABLE_RECORDED` in `NimCreateDedicatedDurableAuditWriterBoundarySupportTest`.

@@ -287,3 +287,10 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - `M521NimDurableAuditWriterProbeBoundaryStaticContractTest` protects the dedicated writer boundary, storage probe executor, and wider durable audit/release digest chain at source level.
 - The contract keeps future storage/writer/probe integration explicit-review only: no Spring injection, HTTP client, Elasticsearch client, `ISysLogService`, `sys_log`, `8100`, or direct success-state writes may appear in these shells.
 - Learning distinction: success-shaped diagnostic data is still caller data unless it is server-issued, typed, digest-bound, and produced by the reviewed side-effect boundary.
+
+### M5.21-79 nim_create Tool entry no-I/O note
+
+- `NimCreateTool` no longer receives `KubeManagerHttpClient`; the public placeholder Tool entry has no runtime HTTP client dependency.
+- `M521NimCreateToolEntryStaticContractTest` locks the entry to `httpMethod=NONE`, `apiEndpoints={}`, `PLACEHOLDER`, authenticated access, confirmation required, fail-closed execution, and state-machine HOLD reporting.
+- The entry contract forbids HTTP/storage/sys_log/8100 shortcuts and direct write-success state in `NimCreateTool`.
+- Learning distinction: for high-risk Agent tools, removing unused dangerous dependencies is a safety feature. A placeholder entry should not be injectable as a writer.

@@ -384,7 +384,7 @@ class HighRiskMutationToolHttpContractTest {
 
     @Test
     void nimCreate_shouldFailClosedUntilReviewedNimDeploymentOrchestrationExists() {
-        Map<String, Object> result = new NimCreateTool(httpClient)
+        Map<String, Object> result = new NimCreateTool()
             .execute(Map.of("name", "llama-nim", "model", "llama"));
 
         assertEquals(Boolean.FALSE, result.get(AtlasToolResult.KEY_SUCCESS));

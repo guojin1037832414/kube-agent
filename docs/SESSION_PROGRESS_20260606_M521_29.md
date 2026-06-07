@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-78, NIM durable audit writer/probe boundary static contract.
+- Current latest wave: M5.21-79, NIM create Tool entry no-I/O static contract.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -48,6 +48,23 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-79 NIM create Tool entry no-I/O static contract is implemented:
+  - Removed unused `KubeManagerHttpClient` dependency from `NimCreateTool`.
+  - `NimCreateTool` now has a no-arg constructor and owns no runtime HTTP/storage client.
+  - The public Tool entry remains `httpMethod=NONE`, `apiEndpoints={}`, `operationType=PLACEHOLDER`, `requiresConfirmation=true`, authenticated, and fail-closed.
+  - Added `src/test/java/com/atlas/contract/M521NimCreateToolEntryStaticContractTest.java`.
+  - Updated `HighRiskMutationToolHttpContractTest` to construct `new NimCreateTool()` and still verify no HTTP interactions.
+  - Added `docs/M5_21_SEVENTY_NINTH_WAVE_NIM_CREATE_TOOL_ENTRY_NO_IO_STATIC_CONTRACT_AUDIT_20260608.md`.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=M521NimCreateToolEntryStaticContractTest,HighRiskMutationToolHttpContractTest,M511AtlasToolHttpContractTest,ToolRegistryPermissionTest" test`
+    - `mvn -q "-Dtest=M521NimCreateToolEntryStaticContractTest,M521NimDurableAuditWriterProbeBoundaryStaticContractTest,M521NimRuntimeSourceGuardBindingContractTest,HighRiskMutationToolHttpContractTest,M511AtlasToolHttpContractTest,ToolRegistryPermissionTest" test`
+    - `git diff --check`
+    - `mvn -q test`
+  - Test note: Spring context tests still initialize app-level `KubeManagerHttpClient`, but `NimCreateTool` no longer receives or stores that client.
+  - Full test note: `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0; this remains an accepted degraded-test-path signal, not an M5.21-79 failure.
+  - No real durable writer/probe, Spring write executor registration, HTTP client in the Tool entry, Elasticsearch, `ISysLogService`, `sys_log`, `8100`, durable receipt, release decision, release switch, or deployment POST was added.
+  - Recovery note: this wave aligns public Tool constructor shape with the placeholder manifest.
 
 - M5.21-78 NIM durable audit writer/probe boundary static contract is implemented:
   - Hardened `NimCreateDedicatedDurableAuditWriterBoundarySupport` recursive forged success detection.

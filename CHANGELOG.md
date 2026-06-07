@@ -6,6 +6,19 @@
 
 ---
 
+## [M5.21-79] - NIM create Tool entry no-I/O static contract
+
+**Delivery**: Hardened the public `nim_create` Tool entry so the placeholder entry no longer owns an unused runtime HTTP dependency.
+**Changes**
+- Removed unused `KubeManagerHttpClient` constructor dependency from `NimCreateTool`.
+- `NimCreateTool` remains `httpMethod=NONE`, `apiEndpoints={}`, `operationType=PLACEHOLDER`, `requiresConfirmation=true`, and fail-closed.
+- Updated `HighRiskMutationToolHttpContractTest` to construct `new NimCreateTool()` and continue verifying no HTTP interaction.
+- Added `M521NimCreateToolEntryStaticContractTest` to guard the public Tool entry against HTTP/storage/sys_log/8100/runtime shortcut drift.
+- Added `docs/M5_21_SEVENTY_NINTH_WAVE_NIM_CREATE_TOOL_ENTRY_NO_IO_STATIC_CONTRACT_AUDIT_20260608.md`.
+**Security**
+- No real durable writer, storage probe, HTTP client in `NimCreateTool`, Spring write executor registration, kube-manager `8100`, durable receipt, release decision, release switch, or deployment POST was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-78] - NIM durable audit writer/probe boundary static contract
 
 **Delivery**: Hardened the future NIM durable audit writer/probe boundary before any real storage or write path exists.
