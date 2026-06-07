@@ -422,6 +422,60 @@ class NimCreateStateMachineReleaseDecisionRequirementSupportTest {
         }
     }
 
+    @Test
+    void stateMachineRequirement_shouldAllowDocumentedSecretFieldNamesButRejectBearerValues() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> cleanPrincipal = trustedPrincipalSnapshot();
+        Map<String, Object> documentedPrincipal = new LinkedHashMap<>(cleanPrincipal);
+        documentedPrincipal.put("documentedForbiddenFieldNames", List.of("Authorization", "apiKey", "ngcApiKey"));
+
+        Map<String, Object> documentedReport = NimCreateStateMachineReleaseDecisionRequirementSupport.plan(
+            new NimCreateStateMachineReleaseDecisionRequirementSupport.StateMachineReleaseDecisionRequirementInput(
+                audit,
+                documentedPrincipal,
+                releaseDecisionGateReport(audit, cleanPrincipal)
+            )
+        );
+
+        assertEquals(NimCreateStateMachineReleaseDecisionRequirementSupport.HOLD_STATE,
+            documentedReport.get("requirementState"));
+        assertEquals(true, documentedReport.get("inputAccepted"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> documentedBlockers =
+            (List<Map<String, Object>>) documentedReport.get("blockedBy");
+        assertHasBlocker(documentedBlockers,
+            "STATE_MACHINE_RELEASE_DECISION_REQUIREMENT_IMPLEMENTATION_HOLD");
+        assertFalse(documentedBlockers.stream().anyMatch(item ->
+            "STATE_MACHINE_RELEASE_DECISION_REQUIREMENT_INPUT_CONTAINS_FORBIDDEN_SECRET"
+                .equals(item.get("code"))));
+
+        Map<String, Object> secretBearingPrincipal = new LinkedHashMap<>(cleanPrincipal);
+        secretBearingPrincipal.put("documentedForbiddenFieldNames",
+            List.of("Authorization=Bearer abcdefghijklmnop"));
+
+        Map<String, Object> rejectedReport = NimCreateStateMachineReleaseDecisionRequirementSupport.plan(
+            new NimCreateStateMachineReleaseDecisionRequirementSupport.StateMachineReleaseDecisionRequirementInput(
+                audit,
+                secretBearingPrincipal,
+                releaseDecisionGateReport(audit, cleanPrincipal)
+            )
+        );
+
+        assertEquals(NimCreateStateMachineReleaseDecisionRequirementSupport.REJECTED_STATE,
+            rejectedReport.get("requirementState"));
+        assertEquals(false, rejectedReport.get("inputAccepted"));
+        assertEquals(false, rejectedReport.get("stateMachineRequirementPlanPrepared"));
+        assertEquals(false, rejectedReport.get("writeExecutionAllowed"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> rejectedPlan = (Map<String, Object>) rejectedReport.get("stateMachineRequirementPlan");
+        assertTrue(rejectedPlan.isEmpty());
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> rejectedBlockers =
+            (List<Map<String, Object>>) rejectedReport.get("blockedBy");
+        assertHasBlocker(rejectedBlockers,
+            "STATE_MACHINE_RELEASE_DECISION_REQUIREMENT_INPUT_CONTAINS_FORBIDDEN_SECRET");
+    }
+
     private Map<String, Object> releaseDecisionGateReport(Map<String, Object> audit,
                                                           Map<String, Object> principal) {
         return NimCreateDurableAuditReleaseDecisionGateSupport.plan(

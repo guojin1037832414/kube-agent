@@ -421,3 +421,11 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Forged release/write scanning remains local: `releaseDecision`, `releaseDecisionGatePass`, `releaseCredential`, `writePermitted=true`, `writeExecuted=true`, and `realHttpExecutionAllowed=true` are authority/execution forgeries, not credential leaks.
 - The usage contract now protects release-decision gate from reintroducing a local secret-key blacklist.
 - Learning distinction: a release gate is not opened by a clean secret scan. Clean input only means "no credentials leaked"; release still requires server-issued, digest-bound, reviewed evidence.
+
+### M5.21-96 state-machine release requirement receipt-schema detector note
+
+- `NimCreateStateMachineReleaseDecisionRequirementSupport` now uses `NimForbiddenSecretMaterialDetector.receiptSchemaPolicy()` for secret-material scanning.
+- This completes the documented-field exception migration group: receipt schema, receipt validation gate, validation-result migration, release-decision gate, and state-machine release requirement all share the same receipt-schema detector policy.
+- The state-machine requirement still keeps forged release/write scanning local. Caller-supplied `releaseDecision`, `validationResult`, `releaseCredential`, `writePermitted=true`, `writeExecutionAllowed=true`, deployment ids, and write results are authority/evidence forgeries.
+- Valid state-machine requirement input still produces `IMPLEMENTATION_HOLD`; a clean secret scan cannot unlock a future write path.
+- Learning distinction: shared utilities should cover a single proof type. Credential-leak detection can be shared broadly, but release authority must remain tied to server-issued, digest-bound evidence and reviewed state-machine gates.
