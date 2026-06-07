@@ -82,12 +82,29 @@ Current track:
 
 Recently completed:
 
-`M5.21-82 Default value prompt authority contract`
+`M5.21-83 ReAct risk metadata prompt contract`
 
 Latest checkpoint:
 
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-83 implemented:
+  - Updated `ReActPromptBuilder` so ReAct high-risk behavior is driven by ToolRegistry risk labels, not only keyword examples.
+  - Tools with `operationType=CREATE/UPDATE/DELETE/ACTION/PLACEHOLDER` or `requiresConfirmation=true` must output Mode C/HITL instead of direct `Action`.
+  - The prompt states that completed parameters, default value backfill, optional fields, and natural-language "confirmation" do not replace server-side HITL.
+  - The prompt forbids the model from proactively generating auth, tenant, HITL, audit, release, or write-control fields in `Action.params`, including `token`, `orgId`, `userId`, `confirmed`, `hitlConfirmed`, `approval`, `auditReceipt`, `releaseDecision`, and `writePermitted`.
+  - `operationType=PLACEHOLDER` or `httpMethod=NONE` now means the Tool has no open real backend execution path; ReAct must not claim create/delete/submit/change success for those tools.
+  - Added `ReActPromptBuilderRiskMetadataContractTest`, covering READ/CREATE/UPDATE/DELETE/ACTION/PLACEHOLDER labels and Mode C rules. UPDATE is covered by an embedded test-only Tool so future update-class behavior is guarded before production UPDATE tools arrive.
+  - Added `docs/M5_21_EIGHTY_THIRD_WAVE_REACT_RISK_METADATA_PROMPT_CONTRACT_AUDIT_20260608.md`.
+  - Updated `CHANGELOG.md`, `docs/M5_21_WAVE_INDEX_20260606.md`, `docs/SESSION_PROGRESS_20260606_M521_29.md`, and `docs/v3.1/DEVELOPMENT_GUIDE.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=ReActPromptBuilderRiskMetadataContractTest,ReActPromptBuilderGpuCreateContractTest,ReActPromptBuilderPodDiagnosticContractTest,ToolRegistryPromptContractTest,M521DefaultValuePromptAuthorityContractTest,M513HitlFailClosedContractTest" test`
+    - `git diff --check`
+    - `mvn -q "-Dtest=ReActPromptBuilderRiskMetadataContractTest,ReActPromptBuilderGpuCreateContractTest,ReActPromptBuilderPodDiagnosticContractTest,ToolRegistryPromptContractTest,ToolRegistryPermissionTest,M513HitlFailClosedContractTest,HighRiskMutationToolHttpContractTest,SafeToolExecutorTest" test`
+    - `mvn -q test`
+  - Full test note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - Security invariant: no real `8100`, no deployment POST, no runtime write behavior, no durable writer/probe/receipt, no validation result, no release decision, no code release switch, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+- Previous checkpoint:
 - M5.21-82 implemented:
   - Updated `ToolRegistry.buildSystemPromptForCurrentUser()` so the LLM-visible tool directory states that `默认/可选` means form draft/frontend fill hints only.
   - The prompt rule says defaults do not mean user confirmation, HITL pass, release approval, audit success, write authorization, or real HTTP execution permission.

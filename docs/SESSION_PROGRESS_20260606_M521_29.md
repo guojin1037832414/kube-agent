@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-82, Default value prompt authority contract.
+- Current latest wave: M5.21-83, ReAct risk metadata prompt contract.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -48,6 +48,25 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-83 ReAct risk metadata prompt contract is implemented:
+  - Updated `src/main/java/com/atlas/react/ReActPromptBuilder.java`.
+  - ReAct high-risk behavior now treats ToolRegistry risk labels as authoritative prompt-level risk hints.
+  - `operationType=CREATE/UPDATE/DELETE/ACTION/PLACEHOLDER` or `requiresConfirmation=true` requires Mode C/HITL instead of direct `Action`.
+  - Parameters being complete, defaults being filled, fields being optional, or the user saying "确认" in natural language do not replace server-side HITL.
+  - ReAct Prompt now forbids proactive generation of auth, tenant, HITL, audit, release, or write-control fields in `Action.params`, including `token`, `orgId`, `userId`, `confirmed`, `hitlConfirmed`, `approval`, `auditReceipt`, `releaseDecision`, and `writePermitted`.
+  - `operationType=PLACEHOLDER` or `httpMethod=NONE` means no real backend execution path is open; ReAct must not claim create/delete/submit/change success.
+  - Added `src/test/java/com/atlas/react/ReActPromptBuilderRiskMetadataContractTest.java`.
+  - The new test covers READ, CREATE, UPDATE, DELETE, ACTION, and PLACEHOLDER prompt labels. UPDATE is covered by a test-only embedded Tool because production code currently has no real UPDATE Tool.
+  - Added `docs/M5_21_EIGHTY_THIRD_WAVE_REACT_RISK_METADATA_PROMPT_CONTRACT_AUDIT_20260608.md`.
+  - Updated `CHANGELOG.md`, `docs/M5_21_WAVE_INDEX_20260606.md`, and `docs/v3.1/DEVELOPMENT_GUIDE.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=ReActPromptBuilderRiskMetadataContractTest,ReActPromptBuilderGpuCreateContractTest,ReActPromptBuilderPodDiagnosticContractTest,ToolRegistryPromptContractTest,M521DefaultValuePromptAuthorityContractTest,M513HitlFailClosedContractTest" test`
+    - `git diff --check`
+    - `mvn -q "-Dtest=ReActPromptBuilderRiskMetadataContractTest,ReActPromptBuilderGpuCreateContractTest,ReActPromptBuilderPodDiagnosticContractTest,ToolRegistryPromptContractTest,ToolRegistryPermissionTest,M513HitlFailClosedContractTest,HighRiskMutationToolHttpContractTest,SafeToolExecutorTest" test`
+    - `mvn -q test`
+  - Full test note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - No real `8100` access; no runtime write behavior; no deployment POST; no durable writer/probe/receipt; no validation result; no release decision; no release switch; no Elasticsearch; no `ISysLogService`; no `sys_log`; `nim_create` remains HOLD/mock-first.
 
 - M5.21-82 Default value prompt authority contract is implemented:
   - Updated `src/main/java/com/atlas/tool/core/ToolRegistry.java`.

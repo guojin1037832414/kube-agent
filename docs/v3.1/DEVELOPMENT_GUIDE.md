@@ -150,6 +150,15 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - The model must not proactively generate auth, tenant, HITL, audit, release, or write-control fields in `Action.params`.
 - Learning distinction: prompt guidance is also a safety boundary. Runtime guards stop unsafe execution; prompt rules reduce the chance that the model proposes authority-shaped parameters in the first place.
 
+### M5.21-83 ReAct risk metadata learning note
+
+- `ReActPromptBuilder` now treats ToolRegistry risk labels as the primary high-risk signal. `operationType=CREATE/UPDATE/DELETE/ACTION/PLACEHOLDER` or `requiresConfirmation=true` means ReAct should output Mode C/HITL instead of direct `Action`.
+- Keyword examples such as delete/删除/scale/扩缩容 are only supplementary hints. Top-tier Agents should prefer structured metadata over brittle keyword matching.
+- `operationType=PLACEHOLDER` or `httpMethod=NONE` means no real backend execution path is open. The model must not claim that resources were created, deleted, submitted, changed, or successfully executed.
+- Complete parameters, default backfill, optional fields, and natural-language "confirmation" still do not replace server-side HITL.
+- ReAct must not proactively generate control-plane fields such as `token`, `orgId`, `userId`, `confirmed`, `hitlConfirmed`, `approval`, `auditReceipt`, `releaseDecision`, or `writePermitted`.
+- Learning distinction: tool metadata should shape both what the model is allowed to propose and what the executor is allowed to run. Prompt safety and runtime HITL should reinforce each other.
+
 ### M5.21-58 validation result / release decision migration note
 
 - `NimCreateDurableAuditValidationResultMigrationSupport` only defines a future migration plan for `NimDurableAuditReceiptValidationResult` and `NimDurableAuditReleaseDecision`; it does not create real DTOs, Beans, validators, storage writes, or release credentials.

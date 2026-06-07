@@ -6,6 +6,22 @@
 
 ---
 
+## [M5.21-83] - ReAct risk metadata prompt contract
+
+**Delivery**: Aligned ReAct high-risk prompt behavior with ToolRegistry risk metadata.
+**Changes**
+- `ReActPromptBuilder` now treats ToolRegistry risk labels as authoritative prompt-level risk hints.
+- Tools with `operationType=CREATE/UPDATE/DELETE/ACTION/PLACEHOLDER` or `requiresConfirmation=true` must output Mode C/HITL instead of direct Action.
+- The prompt states that completed parameters, default value backfill, optional fields, and natural-language "confirmation" do not replace server-side HITL.
+- The prompt forbids proactively generating auth, tenant, HITL, audit, release, or write-control fields in `Action.params`.
+- `operationType=PLACEHOLDER` or `httpMethod=NONE` is now described as a non-open real backend execution path; ReAct must not claim create/delete/submit/change success for those tools.
+- Added `ReActPromptBuilderRiskMetadataContractTest`, covering READ/CREATE/UPDATE/DELETE/ACTION/PLACEHOLDER prompt labels and Mode C rules.
+- Added `docs/M5_21_EIGHTY_THIRD_WAVE_REACT_RISK_METADATA_PROMPT_CONTRACT_AUDIT_20260608.md`.
+**Security**
+- No runtime write behavior was opened.
+- No real `8100`, deployment POST, durable writer/probe/receipt, validation result, release decision, release switch, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-82] - Default value prompt authority contract
 
 **Delivery**: Extended default-value safety into the LLM-visible ToolRegistry prompt.
