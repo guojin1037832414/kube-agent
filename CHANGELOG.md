@@ -6,6 +6,26 @@
 
 ---
 
+## [M5.21-55] - 第五十五批 NIM durable audit writer 接口规格契约审计
+
+**交付**: 在 M5.21-54 dedicated writer boundary 之后，新增未来 `NimDurableAuditWriter` 的接口规格契约，先把请求、响应、方法、失败语义和 test double 规则固定下来，仍不创建真实接口或接入存储。
+
+**变更**
+- 新增 `NimCreateDurableAuditWriterInterfaceSpecSupport`，纯数据消费 `auditContext`、`trustedPrincipalSnapshot`、`dedicatedAuditWriterBoundaryReport`。
+- 输出 `durableAuditWriterInterfaceSpec=NIM_CREATE_DURABLE_AUDIT_WRITER_INTERFACE_SPEC`、`executionMode=DURABLE_AUDIT_WRITER_INTERFACE_SPEC_CONTRACT_ONLY`、`interfaceSpecState=IMPLEMENTATION_HOLD|REJECTED`。
+- 正向输入生成 `interfaceSpec.requestContract`、`responseContract`、`operationMethods`、`failureContract`、`testDoubleRules`，并绑定 M5.21-54 boundary digest。
+- 当前明确保持 `realStorageTouched=false`、`storageProbeExecuted=false`、`storageAvailable=false`、`preWritePersisted=false`、`postWritePersisted=false`、`durableReceiptCanBeIssued=false`。
+- 正向输入仍返回 `DURABLE_AUDIT_WRITER_INTERFACE_IMPLEMENTATION_HOLD`。
+- 缺少 boundary report 返回 `DEDICATED_AUDIT_WRITER_BOUNDARY_REPORT_NOT_READY`。
+- 伪造 storage/persistence/receipt success claim 返回 `DURABLE_AUDIT_WRITER_INTERFACE_FORGED_SUCCESS_CLAIM`；secret 泄漏返回 `DURABLE_AUDIT_WRITER_INTERFACE_INPUT_CONTAINS_FORBIDDEN_SECRET`。
+- 新增 `NimCreateDurableAuditWriterInterfaceSpecSupportTest`。
+- 新增 `docs/M5_21_FIFTY_FIFTH_WAVE_NIM_DURABLE_AUDIT_WRITER_INTERFACE_SPEC_AUDIT_20260607.md`，并更新 M5.21 波次索引、开发指南和项目记忆。
+
+**安全**
+- 本批不创建真实 Java writer 接口，不注入 Spring Bean，不连接 Elasticsearch，不调用 `ISysLogService`，不写 `sys_log`，不新增 HTTP client，不访问真实 `8100`，不调用 `POST /api/{orgId}/deployment`。
+- interface spec 不是 durable writer result，也不是 release credential。
+- `nim_create` 继续保持 `httpMethod=NONE + PLACEHOLDER + requiresConfirmation=true`。
+
 ## [M5.21-54] - 第五十四批 NIM 专用 durable audit writer 边界与测试替身契约审计
 
 **交付**: 在 M5.21-52 writer plan 与 M5.21-53 storage availability gate 之后，新增 dedicated writer boundary / test double contract，明确当前只能验证边界和测试替身约束，不能声明真实存储成功或签发 durable receipt。
