@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-66, NIM durable audit storage probe executor contract.
+- Current latest wave: M5.21-67, NIM durable audit storage probe result contract.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -46,6 +46,38 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-67 NIM durable audit storage probe result contract is implemented:
+  - Added `NimCreateDurableAuditStorageProbeResultSupport`.
+  - Added `NimCreateDurableAuditStorageProbeResultSupportTest`.
+  - The contract shell defines future server-issued `NimDurableAuditStorageProbeResult` and binds:
+    - M5.21-66 `probeExecutorPlanDigest`
+    - M5.21-56 `schemaDigest`
+    - source audit event digest
+    - writer plan / availability plan / writer boundary digests
+    - interface spec digest
+    - trusted principal digest
+  - It cross-checks the M5.21-66 executor report and M5.21-56 typed schema report belong to the same upstream write chain.
+  - Valid inputs still return `IMPLEMENTATION_HOLD`; caller-supplied result objects remain non-authoritative.
+  - All success/write states remain false:
+    - `storageProbeExecuted=false`
+    - `realStorageTouched=false`
+    - `storageAvailable=false`
+    - `durableAckVerified=false`
+    - `readAfterWriteVerified=false`
+    - `storageProbeReceiptIssued=false`
+    - `preWriteAllowed=false`
+    - `writeExecutionAllowed=false`
+    - `realHttpExecutionAllowed=false`
+    - `durableReceiptCanBeIssued=false`
+  - Added `docs/M5_21_SIXTY_SEVENTH_WAVE_NIM_DURABLE_AUDIT_STORAGE_PROBE_RESULT_AUDIT_20260607.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateDurableAuditStorageProbeResultSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateDurableAuditStorageProbeResultSupportTest,NimCreateDurableAuditStorageProbeExecutorSupportTest,NimCreateDurableAuditReceiptSchemaSupportTest,NimCreateDurableAuditWriterInterfaceSpecSupportTest,NimCreateDedicatedDurableAuditWriterBoundarySupportTest,NimCreateDurableAuditStorageAvailabilityGateSupportTest" test`
+  - Full test note: `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0; this is expected for the current local test environment and does not indicate an M5.21-67 regression.
+  - Final closure included `mvn -q test`, `git diff --check`, production boundary import scan, static secret scan, H-drive SHA256 sync verification, commit, and push.
+  - No real `8100` access; no HTTP client; no Elasticsearch connection; no `ISysLogService`; no `sys_log` write; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
+  - Recovery note: future real storage probe implementation must start from `NimCreateDurableAuditStorageProbeResultSupport` and produce a reviewed server-issued result; availability plan, executor plan, typed schema, and caller-shaped result objects remain insufficient.
 
 - M5.21-66 NIM durable audit storage probe executor contract is implemented:
   - Added `NimCreateDurableAuditStorageProbeExecutorSupport`.

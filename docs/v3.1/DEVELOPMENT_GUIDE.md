@@ -194,3 +194,11 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Current output remains `IMPLEMENTATION_HOLD`; `storageProbeExecuted=false`, `storageAvailable=false`, `durableAckVerified=false`, `readAfterWriteVerified=false`, `preWriteAllowed=false`, `writeExecutionAllowed=false`, and `durableReceiptCanBeIssued=false`.
 - Diagnostic probe snapshots are explicitly non-authoritative. Caller or mock supplied `storageAvailable=true`, `availabilityStatus=AVAILABLE`, `durableAckVerified=true`, `readAfterWriteVerified=true`, `writePermitted=true`, or `receiptStatus=DURABLE_RECORDED` remains a forged success claim.
 - Future real implementation must issue a server-side `NimDurableAuditStorageProbeResult` bound to audit event digest, availability plan digest, writer boundary digest, and trusted principal before any pre-write intent can be allowed.
+
+### M5.21-67 storage probe result contract note
+
+- `NimCreateDurableAuditStorageProbeResultSupport` defines the future server-issued `NimDurableAuditStorageProbeResult`; it does not create a real result instance, storage probe receipt, durable ack, or release credential.
+- The result contract binds M5.21-66 `probeExecutorPlanDigest` and M5.21-56 `schemaDigest`, then cross-checks both reports share the same audit event, writer plan, availability plan, and writer boundary.
+- Current output remains `IMPLEMENTATION_HOLD`; `serverIssuedProbeResultAccepted=false`, `storageAvailable=false`, `storageProbeReceiptIssued=false`, `preWriteAllowed=false`, `writeExecutionAllowed=false`, and `durableReceiptCanBeIssued=false`.
+- Caller supplied `probeResult`, `storageProbeResult`, `NimDurableAuditStorageProbeResult`, or `storageProbeReceipt` is rejected even when the object shape is plausible.
+- Learning distinction: executor plan says what must happen, typed schema says what evidence should look like, but only a reviewed server-issued result can become future evidence.

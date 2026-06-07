@@ -6,6 +6,21 @@
 
 ---
 
+## [M5.21-67] - NIM durable audit storage probe result contract
+
+**Delivery**: Added a contract-only future `NimDurableAuditStorageProbeResult` layer after the M5.21-66 storage probe executor shell.
+**Changes**
+- Added `NimCreateDurableAuditStorageProbeResultSupport`.
+- Added `NimCreateDurableAuditStorageProbeResultSupportTest`.
+- Binds M5.21-66 `probeExecutorPlanDigest`, M5.21-56 `schemaDigest`, source audit event, writer plan, availability plan, writer boundary, interface spec, and trusted principal digest.
+- Cross-checks that the probe executor report and typed receipt schema report belong to the same upstream write chain.
+- Rejects caller-supplied probe result / storage probe receipt instances and forged success claims.
+- Keeps `storageProbeExecuted=false`, `storageAvailable=false`, `durableAckVerified=false`, `readAfterWriteVerified=false`, `preWriteAllowed=false`, `writeExecutionAllowed=false`, and `durableReceiptCanBeIssued=false`.
+- Added `docs/M5_21_SIXTY_SEVENTH_WAVE_NIM_DURABLE_AUDIT_STORAGE_PROBE_RESULT_AUDIT_20260607.md`.
+**Security**
+- This wave does not create a real DTO, Spring Bean, storage client, receipt, or release credential.
+- `nim_create` remains `httpMethod=NONE + PLACEHOLDER + requiresConfirmation=true`, with no real `8100`, no `POST /api/{orgId}/deployment`, no Elasticsearch, no `ISysLogService`, and no `sys_log` write.
+
 ## [M5.21-66] - NIM durable audit storage probe executor contract
 
 **Delivery**: Added a contract-only storage probe executor shell that binds the M5.21-53 availability gate and M5.21-54 dedicated writer boundary before any future real storage probe can be considered.

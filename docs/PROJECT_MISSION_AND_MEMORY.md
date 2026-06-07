@@ -81,9 +81,43 @@ Current track:
 
 Recently completed:
 
-`M5.21-66 NIM durable audit storage probe executor contract`
+`M5.21-67 NIM durable audit storage probe result contract`
 
 Latest checkpoint:
+
+- Date: 2026-06-07 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+  - M5.21-67 implemented:
+  - Added `NimCreateDurableAuditStorageProbeResultSupport` as a contract-only future `NimDurableAuditStorageProbeResult` layer.
+  - Added `NimCreateDurableAuditStorageProbeResultSupportTest`.
+  - The support class consumes:
+    - `auditContext`
+    - `trustedPrincipalSnapshot`
+    - `storageProbeExecutorReport`
+    - `durableAuditReceiptAckSchemaReport`
+    - optional caller `probeResult`, which is always non-authoritative in this wave
+  - It binds M5.21-66 `probeExecutorPlanDigest`, M5.21-56 `schemaDigest`, source audit event, writer plan, availability plan, writer boundary, interface spec, and trusted principal digest.
+  - It cross-checks the probe executor report and typed receipt schema report belong to the same upstream write chain.
+  - Caller supplied `probeResult`, `storageProbeResult`, `NimDurableAuditStorageProbeResult`, or `storageProbeReceipt` is rejected.
+  - Current success states remain false:
+    - `storageProbeExecuted=false`
+    - `realStorageTouched=false`
+    - `storageAvailable=false`
+    - `durableAckVerified=false`
+    - `readAfterWriteVerified=false`
+    - `storageProbeReceiptIssued=false`
+    - `preWriteAllowed=false`
+    - `writeExecutionAllowed=false`
+    - `realHttpExecutionAllowed=false`
+    - `durableReceiptCanBeIssued=false`
+  - Added `docs/M5_21_SIXTY_SEVENTH_WAVE_NIM_DURABLE_AUDIT_STORAGE_PROBE_RESULT_AUDIT_20260607.md`.
+  - No real `8100` access; no HTTP client; no Elasticsearch connection; no `ISysLogService` call; no `sys_log` write; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateDurableAuditStorageProbeResultSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateDurableAuditStorageProbeResultSupportTest,NimCreateDurableAuditStorageProbeExecutorSupportTest,NimCreateDurableAuditReceiptSchemaSupportTest,NimCreateDurableAuditWriterInterfaceSpecSupportTest,NimCreateDedicatedDurableAuditWriterBoundarySupportTest,NimCreateDurableAuditStorageAvailabilityGateSupportTest" test`
+  - Full test note: `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0; this remains an accepted degraded-test-path signal, not an M5.21-67 failure.
+  - Final closure included `mvn -q test`, `git diff --check`, production boundary import scan, static secret scan, H-drive SHA256 sync verification, commit, and push.
+  - Learning note: server-issued result, typed schema, executor plan, and receipt are different artifacts. Future real probe work must migrate this contract from HOLD to reviewed implementation instead of accepting caller-shaped result objects.
 
 - Date: 2026-06-07 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
