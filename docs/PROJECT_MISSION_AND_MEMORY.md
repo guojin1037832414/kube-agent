@@ -82,10 +82,27 @@ Current track:
 
 Recently completed:
 
-`M5.21-91 NIM release/switch shared secret detector migration`
+`M5.21-92 NIM runtime binding strict shared secret detector migration`
 
 Latest checkpoint:
 
+- Date: 2026-06-08 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-92 implemented:
+  - Migrated `NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport` to `NimForbiddenSecretMaterialDetector.strictRecursivePolicy()`.
+  - Removed the runtime-binding local forbidden secret key/value scanner copy while preserving local forged runtime release claim scanners.
+  - Extended `NimForbiddenSecretMaterialDetectorUsageContractTest` with a strict-recursive policy support group.
+  - Added runtime-binding regression coverage proving nested `token=false` and `secret=0` remain rejected under strict runtime-source semantics.
+  - Added `docs/M5_21_NINETY_SECOND_WAVE_NIM_RUNTIME_BINDING_STRICT_SECRET_DETECTOR_MIGRATION_AUDIT_20260608.md`.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimForbiddenSecretMaterialDetectorUsageContractTest,NimForbiddenSecretMaterialDetectorTest,NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupportTest,NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupportTest" test`
+  - Final verification passed:
+    - `git diff --check`
+    - `mvn -q test`
+  - Full test note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - Security invariant: no real `8100`, no deployment POST, no runtime write behavior, no state-machine release implementation, no durable executor release implementation, no code release switch implementation, no durable writer/probe/receipt implementation, no validation result signer, no release decision signer, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Recommended next slice: handle documented-field exception scanner classes separately after policy comparison, or return to reviewed durable writer/probe boundary design.
+- Previous checkpoint:
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
 - M5.21-91 implemented:

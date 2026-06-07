@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-91, NIM release/switch shared secret detector migration.
+- Current latest wave: M5.21-92, NIM runtime binding strict shared secret detector migration.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -48,6 +48,23 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-92 NIM runtime binding strict shared secret detector migration is implemented:
+  - Migrated `src/main/java/com/atlas/tool/impl/NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport.java` to `NimForbiddenSecretMaterialDetector.strictRecursivePolicy()`.
+  - Removed the runtime-binding local forbidden secret key/value scanner copy while preserving separate forged runtime release claim scanners.
+  - Preserved blocker code:
+    - `CODE_RELEASE_SWITCH_RUNTIME_BINDING_INPUT_CONTAINS_FORBIDDEN_SECRET`
+  - Extended `src/test/java/com/atlas/tool/core/NimForbiddenSecretMaterialDetectorUsageContractTest.java` with a strict-recursive policy support group.
+  - Added regression coverage in `src/test/java/com/atlas/tool/impl/NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupportTest.java` proving nested `token=false` and `secret=0` remain rejected under strict runtime-source semantics.
+  - Added `docs/M5_21_NINETY_SECOND_WAVE_NIM_RUNTIME_BINDING_STRICT_SECRET_DETECTOR_MIGRATION_AUDIT_20260608.md`.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimForbiddenSecretMaterialDetectorUsageContractTest,NimForbiddenSecretMaterialDetectorTest,NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupportTest,NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupportTest" test`
+  - Final verification passed:
+    - `git diff --check`
+    - `mvn -q test`
+  - Full test note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - No real `8100` access; no deployment POST; no runtime write behavior opened; no state-machine release implementation; no durable executor release implementation; no code release switch implementation; no durable writer/probe/receipt implementation; no validation result signer; no release decision signer; no Elasticsearch; no `ISysLogService`; no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Next recommended slice: handle documented-field exception scanner classes separately after policy comparison, or return to reviewed durable writer/probe boundary design.
 
 - M5.21-91 NIM release/switch shared secret detector migration is implemented:
   - Migrated `src/main/java/com/atlas/tool/impl/NimCreateDurableAuditReleaseDecisionContractSupport.java` to `NimForbiddenSecretMaterialDetector.nonBooleanNumberValuePolicy()`.

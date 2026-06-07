@@ -314,6 +314,31 @@ class NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupportTest {
     }
 
     @Test
+    void runtimeBinding_shouldRejectNonNullForbiddenKeyValuesEvenWhenScalarStateLike() {
+        Map<String, Object> audit = new LinkedHashMap<>(completeAuditContext());
+        audit.put("nested", List.of(Map.of("token", false, "secret", 0)));
+
+        Map<String, Object> report = NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport.plan(
+            new NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport
+                .CodeReleaseSwitchRuntimeBindingInput(
+                audit,
+                trustedPrincipalSnapshot(),
+                Map.of(),
+                Map.of(),
+                Map.of()
+            )
+        );
+
+        assertEquals(NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport.REJECTED_STATE,
+            report.get("bindingState"));
+        assertRuntimeStatesRemainFalse(report);
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+        assertHasBlocker(blockers,
+            "CODE_RELEASE_SWITCH_RUNTIME_BINDING_INPUT_CONTAINS_FORBIDDEN_SECRET");
+    }
+
+    @Test
     void runtimeBindingSupport_shouldNotImportRealNetworkStorageSpringOrWriterDependencies()
         throws Exception {
         String source = Files.readString(Path.of(

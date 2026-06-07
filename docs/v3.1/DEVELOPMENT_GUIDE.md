@@ -389,3 +389,11 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - The usage contract now protects six non-Boolean/Number policy support classes.
 - Release and code-switch forged-claim scanners remain local. They reject authority-shaped caller claims such as `releaseEligible=true`, `writePermitted=true`, `switchState=OPEN`, and typed release credentials.
 - Learning distinction: no-secret is not no-risk. Release authorization also needs source-of-authority checks, digest binding, and explicit code review gates.
+
+### M5.21-92 runtime binding strict detector note
+
+- `NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport` now uses `NimForbiddenSecretMaterialDetector.strictRecursivePolicy()` for secret-material scanning.
+- Strict runtime binding still rejects any non-null forbidden-key value, including `token=false` and `secret=0`, because runtime release-source evidence is caller-visible and non-authoritative.
+- The usage contract now has an explicit strict-recursive policy group for runtime source guard and runtime binding classes.
+- Do not migrate documented-field exception classes into this strict group; they need separate policy review.
+- Learning distinction: a shared detector is safest when the call site names the policy. The policy name tells reviewers which old semantic is being preserved.

@@ -44,6 +44,13 @@ class NimForbiddenSecretMaterialDetectorUsageContractTest {
         Path.of("src/main/java/com/atlas/tool/impl/NimCreateDurableAuditCodeReleaseSwitchContractSupport.java")
     );
 
+    private static final List<Path> STRICT_RECURSIVE_POLICY_SUPPORTS = List.of(
+        Path.of("src/main/java/com/atlas/tool/impl/"
+            + "NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport.java"),
+        Path.of("src/main/java/com/atlas/tool/impl/"
+            + "NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport.java")
+    );
+
     @Test
     void migratedNimSupports_shouldUseSharedDetectorWithoutLocalSecretMaterialLists()
         throws IOException {
@@ -69,6 +76,23 @@ class NimForbiddenSecretMaterialDetectorUsageContractTest {
             assertThat(source)
                 .contains("NimForbiddenSecretMaterialDetector.containsForbiddenSecretMaterial")
                 .contains("NimForbiddenSecretMaterialDetector.nonBooleanNumberValuePolicy()")
+                .doesNotContain("FORBIDDEN_SECRET_KEYS")
+                .doesNotContain("looksLikeSecretValue(")
+                .doesNotContain("isForbiddenSecretKey(")
+                .doesNotContain("secretBearingValue(")
+                .doesNotContain("isDocumentedForbiddenFieldName(");
+        }
+    }
+
+    @Test
+    void strictRecursivePolicySupports_shouldUseSharedDetectorWithoutLocalSecretMaterialLists()
+        throws IOException {
+        for (Path path : STRICT_RECURSIVE_POLICY_SUPPORTS) {
+            String source = read(path);
+
+            assertThat(source)
+                .contains("NimForbiddenSecretMaterialDetector.containsForbiddenSecretMaterial")
+                .contains("NimForbiddenSecretMaterialDetector.strictRecursivePolicy()")
                 .doesNotContain("FORBIDDEN_SECRET_KEYS")
                 .doesNotContain("looksLikeSecretValue(")
                 .doesNotContain("isForbiddenSecretKey(")

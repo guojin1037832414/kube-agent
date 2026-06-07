@@ -6,6 +6,21 @@
 
 ---
 
+## [M5.21-92] - NIM runtime binding strict secret detector migration
+
+**Delivery**: Migrated the code-release-switch runtime-binding secret scanner to the shared strict recursive forbidden secret material policy.
+**Changes**
+- `NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport` now uses `NimForbiddenSecretMaterialDetector.strictRecursivePolicy()` instead of a local forbidden secret key/value scanner.
+- Extended `NimForbiddenSecretMaterialDetectorUsageContractTest` with a strict-recursive policy group for runtime source guard and runtime binding classes.
+- Added a runtime-binding regression proving nested `token=false` and `secret=0` remain rejected under strict runtime-source semantics.
+- Added `docs/M5_21_NINETY_SECOND_WAVE_NIM_RUNTIME_BINDING_STRICT_SECRET_DETECTOR_MIGRATION_AUDIT_20260608.md`.
+**Security**
+- Local forged runtime release claim scanners were intentionally preserved because they guard release-source forgery, not credential material.
+- Documented-field exception classes were intentionally left for separate policy review.
+- No runtime write behavior was opened.
+- No real `8100`, deployment POST, state-machine release, durable executor release, code release switch implementation, durable writer/probe/receipt implementation, validation result signer, release decision signer, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-91] - NIM release/switch secret detector migration
 
 **Delivery**: Migrated release-decision and code-release-switch contract scanners to the shared no-exception forbidden secret material policy.
