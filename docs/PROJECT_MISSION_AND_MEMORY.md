@@ -81,9 +81,53 @@ Current track:
 
 Recently completed:
 
-`M5.21-69 NIM validation result probe binding migration contract`
+`M5.21-70 NIM durable audit receipt validation result contract`
 
 Latest checkpoint:
+
+- Date: 2026-06-07 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+  - M5.21-70 implemented:
+  - Added `NimCreateDurableAuditReceiptValidationResultSupport` as an independent contract-only future `NimDurableAuditReceiptValidationResult` value contract.
+  - Added `NimCreateDurableAuditReceiptValidationResultSupportTest`.
+  - The support class consumes:
+    - `auditContext`
+    - `trustedPrincipalSnapshot`
+    - `validationResultProbeBindingMigrationReport` from M5.21-69
+    - optional caller `callerValidationEvidence`, which is always non-authoritative in this wave
+  - It binds M5.21-69 `enhancedMigrationPlanDigest`, M5.21-68 `sourceProbeBindingPlanDigest`, M5.21-68 `sourceProbeResultContractDigest`, M5.21-67 `sourceProbeExecutorPlanDigest`, M5.21-58 `sourceMigrationPlanDigest`, source audit event, receipt schema, validation plan, writer interface, writer boundary, writer plan, availability plan, and trusted principal digest.
+  - The future validation result contract requires typed storage probe receipt, pre-write durable ack, post-write durable ack, and final durable receipt digests before any future PASS can exist; it also lists the future digest field names `storageProbeReceiptDigest`, `preWriteDurableAckDigest`, `postWriteDurableAckDigest`, and `durableReceiptDigest`.
+  - It rejects missing M5.21-69 enhanced migration report, M5.21-58 legacy migration report alone, tampered enhanced migration digest, tampered `sourceProbeExecutorPlanDigest`, invalid upstream HOLD state, upstream `realStorageTouched=true`, forged PASS/release/write claims, caller-supplied validation/release/receipt evidence, and secret-bearing inputs.
+  - Current success states remain false:
+    - `realValidatorCreated=false`
+    - `realValidationResultCreated=false`
+    - `serverIssuedValidationResultAccepted=false`
+    - `realStorageTouched=false`
+    - `enhancedMigrationDigestVerified=false`
+    - `probeBindingDigestVerified=false`
+    - `probeResultContractDigestVerified=false`
+    - `storageProbeReceiptValidated=false`
+    - `preWriteDurableAckValidated=false`
+    - `postWriteDurableAckValidated=false`
+    - `digestChainValidated=false`
+    - `trustedPrincipalValidated=false`
+    - `durableReceiptValidationPassed=false`
+    - `validationPassed=false`
+    - `releaseEligible=false`
+    - `writeExecutionAllowed=false`
+  - Added `docs/M5_21_SEVENTIETH_WAVE_NIM_DURABLE_AUDIT_RECEIPT_VALIDATION_RESULT_CONTRACT_AUDIT_20260607.md`.
+  - No real `8100` access; no HTTP client; no Elasticsearch connection; no `ISysLogService` call; no `sys_log` write; no real `POST /api/{orgId}/deployment` execution; `nim_create` remains HOLD.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateDurableAuditReceiptValidationResultSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateDurableAuditReceiptValidationResultSupportTest,NimCreateDurableAuditValidationResultProbeBindingMigrationSupportTest,NimCreateDurableAuditValidationResultMigrationSupportTest,NimCreateDurableAuditReceiptValidationProbeResultBindingSupportTest,NimCreateDurableAuditStorageProbeResultSupportTest,NimCreateDurableAuditReceiptValidationGateSupportTest,NimCreateDurableAuditReceiptSchemaSupportTest" test`
+    - `mvn -q test`
+    - `git diff --check`
+    - production boundary import/write-path scan
+    - static secret scan
+    - H-drive SHA256 sync verification
+  - Full test note: `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0; this remains an accepted degraded-test-path signal, not an M5.21-70 failure.
+  - Final closure includes H-drive SHA256 sync verification, commit, and push.
+  - Learning note: M5.21-70 fixes the boundary between migration/binding plans and a future server-issued validation fact. A future release path must not treat M5.21-69 enhanced migration report or caller JSON as PASS; it must require a reviewed server-side validation result issuer and digest-bound typed receipt/ack evidence.
 
 - Date: 2026-06-07 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.

@@ -219,3 +219,11 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Future release decision must bind the probe binding digest, probe result contract digest, validation result digest, schema/validation plan digest, audit event, trusted principal, and code release switch.
 - Current output remains `IMPLEMENTATION_HOLD`; `legacyMigrationReportAloneAllowed=false`, `realValidationResultCreated=false`, `realReleaseDecisionCreated=false`, `releaseEligible=false`, and `writeExecutionAllowed=false`.
 - Learning distinction: never let an intermediate plan object become a permission credential. A future release path that consumes M5.21-58 without M5.21-68 must fail closed.
+
+### M5.21-70 receipt validation result contract note
+
+- `NimCreateDurableAuditReceiptValidationResultSupport` defines only the future server-issued `NimDurableAuditReceiptValidationResult` value contract; it does not create a real validation result or release decision.
+- The contract consumes the M5.21-69 enhanced migration report and requires binding M5.21-69 enhanced migration digest, M5.21-68 probe binding/result digests, M5.21-67 probe executor digest, M5.21-58 migration digest, receipt schema, validation plan, writer interface/boundary/plan, availability plan, audit event, and trusted principal digest.
+- Future PASS also requires typed storage probe receipt, pre-write durable ack, post-write durable ack, and final durable receipt digests, with explicit future fields named `storageProbeReceiptDigest`, `preWriteDurableAckDigest`, `postWriteDurableAckDigest`, and `durableReceiptDigest`. None of those are accepted from caller evidence in this wave.
+- Current output remains `IMPLEMENTATION_HOLD`; `serverIssuedValidationResultRequired=true`, `callerValidationEvidenceAuthoritative=false`, `legacyMigrationReportAloneAllowed=false`, `realStorageTouched=false`, `validationPassed=false`, `releaseEligible=false`, and `writeExecutionAllowed=false`.
+- Learning distinction: a validation result is a server-issued fact, not a plan object, schema, gate, binding report, or caller-supplied JSON object with `validationStatus=PASS`.

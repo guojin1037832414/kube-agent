@@ -6,6 +6,21 @@
 
 ---
 
+## [M5.21-70] - NIM durable audit receipt validation result contract
+
+**Delivery**: Added a contract-only future `NimDurableAuditReceiptValidationResult` value contract that consumes the M5.21-69 enhanced migration report and keeps NIM write release held until a reviewed server-issued validation result exists.
+**Changes**
+- Added `NimCreateDurableAuditReceiptValidationResultSupport`.
+- Added `NimCreateDurableAuditReceiptValidationResultSupportTest`.
+- Binds M5.21-69 `enhancedMigrationPlanDigest`, M5.21-68 `sourceProbeBindingPlanDigest`, M5.21-68 `sourceProbeResultContractDigest`, M5.21-67 `sourceProbeExecutorPlanDigest`, M5.21-58 `sourceMigrationPlanDigest`, source audit event, receipt schema, validation plan, writer interface, writer boundary, writer plan, availability plan, and trusted principal digest.
+- Requires future server-issued validation result evidence to explicitly carry `storageProbeReceiptDigest`, `preWriteDurableAckDigest`, `postWriteDurableAckDigest`, and `durableReceiptDigest`.
+- Rejects missing or tampered M5.21-69 migration reports, caller-supplied validation/release/receipt evidence, forged PASS/release/write claims, and secret-bearing inputs.
+- Keeps `serverIssuedValidationResultRequired=true`, `callerValidationEvidenceAuthoritative=false`, `legacyMigrationReportAloneAllowed=false`, `realStorageTouched=false`, `realValidationResultCreated=false`, `validationPassed=false`, `releaseEligible=false`, and `writeExecutionAllowed=false`.
+- Added `docs/M5_21_SEVENTIETH_WAVE_NIM_DURABLE_AUDIT_RECEIPT_VALIDATION_RESULT_CONTRACT_AUDIT_20260607.md`.
+**Security**
+- This wave does not create a real validator, validation result, release decision, DTO, Spring Bean, storage client, release credential, Tool registration, Controller, or write path.
+- `nim_create` remains `httpMethod=NONE + PLACEHOLDER + requiresConfirmation=true`, with no real `8100`, no real deployment POST execution, no Elasticsearch, no `ISysLogService`, and no `sys_log` write.
+
 ## [M5.21-69] - NIM validation result probe binding migration contract
 
 **Delivery**: Added a contract-only bridge requiring future durable audit validation result and release decision migration to bind the M5.21-68 receipt validation probe-result-binding report before any validation PASS or release decision can exist.
