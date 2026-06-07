@@ -82,12 +82,28 @@ Current track:
 
 Recently completed:
 
-`M5.21-81 Default value global safety contract`
+`M5.21-82 Default value prompt authority contract`
 
 Latest checkpoint:
 
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-82 implemented:
+  - Updated `ToolRegistry.buildSystemPromptForCurrentUser()` so the LLM-visible tool directory states that `默认/可选` means form draft/frontend fill hints only.
+  - The prompt rule says defaults do not mean user confirmation, HITL pass, release approval, audit success, write authorization, or real HTTP execution permission.
+  - The prompt rule clarifies `requiresConfirmation=false` as no extra HITL, not a bypass of login, RBAC, tenant isolation, release gates, or backend authorization.
+  - The prompt tells the model not to proactively generate auth, tenant, HITL, audit, release, or write-control fields in `Action.params`.
+  - Extended `ToolRegistryPromptContractTest`.
+  - Added `M521DefaultValuePromptAuthorityContractTest` to keep ToolRegistry prompt generation from importing/rendering `DefaultValueRegistry`, `DefaultValueApplier`, `IntentDefaults`, or `defaults.yml`.
+  - Added `docs/M5_21_EIGHTY_SECOND_WAVE_DEFAULT_VALUE_PROMPT_AUTHORITY_CONTRACT_AUDIT_20260608.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=ToolRegistryPromptContractTest,M521DefaultValuePromptAuthorityContractTest,M521DefaultValueSafetyContractTest,M521NimCreateDefaultsIntentHoldContractTest" test`
+    - `mvn -q "-Dtest=ToolRegistryPromptContractTest,ToolRegistryPermissionTest,M521DefaultValuePromptAuthorityContractTest,M521DefaultValueSafetyContractTest,M521NimCreateDefaultsIntentHoldContractTest,M513HitlFailClosedContractTest,HighRiskMutationToolHttpContractTest,SafeToolExecutorTest" test`
+    - `git diff --check`
+    - `mvn -q test`
+  - Full test note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - Security invariant: no real `8100`, no deployment POST, no durable writer/probe/receipt, no validation result, no release decision, no code release switch, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+- Previous checkpoint:
 - M5.21-81 implemented:
   - Added `DefaultValueSafety` as the shared protected-default filter.
   - `IntentDefaults` now sanitizes defaults during construction, covering YAML-loaded defaults, reflection/test injection, and future registry construction paths.

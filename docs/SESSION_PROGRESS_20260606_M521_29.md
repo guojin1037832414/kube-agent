@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-81, Default value global safety contract.
+- Current latest wave: M5.21-82, Default value prompt authority contract.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -48,6 +48,24 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-82 Default value prompt authority contract is implemented:
+  - Updated `src/main/java/com/atlas/tool/core/ToolRegistry.java`.
+  - ToolRegistry prompt now states that `默认/可选` only means form draft/frontend fill hints.
+  - The prompt states defaults do not mean user confirmation, HITL pass, release approval, audit success, write authorization, or real HTTP execution permission.
+  - The prompt clarifies `requiresConfirmation=false` as no extra HITL, not a bypass of login, RBAC, tenant isolation, release gates, or backend authorization.
+  - The prompt tells the model not to proactively generate auth, tenant, HITL, audit, release, or write-control fields in `Action.params`.
+  - Updated `src/test/java/com/atlas/tool/core/ToolRegistryPromptContractTest.java`.
+  - Added `src/test/java/com/atlas/contract/M521DefaultValuePromptAuthorityContractTest.java`.
+  - Added `docs/M5_21_EIGHTY_SECOND_WAVE_DEFAULT_VALUE_PROMPT_AUTHORITY_CONTRACT_AUDIT_20260608.md`.
+  - Updated `CHANGELOG.md`, `docs/M5_21_WAVE_INDEX_20260606.md`, and `docs/v3.1/DEVELOPMENT_GUIDE.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=ToolRegistryPromptContractTest,M521DefaultValuePromptAuthorityContractTest,M521DefaultValueSafetyContractTest,M521NimCreateDefaultsIntentHoldContractTest" test`
+    - `mvn -q "-Dtest=ToolRegistryPromptContractTest,ToolRegistryPermissionTest,M521DefaultValuePromptAuthorityContractTest,M521DefaultValueSafetyContractTest,M521NimCreateDefaultsIntentHoldContractTest,M513HitlFailClosedContractTest,HighRiskMutationToolHttpContractTest,SafeToolExecutorTest" test`
+    - `git diff --check`
+    - `mvn -q test`
+  - Full test note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - No real `8100` access; no deployment POST; no durable writer/probe/receipt; no validation result; no release decision; no release switch; no Elasticsearch; no `ISysLogService`; no `sys_log`; `nim_create` remains HOLD/mock-first.
 
 - M5.21-81 Default value global safety contract is implemented:
   - Added `src/main/java/com/atlas/tool/defaults/DefaultValueSafety.java`.

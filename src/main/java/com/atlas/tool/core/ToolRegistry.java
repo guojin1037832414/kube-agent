@@ -336,6 +336,7 @@ public class ToolRegistry {
         sb.append("3. 调用工具前确保已收集所有必填参数\n");
         sb.append("4. Action.params 必须优先使用参数契约中的 canonical 参数名；历史 alias 仅用于系统兼容归一化，不要主动输出 alias 字段\n");
         sb.append("5. 风险标签用于辅助判断操作影响：READ 为普通只读；SENSITIVE_READ 为敏感读取，虽不改变状态但可能读取日志、用户、权限、订单、配额等敏感数据；CREATE/UPDATE/DELETE/ACTION 可能改变系统状态；requiresConfirmation=true 表示执行前必须人工确认，执行层由 HITL fail-closed 守卫强制拦截。\n");
+        sb.append("6. 参数说明中的“默认/可选”只表示表单草稿或前端填充提示，不代表用户已确认、HITL 通过、发布批准、审计成功、写入授权或真实 HTTP 执行许可；requiresConfirmation=false 只表示该 Tool 不需要额外 HITL，不代表绕过登录、RBAC、租户隔离、发布门禁或后端鉴权；不要在 Action.params 主动生成认证、租户、HITL、审计、发布或写入控制字段。\n");
 
         return sb.toString();
     }

@@ -143,6 +143,13 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Legitimate form draft fields remain allowed. For example, `user_create.role=user` is a business default, not an authorization decision.
 - Learning distinction: default values can reduce form friction, but they must not mint authority. Authority must come from permission checks, trusted backend facts, HITL evidence, durable audit, and reviewed release gates.
 
+### M5.21-82 prompt authority learning note
+
+- ToolRegistry prompt rules now explicitly say `默认/可选` only means form draft or frontend fill hints, not user confirmation, HITL pass, release approval, audit success, write authorization, or real HTTP execution permission.
+- `requiresConfirmation=false` only means no extra HITL is required. It does not bypass login, RBAC, tenant isolation, release gates, or backend authorization.
+- The model must not proactively generate auth, tenant, HITL, audit, release, or write-control fields in `Action.params`.
+- Learning distinction: prompt guidance is also a safety boundary. Runtime guards stop unsafe execution; prompt rules reduce the chance that the model proposes authority-shaped parameters in the first place.
+
 ### M5.21-58 validation result / release decision migration note
 
 - `NimCreateDurableAuditValidationResultMigrationSupport` only defines a future migration plan for `NimDurableAuditReceiptValidationResult` and `NimDurableAuditReleaseDecision`; it does not create real DTOs, Beans, validators, storage writes, or release credentials.

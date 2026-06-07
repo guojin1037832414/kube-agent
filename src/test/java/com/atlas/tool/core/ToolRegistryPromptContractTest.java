@@ -171,6 +171,41 @@ class ToolRegistryPromptContractTest {
     }
 
     @Test
+    void buildSystemPrompt_shouldStateDefaultsAreNotAuthorizationAndHideDefaultRegistry() {
+        UserPermissionContext userPermissionContext = new UserPermissionContext();
+        userPermissionContext.onLogin("token-user", "zhangsan", "user", Set.of());
+        userPermissionContext.bind("token-user");
+        ToolRegistry registry = new ToolRegistry(List.of(
+            new com.atlas.tool.impl.DeployCreateTool(null),
+            new com.atlas.tool.impl.NimCreateTool()
+        ), userPermissionContext);
+        registry.init();
+
+        String prompt = registry.buildSystemPromptForCurrentUser();
+
+        assertTrue(prompt.contains("默认/可选"));
+        assertTrue(prompt.contains("只表示表单草稿或前端填充提示"));
+        assertTrue(prompt.contains("不代表用户已确认"));
+        assertTrue(prompt.contains("HITL 通过"));
+        assertTrue(prompt.contains("发布批准"));
+        assertTrue(prompt.contains("审计成功"));
+        assertTrue(prompt.contains("写入授权"));
+        assertTrue(prompt.contains("真实 HTTP 执行许可"));
+        assertTrue(prompt.contains("requiresConfirmation=false 只表示该 Tool 不需要额外 HITL"));
+        assertTrue(prompt.contains("不代表绕过登录、RBAC、租户隔离、发布门禁或后端鉴权"));
+        assertTrue(prompt.contains("不要在 Action.params 主动生成认证、租户、HITL、审计、发布或写入控制字段"));
+
+        assertFalse(prompt.contains("defaults.yml"), "Prompt 不应暴露默认值配置文件名，避免 LLM 把配置当作证据源");
+        assertFalse(prompt.contains("DefaultValueRegistry"), "Prompt 不应暴露默认值注册中心实现细节");
+        assertFalse(prompt.contains("DefaultValueSafety"), "Prompt 不应暴露默认值安全实现细节");
+        assertFalse(prompt.contains("gpuPercentLimits=100"), "Prompt 不应渲染 defaults.yml 中的具体 NIM 默认值");
+        assertFalse(prompt.contains("safeToPost"), "Prompt 不应诱导 LLM 生成写入控制字段");
+        assertFalse(prompt.contains("releaseDecision"), "Prompt 不应诱导 LLM 生成发布决策字段");
+        assertFalse(prompt.contains("writePermitted"), "Prompt 不应诱导 LLM 生成写入授权字段");
+        assertFalse(prompt.contains("Authorization"), "Prompt 不应诱导 LLM 生成认证头字段");
+    }
+
+    @Test
     void buildSystemPrompt_shouldKeepLegacyToolCompatibilityHintWhenSpecsMissing() {
         ToolRegistry registry = new ToolRegistry(List.of(new LegacyNoSpecTool()), new UserPermissionContext());
         registry.init();
