@@ -155,7 +155,7 @@ class M42PlanExecuteSafetyContractTest {
             .contains("EXECUTE_STEP_REQUIRES_CONFIRMATION")
             .contains("SafeToolExecutionSource.PLAN_EXECUTE_NODE")
             .contains("Map<String, Object> stepParameters = step.parameters()")
-            .contains("containsProtectedContextParam(stepParameters)")
+            .contains("containsProtectedToolParam(stepParameters)")
             .contains("PROTECTED_PLAN_PARAMETER")
             .contains("SafeToolExecutionRequest request = new SafeToolExecutionRequest")
             .contains("SafeToolExecutionResult result = safeToolExecutor.executeIntent(request)")
@@ -185,7 +185,7 @@ class M42PlanExecuteSafetyContractTest {
 
         assertThat(source)
             .contains("public class SafeToolExecutor")
-            .contains("PROTECTED_CONTEXT_PARAMS")
+            .contains("ProtectedToolParameterFilter.isProtected")
             .contains("toolRegistry.findByIntentId(intentId)")
             .contains("toolRegistry.canExecuteIntent(intentId)")
             .contains("hitlGuard.verifyByIntentId(")

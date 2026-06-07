@@ -82,12 +82,30 @@ Current track:
 
 Recently completed:
 
-`M5.21-84 ReAct HITL execution guard contract`
+`M5.21-85 Shared protected Tool parameter filter`
 
 Latest checkpoint:
 
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-85 implemented:
+  - Added `ProtectedToolParameterFilter` as the shared Tool execution-boundary filter.
+  - ReAct, SafeToolExecutor, and execute_node now share the same protected parameter recognition for auth/session/tenant, HITL, audit, release, risk metadata, and write-control fields.
+  - Normalized variants such as `hitl_approved`, `release-approved`, `write_allowed`, `operation_type`, and `api.endpoints` are protected.
+  - `SafeToolExecutor` still preserves ordinary unknown business params for Graph/ReAct compatibility, but strips forged control fields before `BaseTool.execute(...)`.
+  - `execute_node` remains stricter than SafeToolExecutor: protected fields anywhere in Plan parameters cause fail-closed before delegation.
+  - Added `ProtectedToolParameterFilterTest` and `ProtectedToolParameterFilterUsageContractTest`.
+  - Extended `SafeToolExecutorTest` for forged HITL/audit/release/write-control params in both Graph and Plan sources.
+  - Added `docs/M5_21_EIGHTY_FIFTH_WAVE_SHARED_PROTECTED_TOOL_PARAMETER_FILTER_AUDIT_20260608.md`.
+  - Updated `CHANGELOG.md`, `docs/M5_21_WAVE_INDEX_20260606.md`, `docs/SESSION_PROGRESS_20260606_M521_29.md`, and `docs/v3.1/DEVELOPMENT_GUIDE.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=ProtectedToolParameterFilterTest,ProtectedToolParameterFilterUsageContractTest,SafeToolExecutorTest,ReActEngineHitlGuardContractTest,M4Px4ToolExecuteEntrypointContractTest,M42PlanExecuteSafetyContractTest" test`
+    - `mvn -q "-Dtest=ProtectedToolParameterFilterTest,ProtectedToolParameterFilterUsageContractTest,SafeToolExecutorTest,ReActEngineHitlGuardContractTest,ReActEngineMultiStepE2ETest,ReActPromptBuilderRiskMetadataContractTest,ReActEventRiskMetadataTest,ToolRegistryPromptContractTest,M521DefaultValuePromptAuthorityContractTest,M521DefaultValueSafetyContractTest,M4Px4ToolExecuteEntrypointContractTest,M42PlanExecuteSafetyContractTest,M513HitlFailClosedContractTest,HighRiskMutationToolHttpContractTest" test`
+    - `git diff --check`
+    - `mvn -q test`
+  - Full test note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - Security invariant: no real `8100`, no deployment POST, no runtime write behavior, no service-side HITL bypass, no durable writer/probe/receipt, no validation result, no release decision, no code release switch, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+- Previous checkpoint:
 - M5.21-84 implemented:
   - Updated `ReActEngine` so a `HitlGuard` block now emits a complete audit timeline: `tool_done(success=false)`, structured `observation`, then `error`.
   - The blocked Observation is still stored in `ReActMemory`, allowing the next ReAct turn to explain the safety block instead of blindly retrying the Action.

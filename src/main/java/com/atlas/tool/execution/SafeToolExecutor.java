@@ -3,6 +3,7 @@ package com.atlas.tool.execution;
 import com.atlas.auth.UserPermissionContext;
 import com.atlas.hitl.HitlGuard;
 import com.atlas.tool.core.BaseTool;
+import com.atlas.tool.core.ProtectedToolParameterFilter;
 import com.atlas.tool.core.ToolParameterNormalizer;
 import com.atlas.tool.core.ToolParameterSpec;
 import com.atlas.tool.core.ToolRegistry;
@@ -38,21 +39,6 @@ import java.util.stream.Collectors;
  */
 @Component
 public class SafeToolExecutor {
-
-    /**
-     * 会话/认证上下文字段白名单。
-     *
-     * <p>这些字段只能来自服务端可信上下文，不能由 LLM、Plan 或前端参数覆盖。</p>
-     */
-    private static final Set<String> PROTECTED_CONTEXT_PARAMS = Set.of(
-        "token",
-        "organizationId",
-        "orgId",
-        "conversationId",
-        "conversation_id",
-        "userId",
-        "user_id"
-    );
 
     private final ToolRegistry toolRegistry;
     private final HitlGuard hitlGuard;
@@ -173,7 +159,7 @@ public class SafeToolExecutor {
         Map<String, Object> businessParams = sanitizeBusinessParams(request, tool);
         if (businessParams != null) {
             businessParams.forEach((key, value) -> {
-                if (!isProtectedContextParam(key)) {
+                if (!ProtectedToolParameterFilter.isProtected(key)) {
                     toolParams.put(key, value);
                 }
             });
@@ -192,8 +178,8 @@ public class SafeToolExecutor {
      * 对业务参数执行来源感知的最小净化。
      *
      * <p>普通 Graph/ReAct/ToolCallback 兼容路径仍保持旧语义：只由
-     * {@link #buildTrustedToolParams(SafeToolExecutionRequest, String, BaseTool)} 过滤 token/orgId 等受保护
-     * 系统字段，不额外删除未知业务字段。M4-PX.4 第五小批只收紧 execute_node 的
+     * {@link #buildTrustedToolParams(SafeToolExecutionRequest, String, BaseTool)} 过滤 token/orgId 以及
+     * HITL/审计/发布/写入控制字段，不额外删除未知业务字段。M4-PX.4 第五小批只收紧 execute_node 的
      * {@link SafeToolExecutionSource#PLAN_EXECUTE_NODE} 来源，因为该来源代表 Plan 自动执行候选，
      * 必须以 Tool 自身声明的 {@link ToolParameterSpec} 作为唯一可信业务参数白名单。</p>
      */
@@ -232,7 +218,7 @@ public class SafeToolExecutor {
      *
      * <p>这里故意检查原始 Plan 参数，而不是检查 normalizer 产物：normalizer 会保留 alias 原字段并补齐
      * canonical 字段，已声明的 alias（如 q/ns）允许作为输入兼容存在，但最终不会透传给 Tool；真正需要
-     * 拒绝的是既不是 canonical、也不是当前 Tool 声明 alias、也不是受保护上下文字段的未知业务参数。
+     * 拒绝的是既不是 canonical、也不是当前 Tool 声明 alias、也不是受保护控制平面字段的未知业务参数。
      * 这样可以把 planner/schema 漂移显式暴露为结构化 fail-closed，而不是静默扩大查询范围。</p>
      */
     private void rejectUnknownPlanParameters(Map<String, Object> rawParams,
@@ -241,17 +227,13 @@ public class SafeToolExecutor {
         Set<String> unknownPlanParams = rawParams.keySet().stream()
             .filter(key -> !allowedParamNames.contains(key))
             .filter(key -> !declaredAliasNames.contains(key))
-            .filter(key -> !isProtectedContextParam(key))
+            .filter(key -> !ProtectedToolParameterFilter.isProtected(key))
             .collect(Collectors.toCollection(TreeSet::new));
         if (!unknownPlanParams.isEmpty()) {
             throw new IllegalStateException(
                 "TOOL_PARAMETER_UNKNOWN_FOR_PLAN_EXECUTE: PLAN_EXECUTE_NODE 来源包含 ToolParameterSpec 未声明的参数: "
                     + unknownPlanParams);
         }
-    }
-
-    private boolean isProtectedContextParam(String key) {
-        return key != null && PROTECTED_CONTEXT_PARAMS.contains(key);
     }
 
     private SafeToolExecutionResult toExecutionResult(String intentId, Map<String, Object> toolResult) {

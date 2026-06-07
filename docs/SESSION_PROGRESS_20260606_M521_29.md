@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-84, ReAct HITL execution guard contract.
+- Current latest wave: M5.21-85, shared protected Tool parameter filter.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -48,6 +48,29 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-85 shared protected Tool parameter filter is implemented:
+  - Added `src/main/java/com/atlas/tool/core/ProtectedToolParameterFilter.java`.
+  - Centralized execution-boundary filtering for auth/session/tenant context, HITL, audit, release, risk metadata, and write-control fields.
+  - Normalized variants such as `hitl_approved`, `release-approved`, `write_allowed`, `operation_type`, and `api.endpoints` are treated as protected.
+  - Updated `src/main/java/com/atlas/react/ReActEngine.java` to use the shared filter when merging trusted initial context and LLM Action params.
+  - Updated `src/main/java/com/atlas/tool/execution/SafeToolExecutor.java` so Graph compatibility and PLAN_EXECUTE_NODE paths strip forged control fields through the same shared filter.
+  - Updated `src/main/java/com/atlas/graph/config/AtlasGraphConfig.java` execute_node so recursive Plan parameter preflight uses the same shared filter and still fails closed before automatic execution.
+  - Added `src/test/java/com/atlas/tool/core/ProtectedToolParameterFilterTest.java`.
+  - Added `src/test/java/com/atlas/tool/core/ProtectedToolParameterFilterUsageContractTest.java`.
+  - Extended `src/test/java/com/atlas/tool/execution/SafeToolExecutorTest.java` to prove forged HITL/audit/release/write fields are stripped in both Graph and Plan execution sources.
+  - Updated static contract tests:
+    - `src/test/java/com/atlas/contract/M4Px4ToolExecuteEntrypointContractTest.java`
+    - `src/test/java/com/atlas/contract/M42PlanExecuteSafetyContractTest.java`
+  - Added `docs/M5_21_EIGHTY_FIFTH_WAVE_SHARED_PROTECTED_TOOL_PARAMETER_FILTER_AUDIT_20260608.md`.
+  - Updated `CHANGELOG.md`, `docs/M5_21_WAVE_INDEX_20260606.md`, and `docs/v3.1/DEVELOPMENT_GUIDE.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=ProtectedToolParameterFilterTest,ProtectedToolParameterFilterUsageContractTest,SafeToolExecutorTest,ReActEngineHitlGuardContractTest,M4Px4ToolExecuteEntrypointContractTest,M42PlanExecuteSafetyContractTest" test`
+    - `mvn -q "-Dtest=ProtectedToolParameterFilterTest,ProtectedToolParameterFilterUsageContractTest,SafeToolExecutorTest,ReActEngineHitlGuardContractTest,ReActEngineMultiStepE2ETest,ReActPromptBuilderRiskMetadataContractTest,ReActEventRiskMetadataTest,ToolRegistryPromptContractTest,M521DefaultValuePromptAuthorityContractTest,M521DefaultValueSafetyContractTest,M4Px4ToolExecuteEntrypointContractTest,M42PlanExecuteSafetyContractTest,M513HitlFailClosedContractTest,HighRiskMutationToolHttpContractTest" test`
+    - `git diff --check`
+    - `mvn -q test`
+  - Full test note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - No real `8100` access; no deployment POST; no runtime write behavior opened; no service-side HITL bypass; no durable writer/probe/receipt; no validation result; no release decision; no release switch; no Elasticsearch; no `ISysLogService`; no `sys_log`; `nim_create` remains HOLD/mock-first.
 
 - M5.21-84 ReAct HITL execution guard contract is implemented:
   - Updated `src/main/java/com/atlas/react/ReActEngine.java`.

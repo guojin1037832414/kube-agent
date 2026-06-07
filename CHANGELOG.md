@@ -6,6 +6,23 @@
 
 ---
 
+## [M5.21-85] - Shared protected Tool parameter filter
+
+**Delivery**: Centralized protected Tool parameter filtering across ReAct, SafeToolExecutor, and execute_node.
+**Changes**
+- Added `ProtectedToolParameterFilter` as the shared execution-boundary filter for auth/session/tenant, HITL, audit, release, risk metadata, and write-control fields.
+- `ReActEngine` now uses the shared filter instead of its previous local protected parameter list.
+- `SafeToolExecutor` now strips forged confirmation, audit, release, and write-control fields in both Graph compatibility and PLAN_EXECUTE_NODE paths.
+- `AtlasGraphConfig` execute_node now uses the same shared filter for its recursive Plan parameter fail-closed guard before delegating to SafeToolExecutor.
+- Added normalized-key coverage for variants such as `hitl_approved`, `release-approved`, `write_allowed`, `operation_type`, and `api.endpoints`.
+- Added `ProtectedToolParameterFilterTest` and `ProtectedToolParameterFilterUsageContractTest`.
+- Extended `SafeToolExecutorTest` and updated static execute-node/SafeToolExecutor contract tests.
+- Added `docs/M5_21_EIGHTY_FIFTH_WAVE_SHARED_PROTECTED_TOOL_PARAMETER_FILTER_AUDIT_20260608.md`.
+**Security**
+- No runtime write behavior was opened.
+- No real `8100`, deployment POST, durable writer/probe/receipt, validation result, release decision, release switch, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-84] - ReAct HITL execution guard contract
 
 **Delivery**: Hardened ReAct execution-layer HITL behavior and audit timeline visibility.

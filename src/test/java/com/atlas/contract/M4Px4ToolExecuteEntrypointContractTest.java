@@ -198,7 +198,7 @@ class M4Px4ToolExecuteEntrypointContractTest {
         assertThat(source)
             .as("SafeToolExecutor 必须继续集中承载受保护参数、HITL 和 ThreadLocal 安全语义")
             .contains("public class SafeToolExecutor")
-            .contains("PROTECTED_CONTEXT_PARAMS")
+            .contains("ProtectedToolParameterFilter.isProtected")
             .contains("缺失 orgId、未注册 Tool、权限不足、HITL 未确认均 fail-closed");
         assertThat(bindIndex).as("SafeToolExecutor 必须绑定可信 ThreadLocal 上下文").isGreaterThanOrEqualTo(0);
         assertThat(guardIndex).as("SafeToolExecutor 必须在执行前调用 HitlGuard").isGreaterThanOrEqualTo(0);

@@ -3,6 +3,7 @@ package com.atlas.react;
 import com.atlas.observability.AgentMetricsService;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.hitl.HitlGuard;
+import com.atlas.tool.core.ProtectedToolParameterFilter;
 import com.atlas.tool.core.ToolParameterNormalizer;
 import com.atlas.tool.core.ToolRegistry;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -15,10 +16,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.LinkedHashMap;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -531,7 +530,8 @@ public class ReActEngine {
      * 来自会话/Graph/认证链路，是 token、organizationId、conversationId、userId 等上下文
      * 的权威来源。因此合并时只允许 Action 补充业务参数，不允许覆盖或新增受保护上下文字段。
      * 同时，LLM 也不能把 {@code confirmed/hitlConfirmed/auditReceipt/releaseDecision/writePermitted}
-     * 这类控制字段塞进 Action.params 伪装成 HITL、审计、发布或写入许可。</p>
+     * 这类控制字段塞进 Action.params 伪装成 HITL、审计、发布或写入许可。该规则由
+     * {@link ProtectedToolParameterFilter} 统一维护，避免执行入口各自复制名单后漂移。</p>
      *
      * <p>参数别名归一化已经从 ReActEngine 内联逻辑抽离到 {@link ToolParameterNormalizer}。
      * ReActEngine 只负责传入当前 toolName，让 normalizer 可以按工具处理 {@code name}
@@ -546,77 +546,12 @@ public class ReActEngine {
         }
         if (actionParams != null && !actionParams.isEmpty()) {
             actionParams.forEach((key, value) -> {
-                if (!isProtectedContextParam(key)) {
+                if (!ProtectedToolParameterFilter.isProtected(key)) {
                     merged.put(key, value);
                 }
             });
         }
         return parameterNormalizer.normalize(toolName, merged);
-    }
-
-    /**
-     * 判断参数名是否属于会话/认证或控制平面字段。
-     *
-     * <p>这些字段不是业务查询条件，不能由 LLM Action 或用户自然语言改写。尤其
-     * {@code organizationId/orgId} 决定租户 path，必须只来自认证上下文；HITL、审计、
-     * 发布和写入控制字段必须来自服务端可信边界，不能由模型参数伪造。</p>
-     */
-    private boolean isProtectedContextParam(String key) {
-        if (key == null) {
-            return false;
-        }
-        return PROTECTED_CONTEXT_PARAMS.contains(key)
-            || PROTECTED_CONTEXT_PARAM_NORMALIZED_KEYS.contains(normalizeProtectedParamKey(key));
-    }
-
-    private static final Set<String> PROTECTED_CONTEXT_PARAMS = Set.of(
-        "token",
-        "organizationId",
-        "orgId",
-        "conversationId",
-        "conversation_id",
-        "userId",
-        "user_id",
-        "confirmed",
-        "hitlConfirmed",
-        "approval",
-        "auditReceipt",
-        "releaseDecision",
-        "writePermitted",
-        "writeExecutionAllowed",
-        "realHttpExecutionAllowed",
-        "releaseEligible"
-    );
-
-    private static final Set<String> PROTECTED_CONTEXT_PARAM_NORMALIZED_KEYS = Set.of(
-        "token",
-        "authorization",
-        "organizationid",
-        "orgid",
-        "conversationid",
-        "userid",
-        "confirmed",
-        "hitlconfirmed",
-        "hitlapproved",
-        "approval",
-        "approved",
-        "auditreceipt",
-        "auditack",
-        "releasereceipt",
-        "releasedecision",
-        "releaseapproved",
-        "writepermitted",
-        "writeallowed",
-        "writeexecutionallowed",
-        "realhttpexecutionallowed",
-        "releaseeligible"
-    );
-
-    private String normalizeProtectedParamKey(String key) {
-        return key.replace("_", "")
-            .replace("-", "")
-            .replace(" ", "")
-            .toLowerCase(Locale.ROOT);
     }
 
     /**

@@ -168,6 +168,15 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Normalized variants such as `hitl_approved`, `release-approved`, and `write_allowed` are also treated as protected.
 - Learning distinction: good Agent safety has two halves. Prompt guidance says "do not propose unsafe actions"; execution guards prove unsafe actions cannot run without server-owned confirmation.
 
+### M5.21-85 shared protected Tool parameter filter learning note
+
+- `ProtectedToolParameterFilter` is now the shared execution-boundary filter for ReAct, SafeToolExecutor, and execute_node.
+- Protected Tool params include auth/session/tenant context, HITL confirmation, audit receipts, release decisions, risk metadata, and write-control fields.
+- The filter recognizes common normalized variants such as `hitl_approved`, `release-approved`, `write_allowed`, `operation_type`, and `api.endpoints`.
+- `SafeToolExecutor` keeps ordinary unknown business params for Graph/ReAct compatibility, but strips forged control-plane fields before calling `BaseTool.execute(...)`.
+- `execute_node` is stricter: if Plan parameters contain protected fields at any nesting level, it fails closed before delegating to SafeToolExecutor.
+- Learning distinction: `DefaultValueSafety` protects configuration/default-value injection, while `ProtectedToolParameterFilter` protects runtime Tool execution authority. They overlap by design, but they are not the same boundary.
+
 ### M5.21-58 validation result / release decision migration note
 
 - `NimCreateDurableAuditValidationResultMigrationSupport` only defines a future migration plan for `NimDurableAuditReceiptValidationResult` and `NimDurableAuditReleaseDecision`; it does not create real DTOs, Beans, validators, storage writes, or release credentials.

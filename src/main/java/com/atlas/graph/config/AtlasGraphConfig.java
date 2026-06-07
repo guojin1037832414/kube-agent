@@ -33,6 +33,7 @@ import com.atlas.hitl.HitlGuard;
 import com.atlas.plan.PlanEngine;
 import com.atlas.plan.PlanResult;
 import com.atlas.plan.PlanStep;
+import com.atlas.tool.core.ProtectedToolParameterFilter;
 import com.atlas.tool.core.ToolRegistry;
 import com.atlas.tool.execution.SafeToolExecutionRequest;
 import com.atlas.tool.execution.SafeToolExecutionResult;
@@ -42,7 +43,6 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 import static com.alibaba.cloud.ai.graph.StateGraph.END;
@@ -67,22 +67,6 @@ import static com.alibaba.cloud.ai.graph.action.AsyncNodeAction.node_async;
  */
 @Configuration
 public class AtlasGraphConfig {
-
-    /**
-     * 会话/认证上下文字段白名单。
-     *
-     * <p>M5.5 多租户安全治理：这些字段只能由系统上下文写入，不能由
-     * AtlasBrain/LLM 输出的 parameters 覆盖，避免跨租户 path 污染。</p>
-     */
-    private static final Set<String> PROTECTED_CONTEXT_PARAMS = Set.of(
-        "token",
-        "organizationId",
-        "orgId",
-        "conversationId",
-        "conversation_id",
-        "userId",
-        "user_id"
-    );
 
     // ═══════════════════════════════════════════════════════════
     // 1. ReactAgent 定义（每个专业 Agent）
@@ -365,10 +349,6 @@ public class AtlasGraphConfig {
         return graph.compile(compileConfig);
     }
 
-    private boolean isProtectedContextParam(String key) {
-        return key != null && PROTECTED_CONTEXT_PARAMS.contains(key);
-    }
-
     /**
      * 判断 Tool 是否必须经过 HITL 人工确认。
      *
@@ -510,11 +490,11 @@ public class AtlasGraphConfig {
                 executeResult.put("reason", "缺少候选 intentId。");
             } else {
                 Map<String, Object> stepParameters = step.parameters() == null ? Map.of() : step.parameters();
-                if (containsProtectedContextParam(stepParameters)) {
-                    answer = "⛔ execute_node 已停止：PlanStep.parameters 包含受保护的系统上下文字段，不能由计划结果覆盖身份、租户或会话信息。";
+                if (containsProtectedToolParam(stepParameters)) {
+                    answer = "⛔ execute_node 已停止：PlanStep.parameters 包含受保护的系统上下文或控制字段，不能由计划结果覆盖身份、租户、会话、HITL、审计、发布或写入许可。";
                     executeResult.put("code", "PROTECTED_PLAN_PARAMETER");
                     executeResult.put("stepId", step.id());
-                    executeResult.put("reason", "Plan 参数属于不可信输入，出现 token/orgId/userId/conversationId 等字段时按 fail-closed 策略停止。");
+                    executeResult.put("reason", "Plan 参数属于不可信输入，出现 token/orgId/userId/conversationId 或 HITL/release/write 控制字段时按 fail-closed 策略停止。");
                 } else {
                     // 【关键安全边界】execute_node 不直接执行任何 Tool，只构造服务端可信请求，
                     // 然后交给 SafeToolExecutor 统一校验 Tool 元数据、权限、HITL、租户上下文和异常恢复。
@@ -921,21 +901,22 @@ public class AtlasGraphConfig {
     }
 
     /**
-     * 递归检查 Plan 参数中是否包含受保护的系统上下文字段。
+     * 递归检查 Plan 参数中是否包含受保护的系统上下文或控制字段。
      *
      * <p>PlanStep.parameters 来自规划层，可能由 LLM 或上游状态间接生成，不能信任。
      * execute_node 在把参数交给 SafeToolExecutor 之前先做一层快速 fail-closed：只要
-     * 顶层或嵌套对象中出现 token/orgId/userId/conversationId 等字段，就认为该计划尝试
-     * 覆盖服务端可信上下文，直接停止执行。SafeToolExecutor 仍保留最终兜底过滤，形成双层防线。</p>
+     * 顶层或嵌套对象中出现 token/orgId/userId/conversationId 或 HITL/release/write 等字段，
+     * 就认为该计划尝试覆盖服务端可信控制平面，直接停止执行。SafeToolExecutor 仍保留最终兜底过滤，
+     * 形成双层防线。</p>
      *
      * @param value 任意 Plan 参数值，可能是 Map、List 或普通标量
-     * @return true 表示发现受保护上下文字段，应停止 execute_node 自动执行
+     * @return true 表示发现受保护字段，应停止 execute_node 自动执行
      */
-    private static boolean containsProtectedContextParam(Object value) {
+    private static boolean containsProtectedToolParam(Object value) {
         if (value instanceof Map<?, ?> map) {
             for (Map.Entry<?, ?> entry : map.entrySet()) {
                 String key = String.valueOf(entry.getKey());
-                if (isProtectedContextKey(key) || containsProtectedContextParam(entry.getValue())) {
+                if (ProtectedToolParameterFilter.isProtected(key) || containsProtectedToolParam(entry.getValue())) {
                     return true;
                 }
             }
@@ -943,44 +924,11 @@ public class AtlasGraphConfig {
         }
         if (value instanceof Iterable<?> iterable) {
             for (Object item : iterable) {
-                if (containsProtectedContextParam(item)) {
+                if (containsProtectedToolParam(item)) {
                     return true;
                 }
             }
         }
         return false;
-    }
-
-    /**
-     * 判断字段名是否属于 execute_node 禁止从 Plan 参数接收的服务端上下文字段。
-     *
-     * <p>这里采用大小写不敏感匹配，并兼容 snake_case/camelCase 的历史字段名。该集合
-     * 与 SafeToolExecutor 的 protected 参数保持语义一致，但 execute_node 选择 fail-closed，
-     * 避免静默删除恶意字段后继续执行。</p>
-     */
-    private static boolean isProtectedContextKey(String key) {
-        if (key == null) {
-            return false;
-        }
-        Set<String> protectedKeys = Set.of(
-            "token",
-            "authorization",
-            "cookie",
-            "accesstoken",
-            "access_token",
-            "authtoken",
-            "auth_token",
-            "organizationid",
-            "organization_id",
-            "orgid",
-            "org_id",
-            "tenantid",
-            "tenant_id",
-            "conversationid",
-            "conversation_id",
-            "userid",
-            "user_id"
-        );
-        return protectedKeys.contains(key.toLowerCase(java.util.Locale.ROOT));
     }
 }
