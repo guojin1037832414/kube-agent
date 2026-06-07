@@ -6,6 +6,18 @@
 
 ---
 
+## [M5.21-74] - NIM code release switch contract report binding
+
+**Delivery**: Wired the M5.21-72 `codeReleaseSwitchContractReport` into the current state-machine and durable-executor shells as fail-closed release evidence shape, while keeping `nim_create` held.
+**Changes**
+- `NimCreateStateMachineSupport` now accepts `codeReleaseSwitchContractReport`, recomputes `codeReleaseSwitchContractDigest`, validates the M5.21-72 HOLD contract shape, and rejects missing/tampered/forged-open switch evidence.
+- `NimCreateDurableWriteExecutorSupport` now requires the same switch contract report before accepting handoff/request-spec input and exposes `sourceCodeReleaseSwitchContractDigest`.
+- Added state-machine and durable-executor tests for missing, tampered, and forged code-switch reports.
+- Added `docs/M5_21_SEVENTY_FOURTH_WAVE_NIM_CODE_RELEASE_SWITCH_CONTRACT_REPORT_BINDING_AUDIT_20260607.md`.
+**Security**
+- A valid switch contract report remains shape evidence only and still adds an implementation HOLD blocker.
+- No real switch, release decision, validation result, release credential, HTTP client, Spring Bean, Controller, Tool registration, Elasticsearch, `ISysLogService`, `sys_log` write, kube-manager `8100` call, or real `POST /api/{orgId}/deployment` was added.
+
 ## [M5.21-73] - NIM code release switch runtime binding contract
 
 **Delivery**: Added a contract-only runtime binding layer that consumes the M5.21-72 code release switch contract report and requires both the state machine and durable executor to re-check the reviewed switch digest before any future write release.

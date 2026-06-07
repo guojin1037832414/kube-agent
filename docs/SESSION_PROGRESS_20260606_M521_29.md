@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-73, NIM code release switch runtime binding contract.
+- Current latest wave: M5.21-74, NIM code release switch contract report binding.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -48,6 +48,18 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-74 NIM code release switch contract report binding is implemented:
+  - Updated `NimCreateStateMachineSupport` to accept `codeReleaseSwitchContractReport`.
+  - Updated `NimCreateDurableWriteExecutorSupport` to require the same M5.21-72 switch contract report before accepting handoff/request-spec input.
+  - Both shells recompute/validate `codeReleaseSwitchContractDigest` and reject missing, tampered, forged-open, or secret-bearing switch reports.
+  - A valid switch contract report is still shape evidence only; it adds a HOLD blocker and does not authorize write release.
+  - Added state-machine tests for valid HOLD binding, tampered digest, and forged open-switch claims.
+  - Added durable-executor tests for missing/tampered/forged switch reports.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimCreateStateMachineSupportTest,NimCreateDurableWriteExecutorSupportTest" test`
+  - No real `8100` access; no HTTP client; no Elasticsearch connection; no `ISysLogService`; no `sys_log` write; no real `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
+  - Recovery note: M5.21-74 consumes the M5.21-72 `codeReleaseSwitchContractReport`; it does not treat the M5.21-73 runtime-binding report as release evidence.
 
 - M5.21-73 NIM code release switch runtime binding contract is implemented:
   - Added `NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport`.

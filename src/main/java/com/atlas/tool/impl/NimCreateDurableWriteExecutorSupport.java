@@ -47,14 +47,22 @@ final class NimCreateDurableWriteExecutorSupport {
         WriteExecutionInput safeInput = input == null ? WriteExecutionInput.empty() : input;
         Map<String, Object> handoffReport = safeInput.writeExecutionHandoffReport();
         Map<String, Object> requestSpecReport = safeInput.writeRequestSpecReport();
+        Map<String, Object> codeReleaseSwitchContractReport = safeInput.codeReleaseSwitchContractReport();
         Map<String, Object> requestSpec = objectMap(requestSpecReport.get("requestSpec"));
         Map<String, Object> handoffPlan = objectMap(handoffReport.get("executionHandoffPlan"));
         List<Map<String, Object>> blockers = new ArrayList<>();
 
         validateRequestSpecReport(requestSpecReport, requestSpec, blockers);
         validateHandoffReport(handoffReport, handoffPlan, requestSpecReport, requestSpec, blockers);
+        validateCodeReleaseSwitchContractReport(
+            codeReleaseSwitchContractReport,
+            handoffReport,
+            requestSpecReport,
+            blockers
+        );
         validateNoSecretMaterial("writeExecutionHandoffReport", handoffReport, blockers);
         validateNoSecretMaterial("writeRequestSpecReport", requestSpecReport, blockers);
+        validateNoSecretMaterial("codeReleaseSwitchContractReport", codeReleaseSwitchContractReport, blockers);
 
         boolean inputAccepted = blockers.isEmpty();
         Map<String, Object> executionAttemptSpec = inputAccepted
@@ -91,6 +99,9 @@ final class NimCreateDurableWriteExecutorSupport {
         result.put("idempotencyKey", text(handoffReport.get("idempotencyKey")));
         result.put("idempotencyKeySource", NimCreateWriteExecutionHandoffSupport.IDEMPOTENCY_KEY_SOURCE);
         result.put("callerIdempotencyKeyAllowed", false);
+        result.put("codeReleaseSwitchContractReportRequired", true);
+        result.put("sourceCodeReleaseSwitchContractDigest",
+            text(codeReleaseSwitchContractReport.get("codeReleaseSwitchContractDigest")));
         result.put("codeReleaseSwitchRuntimeBindingRequired", true);
         result.put("codeReleaseSwitchDigestVerified", false);
         result.put("releaseDecisionDigestVerified", false);
@@ -273,6 +284,92 @@ final class NimCreateDurableWriteExecutorSupport {
             && "1".equals(text(retryPolicy.get("maxAttemptsBeforeExecutorImplementation")));
     }
 
+    private static void validateCodeReleaseSwitchContractReport(Map<String, Object> report,
+                                                                Map<String, Object> handoffReport,
+                                                                Map<String, Object> requestSpecReport,
+                                                                List<Map<String, Object>> blockers) {
+        if (report.isEmpty()) {
+            blockers.add(blocker(
+                "CODE_RELEASE_SWITCH_CONTRACT_REPORT_NOT_READY_FOR_DURABLE_EXECUTOR",
+                "Missing code release switch contract report; durable executor cannot rely on state-machine flags or handoff alone.",
+                "code-release-switch-contract"
+            ));
+            return;
+        }
+
+        Map<String, Object> contract = objectMap(report.get("codeReleaseSwitchContract"));
+        Map<String, Object> durableExecutorBinding = objectMap(contract.get("durableExecutorBinding"));
+        Map<String, Object> template = objectMap(contract.get("currentTemplate"));
+        Map<String, Object> prerequisites = objectMap(contract.get("openPrerequisites"));
+        Map<String, Object> failure = objectMap(contract.get("failureContract"));
+        List<String> fields = stringList(contract.get("requiredFutureEvidenceDigestFields"));
+        boolean valid = NimCreateDurableAuditCodeReleaseSwitchContractSupport.SWITCH_CONTRACT_NAME.equals(
+                text(report.get("durableAuditCodeReleaseSwitchContract")))
+            && NimCreateDurableAuditCodeReleaseSwitchContractSupport.EXECUTION_MODE.equals(
+                text(report.get("executionMode")))
+            && NimCreateDurableAuditCodeReleaseSwitchContractSupport.HOLD_STATE.equals(
+                text(report.get("switchState")))
+            && NimCreateDurableAuditCodeReleaseSwitchContractSupport.FUTURE_CODE_RELEASE_SWITCH.equals(
+                text(report.get("futureCodeReleaseSwitch")))
+            && NimCreateStateMachineSupport.TARGET_TOOL.equals(text(report.get("targetTool")))
+            && PATH_TEMPLATE.equals(text(report.get("pathTemplate")))
+            && "NOT_PERFORMED".equals(text(report.get("networkAccess")))
+            && "NONE".equals(text(report.get("sideEffect")))
+            && Boolean.TRUE.equals(report.get("inputAccepted"))
+            && Boolean.TRUE.equals(report.get("codeReleaseSwitchContractPrepared"))
+            && Boolean.TRUE.equals(report.get("serverOwnedCodeReleaseSwitchRequired"))
+            && Boolean.TRUE.equals(report.get("reviewedCodeSwitchDigestRequired"))
+            && Boolean.FALSE.equals(report.get("callerSwitchEvidenceAuthoritative"))
+            && codeReleaseSwitchStatesRemainFalse(report)
+            && text(report.get("codeReleaseSwitchContractDigest")).matches("[a-f0-9]{64}")
+            && text(report.get("codeReleaseSwitchContractDigest")).equals(digestFor(contract))
+            && hasOnlyBlockerCode(report.get("blockedBy"),
+                "DURABLE_AUDIT_CODE_RELEASE_SWITCH_CONTRACT_IMPLEMENTATION_HOLD")
+            && "REVIEWED_SERVER_OWNED_CODE_RELEASE_SWITCH_REQUIRED".equals(text(contract.get("contractBoundary")))
+            && NimCreateDurableAuditCodeReleaseSwitchContractSupport.FUTURE_CODE_RELEASE_SWITCH.equals(
+                text(contract.get("type")))
+            && Boolean.TRUE.equals(contract.get("futureOnly"))
+            && Boolean.FALSE.equals(contract.get("instanceAllowedNow"))
+            && durableExecutorSwitchBindingValid(durableExecutorBinding)
+            && fields.containsAll(List.of(
+                "codeReleaseSwitchDigest",
+                "releaseDecisionDigest",
+                "validationResultDigest",
+                "bodyDigest",
+                "requestSpecDigest",
+                "handoffDigest",
+                "auditReceiptId",
+                "serverDerivedIdempotencyKey"
+            ))
+            && Boolean.FALSE.equals(template.get("codeReleaseSwitchDigestVerified"))
+            && Boolean.FALSE.equals(template.get("durableExecutorReleaseBound"))
+            && Boolean.FALSE.equals(template.get("writeExecutionAllowed"))
+            && Boolean.FALSE.equals(template.get("realHttpExecutionAllowed"))
+            && Boolean.TRUE.equals(prerequisites.get("durableExecutorRecheckRequired"))
+            && Boolean.FALSE.equals(prerequisites.get("currentContractSatisfiesPrerequisites"))
+            && Boolean.TRUE.equals(failure.get("failClosed"))
+            && Boolean.FALSE.equals(failure.get("fallbackToStateMachineBooleanAllowed"))
+            && Boolean.FALSE.equals(failure.get("fallbackToExecutorSuccessAllowed"))
+            && hasText(handoffReport.get("handoffDigest"))
+            && hasText(requestSpecReport.get("requestSpecDigest"));
+
+        if (!valid) {
+            blockers.add(blocker(
+                "CODE_RELEASE_SWITCH_CONTRACT_REPORT_NOT_TRUSTED_FOR_DURABLE_EXECUTOR",
+                "Durable executor only accepts the M5.21-72 HOLD code release switch contract report with recomputable digest.",
+                "code-release-switch-contract"
+            ));
+        }
+
+        if (codeReleaseSwitchContractClaimsRelease(report)) {
+            blockers.add(blocker(
+                "CODE_RELEASE_SWITCH_CONTRACT_RELEASE_CLAIM_NOT_TRUSTED_FOR_DURABLE_EXECUTOR",
+                "Durable executor cannot trust forged open-switch or write-success claims from the contract report.",
+                "code-release-switch-contract"
+            ));
+        }
+    }
+
     private static Map<String, Object> executionAttemptSpec(Map<String, Object> handoffReport,
                                                             Map<String, Object> handoffPlan,
                                                             Map<String, Object> requestSpecReport,
@@ -316,6 +413,49 @@ final class NimCreateDurableWriteExecutorSupport {
             && !body.containsKey("Authorization")
             && !body.containsKey("password")
             && !body.containsKey("secret");
+    }
+
+    private static boolean codeReleaseSwitchStatesRemainFalse(Map<String, Object> report) {
+        return Boolean.FALSE.equals(report.get("realCodeReleaseSwitchCreated"))
+            && Boolean.FALSE.equals(report.get("realCodeReleaseSwitchOpened"))
+            && Boolean.FALSE.equals(report.get("serverOwnedCodeReleaseSwitchAccepted"))
+            && Boolean.FALSE.equals(report.get("codeReleaseSwitchDigestVerified"))
+            && Boolean.FALSE.equals(report.get("releaseDecisionDigestVerified"))
+            && Boolean.FALSE.equals(report.get("validationResultDigestVerified"))
+            && Boolean.FALSE.equals(report.get("stateMachineReleaseBound"))
+            && Boolean.FALSE.equals(report.get("durableExecutorReleaseBound"))
+            && Boolean.FALSE.equals(report.get("releaseDecisionAccepted"))
+            && Boolean.FALSE.equals(report.get("releaseCredentialIssued"))
+            && Boolean.FALSE.equals(report.get("releaseEligible"))
+            && Boolean.FALSE.equals(report.get("writePermitted"))
+            && Boolean.FALSE.equals(report.get("writeExecutionAllowed"))
+            && Boolean.FALSE.equals(report.get("realHttpExecutionAllowed"))
+            && Boolean.FALSE.equals(report.get("realStorageTouched"));
+    }
+
+    private static boolean durableExecutorSwitchBindingValid(Map<String, Object> binding) {
+        return EXECUTOR_NAME.equals(text(binding.get("target")))
+            && Boolean.TRUE.equals(binding.get("futureCodeReleaseSwitchDigestRequired"))
+            && Boolean.TRUE.equals(binding.get("futureReleaseDecisionDigestRequired"))
+            && Boolean.TRUE.equals(binding.get("futureValidationResultDigestRequired"))
+            && Boolean.TRUE.equals(binding.get("mustRecheckImmediatelyBeforePost"))
+            && Boolean.FALSE.equals(binding.get("fallbackToStateMachineFlagOnlyAllowed"))
+            && Boolean.FALSE.equals(binding.get("writeExecutionAllowedNow"));
+    }
+
+    private static boolean codeReleaseSwitchContractClaimsRelease(Map<String, Object> report) {
+        return Boolean.TRUE.equals(report.get("realCodeReleaseSwitchCreated"))
+            || Boolean.TRUE.equals(report.get("realCodeReleaseSwitchOpened"))
+            || Boolean.TRUE.equals(report.get("serverOwnedCodeReleaseSwitchAccepted"))
+            || Boolean.TRUE.equals(report.get("codeReleaseSwitchDigestVerified"))
+            || Boolean.TRUE.equals(report.get("releaseDecisionDigestVerified"))
+            || Boolean.TRUE.equals(report.get("validationResultDigestVerified"))
+            || Boolean.TRUE.equals(report.get("releaseEligible"))
+            || Boolean.TRUE.equals(report.get("writePermitted"))
+            || Boolean.TRUE.equals(report.get("writeExecutionAllowed"))
+            || Boolean.TRUE.equals(report.get("realHttpExecutionAllowed"))
+            || "OPEN_FOR_NIM_CREATE_WRITE_EXECUTION".equals(text(report.get("switchState")))
+            || "OPEN_FOR_NIM_CREATE_WRITE_EXECUTION".equals(text(report.get("codeReleaseSwitchStatus")));
     }
 
     private static void validateNoSecretMaterial(String source,
@@ -448,6 +588,22 @@ final class NimCreateDurableWriteExecutorSupport {
         return items;
     }
 
+    private static boolean hasOnlyBlockerCode(Object rawBlockers, String code) {
+        List<Map<String, Object>> blockers = listOfMaps(rawBlockers);
+        return blockers.size() == 1 && code.equals(text(blockers.get(0).get("code")));
+    }
+
+    private static List<String> stringList(Object value) {
+        if (!(value instanceof List<?> list)) {
+            return List.of();
+        }
+        List<String> result = new ArrayList<>();
+        for (Object item : list) {
+            result.add(text(item));
+        }
+        return result;
+    }
+
     private static Map<String, Object> objectMap(Object value) {
         if (!(value instanceof Map<?, ?> map)) {
             return Map.of();
@@ -483,15 +639,22 @@ final class NimCreateDurableWriteExecutorSupport {
 
     record WriteExecutionInput(
         Map<String, Object> writeExecutionHandoffReport,
-        Map<String, Object> writeRequestSpecReport
+        Map<String, Object> writeRequestSpecReport,
+        Map<String, Object> codeReleaseSwitchContractReport
     ) {
+        WriteExecutionInput(Map<String, Object> writeExecutionHandoffReport,
+                            Map<String, Object> writeRequestSpecReport) {
+            this(writeExecutionHandoffReport, writeRequestSpecReport, Map.of());
+        }
+
         WriteExecutionInput {
             writeExecutionHandoffReport = writeExecutionHandoffReport == null ? Map.of() : objectMap(writeExecutionHandoffReport);
             writeRequestSpecReport = writeRequestSpecReport == null ? Map.of() : objectMap(writeRequestSpecReport);
+            codeReleaseSwitchContractReport = codeReleaseSwitchContractReport == null ? Map.of() : objectMap(codeReleaseSwitchContractReport);
         }
 
         static WriteExecutionInput empty() {
-            return new WriteExecutionInput(Map.of(), Map.of());
+            return new WriteExecutionInput(Map.of(), Map.of(), Map.of());
         }
     }
 }

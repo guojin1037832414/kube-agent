@@ -74,6 +74,8 @@ final class NimCreateStateMachineSupport {
             Map.of(),
             Map.of(),
             Map.of(),
+            Map.of(),
+            Map.of(),
             "",
             false
         ));
@@ -122,7 +124,16 @@ final class NimCreateStateMachineSupport {
             safeRequest.writeBodyRebuildReport(),
             safeRequest.writeRequestSpecReport(),
             safeRequest.writeExecutionHandoffReport(),
+            safeRequest.codeReleaseSwitchContractReport(),
             safeRequest.durableWriteExecutorReport(),
+            blockers
+        );
+        validateCodeReleaseSwitchContractReport(
+            safeRequest.auditContext(),
+            safeRequest.writeBodyRebuildReport(),
+            safeRequest.writeRequestSpecReport(),
+            safeRequest.writeExecutionHandoffReport(),
+            safeRequest.codeReleaseSwitchContractReport(),
             blockers
         );
         validateReadinessPlan(safeRequest.readinessPlan(), blockers);
@@ -147,8 +158,15 @@ final class NimCreateStateMachineSupport {
         result.put("writeRequestSpecRequired", true);
         result.put("writeExecutionHandoffRequired", true);
         result.put("durableWriteExecutorReportRequired", true);
+        result.put("codeReleaseSwitchContractReportRequired", true);
+        result.put("codeReleaseSwitchContractReportAcceptedForRelease", false);
         result.put("codeReleaseSwitchRuntimeBindingRequired", true);
         result.put("codeReleaseSwitchRuntimeBindingInstalled", false);
+        result.put("codeReleaseSwitchDigestVerified", false);
+        result.put("releaseDecisionDigestVerified", false);
+        result.put("validationResultDigestVerified", false);
+        result.put("sourceCodeReleaseSwitchContractDigest",
+            text(safeRequest.codeReleaseSwitchContractReport().get("codeReleaseSwitchContractDigest")));
         result.put("legacyNimCreateReleasedBooleanAuthoritative", false);
         result.put("readinessExecutionRequired", true);
         result.put("apiKeyPolicy", API_KEY_POLICY);
@@ -616,6 +634,7 @@ final class NimCreateStateMachineSupport {
                                                            Map<String, Object> writeBodyRebuildReport,
                                                            Map<String, Object> writeRequestSpecReport,
                                                            Map<String, Object> writeExecutionHandoffReport,
+                                                           Map<String, Object> codeReleaseSwitchContractReport,
                                                            Map<String, Object> durableWriteExecutorReport,
                                                            List<Map<String, Object>> blockers) {
         if (durableWriteExecutorReport.isEmpty()) {
@@ -650,6 +669,13 @@ final class NimCreateStateMachineSupport {
             && text(writeExecutionHandoffReport.get("idempotencyKey")).equals(text(durableWriteExecutorReport.get("idempotencyKey")))
             && NimCreateWriteExecutionHandoffSupport.IDEMPOTENCY_KEY_SOURCE.equals(text(durableWriteExecutorReport.get("idempotencyKeySource")))
             && Boolean.FALSE.equals(durableWriteExecutorReport.get("callerIdempotencyKeyAllowed"))
+            && Boolean.TRUE.equals(durableWriteExecutorReport.get("codeReleaseSwitchRuntimeBindingRequired"))
+            && text(codeReleaseSwitchContractReport.get("codeReleaseSwitchContractDigest")).equals(
+                text(durableWriteExecutorReport.get("sourceCodeReleaseSwitchContractDigest")))
+            && Boolean.FALSE.equals(durableWriteExecutorReport.get("codeReleaseSwitchDigestVerified"))
+            && Boolean.FALSE.equals(durableWriteExecutorReport.get("releaseDecisionDigestVerified"))
+            && Boolean.FALSE.equals(durableWriteExecutorReport.get("validationResultDigestVerified"))
+            && Boolean.FALSE.equals(durableWriteExecutorReport.get("fallbackToStateMachineWritePermittedAllowed"))
             && hasOnlyBlockerCode(durableWriteExecutorReport.get("blockedBy"), "DURABLE_WRITE_EXECUTOR_IMPLEMENTATION_HOLD")
             && executionAttemptSpecContractValid(auditContext, auditReceipt, writeBodyRebuildReport, writeRequestSpecReport, writeExecutionHandoffReport, executionAttemptSpec);
 
@@ -680,6 +706,132 @@ final class NimCreateStateMachineSupport {
                 "DURABLE_WRITE_EXECUTOR_REPORT_CONTAINS_FORBIDDEN_SECRET",
                 "durable write executor 报告不得携带 Authorization、token、password、secret 或真实 NGC/NIM API Key。",
                 "durable-write-executor"
+            ));
+        }
+    }
+
+    private static void validateCodeReleaseSwitchContractReport(Map<String, Object> auditContext,
+                                                                Map<String, Object> writeBodyRebuildReport,
+                                                                Map<String, Object> writeRequestSpecReport,
+                                                                Map<String, Object> writeExecutionHandoffReport,
+                                                                Map<String, Object> report,
+                                                                List<Map<String, Object>> blockers) {
+        if (report.isEmpty()) {
+            blockers.add(blocker(
+                "CODE_RELEASE_SWITCH_CONTRACT_REPORT_NOT_READY",
+                "Missing code release switch contract report; nimCreateReleased=true alone cannot authorize the state machine.",
+                "code-release-switch-contract"
+            ));
+            return;
+        }
+
+        Map<String, Object> contract = objectMap(report.get("codeReleaseSwitchContract"));
+        Map<String, Object> stateMachineBinding = objectMap(contract.get("stateMachineBinding"));
+        Map<String, Object> durableExecutorBinding = objectMap(contract.get("durableExecutorBinding"));
+        Map<String, Object> template = objectMap(contract.get("currentTemplate"));
+        Map<String, Object> prerequisites = objectMap(contract.get("openPrerequisites"));
+        Map<String, Object> failure = objectMap(contract.get("failureContract"));
+        boolean contractValid = NimCreateDurableAuditCodeReleaseSwitchContractSupport.SWITCH_CONTRACT_NAME.equals(
+                text(report.get("durableAuditCodeReleaseSwitchContract")))
+            && NimCreateDurableAuditCodeReleaseSwitchContractSupport.EXECUTION_MODE.equals(
+                text(report.get("executionMode")))
+            && NimCreateDurableAuditCodeReleaseSwitchContractSupport.HOLD_STATE.equals(
+                text(report.get("switchState")))
+            && NimCreateDurableAuditCodeReleaseSwitchContractSupport.FUTURE_CODE_RELEASE_SWITCH.equals(
+                text(report.get("futureCodeReleaseSwitch")))
+            && TARGET_TOOL.equals(text(report.get("targetTool")))
+            && NimCreateAuditReadinessSupport.BACKEND_ENDPOINT.equals(text(report.get("backendEndpoint")))
+            && "/api/{orgId}/deployment".equals(text(report.get("pathTemplate")))
+            && "NOT_PERFORMED".equals(text(report.get("networkAccess")))
+            && "NONE".equals(text(report.get("sideEffect")))
+            && Boolean.TRUE.equals(report.get("inputAccepted"))
+            && Boolean.TRUE.equals(report.get("codeReleaseSwitchContractPrepared"))
+            && Boolean.TRUE.equals(report.get("serverOwnedCodeReleaseSwitchRequired"))
+            && Boolean.TRUE.equals(report.get("reviewedCodeSwitchDigestRequired"))
+            && Boolean.TRUE.equals(report.get("serverIssuedReleaseDecisionDigestRequired"))
+            && Boolean.TRUE.equals(report.get("serverIssuedValidationResultDigestRequired"))
+            && Boolean.FALSE.equals(report.get("callerSwitchEvidenceAuthoritative"))
+            && Boolean.FALSE.equals(report.get("legacyConfigFlagAllowed"))
+            && Boolean.FALSE.equals(report.get("environmentVariableOverrideAllowed"))
+            && Boolean.FALSE.equals(report.get("runtimeToggleOverrideAllowed"))
+            && codeReleaseSwitchStatesRemainFalse(report)
+            && text(report.get("sourceAuditEventDigest")).equals(digestFor(auditContext))
+            && text(report.get("codeReleaseSwitchContractDigest")).matches("[a-f0-9]{64}")
+            && text(report.get("codeReleaseSwitchContractDigest")).equals(digestFor(contract))
+            && hasOnlyBlockerCode(report.get("blockedBy"),
+                "DURABLE_AUDIT_CODE_RELEASE_SWITCH_CONTRACT_IMPLEMENTATION_HOLD")
+            && "REVIEWED_SERVER_OWNED_CODE_RELEASE_SWITCH_REQUIRED".equals(text(contract.get("contractBoundary")))
+            && NimCreateDurableAuditCodeReleaseSwitchContractSupport.FUTURE_CODE_RELEASE_SWITCH.equals(
+                text(contract.get("type")))
+            && TARGET_TOOL.equals(text(contract.get("targetTool")))
+            && Boolean.TRUE.equals(contract.get("futureOnly"))
+            && Boolean.FALSE.equals(contract.get("instanceAllowedNow"))
+            && "LOCKED_UNTIL_REVIEWED_CODE_RELEASE_SWITCH".equals(text(contract.get("currentSwitchState")))
+            && "OPEN_FOR_NIM_CREATE_WRITE_EXECUTION".equals(text(contract.get("requiredSwitchState")))
+            && Boolean.TRUE.equals(contract.get("serverOwnedRequired"))
+            && Boolean.FALSE.equals(contract.get("callerProvidedSwitchAllowed"))
+            && Boolean.FALSE.equals(contract.get("environmentOverrideAllowed"))
+            && Boolean.FALSE.equals(contract.get("runtimeFlagFallbackAllowed"))
+            && stateMachineSwitchBindingValid(stateMachineBinding)
+            && durableExecutorSwitchBindingValid(durableExecutorBinding)
+            && "LOCKED_UNTIL_REVIEWED_CODE_RELEASE_SWITCH".equals(text(template.get("switchState")))
+            && Boolean.FALSE.equals(template.get("codeReleaseSwitchDigestVerified"))
+            && Boolean.FALSE.equals(template.get("codeReviewDigestVerified"))
+            && Boolean.FALSE.equals(template.get("testEvidenceDigestVerified"))
+            && Boolean.FALSE.equals(template.get("releaseDecisionDigestVerified"))
+            && Boolean.FALSE.equals(template.get("validationResultDigestVerified"))
+            && Boolean.FALSE.equals(template.get("stateMachineReleaseBound"))
+            && Boolean.FALSE.equals(template.get("durableExecutorReleaseBound"))
+            && Boolean.FALSE.equals(template.get("writePermitted"))
+            && Boolean.FALSE.equals(template.get("writeExecutionAllowed"))
+            && Boolean.FALSE.equals(template.get("realHttpExecutionAllowed"))
+            && Boolean.TRUE.equals(prerequisites.get("stateMachineRecheckRequired"))
+            && Boolean.TRUE.equals(prerequisites.get("durableExecutorRecheckRequired"))
+            && Boolean.FALSE.equals(prerequisites.get("currentContractSatisfiesPrerequisites"))
+            && Boolean.TRUE.equals(failure.get("failClosed"))
+            && Boolean.FALSE.equals(failure.get("fallbackToCallerSwitchAllowed"))
+            && Boolean.FALSE.equals(failure.get("fallbackToEnvironmentVariableAllowed"))
+            && Boolean.FALSE.equals(failure.get("fallbackToRuntimeFlagAllowed"))
+            && Boolean.FALSE.equals(failure.get("fallbackToReleaseDecisionContractAllowed"))
+            && Boolean.FALSE.equals(failure.get("fallbackToStateMachineBooleanAllowed"))
+            && Boolean.FALSE.equals(failure.get("fallbackToExecutorSuccessAllowed"));
+
+        if (!contractValid) {
+            blockers.add(blocker(
+                "CODE_RELEASE_SWITCH_CONTRACT_REPORT_CONTRACT_INVALID",
+                "Code release switch contract report must come from the M5.21-72 HOLD contract with recomputable digest and all release states false.",
+                "code-release-switch-contract"
+            ));
+        } else {
+            blockers.add(blocker(
+                "CODE_RELEASE_SWITCH_CONTRACT_REPORT_IMPLEMENTATION_HOLD",
+                "Code release switch contract report is accepted as shape evidence only; the real runtime switch binding is still not installed.",
+                "code-release-switch-contract"
+            ));
+        }
+
+        if (!codeReleaseSwitchContractDigestsMatchWriteChain(report, writeBodyRebuildReport, writeRequestSpecReport,
+            writeExecutionHandoffReport)) {
+            blockers.add(blocker(
+                "CODE_RELEASE_SWITCH_CONTRACT_WRITE_CHAIN_DIGEST_MISMATCH",
+                "Code release switch contract report must advertise future binding of the same controlled body, request and handoff digests.",
+                "code-release-switch-contract"
+            ));
+        }
+
+        if (codeReleaseSwitchContractClaimsRelease(report)) {
+            blockers.add(blocker(
+                "CODE_RELEASE_SWITCH_CONTRACT_RELEASE_CLAIM_NOT_TRUSTED",
+                "Current code release switch report is a HOLD contract; switch/open/write-success claims are not trusted release evidence.",
+                "code-release-switch-contract"
+            ));
+        }
+
+        if (containsForbiddenSecretMaterial(report)) {
+            blockers.add(blocker(
+                "CODE_RELEASE_SWITCH_CONTRACT_REPORT_CONTAINS_FORBIDDEN_SECRET",
+                "Code release switch contract report must not contain Authorization, token, password, secret, or real NGC/NIM API key material.",
+                "code-release-switch-contract"
             ));
         }
     }
@@ -994,6 +1146,92 @@ final class NimCreateStateMachineSupport {
             || !objectMap(durableWriteExecutorReport.get("writeResult")).isEmpty();
     }
 
+    private static boolean codeReleaseSwitchStatesRemainFalse(Map<String, Object> report) {
+        return Boolean.FALSE.equals(report.get("realCodeReleaseSwitchCreated"))
+            && Boolean.FALSE.equals(report.get("realCodeReleaseSwitchOpened"))
+            && Boolean.FALSE.equals(report.get("serverOwnedCodeReleaseSwitchAccepted"))
+            && Boolean.FALSE.equals(report.get("codeReleaseSwitchDigestVerified"))
+            && Boolean.FALSE.equals(report.get("codeReviewDigestVerified"))
+            && Boolean.FALSE.equals(report.get("testEvidenceDigestVerified"))
+            && Boolean.FALSE.equals(report.get("releaseDecisionDigestVerified"))
+            && Boolean.FALSE.equals(report.get("validationResultDigestVerified"))
+            && Boolean.FALSE.equals(report.get("trustedPrincipalValidated"))
+            && Boolean.FALSE.equals(report.get("stateMachineReleaseBound"))
+            && Boolean.FALSE.equals(report.get("durableExecutorReleaseBound"))
+            && Boolean.FALSE.equals(report.get("releaseDecisionAccepted"))
+            && Boolean.FALSE.equals(report.get("releaseCredentialIssued"))
+            && Boolean.FALSE.equals(report.get("releaseEligible"))
+            && Boolean.FALSE.equals(report.get("writePermitted"))
+            && Boolean.FALSE.equals(report.get("writeExecutionAllowed"))
+            && Boolean.FALSE.equals(report.get("realHttpExecutionAllowed"))
+            && Boolean.FALSE.equals(report.get("realStorageTouched"));
+    }
+
+    private static boolean stateMachineSwitchBindingValid(Map<String, Object> binding) {
+        return "NimCreateStateMachineSupport".equals(text(binding.get("target")))
+            && Boolean.TRUE.equals(binding.get("futureCodeReleaseSwitchDigestRequired"))
+            && Boolean.TRUE.equals(binding.get("futureReleaseDecisionDigestRequired"))
+            && Boolean.TRUE.equals(binding.get("futureValidationResultDigestRequired"))
+            && Boolean.TRUE.equals(binding.get("mustRecomputeSwitchDigestBeforeWritePermitted"))
+            && Boolean.FALSE.equals(binding.get("fallbackToRuntimeFlagAllowed"))
+            && Boolean.FALSE.equals(binding.get("fallbackToEnvironmentVariableAllowed"))
+            && Boolean.FALSE.equals(binding.get("writePermittedCanBeTrueNow"));
+    }
+
+    private static boolean durableExecutorSwitchBindingValid(Map<String, Object> binding) {
+        return NimCreateDurableWriteExecutorSupport.EXECUTOR_NAME.equals(text(binding.get("target")))
+            && Boolean.TRUE.equals(binding.get("futureCodeReleaseSwitchDigestRequired"))
+            && Boolean.TRUE.equals(binding.get("futureReleaseDecisionDigestRequired"))
+            && Boolean.TRUE.equals(binding.get("futureValidationResultDigestRequired"))
+            && Boolean.TRUE.equals(binding.get("mustRecheckImmediatelyBeforePost"))
+            && Boolean.FALSE.equals(binding.get("fallbackToStateMachineFlagOnlyAllowed"))
+            && Boolean.FALSE.equals(binding.get("writeExecutionAllowedNow"));
+    }
+
+    private static boolean codeReleaseSwitchContractDigestsMatchWriteChain(Map<String, Object> report,
+                                                                           Map<String, Object> writeBodyRebuildReport,
+                                                                           Map<String, Object> writeRequestSpecReport,
+                                                                           Map<String, Object> writeExecutionHandoffReport) {
+        Map<String, Object> contract = objectMap(report.get("codeReleaseSwitchContract"));
+        List<String> fields = stringList(contract.get("requiredFutureEvidenceDigestFields"));
+        return fields.containsAll(List.of(
+            "bodyDigest",
+            "requestSpecDigest",
+            "handoffDigest",
+            "auditReceiptId",
+            "serverDerivedIdempotencyKey"
+        ))
+            && hasText(writeBodyRebuildReport.get("bodyDigest"))
+            && hasText(writeRequestSpecReport.get("requestSpecDigest"))
+            && hasText(writeExecutionHandoffReport.get("handoffDigest"));
+    }
+
+    private static boolean codeReleaseSwitchContractClaimsRelease(Map<String, Object> report) {
+        return Boolean.TRUE.equals(report.get("realCodeReleaseSwitchCreated"))
+            || Boolean.TRUE.equals(report.get("realCodeReleaseSwitchOpened"))
+            || Boolean.TRUE.equals(report.get("serverOwnedCodeReleaseSwitchAccepted"))
+            || Boolean.TRUE.equals(report.get("codeReleaseSwitchDigestVerified"))
+            || Boolean.TRUE.equals(report.get("releaseDecisionDigestVerified"))
+            || Boolean.TRUE.equals(report.get("validationResultDigestVerified"))
+            || Boolean.TRUE.equals(report.get("releaseEligible"))
+            || Boolean.TRUE.equals(report.get("writePermitted"))
+            || Boolean.TRUE.equals(report.get("writeExecutionAllowed"))
+            || Boolean.TRUE.equals(report.get("realHttpExecutionAllowed"))
+            || "OPEN_FOR_NIM_CREATE_WRITE_EXECUTION".equals(text(report.get("switchState")))
+            || "OPEN_FOR_NIM_CREATE_WRITE_EXECUTION".equals(text(report.get("codeReleaseSwitchStatus")));
+    }
+
+    private static List<String> stringList(Object value) {
+        if (!(value instanceof List<?> list)) {
+            return List.of();
+        }
+        List<String> result = new ArrayList<>();
+        for (Object item : list) {
+            result.add(text(item));
+        }
+        return result;
+    }
+
     private static boolean hasOnlyBlockerCode(Object rawBlockers, String code) {
         List<Map<String, Object>> blockers = listOfMaps(rawBlockers);
         return blockers.size() == 1 && code.equals(text(blockers.get(0).get("code")));
@@ -1177,6 +1415,7 @@ final class NimCreateStateMachineSupport {
         Map<String, Object> writeBodyRebuildReport,
         Map<String, Object> writeRequestSpecReport,
         Map<String, Object> writeExecutionHandoffReport,
+        Map<String, Object> codeReleaseSwitchContractReport,
         Map<String, Object> durableWriteExecutorReport,
         Map<String, Object> readinessPlan,
         Map<String, Object> readinessExecutionReport,
@@ -1207,6 +1446,40 @@ final class NimCreateStateMachineSupport {
                 writeRequestSpecReport,
                 writeExecutionHandoffReport,
                 Map.of(),
+                Map.of(),
+                readinessPlan,
+                readinessExecutionReport,
+                writeBodyProvenance,
+                nimCreateReleased
+            );
+        }
+
+        ReadinessRequest(Map<String, Object> params,
+                         Map<String, Object> creationGate,
+                         Map<String, Object> deploymentBodyPreview,
+                         HitlConfirmation hitlConfirmation,
+                         Map<String, Object> auditContext,
+                         Map<String, Object> auditReceipt,
+                         Map<String, Object> writeBodyRebuildReport,
+                         Map<String, Object> writeRequestSpecReport,
+                         Map<String, Object> writeExecutionHandoffReport,
+                         Map<String, Object> durableWriteExecutorReport,
+                         Map<String, Object> readinessPlan,
+                         Map<String, Object> readinessExecutionReport,
+                         String writeBodyProvenance,
+                         boolean nimCreateReleased) {
+            this(
+                params,
+                creationGate,
+                deploymentBodyPreview,
+                hitlConfirmation,
+                auditContext,
+                auditReceipt,
+                writeBodyRebuildReport,
+                writeRequestSpecReport,
+                writeExecutionHandoffReport,
+                Map.of(),
+                durableWriteExecutorReport,
                 readinessPlan,
                 readinessExecutionReport,
                 writeBodyProvenance,
@@ -1237,6 +1510,7 @@ final class NimCreateStateMachineSupport {
                 writeRequestSpecReport,
                 Map.of(),
                 Map.of(),
+                Map.of(),
                 readinessPlan,
                 readinessExecutionReport,
                 writeBodyProvenance,
@@ -1266,6 +1540,7 @@ final class NimCreateStateMachineSupport {
                 Map.of(),
                 Map.of(),
                 Map.of(),
+                Map.of(),
                 readinessPlan,
                 readinessExecutionReport,
                 writeBodyProvenance,
@@ -1294,6 +1569,7 @@ final class NimCreateStateMachineSupport {
                 Map.of(),
                 Map.of(),
                 Map.of(),
+                Map.of(),
                 readinessPlan,
                 readinessExecutionReport,
                 writeBodyProvenance,
@@ -1321,6 +1597,7 @@ final class NimCreateStateMachineSupport {
                 Map.of(),
                 Map.of(),
                 Map.of(),
+                Map.of(),
                 readinessPlan,
                 Map.of(),
                 writeBodyProvenance,
@@ -1337,6 +1614,7 @@ final class NimCreateStateMachineSupport {
             writeBodyRebuildReport = writeBodyRebuildReport == null ? Map.of() : objectMap(writeBodyRebuildReport);
             writeRequestSpecReport = writeRequestSpecReport == null ? Map.of() : objectMap(writeRequestSpecReport);
             writeExecutionHandoffReport = writeExecutionHandoffReport == null ? Map.of() : objectMap(writeExecutionHandoffReport);
+            codeReleaseSwitchContractReport = codeReleaseSwitchContractReport == null ? Map.of() : objectMap(codeReleaseSwitchContractReport);
             durableWriteExecutorReport = durableWriteExecutorReport == null ? Map.of() : objectMap(durableWriteExecutorReport);
             readinessPlan = readinessPlan == null ? Map.of() : objectMap(readinessPlan);
             readinessExecutionReport = readinessExecutionReport == null ? Map.of() : objectMap(readinessExecutionReport);

@@ -250,3 +250,10 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Future state-machine code must consume `codeReleaseSwitchContractReport`, recompute `codeReleaseSwitchContractDigest`, bind server-issued release/validation digests, and reject `nimCreateReleased=true` as standalone authorization.
 - Future durable executor code must re-check the same switch digest immediately before real POST and must not trust state-machine `writePermitted`, executor success, runtime flags, environment variables, or legacy booleans alone.
 - Owner policy update: kube-manager query/read methods may use local `8100` for real query tests when safely scoped. This does not apply to `nim_create` or other write/create/delete/state-changing capabilities, which remain HOLD/mock-first until explicitly released.
+
+### M5.21-74 code release switch contract report binding note
+
+- `NimCreateStateMachineSupport` now has a `codeReleaseSwitchContractReport` input and validates the M5.21-72 report before any future release path can be considered.
+- `NimCreateDurableWriteExecutorSupport` now also requires the same M5.21-72 report before accepting a controlled handoff/request-spec pair.
+- The shells recompute `codeReleaseSwitchContractDigest`, reject tampered/forged-open reports, and keep `codeReleaseSwitchDigestVerified=false`, `writePermitted=false`, `writeExecutionAllowed=false`, and `realHttpExecutionAllowed=false`.
+- Learning distinction: M5.21-72 is the source switch contract report, M5.21-73 is the runtime-binding requirement, and M5.21-74 wires the report into current shells. None of these are release credentials yet.

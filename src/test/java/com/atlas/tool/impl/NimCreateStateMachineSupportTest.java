@@ -243,7 +243,12 @@ class NimCreateStateMachineSupportTest {
         Map<String, Object> bodyReport = completeWriteBodyRebuildReport(audit, receipt);
         Map<String, Object> requestSpecReport = completeWriteRequestSpecReport(audit, receipt, bodyReport);
         Map<String, Object> handoffReport = completeWriteExecutionHandoffReport(audit, receipt, bodyReport, requestSpecReport);
-        Map<String, Object> executorReport = completeDurableWriteExecutorReport(handoffReport, requestSpecReport);
+        Map<String, Object> codeSwitchReport = completeCodeReleaseSwitchContractReport(audit);
+        Map<String, Object> executorReport = completeDurableWriteExecutorReport(
+            handoffReport,
+            requestSpecReport,
+            codeSwitchReport
+        );
 
         Map<String, Object> guard = NimCreateStateMachineSupport.evaluate(new NimCreateStateMachineSupport.ReadinessRequest(
             Map.of("name", "nim-executor-shell"),
@@ -255,6 +260,7 @@ class NimCreateStateMachineSupportTest {
             bodyReport,
             requestSpecReport,
             handoffReport,
+            codeSwitchReport,
             executorReport,
             completeReadinessPlan(),
             completeReadinessExecutionReport(),
@@ -265,12 +271,17 @@ class NimCreateStateMachineSupportTest {
         assertEquals("HELD", guard.get("state"));
         assertEquals(false, guard.get("writePermitted"));
         assertEquals(true, guard.get("codeReleaseSwitchRuntimeBindingRequired"));
+        assertEquals(true, guard.get("codeReleaseSwitchContractReportRequired"));
         assertEquals(false, guard.get("codeReleaseSwitchRuntimeBindingInstalled"));
+        assertEquals(false, guard.get("codeReleaseSwitchContractReportAcceptedForRelease"));
+        assertEquals(codeSwitchReport.get("codeReleaseSwitchContractDigest"),
+            guard.get("sourceCodeReleaseSwitchContractDigest"));
         assertEquals(false, guard.get("legacyNimCreateReleasedBooleanAuthoritative"));
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> blockers = (List<Map<String, Object>>) guard.get("blockedBy");
         assertHasBlocker(blockers, "DURABLE_WRITE_EXECUTOR_IMPLEMENTATION_HOLD");
-        assertEquals(1, blockers.size());
+        assertHasBlocker(blockers, "CODE_RELEASE_SWITCH_CONTRACT_REPORT_IMPLEMENTATION_HOLD");
+        assertEquals(2, blockers.size());
     }
 
     @Test
@@ -280,7 +291,12 @@ class NimCreateStateMachineSupportTest {
         Map<String, Object> bodyReport = completeWriteBodyRebuildReport(audit, receipt);
         Map<String, Object> requestSpecReport = completeWriteRequestSpecReport(audit, receipt, bodyReport);
         Map<String, Object> handoffReport = completeWriteExecutionHandoffReport(audit, receipt, bodyReport, requestSpecReport);
-        Map<String, Object> forgedExecutorReport = new java.util.LinkedHashMap<>(completeDurableWriteExecutorReport(handoffReport, requestSpecReport));
+        Map<String, Object> codeSwitchReport = completeCodeReleaseSwitchContractReport(audit);
+        Map<String, Object> forgedExecutorReport = new java.util.LinkedHashMap<>(completeDurableWriteExecutorReport(
+            handoffReport,
+            requestSpecReport,
+            codeSwitchReport
+        ));
         forgedExecutorReport.put("executorImplementationAvailable", true);
         forgedExecutorReport.put("writeAttempted", true);
         forgedExecutorReport.put("writeExecuted", true);
@@ -297,6 +313,7 @@ class NimCreateStateMachineSupportTest {
             bodyReport,
             requestSpecReport,
             handoffReport,
+            codeSwitchReport,
             forgedExecutorReport,
             completeReadinessPlan(),
             completeReadinessExecutionReport(),
@@ -310,6 +327,90 @@ class NimCreateStateMachineSupportTest {
         List<Map<String, Object>> blockers = (List<Map<String, Object>>) guard.get("blockedBy");
         assertHasBlocker(blockers, "DURABLE_WRITE_EXECUTOR_REPORT_CONTRACT_INVALID");
         assertHasBlocker(blockers, "DURABLE_WRITE_EXECUTOR_SUCCESS_NOT_TRUSTED");
+    }
+
+    @Test
+    void stateMachine_shouldRejectTamperedCodeReleaseSwitchContractDigest() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> receipt = completeAuditReceipt();
+        Map<String, Object> bodyReport = completeWriteBodyRebuildReport(audit, receipt);
+        Map<String, Object> requestSpecReport = completeWriteRequestSpecReport(audit, receipt, bodyReport);
+        Map<String, Object> handoffReport = completeWriteExecutionHandoffReport(audit, receipt, bodyReport, requestSpecReport);
+        Map<String, Object> codeSwitchReport = new java.util.LinkedHashMap<>(completeCodeReleaseSwitchContractReport(audit));
+        codeSwitchReport.put("codeReleaseSwitchContractDigest", "a".repeat(64));
+        Map<String, Object> executorReport = completeDurableWriteExecutorReport(
+            handoffReport,
+            requestSpecReport,
+            completeCodeReleaseSwitchContractReport(audit)
+        );
+
+        Map<String, Object> guard = NimCreateStateMachineSupport.evaluate(new NimCreateStateMachineSupport.ReadinessRequest(
+            Map.of("name", "nim-tampered-switch"),
+            openGate(),
+            completePreview(),
+            HitlConfirmation.human("thread-1", "nim_create"),
+            audit,
+            receipt,
+            bodyReport,
+            requestSpecReport,
+            handoffReport,
+            codeSwitchReport,
+            executorReport,
+            completeReadinessPlan(),
+            completeReadinessExecutionReport(),
+            NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
+            true
+        ));
+
+        assertEquals("HELD", guard.get("state"));
+        assertEquals(false, guard.get("writePermitted"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) guard.get("blockedBy");
+        assertHasBlocker(blockers, "CODE_RELEASE_SWITCH_CONTRACT_REPORT_CONTRACT_INVALID");
+    }
+
+    @Test
+    void stateMachine_shouldRejectForgedOpenCodeReleaseSwitchClaims() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> receipt = completeAuditReceipt();
+        Map<String, Object> bodyReport = completeWriteBodyRebuildReport(audit, receipt);
+        Map<String, Object> requestSpecReport = completeWriteRequestSpecReport(audit, receipt, bodyReport);
+        Map<String, Object> handoffReport = completeWriteExecutionHandoffReport(audit, receipt, bodyReport, requestSpecReport);
+        Map<String, Object> codeSwitchReport = new java.util.LinkedHashMap<>(completeCodeReleaseSwitchContractReport(audit));
+        codeSwitchReport.put("realCodeReleaseSwitchOpened", true);
+        codeSwitchReport.put("writePermitted", true);
+        codeSwitchReport.put("writeExecutionAllowed", true);
+        codeSwitchReport.put("codeReleaseSwitchDigestVerified", true);
+        Map<String, Object> executorReport = completeDurableWriteExecutorReport(
+            handoffReport,
+            requestSpecReport,
+            completeCodeReleaseSwitchContractReport(audit)
+        );
+
+        Map<String, Object> guard = NimCreateStateMachineSupport.evaluate(new NimCreateStateMachineSupport.ReadinessRequest(
+            Map.of("name", "nim-forged-switch"),
+            openGate(),
+            completePreview(),
+            HitlConfirmation.human("thread-1", "nim_create"),
+            audit,
+            receipt,
+            bodyReport,
+            requestSpecReport,
+            handoffReport,
+            codeSwitchReport,
+            executorReport,
+            completeReadinessPlan(),
+            completeReadinessExecutionReport(),
+            NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
+            true
+        ));
+
+        assertEquals("HELD", guard.get("state"));
+        assertEquals(false, guard.get("writePermitted"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) guard.get("blockedBy");
+        assertHasBlocker(blockers, "CODE_RELEASE_SWITCH_CONTRACT_REPORT_CONTRACT_INVALID");
+        assertHasBlocker(blockers, "CODE_RELEASE_SWITCH_CONTRACT_RELEASE_CLAIM_NOT_TRUSTED");
     }
 
     @Test
@@ -451,17 +552,23 @@ class NimCreateStateMachineSupportTest {
     }
 
     private Map<String, Object> completeAuditContext() {
-        return Map.of(
-            "auditPrepared", true,
-            "auditEventType", "NIM_CREATE_REQUEST",
-            "requestId", "req-1",
-            "conversationId", "conv-1",
-            "userId", "user-1",
-            "organizationId", "100002",
-            "targetTool", "nim_create",
-            "writeBodyProvenance", NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
-            "secretRedactionApplied", true,
-            "apiKeyHandling", NimCreateStateMachineSupport.API_KEY_POLICY
+        return Map.ofEntries(
+            entry("auditPrepared", true),
+            entry("auditEventType", "NIM_CREATE_REQUEST"),
+            entry("requestId", "req-1"),
+            entry("conversationId", "conv-1"),
+            entry("userId", "user-1"),
+            entry("organizationId", "100002"),
+            entry("targetTool", "nim_create"),
+            entry("targetIntent", "nim_create"),
+            entry("operationType", "CREATE"),
+            entry("backendEndpoint", NimCreateAuditReadinessSupport.BACKEND_ENDPOINT),
+            entry("writeBodyProvenance", NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE),
+            entry("displayName", "llama-nim"),
+            entry("image", "nvcr.io/nim/llama:1.0"),
+            entry("templateId", "88"),
+            entry("secretRedactionApplied", true),
+            entry("apiKeyHandling", NimCreateStateMachineSupport.API_KEY_POLICY)
         );
     }
 
@@ -527,12 +634,216 @@ class NimCreateStateMachineSupportTest {
     }
 
     private Map<String, Object> completeDurableWriteExecutorReport(Map<String, Object> handoffReport,
-                                                                   Map<String, Object> requestSpecReport) {
+                                                                   Map<String, Object> requestSpecReport,
+                                                                   Map<String, Object> codeSwitchReport) {
         return NimCreateDurableWriteExecutorSupport.prepare(
             new NimCreateDurableWriteExecutorSupport.WriteExecutionInput(
                 handoffReport,
-                requestSpecReport
+                requestSpecReport,
+                codeSwitchReport
             )
+        );
+    }
+
+    private Map<String, Object> completeCodeReleaseSwitchContractReport(Map<String, Object> audit) {
+        Map<String, Object> principal = trustedPrincipalSnapshot(audit);
+        return NimCreateDurableAuditCodeReleaseSwitchContractSupport.plan(
+            new NimCreateDurableAuditCodeReleaseSwitchContractSupport.CodeReleaseSwitchContractInput(
+                audit,
+                principal,
+                releaseDecisionContractReport(audit, principal),
+                Map.of()
+            )
+        );
+    }
+
+    private Map<String, Object> releaseDecisionContractReport(Map<String, Object> audit,
+                                                              Map<String, Object> principal) {
+        return NimCreateDurableAuditReleaseDecisionContractSupport.plan(
+            new NimCreateDurableAuditReleaseDecisionContractSupport.ReleaseDecisionContractInput(
+                audit,
+                principal,
+                validationResultContractReport(audit, principal),
+                Map.of()
+            )
+        );
+    }
+
+    private Map<String, Object> validationResultContractReport(Map<String, Object> audit,
+                                                               Map<String, Object> principal) {
+        return NimCreateDurableAuditReceiptValidationResultSupport.plan(
+            new NimCreateDurableAuditReceiptValidationResultSupport.ReceiptValidationResultInput(
+                audit,
+                principal,
+                probeBindingMigrationReport(audit, principal),
+                Map.of()
+            )
+        );
+    }
+
+    private Map<String, Object> probeBindingMigrationReport(Map<String, Object> audit,
+                                                            Map<String, Object> principal) {
+        return NimCreateDurableAuditValidationResultProbeBindingMigrationSupport.plan(
+            new NimCreateDurableAuditValidationResultProbeBindingMigrationSupport
+                .ValidationResultProbeBindingMigrationInput(
+                audit,
+                principal,
+                probeBindingReport(audit, principal),
+                validationResultMigrationReport(audit, principal),
+                Map.of()
+            )
+        );
+    }
+
+    private Map<String, Object> probeBindingReport(Map<String, Object> audit,
+                                                   Map<String, Object> principal) {
+        return NimCreateDurableAuditReceiptValidationProbeResultBindingSupport.plan(
+            new NimCreateDurableAuditReceiptValidationProbeResultBindingSupport
+                .ReceiptValidationProbeResultBindingInput(
+                audit,
+                principal,
+                storageProbeResultReport(audit, principal),
+                validationGateReport(audit, principal),
+                Map.of()
+            )
+        );
+    }
+
+    private Map<String, Object> validationResultMigrationReport(Map<String, Object> audit,
+                                                                Map<String, Object> principal) {
+        return NimCreateDurableAuditValidationResultMigrationSupport.plan(
+            new NimCreateDurableAuditValidationResultMigrationSupport.DurableAuditValidationResultMigrationInput(
+                audit,
+                principal,
+                validationGateReport(audit, principal)
+            )
+        );
+    }
+
+    private Map<String, Object> storageProbeResultReport(Map<String, Object> audit,
+                                                         Map<String, Object> principal) {
+        return NimCreateDurableAuditStorageProbeResultSupport.plan(
+            new NimCreateDurableAuditStorageProbeResultSupport.StorageProbeResultInput(
+                audit,
+                principal,
+                probeExecutorReport(audit, principal),
+                receiptSchemaReport(audit, principal),
+                Map.of()
+            )
+        );
+    }
+
+    private Map<String, Object> validationGateReport(Map<String, Object> audit,
+                                                     Map<String, Object> principal) {
+        return NimCreateDurableAuditReceiptValidationGateSupport.plan(
+            new NimCreateDurableAuditReceiptValidationGateSupport.DurableAuditReceiptValidationGateInput(
+                audit,
+                principal,
+                receiptSchemaReport(audit, principal)
+            )
+        );
+    }
+
+    private Map<String, Object> probeExecutorReport(Map<String, Object> audit,
+                                                    Map<String, Object> principal) {
+        Map<String, Object> writerPlanReport = writerPlanReport(audit, principal);
+        Map<String, Object> availabilityGateReport = availabilityGateReport(audit, principal, writerPlanReport);
+        Map<String, Object> boundaryReport = writerBoundaryReport(
+            audit,
+            principal,
+            writerPlanReport,
+            availabilityGateReport
+        );
+        return NimCreateDurableAuditStorageProbeExecutorSupport.plan(
+            new NimCreateDurableAuditStorageProbeExecutorSupport.StorageProbeExecutorInput(
+                audit,
+                principal,
+                availabilityGateReport,
+                boundaryReport,
+                Map.of()
+            )
+        );
+    }
+
+    private Map<String, Object> receiptSchemaReport(Map<String, Object> audit,
+                                                    Map<String, Object> principal) {
+        return NimCreateDurableAuditReceiptSchemaSupport.plan(
+            new NimCreateDurableAuditReceiptSchemaSupport.DurableAuditReceiptSchemaInput(
+                audit,
+                principal,
+                interfaceSpecReport(audit, principal)
+            )
+        );
+    }
+
+    private Map<String, Object> interfaceSpecReport(Map<String, Object> audit,
+                                                    Map<String, Object> principal) {
+        Map<String, Object> writerPlanReport = writerPlanReport(audit, principal);
+        Map<String, Object> availabilityGateReport = availabilityGateReport(audit, principal, writerPlanReport);
+        return NimCreateDurableAuditWriterInterfaceSpecSupport.plan(
+            new NimCreateDurableAuditWriterInterfaceSpecSupport.DurableAuditWriterInterfaceSpecInput(
+                audit,
+                principal,
+                writerBoundaryReport(audit, principal, writerPlanReport, availabilityGateReport)
+            )
+        );
+    }
+
+    private Map<String, Object> writerBoundaryReport(Map<String, Object> audit,
+                                                     Map<String, Object> principal,
+                                                     Map<String, Object> writerPlanReport,
+                                                     Map<String, Object> availabilityGateReport) {
+        return NimCreateDedicatedDurableAuditWriterBoundarySupport.plan(
+            new NimCreateDedicatedDurableAuditWriterBoundarySupport.DedicatedAuditWriterBoundaryInput(
+                audit,
+                principal,
+                writerPlanReport,
+                availabilityGateReport
+            )
+        );
+    }
+
+    private Map<String, Object> availabilityGateReport(Map<String, Object> audit,
+                                                       Map<String, Object> principal,
+                                                       Map<String, Object> writerPlanReport) {
+        return NimCreateDurableAuditStorageAvailabilityGateSupport.plan(
+            new NimCreateDurableAuditStorageAvailabilityGateSupport.StorageAvailabilityGateInput(
+                audit,
+                principal,
+                writerPlanReport
+            )
+        );
+    }
+
+    private Map<String, Object> writerPlanReport(Map<String, Object> audit,
+                                                 Map<String, Object> principal) {
+        return NimCreateDurableAuditWriterPlanSupport.plan(
+            new NimCreateDurableAuditWriterPlanSupport.DurableAuditWriterPlanInput(
+                audit,
+                principal,
+                storageCandidateReport(audit, principal)
+            )
+        );
+    }
+
+    private Map<String, Object> storageCandidateReport(Map<String, Object> audit,
+                                                       Map<String, Object> principal) {
+        return NimCreateDurableAuditStorageSupport.prepare(
+            new NimCreateDurableAuditStorageSupport.DurableAuditStorageInput(
+                audit,
+                principal
+            )
+        );
+    }
+
+    private Map<String, Object> trustedPrincipalSnapshot(Map<String, Object> audit) {
+        return Map.of(
+            "authoritative", true,
+            "source", "SERVER_SESSION_CONTEXT",
+            "protectedFromCallerParams", true,
+            "organizationId", audit.get("organizationId"),
+            "userId", audit.get("userId"),
+            "username", "alice"
         );
     }
 

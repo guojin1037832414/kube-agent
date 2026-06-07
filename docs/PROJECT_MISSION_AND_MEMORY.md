@@ -82,12 +82,23 @@ Current track:
 
 Recently completed:
 
-`M5.21-73 NIM code release switch runtime binding contract`
+`M5.21-74 NIM code release switch contract report binding`
 
 Latest checkpoint:
 
 - Date: 2026-06-07 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-74 implemented:
+  - `NimCreateStateMachineSupport` now consumes `codeReleaseSwitchContractReport`.
+  - `NimCreateDurableWriteExecutorSupport` now consumes the same M5.21-72 switch contract report before accepting handoff/request-spec input.
+  - Both shells recompute/validate `codeReleaseSwitchContractDigest`.
+  - Missing report, tampered digest/contract, forged open-switch/write claims, and secret-bearing report inputs fail closed.
+  - The accepted report is shape evidence only and still produces HOLD; it does not make `writePermitted`, `writeExecutionAllowed`, or `realHttpExecutionAllowed` true.
+  - `nim_create` remains `httpMethod=NONE + PLACEHOLDER + requiresConfirmation=true`; no real `8100`, no `POST /api/{orgId}/deployment`, no Elasticsearch, no `ISysLogService`, and no `sys_log` write.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimCreateStateMachineSupportTest,NimCreateDurableWriteExecutorSupportTest" test`
+  - Learning note: M5.21-72 is the source switch contract report to validate; M5.21-73 is the runtime-binding requirement; M5.21-74 wires the report into current shells. None of these are release credentials.
+- Previous checkpoint:
   - M5.21-73 implemented:
   - Added `NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport` as an independent contract-only runtime binding layer for M5.21-72 code release switch reports.
   - Added `NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupportTest`.
