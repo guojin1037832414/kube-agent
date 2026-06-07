@@ -6,6 +6,26 @@
 
 ---
 
+## [M5.21-53] - 第五十三批 NIM durable audit storage 可用性门禁计划契约审计
+
+**交付**: 在 M5.21-52 writer plan 之后新增 storage availability gate 计划契约，明确未来必须先证明 `sys_log`/持久化链路可用，才能写 pre-write intent 或签发 durable receipt。
+
+**变更**
+- 新增 `NimCreateDurableAuditStorageAvailabilityGateSupport`，纯数据消费 `auditContext`、`trustedPrincipalSnapshot`、`durableAuditWriterPlanReport`。
+- 输出 `durableAuditStorageAvailabilityGate=NIM_CREATE_DURABLE_AUDIT_STORAGE_AVAILABILITY_GATE`、`executionMode=DURABLE_AUDIT_STORAGE_AVAILABILITY_GATE_CONTRACT_ONLY`、`gateState=IMPLEMENTATION_HOLD|REJECTED`。
+- 正向输入生成 `availabilityPlan.probeSteps`、`failurePolicy`、`receiptPrerequisites`、`trustedIdentityBinding`。
+- 当前明确保持 `storageProbeExecuted=false`、`storageAvailable=false`、`availabilityStatus=UNKNOWN_UNTIL_REAL_PROBE`、`durableReceiptCanBeIssued=false`。
+- 正向输入仍返回 `STORAGE_AVAILABILITY_PROBE_IMPLEMENTATION_HOLD`。
+- 缺少 writer plan report 返回 `DURABLE_AUDIT_WRITER_PLAN_REPORT_NOT_READY`。
+- 伪造 storage available / durable success claim 返回 `STORAGE_AVAILABILITY_GATE_FORGED_SUCCESS_CLAIM`；secret 泄漏返回 `STORAGE_AVAILABILITY_GATE_INPUT_CONTAINS_FORBIDDEN_SECRET`。
+- 新增 `NimCreateDurableAuditStorageAvailabilityGateSupportTest`。
+- 新增 `docs/M5_21_FIFTY_THIRD_WAVE_NIM_DURABLE_AUDIT_STORAGE_AVAILABILITY_GATE_AUDIT_20260607.md`，并更新 M5.21 波次索引和项目记忆。
+
+**安全**
+- 本批不连接 Elasticsearch，不调用 `ISysLogService`，不写 `sys_log`，不新增 HTTP client，不访问真实 `8100`，不调用 `POST /api/{orgId}/deployment`。
+- availability plan 不是 storage probe result，也不是 release credential。
+- `nim_create` 继续保持 `httpMethod=NONE + PLACEHOLDER + requiresConfirmation=true`。
+
 ## [M5.21-52] - 第五十二批 NIM durable audit writer 两阶段计划契约审计
 
 **交付**: 在 M5.21-51 `sys_log` 持久化候选证据之上，新增 NIM 专用 durable audit writer 的两阶段计划契约，明确未来必须先写 pre-write intent、再写 post-write result，同时当前仍不能签发 durable receipt。

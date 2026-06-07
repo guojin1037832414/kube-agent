@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-52, NIM durable audit writer two-phase plan contract.
+- Current latest wave: M5.21-53, NIM durable audit storage availability gate plan contract.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -46,6 +46,32 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-53 NIM durable audit storage availability gate plan contract is implemented and verified:
+  - Added `NimCreateDurableAuditStorageAvailabilityGateSupport`.
+  - It consumes `auditContext`, `trustedPrincipalSnapshot`, and `durableAuditWriterPlanReport`.
+  - It outputs `durableAuditStorageAvailabilityGate=NIM_CREATE_DURABLE_AUDIT_STORAGE_AVAILABILITY_GATE`, `executionMode=DURABLE_AUDIT_STORAGE_AVAILABILITY_GATE_CONTRACT_ONLY`, `gateState=IMPLEMENTATION_HOLD|REJECTED`, `storageProbeExecuted=false`, `storageAvailable=false`, and `availabilityStatus=UNKNOWN_UNTIL_REAL_PROBE`.
+  - Positive input creates a sanitized `availabilityPlan` with:
+    - `probeSteps`
+    - `failurePolicy`
+    - `receiptPrerequisites`
+    - `trustedIdentityBinding`
+  - Positive input remains blocked by `STORAGE_AVAILABILITY_PROBE_IMPLEMENTATION_HOLD`.
+  - Missing writer plan report returns `DURABLE_AUDIT_WRITER_PLAN_REPORT_NOT_READY`.
+  - Forged storage available / durable success claims return `STORAGE_AVAILABILITY_GATE_FORGED_SUCCESS_CLAIM`.
+  - Secret leakage returns `STORAGE_AVAILABILITY_GATE_INPUT_CONTAINS_FORBIDDEN_SECRET`.
+  - Added `NimCreateDurableAuditStorageAvailabilityGateSupportTest`.
+  - Added `docs/M5_21_FIFTY_THIRD_WAVE_NIM_DURABLE_AUDIT_STORAGE_AVAILABILITY_GATE_AUDIT_20260607.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateDurableAuditStorageAvailabilityGateSupportTest,NimCreateDurableAuditWriterPlanSupportTest,NimCreateDurableAuditStorageSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateDurableAuditStorageAvailabilityGateSupportTest,NimCreateDurableAuditWriterPlanSupportTest,NimCreateDurableAuditStorageSupportTest,NimCreateAuditWriterSupportTest,NimCreateStateMachineSupportTest,NimCreateDurableWriteExecutorSupportTest,NimCreateWriteExecutionHandoffSupportTest,NimCreateWriteRequestSpecAdapterSupportTest,NimCreateWriteBodyRebuilderSupportTest,NimCreateReadinessHttpAdapterSupportTest,NimCreateReadinessExecutorSupportTest,NimCreateAuditReadinessSupportTest,NimTrustedPolicyProviderSupportTest,NimCreationGateSupportTest,NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest,HighRiskMutationToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest,M510ArchitectureBoundaryTest" test`
+    - `git diff --check`
+    - Real secret-pattern static scan found 0 matches.
+    - Boundary scan found no new real `ElasticsearchTemplate`, `ISysLogService`, HTTP client, or `java.net` import in this wave.
+    - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+  - External recovery docs synced and SHA256-verified to `H:\codex重要文件\kube-agent`.
+  - No real `8100` access; no Elasticsearch connection; no `ISysLogService` call; no `sys_log` write; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
 
 - M5.21-52 NIM durable audit writer two-phase plan contract is implemented and verified:
   - Added `NimCreateDurableAuditWriterPlanSupport`.
@@ -653,12 +679,13 @@
 - `NimCreateStateMachineSupport` now requires a durable write executor report; the current shell report is shape-valid but still blocks release with `DURABLE_WRITE_EXECUTOR_IMPLEMENTATION_HOLD`.
 - `NimCreateDurableAuditStorageSupport` identifies mature `sys_log` as a partial-fit durable storage candidate but blocks release until a dedicated NIM audit writer exists.
 - `NimCreateDurableAuditWriterPlanSupport` added a dedicated two-phase writer plan contract: future pre-write intent, future post-write result, storage availability gate, trusted principal binding, receipt issuance rules, and optional request/handoff digest binding. It remains `IMPLEMENTATION_HOLD` and cannot issue durable receipts.
+- `NimCreateDurableAuditStorageAvailabilityGateSupport` added a storage availability gate plan contract: future probe steps, fail-closed policy, and receipt prerequisites. It keeps `storageProbeExecuted=false`, `storageAvailable=false`, and `availabilityStatus=UNKNOWN_UNTIL_REAL_PROBE` until real probe implementation exists.
 
 ## Next Step
 
 Continue NIM orchestration only through safe slices:
 - design the real dedicated NIM durable audit writer boundary and test double from the M5.21-52 plan,
-- implement storage availability gate semantics before any real pre-write record can be accepted,
+- implement the real storage availability probe executor inside the dedicated writer boundary before any real pre-write record can be accepted,
 - design the reviewed real durable write executor boundary around a controlled kube-manager HTTP boundary, write-before/write-after audit, idempotency persistence, POST response validation, and post-write readiness triggering,
 - later wire `NimTrustedPolicyProviderSupport` to real backend license/user/org readers only after mock-first contracts are complete,
 - keep `nim_create` HOLD until trusted policy, durable audit writer, durable write executor, readiness aftercare, and release switch all pass review,
