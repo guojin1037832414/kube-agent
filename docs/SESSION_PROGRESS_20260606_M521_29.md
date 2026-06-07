@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-85, shared protected Tool parameter filter.
+- Current latest wave: M5.21-86, shared NIM forbidden secret material detector.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -48,6 +48,30 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-86 shared NIM forbidden secret material detector is implemented:
+  - Added `src/main/java/com/atlas/tool/core/NimForbiddenSecretMaterialDetector.java`.
+  - Centralized common NIM forbidden key and secret-looking value detection while keeping blocker codes and business state in each support class.
+  - Preserved three explicit policies:
+    - `textValuePolicy()` for existing `hasText(...)` style checks.
+    - `receiptSchemaPolicy()` for typed schema/interface specs where literal forbidden field names may be documented.
+    - `strictRecursivePolicy()` for runtime source guard inputs where non-null secret-key values remain unsafe.
+  - Migrated `src/main/java/com/atlas/tool/impl/NimCreateDurableAuditReceiptSchemaSupport.java`.
+  - Migrated `src/main/java/com/atlas/tool/impl/NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport.java`.
+  - Added `src/test/java/com/atlas/tool/core/NimForbiddenSecretMaterialDetectorTest.java`.
+  - Added `src/test/java/com/atlas/tool/core/NimForbiddenSecretMaterialDetectorUsageContractTest.java`.
+  - Added `docs/M5_21_EIGHTY_SIXTH_WAVE_SHARED_NIM_FORBIDDEN_SECRET_MATERIAL_DETECTOR_AUDIT_20260608.md`.
+  - Updated `CHANGELOG.md`, `docs/M5_21_WAVE_INDEX_20260606.md`, and `docs/v3.1/DEVELOPMENT_GUIDE.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimForbiddenSecretMaterialDetectorTest,NimForbiddenSecretMaterialDetectorUsageContractTest,NimCreateDurableAuditReceiptSchemaSupportTest,NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupportTest" test`
+    - `git diff --check`
+    - `mvn -q test`
+  - Full test note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - H-drive recovery synced to `H:\codex重要文件\kube-agent`.
+  - H-drive manifest: `H:\codex重要文件\kube-agent\M5_21_86_RECOVERY_SHA256.json`.
+  - H-drive manifest SHA256 is reported outside this hashed file to avoid circular manifest churn.
+  - No real `8100` access; no deployment POST; no runtime write behavior opened; no service-side HITL bypass; no durable writer/probe/receipt implementation; no validation result; no release decision; no release switch implementation; no Elasticsearch; no `ISysLogService`; no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Next recommended slice: migrate homogeneous classes such as `NimCreateWriteRequestSpecAdapterSupport` and `NimCreateWriteExecutionHandoffSupport` to the shared detector.
 
 - M5.21-85 shared protected Tool parameter filter is implemented:
   - Added `src/main/java/com/atlas/tool/core/ProtectedToolParameterFilter.java`.

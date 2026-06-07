@@ -82,12 +82,33 @@ Current track:
 
 Recently completed:
 
-`M5.21-85 Shared protected Tool parameter filter`
+`M5.21-86 Shared NIM forbidden secret material detector`
 
 Latest checkpoint:
 
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-86 implemented:
+  - Added `src/main/java/com/atlas/tool/core/NimForbiddenSecretMaterialDetector.java`.
+  - Centralized NIM forbidden secret key and secret-looking value detection into a shared helper.
+  - Preserved policy differences through explicit detector policies:
+    - `textValuePolicy()` for existing `hasText(...)` style checks.
+    - `receiptSchemaPolicy()` for typed schema/interface reports that may document forbidden field names.
+    - `strictRecursivePolicy()` for runtime source guard evidence where any non-null secret-key value remains unsafe.
+  - Migrated `NimCreateDurableAuditReceiptSchemaSupport` to `receiptSchemaPolicy()`.
+  - Migrated `NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport` to `strictRecursivePolicy()`.
+  - Added `NimForbiddenSecretMaterialDetectorTest`.
+  - Added `NimForbiddenSecretMaterialDetectorUsageContractTest`.
+  - Added `docs/M5_21_EIGHTY_SIXTH_WAVE_SHARED_NIM_FORBIDDEN_SECRET_MATERIAL_DETECTOR_AUDIT_20260608.md`.
+  - Updated `CHANGELOG.md`, `docs/M5_21_WAVE_INDEX_20260606.md`, `docs/SESSION_PROGRESS_20260606_M521_29.md`, and `docs/v3.1/DEVELOPMENT_GUIDE.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimForbiddenSecretMaterialDetectorTest,NimForbiddenSecretMaterialDetectorUsageContractTest,NimCreateDurableAuditReceiptSchemaSupportTest,NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupportTest" test`
+    - `git diff --check`
+    - `mvn -q test`
+  - Full test note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - Security invariant: no real `8100`, no deployment POST, no runtime write behavior, no service-side HITL bypass, no durable writer/probe/receipt implementation, no validation result, no release decision, no code release switch implementation, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Recommended next slice: migrate homogeneous text-policy classes such as `NimCreateWriteRequestSpecAdapterSupport` and `NimCreateWriteExecutionHandoffSupport` to the shared detector.
+- Previous checkpoint:
 - M5.21-85 implemented:
   - Added `ProtectedToolParameterFilter` as the shared Tool execution-boundary filter.
   - ReAct, SafeToolExecutor, and execute_node now share the same protected parameter recognition for auth/session/tenant, HITL, audit, release, risk metadata, and write-control fields.

@@ -177,6 +177,14 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - `execute_node` is stricter: if Plan parameters contain protected fields at any nesting level, it fails closed before delegating to SafeToolExecutor.
 - Learning distinction: `DefaultValueSafety` protects configuration/default-value injection, while `ProtectedToolParameterFilter` protects runtime Tool execution authority. They overlap by design, but they are not the same boundary.
 
+### M5.21-86 shared NIM forbidden secret material detector learning note
+
+- `NimForbiddenSecretMaterialDetector` centralizes common forbidden NIM secret key and secret-looking value detection.
+- Shared safety helpers must preserve policy differences explicitly. Receipt schema contracts can document forbidden field names such as `Authorization` or `ngcApiKey`, but they must still reject real values such as `Authorization=Bearer ...`.
+- Runtime source guard evidence is stricter: any non-null value under secret-bearing keys remains unsafe because release-source claims are caller-visible and non-authoritative.
+- The first migration covers only `NimCreateDurableAuditReceiptSchemaSupport` and `NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport`; follow-up waves should migrate small homogeneous groups and keep blocker codes unchanged.
+- Learning distinction: deduplicating safety code is good engineering only when the extracted abstraction makes the security policy matrix more visible, not flatter.
+
 ### M5.21-58 validation result / release decision migration note
 
 - `NimCreateDurableAuditValidationResultMigrationSupport` only defines a future migration plan for `NimDurableAuditReceiptValidationResult` and `NimDurableAuditReleaseDecision`; it does not create real DTOs, Beans, validators, storage writes, or release credentials.

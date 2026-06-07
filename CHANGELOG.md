@@ -6,6 +6,23 @@
 
 ---
 
+## [M5.21-86] - Shared NIM forbidden secret material detector
+
+**Delivery**: Centralized the first NIM secret-material scanner without changing existing HOLD/write boundaries.
+**Changes**
+- Added `NimForbiddenSecretMaterialDetector` as a shared detector for forbidden NIM secret keys and secret-looking values.
+- Preserved policy differences through explicit detector policies:
+  - text-value policy for existing `hasText(...)` style checks.
+  - receipt-schema policy that allows documented forbidden field names while rejecting real secret material.
+  - strict recursive policy for runtime source guard inputs where non-null secret-key values remain unsafe.
+- Migrated `NimCreateDurableAuditReceiptSchemaSupport` and `NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport` to the shared detector.
+- Added `NimForbiddenSecretMaterialDetectorTest` and `NimForbiddenSecretMaterialDetectorUsageContractTest`.
+- Added `docs/M5_21_EIGHTY_SIXTH_WAVE_SHARED_NIM_FORBIDDEN_SECRET_MATERIAL_DETECTOR_AUDIT_20260608.md`.
+**Security**
+- No runtime write behavior was opened.
+- No real `8100`, deployment POST, durable writer/probe/receipt, validation result, release decision, release switch, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-85] - Shared protected Tool parameter filter
 
 **Delivery**: Centralized protected Tool parameter filtering across ReAct, SafeToolExecutor, and execute_node.

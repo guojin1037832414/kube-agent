@@ -1,5 +1,7 @@
 package com.atlas.tool.impl;
 
+import com.atlas.tool.core.NimForbiddenSecretMaterialDetector;
+
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -9,7 +11,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
 
 /**
@@ -34,18 +35,6 @@ final class NimCreateDurableAuditReceiptSchemaSupport {
     private static final String STORAGE_AVAILABLE_STATUS = "STORAGE_AVAILABLE_CONFIRMED";
     private static final String PRE_WRITE_ACK_STATUS = "PRE_WRITE_DURABLY_RECORDED";
     private static final String POST_WRITE_ACK_STATUS = "POST_WRITE_DURABLY_RECORDED";
-    private static final Set<String> FORBIDDEN_SECRET_KEYS = Set.of(
-        "apikey",
-        "ngcapikey",
-        "nvaieapikey",
-        "token",
-        "secret",
-        "password",
-        "authorization",
-        "authheader",
-        "bearertoken"
-    );
-
     private NimCreateDurableAuditReceiptSchemaSupport() {
     }
 
@@ -621,38 +610,10 @@ final class NimCreateDurableAuditReceiptSchemaSupport {
     }
 
     private static boolean containsForbiddenSecretMaterial(Map<String, Object> map) {
-        for (Map.Entry<String, Object> entry : map.entrySet()) {
-            Object value = entry.getValue();
-            if (isForbiddenSecretKey(entry.getKey()) && secretBearingValue(value)) {
-                return true;
-            }
-            if (value instanceof String textValue && looksLikeSecretValue(textValue)) {
-                return true;
-            }
-            if (value instanceof Map<?, ?> nested && containsForbiddenSecretMaterial(objectMap(nested))) {
-                return true;
-            }
-            if (value instanceof List<?> list) {
-                for (Object item : list) {
-                    if (item instanceof Map<?, ?> nestedItem && containsForbiddenSecretMaterial(objectMap(nestedItem))) {
-                        return true;
-                    }
-                    if (item instanceof String textItem
-                        && looksLikeSecretValue(textItem)
-                        && !isDocumentedForbiddenFieldName(textItem)) {
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
-    }
-
-    private static boolean secretBearingValue(Object value) {
-        if (value instanceof Boolean || value instanceof Number) {
-            return false;
-        }
-        return hasText(value);
+        return NimForbiddenSecretMaterialDetector.containsForbiddenSecretMaterial(
+            map,
+            NimForbiddenSecretMaterialDetector.receiptSchemaPolicy()
+        );
     }
 
     private static boolean hasForgedSuccessClaim(Map<String, Object> map) {
@@ -749,51 +710,6 @@ final class NimCreateDurableAuditReceiptSchemaSupport {
             }
         }
         return ignored;
-    }
-
-    private static boolean isForbiddenSecretKey(String key) {
-        String normalized = normalizeKey(key);
-        return FORBIDDEN_SECRET_KEYS.contains(normalized)
-            || normalized.endsWith("apikey")
-            || normalized.endsWith("token")
-            || normalized.endsWith("secret")
-            || normalized.endsWith("password")
-            || normalized.endsWith("authorization");
-    }
-
-    private static boolean looksLikeSecretValue(String value) {
-        String trimmed = value.trim();
-        String normalized = normalizeKey(trimmed);
-        if (trimmed.startsWith("Bearer ") && trimmed.length() > "Bearer ".length()) {
-            return true;
-        }
-        return normalized.contains("ngcapikey")
-            || normalized.contains("nvaieapikey")
-            || normalized.contains("authorizationbearer")
-            || normalized.contains("apikey=")
-            || normalized.contains("token=")
-            || normalized.contains("secret=")
-            || normalized.contains("password=")
-            || normalized.contains("authorization=")
-            || trimmed.matches("sk-[A-Za-z0-9]{20,}")
-            || trimmed.matches("AKIA[0-9A-Z]{16}")
-            || trimmed.matches("AIza[0-9A-Za-z_-]{35}")
-            || trimmed.matches("ghp_[A-Za-z0-9]{36}")
-            || trimmed.matches("xox[baprs]-[A-Za-z0-9-]{10,}");
-    }
-
-    private static boolean isDocumentedForbiddenFieldName(String value) {
-        return Set.of(
-            "authorization",
-            "token",
-            "apikey",
-            "ngcapikey",
-            "nvaieapikey",
-            "password",
-            "secret",
-            "callerprovidedusername",
-            "callerprovidedorganizationid"
-        ).contains(normalizeKey(value));
     }
 
     private static String digestFor(Map<String, Object> value) {
