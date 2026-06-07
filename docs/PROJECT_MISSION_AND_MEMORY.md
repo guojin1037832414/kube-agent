@@ -82,12 +82,29 @@ Current track:
 
 Recently completed:
 
-`M5.21-83 ReAct risk metadata prompt contract`
+`M5.21-84 ReAct HITL execution guard contract`
 
 Latest checkpoint:
 
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-84 implemented:
+  - Updated `ReActEngine` so a `HitlGuard` block now emits a complete audit timeline: `tool_done(success=false)`, structured `observation`, then `error`.
+  - The blocked Observation is still stored in `ReActMemory`, allowing the next ReAct turn to explain the safety block instead of blindly retrying the Action.
+  - ReAct Action parameter cleanup now strips forged control fields such as `confirmed`, `hitlConfirmed`, `approval`, `auditReceipt`, `releaseDecision`, `writePermitted`, `writeExecutionAllowed`, `realHttpExecutionAllowed`, and `releaseEligible`.
+  - Added normalized-key filtering for common forged variants such as `hitl_approved`, `release-approved`, and `write_allowed`.
+  - Added `ReActEngineHitlGuardContractTest`.
+  - The new E2E contract scripts an LLM that attempts to call a CREATE Tool directly and smuggles forged confirmation/audit/release/write fields. It proves the Tool is never executed, the ReAct step is marked failed, the Observation contains `HITL_CONFIRMATION_REQUIRED`, trusted `organizationId` is preserved, forged fields are stripped, and risk-tagged events do not leak `apiEndpoints`.
+  - Added `docs/M5_21_EIGHTY_FOURTH_WAVE_REACT_HITL_EXECUTION_GUARD_CONTRACT_AUDIT_20260608.md`.
+  - Updated `CHANGELOG.md`, `docs/M5_21_WAVE_INDEX_20260606.md`, `docs/SESSION_PROGRESS_20260606_M521_29.md`, and `docs/v3.1/DEVELOPMENT_GUIDE.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=ReActEngineHitlGuardContractTest,ReActEngineMultiStepE2ETest,ReActPromptBuilderRiskMetadataContractTest,M513HitlFailClosedContractTest" test`
+    - `mvn -q "-Dtest=ReActEngineHitlGuardContractTest,ReActEngineMultiStepE2ETest,ReActEventRiskMetadataTest,ReActPromptBuilderRiskMetadataContractTest,ToolRegistryPromptContractTest,M513HitlFailClosedContractTest,SafeToolExecutorTest" test`
+    - `git diff --check`
+    - `mvn -q test`
+  - Full test note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - Security invariant: no real `8100`, no deployment POST, no runtime write behavior opened by ReAct, no service-side HITL bypass, no durable writer/probe/receipt, no validation result, no release decision, no code release switch, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+- Previous checkpoint:
 - M5.21-83 implemented:
   - Updated `ReActPromptBuilder` so ReAct high-risk behavior is driven by ToolRegistry risk labels, not only keyword examples.
   - Tools with `operationType=CREATE/UPDATE/DELETE/ACTION/PLACEHOLDER` or `requiresConfirmation=true` must output Mode C/HITL instead of direct `Action`.

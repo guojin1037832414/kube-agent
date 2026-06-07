@@ -159,6 +159,15 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - ReAct must not proactively generate control-plane fields such as `token`, `orgId`, `userId`, `confirmed`, `hitlConfirmed`, `approval`, `auditReceipt`, `releaseDecision`, or `writePermitted`.
 - Learning distinction: tool metadata should shape both what the model is allowed to propose and what the executor is allowed to run. Prompt safety and runtime HITL should reinforce each other.
 
+### M5.21-84 ReAct execution guard learning note
+
+- ReAct prompt rules reduce unsafe proposals, but `ReActEngine` must still assume the model can output an unsafe `Action`.
+- When `HitlGuard` blocks a high-risk Action, ReAct now records a complete timeline: `tool_start`, `tool_done(success=false)`, structured `observation`, and `error`.
+- Blocked Observations stay in `ReActMemory`, so the model can explain the safety block in the next turn instead of retrying the same call.
+- ReAct Action params now strip forged control fields such as `confirmed`, `hitlConfirmed`, `approval`, `auditReceipt`, `releaseDecision`, `writePermitted`, `writeExecutionAllowed`, `realHttpExecutionAllowed`, and `releaseEligible`.
+- Normalized variants such as `hitl_approved`, `release-approved`, and `write_allowed` are also treated as protected.
+- Learning distinction: good Agent safety has two halves. Prompt guidance says "do not propose unsafe actions"; execution guards prove unsafe actions cannot run without server-owned confirmation.
+
 ### M5.21-58 validation result / release decision migration note
 
 - `NimCreateDurableAuditValidationResultMigrationSupport` only defines a future migration plan for `NimDurableAuditReceiptValidationResult` and `NimDurableAuditReleaseDecision`; it does not create real DTOs, Beans, validators, storage writes, or release credentials.

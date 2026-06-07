@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-83, ReAct risk metadata prompt contract.
+- Current latest wave: M5.21-84, ReAct HITL execution guard contract.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -48,6 +48,40 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-84 ReAct HITL execution guard contract is implemented:
+  - Updated `src/main/java/com/atlas/react/ReActEngine.java`.
+  - When `HitlGuard` blocks a high-risk ReAct Action, the engine now emits `tool_done(success=false)` and structured `observation` events before the existing `error` event.
+  - Blocked Observations remain in `ReActMemory`, so the next LLM turn can summarize the safety block rather than retrying blindly.
+  - ReAct Action parameter cleanup now strips forged confirmation/audit/release/write-control fields:
+    - `confirmed`
+    - `hitlConfirmed`
+    - `approval`
+    - `auditReceipt`
+    - `releaseDecision`
+    - `writePermitted`
+    - `writeExecutionAllowed`
+    - `realHttpExecutionAllowed`
+    - `releaseEligible`
+  - Normalized variants such as `hitl_approved`, `release-approved`, and `write_allowed` are also filtered.
+  - Added `src/test/java/com/atlas/react/ReActEngineHitlGuardContractTest.java`.
+  - The new E2E test scripts an LLM that attempts to directly call a CREATE Tool and smuggle forged control fields. It proves:
+    - the Tool is never executed
+    - the blocked step is marked unsuccessful
+    - Observation contains `HITL_CONFIRMATION_REQUIRED`
+    - trusted `organizationId` from initial context is preserved
+    - forged control fields are stripped
+    - event timeline includes `tool_start`, `tool_done(false)`, `observation`, and `error`
+    - risk metadata is present without leaking `apiEndpoints`
+  - Added `docs/M5_21_EIGHTY_FOURTH_WAVE_REACT_HITL_EXECUTION_GUARD_CONTRACT_AUDIT_20260608.md`.
+  - Updated `CHANGELOG.md`, `docs/M5_21_WAVE_INDEX_20260606.md`, and `docs/v3.1/DEVELOPMENT_GUIDE.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=ReActEngineHitlGuardContractTest,ReActEngineMultiStepE2ETest,ReActPromptBuilderRiskMetadataContractTest,M513HitlFailClosedContractTest" test`
+    - `mvn -q "-Dtest=ReActEngineHitlGuardContractTest,ReActEngineMultiStepE2ETest,ReActEventRiskMetadataTest,ReActPromptBuilderRiskMetadataContractTest,ToolRegistryPromptContractTest,M513HitlFailClosedContractTest,SafeToolExecutorTest" test`
+    - `git diff --check`
+    - `mvn -q test`
+  - Full test note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - No real `8100` access; no runtime write behavior opened by ReAct; no deployment POST; no service-side HITL bypass; no durable writer/probe/receipt; no validation result; no release decision; no release switch; no Elasticsearch; no `ISysLogService`; no `sys_log`; `nim_create` remains HOLD/mock-first.
 
 - M5.21-83 ReAct risk metadata prompt contract is implemented:
   - Updated `src/main/java/com/atlas/react/ReActPromptBuilder.java`.

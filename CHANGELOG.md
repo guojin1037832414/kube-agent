@@ -6,6 +6,21 @@
 
 ---
 
+## [M5.21-84] - ReAct HITL execution guard contract
+
+**Delivery**: Hardened ReAct execution-layer HITL behavior and audit timeline visibility.
+**Changes**
+- `ReActEngine` now emits `tool_done(success=false)` and `observation` events when `HitlGuard` blocks a high-risk Action, before the existing `error` event.
+- The blocked Observation remains in `ReActMemory`, allowing the next ReAct turn to summarize the safety block instead of retrying blindly.
+- ReAct Action parameter cleanup now strips forged confirmation, audit, release, and write-control fields such as `confirmed`, `hitlConfirmed`, `approval`, `auditReceipt`, `releaseDecision`, `writePermitted`, `writeExecutionAllowed`, `realHttpExecutionAllowed`, and `releaseEligible`.
+- Added normalized-key filtering for common variants such as `hitl_approved`, `release-approved`, and `write_allowed`.
+- Added `ReActEngineHitlGuardContractTest` to prove a scripted high-risk CREATE Action is blocked before Tool execution and produces a complete risk-tagged event timeline.
+- Added `docs/M5_21_EIGHTY_FOURTH_WAVE_REACT_HITL_EXECUTION_GUARD_CONTRACT_AUDIT_20260608.md`.
+**Security**
+- No runtime write behavior was opened.
+- No real `8100`, deployment POST, durable writer/probe/receipt, validation result, release decision, release switch, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-83] - ReAct risk metadata prompt contract
 
 **Delivery**: Aligned ReAct high-risk prompt behavior with ToolRegistry risk metadata.
