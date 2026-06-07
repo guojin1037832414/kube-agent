@@ -114,6 +114,7 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - 当前 `NimCreateDurableAuditStorageAvailabilityGateSupport` 只生成未来 probe plan，仍然 `storageProbeExecuted=false`、`storageAvailable=false`；真实可用性探测必须在 dedicated writer 服务端边界内完成。
 - 当前 `NimCreateDedicatedDurableAuditWriterBoundarySupport` 只生成未来 `NimDurableAuditWriter` 的边界计划和测试替身契约，仍然 `IMPLEMENTATION_HOLD`；test double 只能验证顺序、digest/identity binding 和 fail-closed blocker，不能声称 `storageAvailable=true`、`preWritePersisted=true`、`postWritePersisted=true` 或 `DURABLE_RECORDED`。
 - 当前 `NimCreateDurableAuditWriterInterfaceSpecSupport` 只定义未来 `NimDurableAuditWriter` 的 request/response/method/failure/test-double 规格，仍然 `IMPLEMENTATION_HOLD`；接口规格不能替代真实 Java 接口、真实存储 probe、durable ack 或 release credential。
+- 当前 `NimCreateDurableAuditReceiptSchemaSupport` 只定义未来 `StorageAvailabilityProbeReceipt`、`PreWriteDurableAck`、`PostWriteDurableAck` 和 `DurableAuditReceipt` 的 schema，仍然 `IMPLEMENTATION_HOLD`；schema 不是 ack instance，也不是 `DURABLE_RECORDED` release credential。即使调用方传入空的 typed ack/receipt 对象，也必须按 forged success claim 拒绝。
 - write body rebuilder 只能从已审计 NIM 状态重建白名单 DeploymentDTO，不得复用 preview body 引用。
 - POST request spec adapter 只能从 body rebuild report 编译 `POST /api/{orgId}/deployment` 规格，且 `sideEffect=NONE`、无调用方 header、无 Authorization、无真实 NGC/NIM API Key。
 - write execution handoff 必须在真实 durable writer 前绑定 request spec digest、body digest、durable audit receipt、服务端派生幂等键和写后 readiness handoff；它仍然不是 HTTP 执行器。

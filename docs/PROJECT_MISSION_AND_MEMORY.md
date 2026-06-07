@@ -81,9 +81,37 @@ Current track:
 
 Recently completed:
 
-`M5.21-55 NIM durable audit writer interface spec contract`
+`M5.21-56 NIM durable audit typed ack/receipt schema contract`
 
 Latest checkpoint:
+
+- Date: 2026-06-07 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+  - M5.21-56 implemented and verified:
+  - Added `NimCreateDurableAuditReceiptSchemaSupport` as a pure/mock-first schema contract for future typed durable audit evidence.
+  - It consumes:
+    - `auditContext`
+    - `trustedPrincipalSnapshot`
+    - `durableAuditWriterInterfaceSpecReport`
+  - It returns `durableAuditReceiptAckSchema=NIM_CREATE_DURABLE_AUDIT_RECEIPT_ACK_SCHEMA`, `executionMode=DURABLE_AUDIT_RECEIPT_ACK_SCHEMA_CONTRACT_ONLY`, and `schemaState=IMPLEMENTATION_HOLD|REJECTED`.
+  - Positive input produces `typedSchema.storageAvailabilityProbeReceiptSchema`, `preWriteDurableAckSchema`, `postWriteDurableAckSchema`, `durableAuditReceiptSchema`, `digestChainRules`, `currentResponseTemplate`, `failureContract`, and `testDoubleRules`.
+  - The schema binds the M5.21-55 `interfaceSpecDigest`, upstream boundary/writer/gate digests, the source audit event digest, and the trusted server principal.
+  - Current state explicitly remains `realStorageTouched=false`, `storageProbeExecuted=false`, `storageAvailable=false`, `storageProbeReceiptIssued=false`, `preWriteDurableAckIssued=false`, `postWriteDurableAckIssued=false`, and `durableReceiptIssued=false`.
+  - Positive input remains blocked by `DURABLE_AUDIT_RECEIPT_ACK_SCHEMA_IMPLEMENTATION_HOLD`.
+  - Missing interface spec report is rejected with `DURABLE_AUDIT_WRITER_INTERFACE_SPEC_REPORT_NOT_READY`.
+  - Forged typed ack/receipt or storage/persistence/receipt success claims are rejected with `DURABLE_AUDIT_RECEIPT_SCHEMA_FORGED_SUCCESS_CLAIM`; even an empty caller-supplied typed ack/receipt object is rejected.
+  - Secret leakage is rejected with `DURABLE_AUDIT_RECEIPT_SCHEMA_INPUT_CONTAINS_FORBIDDEN_SECRET`, while documented forbidden field names inside interface specs are not confused with real secret material.
+  - Added `NimCreateDurableAuditReceiptSchemaSupportTest`.
+  - Added `docs/M5_21_FIFTY_SIXTH_WAVE_NIM_DURABLE_AUDIT_RECEIPT_ACK_SCHEMA_AUDIT_20260607.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateDurableAuditReceiptSchemaSupportTest,NimCreateDurableAuditWriterInterfaceSpecSupportTest,NimCreateDedicatedDurableAuditWriterBoundarySupportTest,NimCreateDurableAuditStorageAvailabilityGateSupportTest,NimCreateDurableAuditWriterPlanSupportTest,NimCreateDurableAuditStorageSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateDurableAuditReceiptSchemaSupportTest,NimCreateDurableAuditWriterInterfaceSpecSupportTest,NimCreateDedicatedDurableAuditWriterBoundarySupportTest,NimCreateDurableAuditStorageAvailabilityGateSupportTest,NimCreateDurableAuditWriterPlanSupportTest,NimCreateDurableAuditStorageSupportTest,NimCreateAuditWriterSupportTest,NimCreateStateMachineSupportTest,NimCreateDurableWriteExecutorSupportTest,NimCreateWriteExecutionHandoffSupportTest,NimCreateWriteRequestSpecAdapterSupportTest,NimCreateWriteBodyRebuilderSupportTest,NimCreateReadinessHttpAdapterSupportTest,NimCreateReadinessExecutorSupportTest,NimCreateAuditReadinessSupportTest,NimTrustedPolicyProviderSupportTest,NimCreationGateSupportTest,NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest,HighRiskMutationToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest,M510ArchitectureBoundaryTest" test`
+    - `git diff --check`
+    - Real secret-pattern static scan found 0 matches.
+    - Boundary import scan found no new real `ElasticsearchTemplate`, `ISysLogService`, HTTP client, or `java.net` import in this wave.
+    - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+  - No real `8100` access; no Elasticsearch connection; no `ISysLogService` call; no `sys_log` write; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
 
 - Date: 2026-06-07 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
@@ -553,7 +581,7 @@ Latest checkpoint:
     - `available_models[0]`;
     - otherwise `fetch failed`, non-fatal after health is live.
   - Secret/API-key boundary:
-    - rejects `Authorization`, `token`, `apiKey`, `secret`, `password`, real Bearer values, and common real key-shaped strings in plan/responses.
+    - rejects `Authorization`, `token`, `apiKey`, `secret`, `password`, bearer-style credential strings, and common real key-shaped strings in plan/responses.
   - Added `NimCreateReadinessExecutorSupportTest`.
   - Added `docs/M5_21_FORTY_THIRD_WAVE_NIM_READINESS_EXECUTOR_AUDIT_20260607.md`.
   - Verification passed:

@@ -6,6 +6,27 @@
 
 ---
 
+## [M5.21-56] - 第五十六批 NIM durable audit typed ack/receipt schema 契约审计
+
+**交付**: 在 M5.21-55 future writer interface spec 之后，新增 typed storage probe receipt、pre-write ack、post-write ack 和 durable receipt 的 schema 契约，继续保持纯数据、contract-only 和 `IMPLEMENTATION_HOLD`。
+
+**变更**
+- 新增 `NimCreateDurableAuditReceiptSchemaSupport`，纯数据消费 `auditContext`、`trustedPrincipalSnapshot`、`durableAuditWriterInterfaceSpecReport`。
+- 输出 `durableAuditReceiptAckSchema=NIM_CREATE_DURABLE_AUDIT_RECEIPT_ACK_SCHEMA`、`executionMode=DURABLE_AUDIT_RECEIPT_ACK_SCHEMA_CONTRACT_ONLY`、`schemaState=IMPLEMENTATION_HOLD|REJECTED`。
+- 正向输入生成 `typedSchema.storageAvailabilityProbeReceiptSchema`、`preWriteDurableAckSchema`、`postWriteDurableAckSchema`、`durableAuditReceiptSchema`、`digestChainRules`、`failureContract`、`testDoubleRules`，并绑定 M5.21-55 interface spec digest。
+- 当前明确保持 `realStorageTouched=false`、`storageProbeExecuted=false`、`storageAvailable=false`、`storageProbeReceiptIssued=false`、`preWriteDurableAckIssued=false`、`postWriteDurableAckIssued=false`、`durableReceiptIssued=false`。
+- 正向输入仍返回 `DURABLE_AUDIT_RECEIPT_ACK_SCHEMA_IMPLEMENTATION_HOLD`。
+- 缺少 interface spec report 返回 `DURABLE_AUDIT_WRITER_INTERFACE_SPEC_REPORT_NOT_READY`。
+- 伪造 typed ack/receipt 或 storage/persistence/receipt success claim 返回 `DURABLE_AUDIT_RECEIPT_SCHEMA_FORGED_SUCCESS_CLAIM`；即使是空的 caller-supplied typed ack 实例也会拒绝。
+- secret 泄漏返回 `DURABLE_AUDIT_RECEIPT_SCHEMA_INPUT_CONTAINS_FORBIDDEN_SECRET`，同时区分接口规格里的“禁用字段名清单”和真实 secret material。
+- 新增 `NimCreateDurableAuditReceiptSchemaSupportTest`。
+- 新增 `docs/M5_21_FIFTY_SIXTH_WAVE_NIM_DURABLE_AUDIT_RECEIPT_ACK_SCHEMA_AUDIT_20260607.md`，并更新 M5.21 波次索引、开发指南和项目记忆。
+
+**安全**
+- 本批不创建真实 Java writer/value type，不注入 Spring Bean，不连接 Elasticsearch，不调用 `ISysLogService`，不写 `sys_log`，不新增 HTTP client，不访问真实 `8100`，不调用 `POST /api/{orgId}/deployment`。
+- typed schema 不是 ack instance、durable writer result 或 release credential。
+- `nim_create` 继续保持 `httpMethod=NONE + PLACEHOLDER + requiresConfirmation=true`。
+
 ## [M5.21-55] - 第五十五批 NIM durable audit writer 接口规格契约审计
 
 **交付**: 在 M5.21-54 dedicated writer boundary 之后，新增未来 `NimDurableAuditWriter` 的接口规格契约，先把请求、响应、方法、失败语义和 test double 规则固定下来，仍不创建真实接口或接入存储。
