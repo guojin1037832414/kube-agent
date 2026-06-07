@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-74, NIM code release switch contract report binding.
+- Current latest wave: M5.21-75, NIM code release switch runtime source guard matrix.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -48,6 +48,29 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-75 NIM code release switch runtime source guard matrix is implemented:
+  - Added `NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport`.
+  - Added `NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupportTest`.
+  - Added `M521NimCodeReleaseSwitchRuntimeSourceGuardContractTest`.
+  - Added `docs/M5_21_SEVENTY_FIFTH_WAVE_NIM_CODE_RELEASE_SWITCH_RUNTIME_SOURCE_GUARD_AUDIT_20260608.md`.
+  - The source guard consumes M5.21-73 runtime-binding report, recomputes `runtimeBindingContractDigest`, and binds `sourceCodeReleaseSwitchContractDigest`.
+  - M5.21-72 and M5.21-73 reports are accepted only as planning/shape evidence, not release sources.
+  - Forbidden release sources include caller/LLM JSON, environment variables, runtime flags, legacy `nimCreateReleased`, state-machine `writePermitted`, durable executor success / `deploymentId`, backend query/readback, `sys_log` / Elasticsearch backfill, and release/validation contract reports alone.
+  - Current release source state remains `acceptedSourcesForCurrentRelease=[]`, `sourceGuardInstalled=false`, `candidateSourceEvidenceAuthoritative=false`, `backendQuerySourceAllowedForRelease=false`, and `sysLogBackfillSourceAllowed=false`.
+  - Dangerous field names are tracked, including `codeReleaseSwitchContractReportAcceptedForRelease`, `serverOwnedCodeReleaseSwitchAccepted`, `codeReleaseSwitchDigestVerified`, `writeExecuted`, `deploymentId`, `deploymentUid`, and `writeResult`.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupportTest,M521NimCodeReleaseSwitchRuntimeSourceGuardContractTest" test`
+  - Final verification passed:
+    - `mvn -q "-Dtest=NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupportTest,M521NimCodeReleaseSwitchRuntimeSourceGuardContractTest,NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupportTest,NimCreateDurableAuditCodeReleaseSwitchContractSupportTest,NimCreateStateMachineSupportTest,NimCreateDurableWriteExecutorSupportTest" test`
+    - `mvn -q test`
+    - `git diff --check`
+    - production-boundary, true/success shortcut, and static secret scans
+  - Full test note: `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0; this is expected for the current local test environment and does not indicate an M5.21-75 regression.
+  - No real `8100` access; no HTTP client; no Elasticsearch connection; no `ISysLogService`; no `sys_log` write; no real `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
+  - Recovery note: safe local `8100` read/query tests remain allowed for read tools, but backend readback cannot become release authorization for `nim_create`.
+  - Learning note: source governance is separate from shape validation. A report can be digest-valid and still not be a release credential if it comes from a planning contract, caller JSON, runtime toggle, readback, or backfilled storage.
 
 - M5.21-74 NIM code release switch contract report binding is implemented:
   - Updated `NimCreateStateMachineSupport` to accept `codeReleaseSwitchContractReport`.

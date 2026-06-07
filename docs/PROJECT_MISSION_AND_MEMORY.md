@@ -82,13 +82,34 @@ Current track:
 
 Recently completed:
 
-`M5.21-74 NIM code release switch contract report binding`
+`M5.21-75 NIM code release switch runtime source guard matrix`
 
 Latest checkpoint:
 
-- Date: 2026-06-07 Asia/Shanghai.
+- Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
-- M5.21-74 implemented:
+- M5.21-75 implemented:
+  - Added `NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport`.
+  - Added `NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupportTest`.
+  - Added `M521NimCodeReleaseSwitchRuntimeSourceGuardContractTest`.
+  - Added `docs/M5_21_SEVENTY_FIFTH_WAVE_NIM_CODE_RELEASE_SWITCH_RUNTIME_SOURCE_GUARD_AUDIT_20260608.md`.
+  - The source guard consumes M5.21-73 `codeReleaseSwitchRuntimeBindingReport`, recomputes `runtimeBindingContractDigest`, and binds M5.21-72 `sourceCodeReleaseSwitchContractDigest`.
+  - It keeps M5.21-72 and M5.21-73 as planning/shape evidence only.
+  - It explicitly forbids caller/LLM JSON, environment variables, runtime flags, legacy `nimCreateReleased`, state-machine `writePermitted`, durable executor success, backend readback, and `sys_log`/Elasticsearch backfill as release sources.
+  - It exposes `acceptedSourcesForCurrentRelease=[]`, `sourceGuardInstalled=false`, `candidateSourceEvidenceAuthoritative=false`, `backendQuerySourceAllowedForRelease=false`, and `sysLogBackfillSourceAllowed=false`.
+  - It tracks dangerous release credential field names such as `codeReleaseSwitchContractReportAcceptedForRelease`, `codeReleaseSwitchDigestVerified`, `writeExecuted`, `deploymentId`, and `writeResult`.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupportTest,M521NimCodeReleaseSwitchRuntimeSourceGuardContractTest" test`
+  - Final verification passed:
+    - `mvn -q "-Dtest=NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupportTest,M521NimCodeReleaseSwitchRuntimeSourceGuardContractTest,NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupportTest,NimCreateDurableAuditCodeReleaseSwitchContractSupportTest,NimCreateStateMachineSupportTest,NimCreateDurableWriteExecutorSupportTest" test`
+    - `mvn -q test`
+    - `git diff --check`
+    - production-boundary, true/success shortcut, and static secret scans
+  - Full test note: `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0; this remains an accepted degraded-test-path signal, not an M5.21-75 failure.
+  - Learning note: M5.21-75 adds source governance. A correctly shaped fact is not enough; the write path must also prove the source is reviewed, server-owned, digest-bound, and rechecked by both state machine and durable executor.
+- Previous checkpoint:
+  - M5.21-74 implemented:
   - `NimCreateStateMachineSupport` now consumes `codeReleaseSwitchContractReport`.
   - `NimCreateDurableWriteExecutorSupport` now consumes the same M5.21-72 switch contract report before accepting handoff/request-spec input.
   - Both shells recompute/validate `codeReleaseSwitchContractDigest`.
@@ -98,7 +119,6 @@ Latest checkpoint:
   - Targeted verification passed:
     - `mvn -q "-Dtest=NimCreateStateMachineSupportTest,NimCreateDurableWriteExecutorSupportTest" test`
   - Learning note: M5.21-72 is the source switch contract report to validate; M5.21-73 is the runtime-binding requirement; M5.21-74 wires the report into current shells. None of these are release credentials.
-- Previous checkpoint:
   - M5.21-73 implemented:
   - Added `NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport` as an independent contract-only runtime binding layer for M5.21-72 code release switch reports.
   - Added `NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupportTest`.

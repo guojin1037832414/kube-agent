@@ -6,6 +6,20 @@
 
 ---
 
+## [M5.21-75] - NIM code release switch runtime source guard matrix
+
+**Delivery**: Added a contract-only runtime source-guard matrix after M5.21-73 so future `nim_create` release code cannot confuse planning evidence, runtime flags, readback data, or executor success with a reviewed open switch.
+**Changes**
+- Added `NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport`.
+- Added `NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupportTest`.
+- Added `M521NimCodeReleaseSwitchRuntimeSourceGuardContractTest` as a source-level guard against environment/property release-switch shortcuts.
+- The matrix marks M5.21-72 and M5.21-73 reports as planning/shape sources only and keeps `acceptedSourcesForCurrentRelease=[]`.
+- The matrix explicitly forbids caller/LLM JSON, env/runtime flags, legacy `nimCreateReleased`, state-machine `writePermitted`, durable executor success, backend readback, and `sys_log`/Elasticsearch backfill as release sources.
+- Added `docs/M5_21_SEVENTY_FIFTH_WAVE_NIM_CODE_RELEASE_SWITCH_RUNTIME_SOURCE_GUARD_AUDIT_20260608.md`.
+**Security**
+- No real switch, release decision, validation result, release credential, HTTP client, Spring Bean, Controller, Tool registration, Elasticsearch, `ISysLogService`, `sys_log` write, kube-manager `8100` call, or real `POST /api/{orgId}/deployment` was added.
+- `nim_create` remains `httpMethod=NONE + PLACEHOLDER + requiresConfirmation=true`.
+
 ## [M5.21-74] - NIM code release switch contract report binding
 
 **Delivery**: Wired the M5.21-72 `codeReleaseSwitchContractReport` into the current state-machine and durable-executor shells as fail-closed release evidence shape, while keeping `nim_create` held.

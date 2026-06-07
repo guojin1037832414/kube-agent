@@ -257,3 +257,11 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - `NimCreateDurableWriteExecutorSupport` now also requires the same M5.21-72 report before accepting a controlled handoff/request-spec pair.
 - The shells recompute `codeReleaseSwitchContractDigest`, reject tampered/forged-open reports, and keep `codeReleaseSwitchDigestVerified=false`, `writePermitted=false`, `writeExecutionAllowed=false`, and `realHttpExecutionAllowed=false`.
 - Learning distinction: M5.21-72 is the source switch contract report, M5.21-73 is the runtime-binding requirement, and M5.21-74 wires the report into current shells. None of these are release credentials yet.
+
+### M5.21-75 code release switch runtime source guard note
+
+- `NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport` defines a source taxonomy after M5.21-73.
+- M5.21-72 and M5.21-73 reports are accepted only as planning/shape evidence, not as release sources.
+- Caller/LLM JSON, environment variables, runtime flags, legacy `nimCreateReleased`, state-machine `writePermitted`, durable executor success, backend readback, and storage backfills remain forbidden release sources.
+- The matrix tracks dangerous field names such as `codeReleaseSwitchContractReportAcceptedForRelease`, `codeReleaseSwitchDigestVerified`, `writeExecuted`, `deploymentId`, and `writeResult`.
+- Learning distinction: a top-tier Agent write path needs source governance, not only value validation. Evidence can be shaped correctly and still come from the wrong source.
