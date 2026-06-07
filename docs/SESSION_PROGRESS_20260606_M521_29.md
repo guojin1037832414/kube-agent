@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-56, NIM durable audit typed ack/receipt schema contract.
+- Current latest wave: M5.21-57, NIM durable audit receipt validation gate contract.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -46,6 +46,33 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-57 NIM durable audit receipt validation gate contract is implemented and verified:
+  - Added `NimCreateDurableAuditReceiptValidationGateSupport`.
+  - It consumes `auditContext`, `trustedPrincipalSnapshot`, and `durableAuditReceiptAckSchemaReport`.
+  - It outputs `durableAuditReceiptValidationGate=NIM_CREATE_DURABLE_AUDIT_RECEIPT_VALIDATION_GATE`, `executionMode=DURABLE_AUDIT_RECEIPT_VALIDATION_GATE_CONTRACT_ONLY`, `gateState=IMPLEMENTATION_HOLD|REJECTED`, `validationGateState=IMPLEMENTATION_HOLD|REJECTED`, and `futureValidator=NimDurableAuditReceiptValidator`.
+  - Positive input creates:
+    - `validationSequence`
+    - `requiredEvidence`
+    - `releaseDecisionTemplate`
+    - `failureContract`
+    - `forbiddenShortcuts`
+  - Current state explicitly remains `realStorageTouched=false`, `storageProbeReceiptValidated=false`, `preWriteDurableAckValidated=false`, `postWriteDurableAckValidated=false`, `digestChainValidated=false`, `trustedPrincipalValidated=false`, `durableReceiptValidationPassed=false`, `durableReceiptAccepted=false`, `releaseEligible=false`, `writeExecutionAllowed=false`.
+  - Positive input remains blocked by `DURABLE_AUDIT_RECEIPT_VALIDATION_GATE_IMPLEMENTATION_HOLD`.
+  - Missing schema report returns `DURABLE_AUDIT_RECEIPT_ACK_SCHEMA_REPORT_NOT_READY`.
+  - Forged validation pass, typed ack/receipt, release decision, or write execution claims return `DURABLE_AUDIT_RECEIPT_VALIDATION_GATE_FORGED_PASS_CLAIM`.
+  - Secret leakage returns `DURABLE_AUDIT_RECEIPT_VALIDATION_GATE_INPUT_CONTAINS_FORBIDDEN_SECRET`.
+  - Added `NimCreateDurableAuditReceiptValidationGateSupportTest`.
+  - Added `docs/M5_21_FIFTY_SEVENTH_WAVE_NIM_DURABLE_AUDIT_RECEIPT_VALIDATION_GATE_AUDIT_20260607.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateDurableAuditReceiptValidationGateSupportTest,NimCreateDurableAuditReceiptSchemaSupportTest,NimCreateDurableAuditWriterInterfaceSpecSupportTest,NimCreateDedicatedDurableAuditWriterBoundarySupportTest,NimCreateDurableAuditStorageAvailabilityGateSupportTest,NimCreateDurableAuditWriterPlanSupportTest,NimCreateDurableAuditStorageSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateDurableAuditReceiptValidationGateSupportTest,NimCreateDurableAuditReceiptSchemaSupportTest,NimCreateDurableAuditWriterInterfaceSpecSupportTest,NimCreateDedicatedDurableAuditWriterBoundarySupportTest,NimCreateDurableAuditStorageAvailabilityGateSupportTest,NimCreateDurableAuditWriterPlanSupportTest,NimCreateDurableAuditStorageSupportTest,NimCreateAuditWriterSupportTest,NimCreateStateMachineSupportTest,NimCreateDurableWriteExecutorSupportTest,NimCreateWriteExecutionHandoffSupportTest,NimCreateWriteRequestSpecAdapterSupportTest,NimCreateWriteBodyRebuilderSupportTest,NimCreateReadinessHttpAdapterSupportTest,NimCreateReadinessExecutorSupportTest,NimCreateAuditReadinessSupportTest,NimTrustedPolicyProviderSupportTest,NimCreationGateSupportTest,NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest,HighRiskMutationToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest,M510ArchitectureBoundaryTest" test`
+    - `git diff --check`
+    - Real secret-pattern static scan found 0 matches.
+    - Boundary import scan found no new real `ElasticsearchTemplate`, `ISysLogService`, HTTP client, or `java.net` import in this wave.
+    - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+  - No real `8100` access; no Elasticsearch connection; no `ISysLogService` call; no `sys_log` write; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
 
 - M5.21-56 NIM durable audit typed ack/receipt schema contract is implemented and verified:
   - Added `NimCreateDurableAuditReceiptSchemaSupport`.

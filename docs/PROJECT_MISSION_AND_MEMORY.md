@@ -81,9 +81,37 @@ Current track:
 
 Recently completed:
 
-`M5.21-56 NIM durable audit typed ack/receipt schema contract`
+`M5.21-57 NIM durable audit receipt validation gate contract`
 
 Latest checkpoint:
+
+- Date: 2026-06-07 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+  - M5.21-57 implemented and verified:
+  - Added `NimCreateDurableAuditReceiptValidationGateSupport` as a pure/mock-first validation gate contract for future typed durable audit evidence.
+  - It consumes:
+    - `auditContext`
+    - `trustedPrincipalSnapshot`
+    - `durableAuditReceiptAckSchemaReport`
+  - It returns `durableAuditReceiptValidationGate=NIM_CREATE_DURABLE_AUDIT_RECEIPT_VALIDATION_GATE`, `executionMode=DURABLE_AUDIT_RECEIPT_VALIDATION_GATE_CONTRACT_ONLY`, and `gateState=IMPLEMENTATION_HOLD|REJECTED`.
+  - Positive input produces `validationPlan.validationSequence`, `requiredEvidence`, `releaseDecisionTemplate`, `failureContract`, and `forbiddenShortcuts`.
+  - The validation plan binds the M5.21-56 schema digest, upstream interface/boundary/writer/gate digests, the source audit event digest, and the trusted server principal.
+  - Current state explicitly remains `realStorageTouched=false`, `storageProbeReceiptValidated=false`, `preWriteDurableAckValidated=false`, `postWriteDurableAckValidated=false`, `digestChainValidated=false`, `trustedPrincipalValidated=false`, `durableReceiptValidationPassed=false`, `durableReceiptAccepted=false`, `releaseEligible=false`, and `writeExecutionAllowed=false`.
+  - Positive input remains blocked by `DURABLE_AUDIT_RECEIPT_VALIDATION_GATE_IMPLEMENTATION_HOLD`.
+  - Missing schema report is rejected with `DURABLE_AUDIT_RECEIPT_ACK_SCHEMA_REPORT_NOT_READY`.
+  - Forged validation pass, typed ack/receipt, release decision, or write execution claims are rejected with `DURABLE_AUDIT_RECEIPT_VALIDATION_GATE_FORGED_PASS_CLAIM`.
+  - Secret leakage is rejected with `DURABLE_AUDIT_RECEIPT_VALIDATION_GATE_INPUT_CONTAINS_FORBIDDEN_SECRET`.
+  - Added `NimCreateDurableAuditReceiptValidationGateSupportTest`.
+  - Added `docs/M5_21_FIFTY_SEVENTH_WAVE_NIM_DURABLE_AUDIT_RECEIPT_VALIDATION_GATE_AUDIT_20260607.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateDurableAuditReceiptValidationGateSupportTest,NimCreateDurableAuditReceiptSchemaSupportTest,NimCreateDurableAuditWriterInterfaceSpecSupportTest,NimCreateDedicatedDurableAuditWriterBoundarySupportTest,NimCreateDurableAuditStorageAvailabilityGateSupportTest,NimCreateDurableAuditWriterPlanSupportTest,NimCreateDurableAuditStorageSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateDurableAuditReceiptValidationGateSupportTest,NimCreateDurableAuditReceiptSchemaSupportTest,NimCreateDurableAuditWriterInterfaceSpecSupportTest,NimCreateDedicatedDurableAuditWriterBoundarySupportTest,NimCreateDurableAuditStorageAvailabilityGateSupportTest,NimCreateDurableAuditWriterPlanSupportTest,NimCreateDurableAuditStorageSupportTest,NimCreateAuditWriterSupportTest,NimCreateStateMachineSupportTest,NimCreateDurableWriteExecutorSupportTest,NimCreateWriteExecutionHandoffSupportTest,NimCreateWriteRequestSpecAdapterSupportTest,NimCreateWriteBodyRebuilderSupportTest,NimCreateReadinessHttpAdapterSupportTest,NimCreateReadinessExecutorSupportTest,NimCreateAuditReadinessSupportTest,NimTrustedPolicyProviderSupportTest,NimCreationGateSupportTest,NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest,HighRiskMutationToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest,M510ArchitectureBoundaryTest" test`
+    - `git diff --check`
+    - Real secret-pattern static scan found 0 matches.
+    - Boundary import scan found no new real `ElasticsearchTemplate`, `ISysLogService`, HTTP client, or `java.net` import in this wave.
+    - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+  - No real `8100` access; no Elasticsearch connection; no `ISysLogService` call; no `sys_log` write; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
 
 - Date: 2026-06-07 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.

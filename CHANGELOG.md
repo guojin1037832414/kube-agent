@@ -6,6 +6,27 @@
 
 ---
 
+## [M5.21-57] - 第五十七批 NIM durable audit receipt validation gate 契约审计
+
+**交付**: 在 M5.21-56 typed ack/receipt schema 之后，新增未来 `NimDurableAuditReceiptValidator` 的 validation gate 契约，先把真实 receipt/ack 出现后必须通过的 digest、phase、status、principal 和 release decision 校验规则固定下来，仍不执行真实校验或 I/O。
+
+**变更**
+- 新增 `NimCreateDurableAuditReceiptValidationGateSupport`，纯数据消费 `auditContext`、`trustedPrincipalSnapshot`、`durableAuditReceiptAckSchemaReport`。
+- 输出 `durableAuditReceiptValidationGate=NIM_CREATE_DURABLE_AUDIT_RECEIPT_VALIDATION_GATE`、`executionMode=DURABLE_AUDIT_RECEIPT_VALIDATION_GATE_CONTRACT_ONLY`、`gateState=IMPLEMENTATION_HOLD|REJECTED`。
+- 正向输入生成 `validationPlan.validationSequence`、`requiredEvidence`、`releaseDecisionTemplate`、`failureContract`、`forbiddenShortcuts`，并绑定 M5.21-56 schema digest。
+- 当前明确保持 `realStorageTouched=false`、`storageProbeReceiptValidated=false`、`preWriteDurableAckValidated=false`、`postWriteDurableAckValidated=false`、`digestChainValidated=false`、`trustedPrincipalValidated=false`、`durableReceiptValidationPassed=false`、`releaseEligible=false`、`writeExecutionAllowed=false`。
+- 正向输入仍返回 `DURABLE_AUDIT_RECEIPT_VALIDATION_GATE_IMPLEMENTATION_HOLD`。
+- 缺少 schema report 返回 `DURABLE_AUDIT_RECEIPT_ACK_SCHEMA_REPORT_NOT_READY`。
+- 伪造 validation pass、typed receipt/ack、release decision 或 write execution claim 返回 `DURABLE_AUDIT_RECEIPT_VALIDATION_GATE_FORGED_PASS_CLAIM`。
+- secret 泄漏返回 `DURABLE_AUDIT_RECEIPT_VALIDATION_GATE_INPUT_CONTAINS_FORBIDDEN_SECRET`。
+- 新增 `NimCreateDurableAuditReceiptValidationGateSupportTest`。
+- 新增 `docs/M5_21_FIFTY_SEVENTH_WAVE_NIM_DURABLE_AUDIT_RECEIPT_VALIDATION_GATE_AUDIT_20260607.md`，并更新 M5.21 波次索引、开发指南和项目记忆。
+
+**安全**
+- 本批不创建真实 Java validator/value type，不注入 Spring Bean，不连接 Elasticsearch，不调用 `ISysLogService`，不写 `sys_log`，不新增 HTTP client，不访问真实 `8100`，不调用 `POST /api/{orgId}/deployment`。
+- validation plan 不是 validation pass、durable receipt 或 release credential。
+- `nim_create` 继续保持 `httpMethod=NONE + PLACEHOLDER + requiresConfirmation=true`。
+
 ## [M5.21-56] - 第五十六批 NIM durable audit typed ack/receipt schema 契约审计
 
 **交付**: 在 M5.21-55 future writer interface spec 之后，新增 typed storage probe receipt、pre-write ack、post-write ack 和 durable receipt 的 schema 契约，继续保持纯数据、contract-only 和 `IMPLEMENTATION_HOLD`。
