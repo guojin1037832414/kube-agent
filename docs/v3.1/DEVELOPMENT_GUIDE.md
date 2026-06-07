@@ -127,6 +127,14 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 
 这条链路的教学重点是：顶级 Agent 不靠“相信中间对象已经安全”来放行，而是把每一段证据都变成可测试、可复算、可审计的契约。
 
+### M5.21-80 defaults / intent metadata learning note
+
+- `defaults.yml` and `intents.yml` are low-authority metadata layers. They can help UI forms and LLM schemas, but they cannot approve side effects.
+- Current `nim_create` defaults are only form draft values: `gpuPercentLimits=100`, `replicas=1`, and `enableWebSsh=true`.
+- Do not add `safeToPost`, `confirmed`, `hitlConfirmation`, `writePermitted`, `writeExecutionAllowed`, `realHttpExecutionAllowed`, `releaseEligible`, `releaseDecision`, org/user identity, auth headers, fallback, deployment id, or audit receipt fields to `defaults.nim_create`.
+- While `nim_create` is `PLACEHOLDER`, `NimCreateTool` must not bind `@WithDefaults`, `DefaultValueApplier`, or `DefaultValueRegistry`; any future default injection must remain before/around form drafting, not write authorization.
+- Learning distinction: metadata can describe desired shape, but only server-owned HITL, durable audit, trusted policy, release decision, code switch, and write executor evidence can authorize a future write.
+
 ### M5.21-58 validation result / release decision migration note
 
 - `NimCreateDurableAuditValidationResultMigrationSupport` only defines a future migration plan for `NimDurableAuditReceiptValidationResult` and `NimDurableAuditReleaseDecision`; it does not create real DTOs, Beans, validators, storage writes, or release credentials.

@@ -6,6 +6,22 @@
 
 ---
 
+## [M5.21-80] - NIM create defaults / intent HOLD contract
+
+**Delivery**: Hardened the `nim_create` metadata layer so defaults and intent parameters remain UI/form draft hints only.
+**Changes**
+- Added `M521NimCreateDefaultsIntentHoldContractTest`.
+- The contract parses `defaults.yml` and asserts `defaults.nim_create` contains only `gpuPercentLimits`, `replicas`, and `enableWebSsh`.
+- The contract parses `intents.yml` and rejects `nim_create` control-plane/release keys such as `safeToPost`, `confirmed`, `writePermitted`, `writeExecutionAllowed`, `releaseEligible`, `releaseDecision`, auth headers, org/user identity, fallback, and deployment success fields.
+- The contract proves applying `nim_create` defaults plus forged release claims still leaves `NimCreateTool` fail-closed with `UNSUPPORTED_BACKEND_OPERATION`, `state=HELD`, `writePermitted=false`, and `sideEffect=NONE`.
+- `NimCreateStateMachineSupport` now records additional forged caller release/code-switch/source-guard claims as ignored.
+- Locked `NimCreateTool` against `@WithDefaults`, `DefaultValueApplier`, and `DefaultValueRegistry` while it remains a placeholder.
+- Added `docs/M5_21_EIGHTIETH_WAVE_NIM_CREATE_DEFAULTS_INTENT_HOLD_CONTRACT_AUDIT_20260608.md`.
+**Security**
+- No runtime write behavior was opened.
+- No real `8100`, HTTP client in `NimCreateTool`, `POST /api/{orgId}/deployment`, durable writer, storage probe, durable receipt, validation result, release decision, release switch, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-79] - NIM create Tool entry no-I/O static contract
 
 **Delivery**: Hardened the public `nim_create` Tool entry so the placeholder entry no longer owns an unused runtime HTTP dependency.

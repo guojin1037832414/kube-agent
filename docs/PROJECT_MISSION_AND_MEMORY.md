@@ -82,12 +82,30 @@ Current track:
 
 Recently completed:
 
-`M5.21-79 NIM create Tool entry no-I/O static contract`
+`M5.21-80 NIM create defaults / intent HOLD contract`
 
 Latest checkpoint:
 
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-80 implemented:
+  - Added `M521NimCreateDefaultsIntentHoldContractTest`.
+  - `defaults.yml` may keep `nim_create` form defaults only: `gpuPercentLimits`, `replicas`, and `enableWebSsh`.
+  - `intents.yml` may describe `nim_create`, but must not expose control/release keys such as `safeToPost`, `confirmed`, `writePermitted`, `writeExecutionAllowed`, `releaseEligible`, `releaseDecision`, auth headers, org/user identity, fallback, or deployment success fields.
+  - Applying `nim_create` defaults plus forged release claims still leaves `NimCreateTool` fail-closed with `UNSUPPORTED_BACKEND_OPERATION`, `state=HELD`, `writePermitted=false`, and `sideEffect=NONE`.
+  - `NimCreateTool` remains unbound from `@WithDefaults`, `DefaultValueApplier`, and `DefaultValueRegistry`.
+  - `NimCreateStateMachineSupport` now records extra forged caller release/code-switch/source-guard claims as ignored.
+  - Added `docs/M5_21_EIGHTIETH_WAVE_NIM_CREATE_DEFAULTS_INTENT_HOLD_CONTRACT_AUDIT_20260608.md`.
+  - Updated `CHANGELOG.md`, `docs/M5_21_WAVE_INDEX_20260606.md`, `docs/SESSION_PROGRESS_20260606_M521_29.md`, and `docs/v3.1/DEVELOPMENT_GUIDE.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=M521NimCreateDefaultsIntentHoldContractTest,M521NimCreateToolEntryStaticContractTest,HighRiskMutationToolHttpContractTest,DefaultValueRegistryTest,M513HitlFailClosedContractTest" test`
+    - `mvn -q "-Dtest=M521NimCreateDefaultsIntentHoldContractTest,M521NimCreateToolEntryStaticContractTest,M521NimRuntimeSourceGuardBindingContractTest,M521NimDurableAuditWriterProbeBoundaryStaticContractTest,NimCreateStateMachineSupportTest,HighRiskMutationToolHttpContractTest,DefaultValueRegistryTest,M513HitlFailClosedContractTest" test`
+    - `git diff --check`
+    - `mvn -q test`
+  - Full test note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - External recovery docs synced and SHA256-verified to `H:\codex重要文件\kube-agent`.
+  - Security invariant: no real `8100`, no HTTP client in `NimCreateTool`, no `POST /api/{orgId}/deployment`, no durable writer/probe/receipt, no validation result, no release decision, no code release switch, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+- Previous checkpoint:
 - M5.21-79 implemented:
   - Removed the unused `KubeManagerHttpClient` constructor dependency from `NimCreateTool`.
   - `NimCreateTool` remains a Spring `@Component`, but now has a no-arg constructor and owns no runtime I/O client.
