@@ -7,6 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -72,6 +73,26 @@ class NimForbiddenSecretMaterialDetectorUsageContractTest {
             String source = read(path);
 
             assertThat(source)
+                .contains("NimForbiddenSecretMaterialDetector.containsForbiddenSecretMaterial")
+                .doesNotContain("FORBIDDEN_SECRET_KEYS")
+                .doesNotContain("looksLikeSecretValue(")
+                .doesNotContain("private static boolean isForbiddenSecretKey(")
+                .doesNotContain("secretBearingValue(")
+                .doesNotContain("isDocumentedForbiddenFieldName(");
+        }
+    }
+
+    @Test
+    void allNimCreateSecretScannerSources_shouldUseSharedDetectorWithoutLocalMatcherDrift()
+        throws IOException {
+        List<Path> scannerSources = nimCreateSourcesWithSecretScanner();
+
+        assertThat(scannerSources).isNotEmpty();
+        for (Path path : scannerSources) {
+            String source = read(path);
+
+            assertThat(source)
+                .as(path.toString())
                 .contains("NimForbiddenSecretMaterialDetector.containsForbiddenSecretMaterial")
                 .doesNotContain("FORBIDDEN_SECRET_KEYS")
                 .doesNotContain("looksLikeSecretValue(")
@@ -172,5 +193,26 @@ class NimForbiddenSecretMaterialDetectorUsageContractTest {
 
     private String read(Path path) throws IOException {
         return Files.readString(path, StandardCharsets.UTF_8);
+    }
+
+    private List<Path> nimCreateSourcesWithSecretScanner() throws IOException {
+        Path implDir = Path.of("src/main/java/com/atlas/tool/impl");
+        try (Stream<Path> sources = Files.walk(implDir)) {
+            return sources
+                .filter(Files::isRegularFile)
+                .filter(path -> path.getFileName().toString().startsWith("NimCreate"))
+                .filter(path -> path.getFileName().toString().endsWith(".java"))
+                .filter(path -> containsSecretScanner(path))
+                .sorted()
+                .toList();
+        }
+    }
+
+    private boolean containsSecretScanner(Path path) {
+        try {
+            return read(path).contains("containsForbiddenSecretMaterial(");
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to read source file: " + path, e);
+        }
     }
 }

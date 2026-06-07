@@ -469,3 +469,10 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - The same placeholder still rejects under `token` or assignment-like text such as `token=<placeholder>`, and real Bearer/API-key material remains blocked.
 - The migration is also hardening: suffix-style keys such as `refreshToken` and list/nested `Authorization=Bearer ...` strings now share the stronger detector coverage.
 - Learning distinction: example placeholders can support teaching, but field context still controls authority. A placeholder under a secret-bearing key is unsafe because the key changes the meaning of the value.
+
+### M5.21-102 secret detector drift contract note
+
+- `NimForbiddenSecretMaterialDetectorUsageContractTest` now dynamically scans all `NimCreate*.java` sources that contain `containsForbiddenSecretMaterial(`.
+- Any such source must delegate to `NimForbiddenSecretMaterialDetector.containsForbiddenSecretMaterial` and must not carry local forbidden-key or secret-looking-value matchers.
+- The existing hand-written groups still lock exact policy choices; the dynamic scanner catches future omissions from those lists.
+- Learning distinction: policy tests and drift tests answer different questions. A policy test says "which shared policy is correct here"; a drift test says "do not fork the safety primitive again."

@@ -6,6 +6,19 @@
 
 ---
 
+## [M5.21-102] - NIM secret detector global drift contract
+
+**Delivery**: Added a dynamic static contract that prevents future `NimCreate*.java` support classes from reintroducing local secret scanner forks.
+**Changes**
+- Extended `NimForbiddenSecretMaterialDetectorUsageContractTest` with a dynamic walk over `src/main/java/com/atlas/tool/impl`.
+- Every `NimCreate*.java` source containing `containsForbiddenSecretMaterial(` must now delegate to `NimForbiddenSecretMaterialDetector.containsForbiddenSecretMaterial`.
+- The dynamic contract rejects local `FORBIDDEN_SECRET_KEYS`, `looksLikeSecretValue(`, local `isForbiddenSecretKey(`, `secretBearingValue(`, and documented-field scanner forks.
+- Added `docs/M5_21_ONE_HUNDRED_SECOND_WAVE_NIM_SECRET_DETECTOR_GLOBAL_DRIFT_CONTRACT_AUDIT_20260608.md`.
+**Security**
+- No runtime write behavior was opened.
+- No real `8100`, real NIM service HTTP call, Authorization header sending, durable audit write, deployment POST, state-machine release binding, durable executor release binding, validation result signer, release decision signer, code release switch implementation, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-101] - NIM state-machine placeholder-aware secret detector migration
 
 **Delivery**: Migrated the NIM create state-machine secret scanner to the shared forbidden secret material detector with an explicit readiness API-key placeholder allowance.

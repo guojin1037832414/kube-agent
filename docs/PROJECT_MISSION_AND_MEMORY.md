@@ -82,10 +82,26 @@ Current track:
 
 Recently completed:
 
-`M5.21-101 NIM state-machine placeholder-aware shared secret detector migration`
+`M5.21-102 NIM secret detector global drift static contract`
 
 Latest checkpoint:
 
+- Date: 2026-06-08 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-102 implemented:
+  - Added dynamic coverage to `NimForbiddenSecretMaterialDetectorUsageContractTest`.
+  - The new contract walks `src/main/java/com/atlas/tool/impl`, selects every `NimCreate*.java` source containing `containsForbiddenSecretMaterial(`, and requires delegation to `NimForbiddenSecretMaterialDetector.containsForbiddenSecretMaterial`.
+  - It rejects local `FORBIDDEN_SECRET_KEYS`, `looksLikeSecretValue(`, local `isForbiddenSecretKey(`, `secretBearingValue(`, and documented-field scanner forks.
+  - Added `docs/M5_21_ONE_HUNDRED_SECOND_WAVE_NIM_SECRET_DETECTOR_GLOBAL_DRIFT_CONTRACT_AUDIT_20260608.md`.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimForbiddenSecretMaterialDetectorUsageContractTest,NimForbiddenSecretMaterialDetectorTest" test`
+  - Final verification passed:
+    - `git diff --check`
+    - `mvn -q test`
+  - Full test note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - Security invariant: no real `8100`, no real NIM service HTTP call, no Authorization header sending, no durable audit write, no deployment POST, no runtime write behavior, no state-machine release binding implementation, no durable executor release binding implementation, no validation result signer, no release decision signer, no code release switch implementation, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Recommended next slice: consider a similar dynamic contract for protected-context stripping only after the remaining call sites are categorized, or return to durable audit/release binding design.
+- Previous checkpoint:
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
 - M5.21-101 implemented:
