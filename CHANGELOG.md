@@ -6,6 +6,20 @@
 
 ---
 
+## [M5.21-99] - NIM audit writer secret detector migration
+
+**Delivery**: Migrated the mock-first audit writer secret scanner to the shared forbidden secret material detector and hardened audit-context leakage detection.
+**Changes**
+- `NimCreateAuditWriterSupport` now uses `NimForbiddenSecretMaterialDetector.textValuePolicy()` instead of a local forbidden secret key scanner.
+- Extended `NimForbiddenSecretMaterialDetectorUsageContractTest` so the audit writer cannot reintroduce local detector drift.
+- Added audit writer regressions for `Authorization: Bearer ...` and nested/list-carried `Authorization=Bearer ...` audit metadata.
+- Added `docs/M5_21_NINETY_NINTH_WAVE_NIM_AUDIT_WRITER_SECRET_DETECTOR_MIGRATION_AUDIT_20260608.md`.
+**Security**
+- This intentionally expands audit-context rejection beyond the old local key list to cover Authorization/authHeader/bearerToken variants and secret-looking strings outside forbidden keys.
+- No runtime write behavior was opened.
+- No real `8100`, real NIM service HTTP call, Authorization header sending, durable audit write, deployment POST, state-machine release binding, durable executor release binding, validation result signer, release decision signer, code release switch implementation, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-98] - NIM readiness HTTP adapter placeholder-aware secret detector migration
 
 **Delivery**: Migrated the readiness HTTP adapter secret scanner to the shared forbidden secret material detector with the existing API-key placeholder allowlist.

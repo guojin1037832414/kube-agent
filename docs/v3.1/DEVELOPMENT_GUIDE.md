@@ -445,3 +445,11 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - The fixed API-key placeholder can appear as explanatory readiness-plan text, but not under forbidden keys such as `token`, and not inside service URLs as real credential material.
 - Adapter output remains `REQUEST_SPEC_CONTRACT_ONLY`; it does not perform HTTP, call `8100`, or contact the NIM service.
 - Learning distinction: request-spec compilation is not execution. A top-tier Agent keeps compilation, execution, authorization, and credential handling as separate audited boundaries.
+
+### M5.21-99 audit writer shared detector note
+
+- `NimCreateAuditWriterSupport` now uses `NimForbiddenSecretMaterialDetector.textValuePolicy()` for sanitized audit-context scanning.
+- This is a deliberate hardening, not a pure equivalence refactor: Authorization/authHeader/bearerToken variants, suffix-style secret keys, secret-like strings, and `List<String>` secret material now fail closed.
+- Do not add an audit-writer allowlist for schema examples. Exact documented forbidden field names belong in receipt-schema/report contexts that use `receiptSchemaPolicy()`, while audit context should carry only redacted evidence.
+- Valid audit context still produces only a mock receipt; clean secret scanning does not create durable storage, release eligibility, or write authority.
+- Learning distinction: durable audit quality starts before persistence. A top-tier Agent redacts credentials at the boundary, then audits sanitized facts rather than raw caller material.

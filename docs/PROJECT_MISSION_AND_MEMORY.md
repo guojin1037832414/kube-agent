@@ -82,10 +82,31 @@ Current track:
 
 Recently completed:
 
-`M5.21-98 NIM readiness HTTP adapter placeholder-aware shared secret detector migration`
+`M5.21-99 NIM audit writer shared secret detector migration`
 
 Latest checkpoint:
 
+- Date: 2026-06-08 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-99 implemented:
+  - Migrated `NimCreateAuditWriterSupport` to `NimForbiddenSecretMaterialDetector.textValuePolicy()`.
+  - Removed the audit writer local forbidden secret key scanner copy.
+  - Preserved blocker code:
+    - `AUDIT_CONTEXT_CONTAINS_FORBIDDEN_SECRET`
+  - Extended `NimForbiddenSecretMaterialDetectorUsageContractTest` so the audit writer is covered by the shared-detector no-local-copy contract and explicitly locked to `textValuePolicy()`.
+  - Added audit writer regression coverage proving `Authorization: Bearer ...`, plain `Authorization: present`, `token=123`, and nested/list-carried `Authorization=Bearer ...` all reject.
+  - Added `docs/M5_21_NINETY_NINTH_WAVE_NIM_AUDIT_WRITER_SECRET_DETECTOR_MIGRATION_AUDIT_20260608.md`.
+  - Policy note: this is intentional audit-context hardening, not a purely equivalent refactor. It expands rejection to Authorization/authHeader/bearerToken variants, suffix-style secret keys, secret-like strings, and list-carried secret-looking values.
+  - Compatibility note: audit context must not carry caller headers, token examples, raw placeholders, or schema snippets such as `Authorization=Bearer ...`; redaction should happen before audit writing.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimForbiddenSecretMaterialDetectorUsageContractTest,NimForbiddenSecretMaterialDetectorTest,NimCreateAuditWriterSupportTest,NimCreateAuditReadinessSupportTest,NimCreateStateMachineSupportTest" test`
+  - Final verification passed:
+    - `git diff --check`
+    - `mvn -q test`
+  - Full test note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - Security invariant: no real `8100`, no real NIM service HTTP call, no Authorization header sending, no durable audit write, no deployment POST, no runtime write behavior, no state-machine release binding implementation, no durable executor release binding implementation, no validation result signer, no release decision signer, no code release switch implementation, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Recommended next slice: resolve the known durable executor/source-guard acceptance-shape mismatch before real write boundary design, or continue remaining local detector cleanup only after explicit policy comparison.
+- Previous checkpoint:
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
 - M5.21-98 implemented:

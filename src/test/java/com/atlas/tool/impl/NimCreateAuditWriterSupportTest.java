@@ -83,6 +83,64 @@ class NimCreateAuditWriterSupportTest {
     }
 
     @Test
+    void writer_shouldRejectAuthorizationHeaderSecretMaterial() {
+        Map<String, Object> audit = new java.util.LinkedHashMap<>(completeAuditContext());
+        audit.put("Authorization", "Bearer real-key-material");
+
+        Map<String, Object> receipt = NimCreateAuditWriterSupport.buildMockReceipt(audit);
+
+        assertEquals(false, receipt.get("auditReceiptPrepared"));
+        assertEquals("REJECTED", receipt.get("receiptStatus"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) receipt.get("blockedBy");
+        assertTrue(blockers.stream().anyMatch(item -> "AUDIT_CONTEXT_CONTAINS_FORBIDDEN_SECRET".equals(item.get("code"))));
+    }
+
+    @Test
+    void writer_shouldRejectAuthorizationKeyEvenWithPlainTextValue() {
+        Map<String, Object> audit = new java.util.LinkedHashMap<>(completeAuditContext());
+        audit.put("Authorization", "present");
+
+        Map<String, Object> receipt = NimCreateAuditWriterSupport.buildMockReceipt(audit);
+
+        assertEquals(false, receipt.get("auditReceiptPrepared"));
+        assertEquals("REJECTED", receipt.get("receiptStatus"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) receipt.get("blockedBy");
+        assertTrue(blockers.stream().anyMatch(item -> "AUDIT_CONTEXT_CONTAINS_FORBIDDEN_SECRET".equals(item.get("code"))));
+    }
+
+    @Test
+    void writer_shouldRejectTokenNumberToLockTextValuePolicy() {
+        Map<String, Object> audit = new java.util.LinkedHashMap<>(completeAuditContext());
+        audit.put("token", 123);
+
+        Map<String, Object> receipt = NimCreateAuditWriterSupport.buildMockReceipt(audit);
+
+        assertEquals(false, receipt.get("auditReceiptPrepared"));
+        assertEquals("REJECTED", receipt.get("receiptStatus"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) receipt.get("blockedBy");
+        assertTrue(blockers.stream().anyMatch(item -> "AUDIT_CONTEXT_CONTAINS_FORBIDDEN_SECRET".equals(item.get("code"))));
+    }
+
+    @Test
+    void writer_shouldRejectNestedSecretLikeAuditStrings() {
+        Map<String, Object> audit = new java.util.LinkedHashMap<>(completeAuditContext());
+        audit.put("callerMetadata", Map.of(
+            "headers", List.of("Authorization=Bearer real-key-material")
+        ));
+
+        Map<String, Object> receipt = NimCreateAuditWriterSupport.buildMockReceipt(audit);
+
+        assertEquals(false, receipt.get("auditReceiptPrepared"));
+        assertEquals("REJECTED", receipt.get("receiptStatus"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) receipt.get("blockedBy");
+        assertTrue(blockers.stream().anyMatch(item -> "AUDIT_CONTEXT_CONTAINS_FORBIDDEN_SECRET".equals(item.get("code"))));
+    }
+
+    @Test
     void writerMockReceipt_shouldNotSatisfyStateMachineDurableAuditRequirement() {
         Map<String, Object> audit = completeAuditContext();
         Map<String, Object> guard = NimCreateStateMachineSupport.evaluate(new NimCreateStateMachineSupport.ReadinessRequest(

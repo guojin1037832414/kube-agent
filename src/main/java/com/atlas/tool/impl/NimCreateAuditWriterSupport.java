@@ -1,5 +1,7 @@
 package com.atlas.tool.impl;
 
+import com.atlas.tool.core.NimForbiddenSecretMaterialDetector;
+
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -8,7 +10,6 @@ import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * NIM 创建审计写入器的 mock-first 契约支持。
@@ -25,15 +26,6 @@ final class NimCreateAuditWriterSupport {
 
     private static final String RECEIPT_STATUS_MOCK_PREPARED = "MOCK_PREPARED";
     private static final String RECEIPT_STATUS_REJECTED = "REJECTED";
-
-    private static final Set<String> FORBIDDEN_SECRET_KEYS = Set.of(
-        "apikey",
-        "ngcapikey",
-        "nvaieapikey",
-        "token",
-        "secret",
-        "password"
-    );
 
     private NimCreateAuditWriterSupport() {
     }
@@ -143,26 +135,10 @@ final class NimCreateAuditWriterSupport {
     }
 
     private static boolean containsForbiddenSecretMaterial(Map<String, Object> map) {
-        for (Map.Entry<String, Object> entry : map.entrySet()) {
-            String normalizedKey = entry.getKey() == null
-                ? ""
-                : entry.getKey().replace("_", "").replace("-", "").toLowerCase(java.util.Locale.ROOT);
-            if (FORBIDDEN_SECRET_KEYS.contains(normalizedKey) && hasText(entry.getValue())) {
-                return true;
-            }
-            Object value = entry.getValue();
-            if (value instanceof Map<?, ?> nested && containsForbiddenSecretMaterial(objectMap(nested))) {
-                return true;
-            }
-            if (value instanceof List<?> list) {
-                for (Object item : list) {
-                    if (item instanceof Map<?, ?> nestedItem && containsForbiddenSecretMaterial(objectMap(nestedItem))) {
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
+        return NimForbiddenSecretMaterialDetector.containsForbiddenSecretMaterial(
+            map,
+            NimForbiddenSecretMaterialDetector.textValuePolicy()
+        );
     }
 
     private static Map<String, Object> blocker(String code, String message, String source) {
