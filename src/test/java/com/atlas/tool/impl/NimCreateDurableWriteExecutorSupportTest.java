@@ -46,6 +46,11 @@ class NimCreateDurableWriteExecutorSupportTest {
         assertEquals(false, report.get("writeAttempted"));
         assertEquals(false, report.get("writeExecuted"));
         assertEquals(false, report.get("postWriteReadinessTriggered"));
+        assertEquals(true, report.get("codeReleaseSwitchRuntimeBindingRequired"));
+        assertEquals(false, report.get("codeReleaseSwitchDigestVerified"));
+        assertEquals(false, report.get("releaseDecisionDigestVerified"));
+        assertEquals(false, report.get("validationResultDigestVerified"));
+        assertEquals(false, report.get("fallbackToStateMachineWritePermittedAllowed"));
         assertEquals(handoffReport.get("handoffDigest"), report.get("sourceHandoffDigest"));
         assertEquals(requestSpecReport.get("requestSpecDigest"), report.get("sourceRequestSpecDigest"));
         assertEquals(handoffReport.get("idempotencyKey"), report.get("idempotencyKey"));

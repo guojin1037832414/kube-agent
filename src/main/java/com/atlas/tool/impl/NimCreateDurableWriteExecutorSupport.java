@@ -91,10 +91,17 @@ final class NimCreateDurableWriteExecutorSupport {
         result.put("idempotencyKey", text(handoffReport.get("idempotencyKey")));
         result.put("idempotencyKeySource", NimCreateWriteExecutionHandoffSupport.IDEMPOTENCY_KEY_SOURCE);
         result.put("callerIdempotencyKeyAllowed", false);
+        result.put("codeReleaseSwitchRuntimeBindingRequired", true);
+        result.put("codeReleaseSwitchDigestVerified", false);
+        result.put("releaseDecisionDigestVerified", false);
+        result.put("validationResultDigestVerified", false);
+        result.put("fallbackToStateMachineWritePermittedAllowed", false);
         result.put("executionAttemptSpec", executionAttemptSpec);
         result.put("blockedBy", finalBlockers);
         result.put("nextImplementationRequirements", List.of(
             "wire reviewed KubeManagerHttpClient only inside this executor boundary",
+            "re-check reviewed code release switch digest immediately before real POST",
+            "bind release decision digest and validation result digest to the same switch runtime binding",
             "persist write attempt/result audit before and after POST",
             "reuse only the server-derived idempotency key from handoff",
             "trigger post-write readiness executor only after a confirmed write response"

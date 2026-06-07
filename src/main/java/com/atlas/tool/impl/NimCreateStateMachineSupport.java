@@ -147,6 +147,9 @@ final class NimCreateStateMachineSupport {
         result.put("writeRequestSpecRequired", true);
         result.put("writeExecutionHandoffRequired", true);
         result.put("durableWriteExecutorReportRequired", true);
+        result.put("codeReleaseSwitchRuntimeBindingRequired", true);
+        result.put("codeReleaseSwitchRuntimeBindingInstalled", false);
+        result.put("legacyNimCreateReleasedBooleanAuthoritative", false);
         result.put("readinessExecutionRequired", true);
         result.put("apiKeyPolicy", API_KEY_POLICY);
         return result;
@@ -809,6 +812,7 @@ final class NimCreateStateMachineSupport {
             "POST body 必须由受控 NIM 状态机重新构建，不能直接复用 preview bodyDraft",
             "受控写执行交接之后必须产出 durable write executor 报告，不能只凭 handoff 放行",
             "当前 durable write executor shell 仍为 IMPLEMENTATION_HOLD/writeExecuted=false，真实写入必须等待实现审计",
+            "code release switch runtime binding 必须由状态机复算 switch digest，旧 nimCreateReleased 布尔值不能单独授权",
             "创建后 readiness 只能只读轮询，且必须由受控 readiness executor 返回 READY 报告",
             "readiness executor 报告不得生成、保存、展示或携带真实 API Key",
             "nim_create 代码级 release 开关必须显式打开"

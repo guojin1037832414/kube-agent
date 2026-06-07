@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-72, NIM code release switch contract.
+- Current latest wave: M5.21-73, NIM code release switch runtime binding contract.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -13,7 +13,9 @@
 - Keep project memories grouped by project under `H:\codex重要文件`.
 - After each completed chunk, update this project progress/memory and sync it to `H:\codex重要文件\kube-agent`.
 - Do not revert unrelated dirty worktree changes.
-- Use cautious, evidence-based Tool migration; do not call real kube-manager/8100.
+- Use cautious, evidence-based Tool migration.
+- kube-manager query/read methods may use local `8100` for real query tests when safely scoped.
+- Write/create/delete/state-changing methods, including `nim_create`, remain HOLD/mock-first unless explicitly released.
 - The user clarified the ultimate mission is not just a production-grade Agent, but a top-tier Agent and learning project that helps the owner progress from Agent beginner to Agent master.
 - Continue using latest reasonable Agent engineering patterns, multi-expert/multi-round review, Chinese comments and technical docs, and commit/push after each completed chunk.
 
@@ -46,6 +48,30 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-73 NIM code release switch runtime binding contract is implemented:
+  - Added `NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport`.
+  - Added `NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupportTest`.
+  - Added `docs/M5_21_SEVENTY_THIRD_WAVE_NIM_CODE_RELEASE_SWITCH_RUNTIME_BINDING_AUDIT_20260607.md`.
+  - The contract consumes:
+    - `auditContext`
+    - `trustedPrincipalSnapshot`
+    - `durableAuditCodeReleaseSwitchContractReport` from M5.21-72
+    - optional `stateMachineReleaseEvidence`, which is non-authoritative in this wave
+    - optional `durableExecutorReleaseEvidence`, which is non-authoritative in this wave
+  - Future `NimCreateStateMachineSupport` must consume `codeReleaseSwitchContractReport`, recompute `codeReleaseSwitchContractDigest`, bind server-issued release/validation digests, bind write-chain digests, and reject legacy `nimCreateReleased=true` as standalone authorization.
+  - Future `NimCreateDurableWriteExecutorSupport` must re-check the same switch digest immediately before real POST and reject state-machine/write-success shortcuts.
+  - Updated current state-machine and durable-executor shells with `codeReleaseSwitchRuntimeBindingRequired=true`; all verified/bound/write flags remain false.
+  - Rejected cases include missing M5.21-72 report, tampered `codeReleaseSwitchContractDigest`, forged runtime release/write evidence, and secret-bearing inputs.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupportTest,NimCreateDurableAuditCodeReleaseSwitchContractSupportTest,NimCreateStateMachineSupportTest,NimCreateDurableWriteExecutorSupportTest" test`
+    - `mvn -q test`
+  - Full test note: `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0; this is expected for the current local test environment and does not indicate an M5.21-73 regression.
+  - Static closure passed: `git diff --check`, production boundary scan, and static secret scan. H-drive SHA256 sync verification, commit, and push are required for final closure.
+  - User policy update captured: kube-manager query/read methods may use local `8100` for real query tests when safely scoped; write/create/delete/state-changing methods remain HOLD/mock-first unless explicitly released.
+  - No real `8100` access; no HTTP client; no Elasticsearch connection; no `ISysLogService`; no `sys_log` write; no real `POST /api/{orgId}/deployment` execution; `nim_create` remains HOLD.
+  - Recovery note: future write execution must prove both state-machine and durable-executor runtime binding to the same reviewed code release switch digest. A switch contract report, `nimCreateReleased=true`, runtime flag, environment variable, state-machine `writePermitted`, or executor success is insufficient alone.
 
 - M5.21-72 NIM code release switch contract is implemented:
   - Added `NimCreateDurableAuditCodeReleaseSwitchContractSupport`.

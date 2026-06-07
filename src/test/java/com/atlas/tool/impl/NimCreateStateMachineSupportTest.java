@@ -228,6 +228,9 @@ class NimCreateStateMachineSupportTest {
         assertEquals("HELD", guard.get("state"));
         assertEquals(false, guard.get("writePermitted"));
         assertEquals(true, guard.get("durableWriteExecutorReportRequired"));
+        assertEquals(true, guard.get("codeReleaseSwitchRuntimeBindingRequired"));
+        assertEquals(false, guard.get("codeReleaseSwitchRuntimeBindingInstalled"));
+        assertEquals(false, guard.get("legacyNimCreateReleasedBooleanAuthoritative"));
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> blockers = (List<Map<String, Object>>) guard.get("blockedBy");
         assertHasBlocker(blockers, "DURABLE_WRITE_EXECUTOR_REPORT_NOT_READY");
@@ -261,6 +264,9 @@ class NimCreateStateMachineSupportTest {
 
         assertEquals("HELD", guard.get("state"));
         assertEquals(false, guard.get("writePermitted"));
+        assertEquals(true, guard.get("codeReleaseSwitchRuntimeBindingRequired"));
+        assertEquals(false, guard.get("codeReleaseSwitchRuntimeBindingInstalled"));
+        assertEquals(false, guard.get("legacyNimCreateReleasedBooleanAuthoritative"));
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> blockers = (List<Map<String, Object>>) guard.get("blockedBy");
         assertHasBlocker(blockers, "DURABLE_WRITE_EXECUTOR_IMPLEMENTATION_HOLD");

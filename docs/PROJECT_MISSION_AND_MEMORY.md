@@ -25,7 +25,8 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
   - `requiresConfirmation`
 - Separate normal `READ`, `SENSITIVE_READ`, `CREATE`, `UPDATE`, `DELETE`, and `ACTION`.
 - Keep dangerous or unclear abilities fail-closed until evidence, permission boundary, tests, and docs are ready.
-- Do not call real kube-manager `8100` during audit/migration waves unless explicitly required and safely scoped.
+- kube-manager query/read methods may call local `8100` for real query tests when explicitly useful and safely scoped.
+- Do not call real kube-manager `8100` for write/create/delete/state-changing audit or migration waves unless explicitly released and safely scoped.
 - Prefer static contract tests and mock HTTP client tests for Tool migration.
 - Keep implementation changes scoped and reversible.
 
@@ -81,9 +82,51 @@ Current track:
 
 Recently completed:
 
-`M5.21-72 NIM code release switch contract`
+`M5.21-73 NIM code release switch runtime binding contract`
 
 Latest checkpoint:
+
+- Date: 2026-06-07 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+  - M5.21-73 implemented:
+  - Added `NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport` as an independent contract-only runtime binding layer for M5.21-72 code release switch reports.
+  - Added `NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupportTest`.
+  - The support class consumes:
+    - `auditContext`
+    - `trustedPrincipalSnapshot`
+    - `durableAuditCodeReleaseSwitchContractReport` from M5.21-72
+    - optional `stateMachineReleaseEvidence`, which is non-authoritative in this wave
+    - optional `durableExecutorReleaseEvidence`, which is non-authoritative in this wave
+  - It requires future `NimCreateStateMachineSupport` to consume `codeReleaseSwitchContractReport`, recompute `codeReleaseSwitchContractDigest`, bind server-issued release/validation digests, bind write-chain digests, and reject legacy `nimCreateReleased=true` as standalone authorization.
+  - It requires future `NimCreateDurableWriteExecutorSupport` to re-check the same switch digest immediately before real POST and reject state-machine/write-success shortcuts.
+  - Updated `NimCreateStateMachineSupport` and `NimCreateDurableWriteExecutorSupport` shell outputs with `codeReleaseSwitchRuntimeBindingRequired=true` and false verified/bound flags.
+  - Current success states remain false:
+    - `codeReleaseSwitchDigestVerified=false`
+    - `codeReviewDigestVerified=false`
+    - `testEvidenceDigestVerified=false`
+    - `releaseDecisionDigestVerified=false`
+    - `validationResultDigestVerified=false`
+    - `trustedPrincipalValidated=false`
+    - `runtimeBindingInstalled=false`
+    - `stateMachineReleaseBound=false`
+    - `durableExecutorReleaseBound=false`
+    - `releaseDecisionAccepted=false`
+    - `releaseCredentialIssued=false`
+    - `releaseEligible=false`
+    - `writePermitted=false`
+    - `writeExecutionAllowed=false`
+    - `realHttpExecutionAllowed=false`
+    - `realStorageTouched=false`
+  - Added `docs/M5_21_SEVENTY_THIRD_WAVE_NIM_CODE_RELEASE_SWITCH_RUNTIME_BINDING_AUDIT_20260607.md`.
+  - User policy update captured: kube-manager query/read methods may use local `8100` for real query tests when safely scoped; `nim_create` and other write/create/delete/state-changing capabilities remain HOLD/mock-first unless explicitly released.
+  - No real `8100` access; no HTTP client; no Elasticsearch connection; no `ISysLogService` call; no `sys_log` write; no real `POST /api/{orgId}/deployment` execution; `nim_create` remains HOLD.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupportTest,NimCreateDurableAuditCodeReleaseSwitchContractSupportTest,NimCreateStateMachineSupportTest,NimCreateDurableWriteExecutorSupportTest" test`
+    - `mvn -q test`
+  - Full test note: `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0; this remains an accepted degraded-test-path signal, not an M5.21-73 failure.
+  - Static closure passed: `git diff --check`, production boundary scan, and static secret scan. H-drive SHA256 sync verification, commit, and push are required for final closure.
+  - Learning note: M5.21-73 turns code release switch from a value contract into a runtime-binding requirement. Future release code must not stop at "a switch contract exists"; both the state machine and durable executor must recompute/recheck the same reviewed switch digest before any write can be considered.
 
 - Date: 2026-06-07 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.

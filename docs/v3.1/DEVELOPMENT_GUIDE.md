@@ -243,3 +243,10 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Future switch-open evidence also requires `codeReviewDigest`, `testEvidenceDigest`, `securityApprovalDigest`, `rollbackPlanDigest`, and `changeWindowDigest`.
 - Current output remains `IMPLEMENTATION_HOLD`; `serverOwnedCodeReleaseSwitchRequired=true`, `callerSwitchEvidenceAuthoritative=false`, `realCodeReleaseSwitchOpened=false`, `codeReleaseSwitchDigestVerified=false`, `releaseEligible=false`, `writePermitted=false`, and `writeExecutionAllowed=false`.
 - Learning distinction: release switch is a reviewed release-governance fact, not a caller JSON object, environment variable, runtime flag, or legacy config boolean.
+
+### M5.21-73 code release switch runtime binding note
+
+- `NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport` turns the M5.21-72 switch value contract into a future state-machine / durable-executor runtime binding requirement.
+- Future state-machine code must consume `codeReleaseSwitchContractReport`, recompute `codeReleaseSwitchContractDigest`, bind server-issued release/validation digests, and reject `nimCreateReleased=true` as standalone authorization.
+- Future durable executor code must re-check the same switch digest immediately before real POST and must not trust state-machine `writePermitted`, executor success, runtime flags, environment variables, or legacy booleans alone.
+- Owner policy update: kube-manager query/read methods may use local `8100` for real query tests when safely scoped. This does not apply to `nim_create` or other write/create/delete/state-changing capabilities, which remain HOLD/mock-first until explicitly released.

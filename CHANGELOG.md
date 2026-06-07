@@ -6,6 +6,20 @@
 
 ---
 
+## [M5.21-73] - NIM code release switch runtime binding contract
+
+**Delivery**: Added a contract-only runtime binding layer that consumes the M5.21-72 code release switch contract report and requires both the state machine and durable executor to re-check the reviewed switch digest before any future write release.
+**Changes**
+- Added `NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport`.
+- Added `NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupportTest`.
+- Requires future `NimCreateStateMachineSupport` to consume `codeReleaseSwitchContractReport`, recompute `codeReleaseSwitchContractDigest`, bind server-issued release/validation digests, and reject `nimCreateReleased=true` as standalone authorization.
+- Requires future `NimCreateDurableWriteExecutorSupport` to re-check the same switch digest immediately before any real POST and reject state-machine/write-success shortcuts.
+- Updated state-machine and durable-executor shell outputs with `codeReleaseSwitchRuntimeBindingRequired=true` and false verified/bound flags.
+- Added `docs/M5_21_SEVENTY_THIRD_WAVE_NIM_CODE_RELEASE_SWITCH_RUNTIME_BINDING_AUDIT_20260607.md`.
+**Security**
+- This wave does not create a real switch, release decision, validation result, DTO, Spring Bean, storage client, release credential, Tool registration, Controller, state-machine release, or write path.
+- `nim_create` remains `httpMethod=NONE + PLACEHOLDER + requiresConfirmation=true`, with no real `8100`, no real deployment POST execution, no Elasticsearch, no `ISysLogService`, and no `sys_log` write.
+
 ## [M5.21-72] - NIM code release switch contract
 
 **Delivery**: Added a contract-only future `NimCreateDurableAuditCodeReleaseSwitch` layer that consumes the M5.21-71 release decision contract and keeps write release held until a reviewed, server-owned code release switch exists.
