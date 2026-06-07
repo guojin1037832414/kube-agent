@@ -81,9 +81,39 @@ Current track:
 
 Recently completed:
 
-`M5.21-53 NIM durable audit storage availability gate plan contract`
+`M5.21-54 NIM dedicated durable audit writer boundary / test double contract`
 
 Latest checkpoint:
+
+- Date: 2026-06-07 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+  - M5.21-54 implemented and verified:
+  - Added `NimCreateDedicatedDurableAuditWriterBoundarySupport` as a pure/mock-first dedicated durable audit writer boundary and test double contract.
+  - It consumes:
+    - `auditContext`
+    - `trustedPrincipalSnapshot`
+    - `durableAuditWriterPlanReport`
+    - `storageAvailabilityGateReport`
+  - It returns `dedicatedAuditWriterBoundary=NIM_CREATE_DEDICATED_DURABLE_AUDIT_WRITER_BOUNDARY`, `executionMode=DEDICATED_DURABLE_AUDIT_WRITER_BOUNDARY_TEST_DOUBLE_CONTRACT_ONLY`, and `writerBoundaryState=IMPLEMENTATION_HOLD|REJECTED`.
+  - Positive input produces `writerBoundaryPlan` with future `NimDurableAuditWriter` boundary requirements, `probe -> pre-write -> post-write -> receipt` order, evidence digest binding, trusted identity binding, current implementation state, and receipt release rule.
+  - Positive input also produces `testDoubleContract`, which may only assert contract shape/order/digest binding/fail-closed behavior and must not assert real storage success.
+  - Current state explicitly remains `realStorageTouched=false`, `storageProbeExecuted=false`, `storageAvailable=false`, `preWritePersisted=false`, `postWritePersisted=false`, and `durableReceiptCanBeIssued=false`.
+  - Positive input remains blocked by `DEDICATED_DURABLE_AUDIT_WRITER_BOUNDARY_IMPLEMENTATION_HOLD`.
+  - Missing writer plan report is rejected with `DURABLE_AUDIT_WRITER_PLAN_REPORT_NOT_READY`.
+  - Missing storage availability gate report is rejected with `STORAGE_AVAILABILITY_GATE_REPORT_NOT_READY`.
+  - Forged storage/persistence/receipt success claims are rejected with `DEDICATED_AUDIT_WRITER_BOUNDARY_FORGED_SUCCESS_CLAIM`.
+  - Secret leakage is rejected with `DEDICATED_AUDIT_WRITER_BOUNDARY_INPUT_CONTAINS_FORBIDDEN_SECRET`.
+  - Added `NimCreateDedicatedDurableAuditWriterBoundarySupportTest`.
+  - Added `docs/M5_21_FIFTY_FOURTH_WAVE_NIM_DEDICATED_DURABLE_AUDIT_WRITER_BOUNDARY_AUDIT_20260607.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateDedicatedDurableAuditWriterBoundarySupportTest,NimCreateDurableAuditStorageAvailabilityGateSupportTest,NimCreateDurableAuditWriterPlanSupportTest,NimCreateDurableAuditStorageSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateDedicatedDurableAuditWriterBoundarySupportTest,NimCreateDurableAuditStorageAvailabilityGateSupportTest,NimCreateDurableAuditWriterPlanSupportTest,NimCreateDurableAuditStorageSupportTest,NimCreateAuditWriterSupportTest,NimCreateStateMachineSupportTest,NimCreateDurableWriteExecutorSupportTest,NimCreateWriteExecutionHandoffSupportTest,NimCreateWriteRequestSpecAdapterSupportTest,NimCreateWriteBodyRebuilderSupportTest,NimCreateReadinessHttpAdapterSupportTest,NimCreateReadinessExecutorSupportTest,NimCreateAuditReadinessSupportTest,NimTrustedPolicyProviderSupportTest,NimCreationGateSupportTest,NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest,HighRiskMutationToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest,M510ArchitectureBoundaryTest" test`
+    - `git diff --check`
+    - Real secret-pattern static scan found 0 matches.
+    - Boundary import scan found no new real `ElasticsearchTemplate`, `ISysLogService`, HTTP client, or `java.net` import in this wave.
+    - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+  - No real `8100` access; no Elasticsearch connection; no `ISysLogService` call; no `sys_log` write; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
 
 - Date: 2026-06-07 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.

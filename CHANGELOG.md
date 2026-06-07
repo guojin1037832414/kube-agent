@@ -6,6 +6,27 @@
 
 ---
 
+## [M5.21-54] - 第五十四批 NIM 专用 durable audit writer 边界与测试替身契约审计
+
+**交付**: 在 M5.21-52 writer plan 与 M5.21-53 storage availability gate 之后，新增 dedicated writer boundary / test double contract，明确当前只能验证边界和测试替身约束，不能声明真实存储成功或签发 durable receipt。
+
+**变更**
+- 新增 `NimCreateDedicatedDurableAuditWriterBoundarySupport`，纯数据消费 `auditContext`、`trustedPrincipalSnapshot`、`durableAuditWriterPlanReport`、`storageAvailabilityGateReport`。
+- 输出 `dedicatedAuditWriterBoundary=NIM_CREATE_DEDICATED_DURABLE_AUDIT_WRITER_BOUNDARY`、`executionMode=DEDICATED_DURABLE_AUDIT_WRITER_BOUNDARY_TEST_DOUBLE_CONTRACT_ONLY`、`writerBoundaryState=IMPLEMENTATION_HOLD|REJECTED`。
+- 正向输入生成 `writerBoundaryPlan`，固化未来 `NimDurableAuditWriter` 的 `probe -> pre-write -> post-write -> receipt` 顺序、digest 绑定、可信身份绑定和 receipt release rule。
+- 正向输入生成 `testDoubleContract`，只允许断言契约形状、顺序、digest/identity binding 和 fail-closed blocker，禁止断言 `storageAvailable=true`、`preWritePersisted=true`、`postWritePersisted=true` 或 `DURABLE_RECORDED`。
+- 当前明确保持 `realStorageTouched=false`、`storageProbeExecuted=false`、`storageAvailable=false`、`preWritePersisted=false`、`postWritePersisted=false`、`durableReceiptCanBeIssued=false`。
+- 正向输入仍返回 `DEDICATED_DURABLE_AUDIT_WRITER_BOUNDARY_IMPLEMENTATION_HOLD`。
+- 缺少 writer plan / availability gate report 返回 `DURABLE_AUDIT_WRITER_PLAN_REPORT_NOT_READY` / `STORAGE_AVAILABILITY_GATE_REPORT_NOT_READY`。
+- 伪造 storage/persistence/receipt success claim 返回 `DEDICATED_AUDIT_WRITER_BOUNDARY_FORGED_SUCCESS_CLAIM`；secret 泄漏返回 `DEDICATED_AUDIT_WRITER_BOUNDARY_INPUT_CONTAINS_FORBIDDEN_SECRET`。
+- 新增 `NimCreateDedicatedDurableAuditWriterBoundarySupportTest`。
+- 新增 `docs/M5_21_FIFTY_FOURTH_WAVE_NIM_DEDICATED_DURABLE_AUDIT_WRITER_BOUNDARY_AUDIT_20260607.md`，并更新 M5.21 波次索引、开发指南和项目记忆。
+
+**安全**
+- 本批不连接 Elasticsearch，不调用 `ISysLogService`，不写 `sys_log`，不新增 HTTP client，不访问真实 `8100`，不调用 `POST /api/{orgId}/deployment`。
+- boundary plan 与 test double contract 都不是 release credential。
+- `nim_create` 继续保持 `httpMethod=NONE + PLACEHOLDER + requiresConfirmation=true`。
+
 ## [M5.21-53] - 第五十三批 NIM durable audit storage 可用性门禁计划契约审计
 
 **交付**: 在 M5.21-52 writer plan 之后新增 storage availability gate 计划契约，明确未来必须先证明 `sys_log`/持久化链路可用，才能写 pre-write intent 或签发 durable receipt。

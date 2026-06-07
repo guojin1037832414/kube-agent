@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-53, NIM durable audit storage availability gate plan contract.
+- Current latest wave: M5.21-54, NIM dedicated durable audit writer boundary / test double contract.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -46,6 +46,35 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-54 NIM dedicated durable audit writer boundary / test double contract is implemented and verified:
+  - Added `NimCreateDedicatedDurableAuditWriterBoundarySupport`.
+  - It consumes `auditContext`, `trustedPrincipalSnapshot`, `durableAuditWriterPlanReport`, and `storageAvailabilityGateReport`.
+  - It outputs `dedicatedAuditWriterBoundary=NIM_CREATE_DEDICATED_DURABLE_AUDIT_WRITER_BOUNDARY`, `executionMode=DEDICATED_DURABLE_AUDIT_WRITER_BOUNDARY_TEST_DOUBLE_CONTRACT_ONLY`, `writerBoundaryState=IMPLEMENTATION_HOLD|REJECTED`, `testDoubleName=NIM_CREATE_DEDICATED_DURABLE_AUDIT_WRITER_TEST_DOUBLE`.
+  - Positive input creates:
+    - `writerBoundaryPlan`
+    - `testDoubleContract`
+    - future `probe -> pre-write -> post-write -> receipt` operation order
+    - evidence digest binding
+    - trusted identity binding
+    - receipt release rule
+  - Current state explicitly remains `realStorageTouched=false`, `storageProbeExecuted=false`, `storageAvailable=false`, `preWritePersisted=false`, `postWritePersisted=false`, `durableReceiptCanBeIssued=false`.
+  - Positive input remains blocked by `DEDICATED_DURABLE_AUDIT_WRITER_BOUNDARY_IMPLEMENTATION_HOLD`.
+  - Missing writer plan report returns `DURABLE_AUDIT_WRITER_PLAN_REPORT_NOT_READY`.
+  - Missing availability gate report returns `STORAGE_AVAILABILITY_GATE_REPORT_NOT_READY`.
+  - Forged storage/persistence/receipt success claims return `DEDICATED_AUDIT_WRITER_BOUNDARY_FORGED_SUCCESS_CLAIM`.
+  - Secret leakage returns `DEDICATED_AUDIT_WRITER_BOUNDARY_INPUT_CONTAINS_FORBIDDEN_SECRET`.
+  - Added `NimCreateDedicatedDurableAuditWriterBoundarySupportTest`.
+  - Added `docs/M5_21_FIFTY_FOURTH_WAVE_NIM_DEDICATED_DURABLE_AUDIT_WRITER_BOUNDARY_AUDIT_20260607.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateDedicatedDurableAuditWriterBoundarySupportTest,NimCreateDurableAuditStorageAvailabilityGateSupportTest,NimCreateDurableAuditWriterPlanSupportTest,NimCreateDurableAuditStorageSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateDedicatedDurableAuditWriterBoundarySupportTest,NimCreateDurableAuditStorageAvailabilityGateSupportTest,NimCreateDurableAuditWriterPlanSupportTest,NimCreateDurableAuditStorageSupportTest,NimCreateAuditWriterSupportTest,NimCreateStateMachineSupportTest,NimCreateDurableWriteExecutorSupportTest,NimCreateWriteExecutionHandoffSupportTest,NimCreateWriteRequestSpecAdapterSupportTest,NimCreateWriteBodyRebuilderSupportTest,NimCreateReadinessHttpAdapterSupportTest,NimCreateReadinessExecutorSupportTest,NimCreateAuditReadinessSupportTest,NimTrustedPolicyProviderSupportTest,NimCreationGateSupportTest,NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest,HighRiskMutationToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest,M510ArchitectureBoundaryTest" test`
+    - `git diff --check`
+    - Real secret-pattern static scan found 0 matches.
+    - Boundary import scan found no new real `ElasticsearchTemplate`, `ISysLogService`, HTTP client, or `java.net` import in this wave.
+    - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+  - No real `8100` access; no Elasticsearch connection; no `ISysLogService` call; no `sys_log` write; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
 
 - M5.21-53 NIM durable audit storage availability gate plan contract is implemented and verified:
   - Added `NimCreateDurableAuditStorageAvailabilityGateSupport`.
