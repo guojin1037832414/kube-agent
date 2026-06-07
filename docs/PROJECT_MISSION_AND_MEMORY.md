@@ -81,9 +81,38 @@ Current track:
 
 Recently completed:
 
-`M5.21-58 NIM durable audit validation result migration contract`
+`M5.21-59 NIM durable audit release decision gate contract`
 
 Latest checkpoint:
+
+- Date: 2026-06-07 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+  - M5.21-59 implemented and verified:
+  - Added `NimCreateDurableAuditReleaseDecisionGateSupport` as a pure contract-only release decision gate plan for future state-machine and durable-executor binding.
+  - It consumes:
+    - `auditContext`
+    - `trustedPrincipalSnapshot`
+    - `durableAuditValidationResultMigrationReport` from M5.21-58
+  - It returns `durableAuditReleaseDecisionGate=NIM_CREATE_DURABLE_AUDIT_RELEASE_DECISION_GATE`, `executionMode=DURABLE_AUDIT_RELEASE_DECISION_GATE_CONTRACT_ONLY`, and `gateState=IMPLEMENTATION_HOLD|REJECTED`.
+  - Positive input produces `releaseDecisionGatePlan.gateSequence`, `requiredFutureEvidence`, `stateMachineBindingPlan`, `durableExecutorBindingPlan`, `currentDenyTemplate`, `failureContract`, and `forbiddenShortcuts`.
+  - The plan binds M5.21-58 `migrationPlanDigest`, upstream validation/schema/interface/boundary/writer/availability digests, source audit event digest, trusted server principal, and future write-chain evidence: body digest, request spec digest, handoff digest, audit receipt id/event digest, and server-derived idempotency key.
+  - Current state explicitly remains `realReleaseDecisionLoaded=false`, `realReleaseDecisionAccepted=false`, `validationResultDigestVerified=false`, `releaseDecisionDigestVerified=false`, `trustedPrincipalValidated=false`, `codeReleaseSwitchVerified=false`, `stateMachineReleaseBound=false`, `durableExecutorReleaseBound=false`, `legacyAuditReceiptReleaseFlagTrusted=false`, `releaseEligible=false`, `writePermitted=false`, `writeExecutionAllowed=false`, and `realHttpExecutionAllowed=false`.
+  - Positive input remains blocked by `DURABLE_AUDIT_RELEASE_DECISION_GATE_IMPLEMENTATION_HOLD`.
+  - Missing migration report is rejected with `DURABLE_AUDIT_VALIDATION_RESULT_MIGRATION_REPORT_NOT_READY`.
+  - Forged release decision, validation result, legacy `auditReceipt.releaseEligible`, write permission, or executor success claims are rejected with `DURABLE_AUDIT_RELEASE_DECISION_GATE_FORGED_RELEASE_CLAIM`; even an empty caller-supplied `releaseDecision` is rejected.
+  - Secret leakage is rejected with `DURABLE_AUDIT_RELEASE_DECISION_GATE_INPUT_CONTAINS_FORBIDDEN_SECRET`.
+  - Added `NimCreateDurableAuditReleaseDecisionGateSupportTest`.
+  - Added `docs/M5_21_FIFTY_NINTH_WAVE_NIM_DURABLE_AUDIT_RELEASE_DECISION_GATE_AUDIT_20260607.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateDurableAuditReleaseDecisionGateSupportTest,NimCreateDurableAuditValidationResultMigrationSupportTest,NimCreateDurableAuditReceiptValidationGateSupportTest,NimCreateDurableAuditReceiptSchemaSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateDurableAuditReleaseDecisionGateSupportTest,NimCreateDurableAuditValidationResultMigrationSupportTest,NimCreateDurableAuditReceiptValidationGateSupportTest,NimCreateDurableAuditReceiptSchemaSupportTest,NimCreateDurableAuditWriterInterfaceSpecSupportTest,NimCreateDedicatedDurableAuditWriterBoundarySupportTest,NimCreateDurableAuditStorageAvailabilityGateSupportTest,NimCreateDurableAuditWriterPlanSupportTest,NimCreateDurableAuditStorageSupportTest,NimCreateAuditWriterSupportTest,NimCreateStateMachineSupportTest,NimCreateDurableWriteExecutorSupportTest,NimCreateWriteExecutionHandoffSupportTest,NimCreateWriteRequestSpecAdapterSupportTest,NimCreateWriteBodyRebuilderSupportTest,NimCreateReadinessHttpAdapterSupportTest,NimCreateReadinessExecutorSupportTest,NimCreateAuditReadinessSupportTest,NimTrustedPolicyProviderSupportTest,NimCreationGateSupportTest,NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest,HighRiskMutationToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest,M510ArchitectureBoundaryTest" test`
+    - `git diff --check` only reported Windows line-ending warnings.
+    - Secret-pattern static scan found 0 matches for this wave.
+    - Boundary import scan found no new real `ElasticsearchTemplate`, `ISysLogService`, HTTP client, `java.net`, or `POST /api/{orgId}/deployment` dependency in this wave.
+    - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+  - No real `8100` access; no Elasticsearch connection; no `ISysLogService` call; no `sys_log` write; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
+  - Learning note: release decision must be double-bound. Future state machine and future durable executor both need to re-check the same server-issued release decision digest before a real POST can be considered.
 
 - Date: 2026-06-07 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.

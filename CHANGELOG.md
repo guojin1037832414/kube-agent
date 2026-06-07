@@ -6,6 +6,22 @@
 
 ---
 
+## [M5.21-59] - NIM durable audit release decision gate contract
+
+**Delivery**: Added a contract-only release decision gate plan after M5.21-58. It describes how a future server-issued `NimDurableAuditReleaseDecision` must bind back into both the state machine and durable write executor, while still issuing no real release credential and performing no I/O.
+**Changes**
+- Added `NimCreateDurableAuditReleaseDecisionGateSupport`, consuming only `auditContext`, `trustedPrincipalSnapshot`, and `durableAuditValidationResultMigrationReport`.
+- Output includes `durableAuditReleaseDecisionGate=NIM_CREATE_DURABLE_AUDIT_RELEASE_DECISION_GATE`, `executionMode=DURABLE_AUDIT_RELEASE_DECISION_GATE_CONTRACT_ONLY`, and `gateState=IMPLEMENTATION_HOLD|REJECTED`.
+- Positive input prepares `gateSequence`, `requiredFutureEvidence`, `stateMachineBindingPlan`, `durableExecutorBindingPlan`, `currentDenyTemplate`, `failureContract`, and `forbiddenShortcuts`.
+- The plan binds M5.21-58 migration digest, validation plan/schema/interface/boundary/writer/availability digests, trusted principal, and future write-chain evidence including body/request/handoff digests, audit receipt id/event digest, and server-derived idempotency key.
+- Current state remains `realReleaseDecisionLoaded=false`, `realReleaseDecisionAccepted=false`, `validationResultDigestVerified=false`, `releaseDecisionDigestVerified=false`, `stateMachineReleaseBound=false`, `durableExecutorReleaseBound=false`, `releaseEligible=false`, `writePermitted=false`, `writeExecutionAllowed=false`, and `realHttpExecutionAllowed=false`.
+- Forged `releaseDecision`, `validationResult`, legacy `auditReceipt.releaseEligible`, write permission, or executor success claims are rejected with `DURABLE_AUDIT_RELEASE_DECISION_GATE_FORGED_RELEASE_CLAIM`.
+- Added `NimCreateDurableAuditReleaseDecisionGateSupportTest`.
+- Added `docs/M5_21_FIFTY_NINTH_WAVE_NIM_DURABLE_AUDIT_RELEASE_DECISION_GATE_AUDIT_20260607.md`.
+**Security**
+- This wave adds no real Java release decision/validator/release gate, no Spring Bean, no Elasticsearch, no `ISysLogService`, no `sys_log` write, no HTTP client, no real `8100` access, and no `POST /api/{orgId}/deployment`.
+- The gate plan is not a release decision or release credential; `nim_create` remains `httpMethod=NONE + PLACEHOLDER + requiresConfirmation=true`.
+
 ## [M5.21-58] - NIM durable audit validation result migration contract
 
 **Delivery**: Added a contract-only migration plan for the future `NimDurableAuditReceiptValidationResult` and `NimDurableAuditReleaseDecision` after the M5.21-57 receipt validation gate. The plan separates validation gate rules, migration planning, server-issued validation results, and release decisions. It still creates no real DTO, Bean, validator, I/O, or release credential.

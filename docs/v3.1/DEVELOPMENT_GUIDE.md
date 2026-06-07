@@ -135,3 +135,11 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Caller supplied `validationResult`, `releaseDecision`, or legacy `auditReceipt.releaseEligible=true` is treated as a forged release claim, even when the supplied object is empty.
 - Future real write release must bind the M5.21-57 validation plan digest, receipt schema digest, source audit event digest, typed evidence digests, trusted principal, and code release switch.
 - This wave keeps `nim_create` at `httpMethod=NONE + PLACEHOLDER + requiresConfirmation=true`; no real `8100`, no `POST /api/{orgId}/deployment`, no Elasticsearch, no `ISysLogService`, and no `sys_log` write.
+
+### M5.21-59 release decision gate learning note
+
+- `NimCreateDurableAuditReleaseDecisionGateSupport` defines only a future release decision gate plan; it does not load or accept a real `NimDurableAuditReleaseDecision`.
+- The key learning point is double binding: the future state machine and the future durable write executor must both re-check the same server-issued release decision digest.
+- Future release evidence must also bind the write chain: `bodyDigest`, `requestSpecDigest`, `handoffDigest`, audit receipt id/event digest, and server-derived idempotency key.
+- Current gate output remains `IMPLEMENTATION_HOLD`; `releaseEligible=false`, `writePermitted=false`, `writeExecutionAllowed=false`, and `realHttpExecutionAllowed=false`.
+- Caller supplied release decisions, validation results, legacy `auditReceipt.releaseEligible=true`, or executor success claims are forged release claims until a reviewed server-side gate exists.
