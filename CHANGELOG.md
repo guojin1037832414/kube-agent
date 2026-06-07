@@ -6,6 +6,21 @@
 
 ---
 
+## [M5.21-72] - NIM code release switch contract
+
+**Delivery**: Added a contract-only future `NimCreateDurableAuditCodeReleaseSwitch` layer that consumes the M5.21-71 release decision contract and keeps write release held until a reviewed, server-owned code release switch exists.
+**Changes**
+- Added `NimCreateDurableAuditCodeReleaseSwitchContractSupport`.
+- Added `NimCreateDurableAuditCodeReleaseSwitchContractSupportTest`.
+- Binds M5.21-71 `releaseDecisionContractDigest`, M5.21-70 `validationResultContractDigest`, future server-issued `validationResultDigest`, future `releaseDecisionDigest`, future `codeReleaseSwitchDigest`, source audit event, trusted principal, upstream migration/probe/schema/writer digests, and future write-chain digest fields.
+- Requires future switch evidence to carry `codeReviewDigest`, `testEvidenceDigest`, `securityApprovalDigest`, `rollbackPlanDigest`, and `changeWindowDigest` before the switch can open.
+- Rejects missing or tampered M5.21-71 reports, caller-supplied switch/runtime/environment overrides, forged open/write claims, and secret-bearing inputs.
+- Keeps `serverOwnedCodeReleaseSwitchRequired=true`, `callerSwitchEvidenceAuthoritative=false`, `realCodeReleaseSwitchCreated=false`, `realCodeReleaseSwitchOpened=false`, `codeReleaseSwitchDigestVerified=false`, `releaseEligible=false`, `writePermitted=false`, and `writeExecutionAllowed=false`.
+- Added `docs/M5_21_SEVENTY_SECOND_WAVE_NIM_CODE_RELEASE_SWITCH_CONTRACT_AUDIT_20260607.md`.
+**Security**
+- This wave does not create a real switch, release decision, validation result, DTO, Spring Bean, storage client, release credential, Tool registration, Controller, state-machine release, or write path.
+- `nim_create` remains `httpMethod=NONE + PLACEHOLDER + requiresConfirmation=true`, with no real `8100`, no real deployment POST execution, no Elasticsearch, no `ISysLogService`, and no `sys_log` write.
+
 ## [M5.21-71] - NIM durable audit release decision contract
 
 **Delivery**: Added a contract-only future `NimDurableAuditReleaseDecision` value contract that consumes the M5.21-70 receipt validation result contract and keeps write release held until a reviewed server-issued release decision exists.

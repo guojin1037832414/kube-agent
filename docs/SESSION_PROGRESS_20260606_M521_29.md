@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-71, NIM durable audit release decision contract.
+- Current latest wave: M5.21-72, NIM code release switch contract.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -46,6 +46,69 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-72 NIM code release switch contract is implemented:
+  - Added `NimCreateDurableAuditCodeReleaseSwitchContractSupport`.
+  - Added `NimCreateDurableAuditCodeReleaseSwitchContractSupportTest`.
+  - Added `docs/M5_21_SEVENTY_SECOND_WAVE_NIM_CODE_RELEASE_SWITCH_CONTRACT_AUDIT_20260607.md`.
+  - The contract shell defines future `NimCreateDurableAuditCodeReleaseSwitch` as a reviewed, server-owned code release fact, not caller evidence, not an environment variable, and not a runtime boolean.
+  - It consumes:
+    - `auditContext`
+    - `trustedPrincipalSnapshot`
+    - `durableAuditReleaseDecisionContractReport` from M5.21-71
+    - optional caller `callerSwitchEvidence`, which is always non-authoritative in this wave
+  - It binds:
+    - M5.21-71 `releaseDecisionContractDigest`
+    - M5.21-70 `validationResultContractDigest`
+    - future server-issued `validationResultDigest`
+    - future `releaseDecisionDigest`
+    - future `codeReleaseSwitchDigest`
+    - `codeReviewDigest`
+    - `testEvidenceDigest`
+    - `securityApprovalDigest`
+    - `rollbackPlanDigest`
+    - `changeWindowDigest`
+    - `bodyDigest`
+    - `requestSpecDigest`
+    - `handoffDigest`
+    - `auditReceiptId`
+    - `serverDerivedIdempotencyKey`
+    - source audit event digest
+    - trusted principal digest
+    - upstream migration/probe/schema/writer digests
+  - Valid inputs still return `IMPLEMENTATION_HOLD`; no real code switch, switch-open state, release decision, validation result, release credential, state-machine release, durable executor release, storage write, or HTTP execution is produced.
+  - All switch/release/write states remain false:
+    - `realCodeReleaseSwitchCreated=false`
+    - `realCodeReleaseSwitchOpened=false`
+    - `serverOwnedCodeReleaseSwitchAccepted=false`
+    - `codeReleaseSwitchDigestVerified=false`
+    - `codeReviewDigestVerified=false`
+    - `testEvidenceDigestVerified=false`
+    - `releaseDecisionDigestVerified=false`
+    - `validationResultDigestVerified=false`
+    - `trustedPrincipalValidated=false`
+    - `stateMachineReleaseBound=false`
+    - `durableExecutorReleaseBound=false`
+    - `releaseDecisionAccepted=false`
+    - `releaseCredentialIssued=false`
+    - `releaseEligible=false`
+    - `writePermitted=false`
+    - `writeExecutionAllowed=false`
+    - `realHttpExecutionAllowed=false`
+    - `realStorageTouched=false`
+  - Rejected cases include missing M5.21-71 report, tampered `releaseDecisionContractDigest`, invalid upstream HOLD state, forged switch-open/release/write claims, caller switch/runtime/environment evidence, and secret-bearing inputs.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateDurableAuditCodeReleaseSwitchContractSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateDurableAuditCodeReleaseSwitchContractSupportTest,NimCreateDurableAuditReleaseDecisionContractSupportTest,NimCreateDurableAuditReceiptValidationResultSupportTest,NimCreateDurableAuditValidationResultProbeBindingMigrationSupportTest,NimCreateDurableAuditValidationResultMigrationSupportTest,NimCreateDurableAuditReceiptValidationProbeResultBindingSupportTest,NimCreateDurableAuditStorageProbeResultSupportTest,NimCreateDurableAuditStorageProbeExecutorSupportTest,NimCreateDurableAuditReceiptValidationGateSupportTest,NimCreateDurableAuditReceiptSchemaSupportTest" test`
+    - `mvn -q test`
+    - `git diff --check`
+    - production boundary scan
+    - static secret scan
+    - H-drive SHA256 sync verification
+  - Full test note: `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0; this is expected for the current local test environment and does not indicate an M5.21-72 regression.
+  - Final closure includes H-drive SHA256 sync verification, commit, and push.
+  - No real `8100` access; no HTTP client; no Elasticsearch connection; no `ISysLogService`; no `sys_log` write; no real `POST /api/{orgId}/deployment` execution; `nim_create` remains HOLD.
+  - Recovery note: future write execution must require reviewed server-owned code switch evidence bound to release/validation digests, code review/test/security/rollback/change-window digests, trusted principal, audit event, and write-chain digests. It must not jump from caller switch evidence, environment variables, runtime flags, legacy config booleans, M5.21-71 contract report, or executor success to `writePermitted=true`.
 
 - M5.21-71 NIM durable audit release decision contract is implemented:
   - Added `NimCreateDurableAuditReleaseDecisionContractSupport`.

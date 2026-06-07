@@ -81,9 +81,55 @@ Current track:
 
 Recently completed:
 
-`M5.21-71 NIM durable audit release decision contract`
+`M5.21-72 NIM code release switch contract`
 
 Latest checkpoint:
+
+- Date: 2026-06-07 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+  - M5.21-72 implemented:
+  - Added `NimCreateDurableAuditCodeReleaseSwitchContractSupport` as an independent contract-only future `NimCreateDurableAuditCodeReleaseSwitch` value contract.
+  - Added `NimCreateDurableAuditCodeReleaseSwitchContractSupportTest`.
+  - The support class consumes:
+    - `auditContext`
+    - `trustedPrincipalSnapshot`
+    - `durableAuditReleaseDecisionContractReport` from M5.21-71
+    - optional caller `callerSwitchEvidence`, which is always non-authoritative in this wave
+  - It binds M5.21-71 `releaseDecisionContractDigest`, M5.21-70 `validationResultContractDigest`, future server-issued `validationResultDigest`, future `releaseDecisionDigest`, future `codeReleaseSwitchDigest`, source audit event, trusted principal, upstream migration/probe/schema/writer digests, and future write-chain digest fields.
+  - The future code switch contract requires `codeReviewDigest`, `testEvidenceDigest`, `securityApprovalDigest`, `rollbackPlanDigest`, and `changeWindowDigest` before any future switch-open state can exist.
+  - It rejects missing M5.21-71 report, tampered `releaseDecisionContractDigest`, invalid upstream HOLD state, forged switch-open/release/write claims, caller-supplied switch/runtime/environment evidence, and secret-bearing inputs.
+  - Current success states remain false:
+    - `realCodeReleaseSwitchCreated=false`
+    - `realCodeReleaseSwitchOpened=false`
+    - `serverOwnedCodeReleaseSwitchAccepted=false`
+    - `codeReleaseSwitchDigestVerified=false`
+    - `codeReviewDigestVerified=false`
+    - `testEvidenceDigestVerified=false`
+    - `releaseDecisionDigestVerified=false`
+    - `validationResultDigestVerified=false`
+    - `trustedPrincipalValidated=false`
+    - `stateMachineReleaseBound=false`
+    - `durableExecutorReleaseBound=false`
+    - `releaseDecisionAccepted=false`
+    - `releaseCredentialIssued=false`
+    - `releaseEligible=false`
+    - `writePermitted=false`
+    - `writeExecutionAllowed=false`
+    - `realHttpExecutionAllowed=false`
+    - `realStorageTouched=false`
+  - Added `docs/M5_21_SEVENTY_SECOND_WAVE_NIM_CODE_RELEASE_SWITCH_CONTRACT_AUDIT_20260607.md`.
+  - No real `8100` access; no HTTP client; no Elasticsearch connection; no `ISysLogService` call; no `sys_log` write; no real `POST /api/{orgId}/deployment` execution; `nim_create` remains HOLD.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateDurableAuditCodeReleaseSwitchContractSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateDurableAuditCodeReleaseSwitchContractSupportTest,NimCreateDurableAuditReleaseDecisionContractSupportTest,NimCreateDurableAuditReceiptValidationResultSupportTest,NimCreateDurableAuditValidationResultProbeBindingMigrationSupportTest,NimCreateDurableAuditValidationResultMigrationSupportTest,NimCreateDurableAuditReceiptValidationProbeResultBindingSupportTest,NimCreateDurableAuditStorageProbeResultSupportTest,NimCreateDurableAuditStorageProbeExecutorSupportTest,NimCreateDurableAuditReceiptValidationGateSupportTest,NimCreateDurableAuditReceiptSchemaSupportTest" test`
+    - `mvn -q test`
+    - `git diff --check`
+    - production boundary import/write-path scan
+    - static secret scan
+    - H-drive SHA256 sync verification
+  - Full test note: `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0; this remains an accepted degraded-test-path signal, not an M5.21-72 failure.
+  - Final closure includes H-drive SHA256 sync verification, commit, and push.
+  - Learning note: M5.21-72 fixes the boundary between release decision and code release governance. A future write path must not treat M5.21-71 release decision contract, caller switch evidence, environment variables, runtime flags, or legacy config booleans as an open switch; it must require a reviewed server-owned code switch bound to release/validation digests, code review/test/security/rollback/change-window digests, trusted principal, audit event, and write-chain digests.
 
 - Date: 2026-06-07 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.

@@ -235,3 +235,11 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Future write release also requires `bodyDigest`, `requestSpecDigest`, `handoffDigest`, `auditReceiptId`, and `serverDerivedIdempotencyKey`; these fields must be rechecked by the state machine and durable executor immediately before any real POST can run.
 - Current output remains `IMPLEMENTATION_HOLD`; `serverIssuedReleaseDecisionRequired=true`, `callerReleaseEvidenceAuthoritative=false`, `realReleaseDecisionCreated=false`, `releaseDecisionAccepted=false`, `releaseCredentialIssued=false`, `releaseEligible=false`, `writePermitted=false`, and `writeExecutionAllowed=false`.
 - Learning distinction: validation fact and release fact are two separate server-issued layers. Caller release evidence, legacy `auditReceipt.releaseEligible`, executor success, and `releaseDecisionGateReportAccepted` are not release credentials.
+
+### M5.21-72 code release switch contract note
+
+- `NimCreateDurableAuditCodeReleaseSwitchContractSupport` defines only the future reviewed/server-owned `NimCreateDurableAuditCodeReleaseSwitch` contract; it does not open a real switch or allow write execution.
+- The contract consumes the M5.21-71 release decision contract report and requires binding M5.21-71 `releaseDecisionContractDigest`, M5.21-70 `validationResultContractDigest`, future validation/release decision digests, future `codeReleaseSwitchDigest`, trusted principal, audit event, and write-chain digests.
+- Future switch-open evidence also requires `codeReviewDigest`, `testEvidenceDigest`, `securityApprovalDigest`, `rollbackPlanDigest`, and `changeWindowDigest`.
+- Current output remains `IMPLEMENTATION_HOLD`; `serverOwnedCodeReleaseSwitchRequired=true`, `callerSwitchEvidenceAuthoritative=false`, `realCodeReleaseSwitchOpened=false`, `codeReleaseSwitchDigestVerified=false`, `releaseEligible=false`, `writePermitted=false`, and `writeExecutionAllowed=false`.
+- Learning distinction: release switch is a reviewed release-governance fact, not a caller JSON object, environment variable, runtime flag, or legacy config boolean.
