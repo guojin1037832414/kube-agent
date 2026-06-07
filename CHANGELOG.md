@@ -6,6 +6,20 @@
 
 ---
 
+## [M5.21-91] - NIM release/switch secret detector migration
+
+**Delivery**: Migrated release-decision and code-release-switch contract scanners to the shared no-exception forbidden secret material policy.
+**Changes**
+- `NimCreateDurableAuditReleaseDecisionContractSupport` now uses `NimForbiddenSecretMaterialDetector.nonBooleanNumberValuePolicy()` instead of a local forbidden secret key/value scanner.
+- `NimCreateDurableAuditCodeReleaseSwitchContractSupport` now uses the same shared policy.
+- Extended `NimForbiddenSecretMaterialDetectorUsageContractTest` so six non-Boolean/Number policy support classes cannot reintroduce local secret detector copies or documented-field exceptions.
+- Added `docs/M5_21_NINETY_FIRST_WAVE_NIM_RELEASE_SWITCH_SHARED_SECRET_DETECTOR_MIGRATION_AUDIT_20260608.md`.
+**Security**
+- Local forged release/switch claim scanners were intentionally preserved because they guard authority/evidence forgery, not credential material.
+- No runtime write behavior was opened.
+- No real `8100`, deployment POST, release decision signer, code release switch implementation, durable writer/probe/receipt implementation, validation result signer, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-90] - NIM validation/probe-result secret detector migration
 
 **Delivery**: Migrated validation/probe-result evidence scanners to a shared no-exception forbidden secret material policy.

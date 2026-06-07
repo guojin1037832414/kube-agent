@@ -39,7 +39,9 @@ class NimForbiddenSecretMaterialDetectorUsageContractTest {
             + "NimCreateDurableAuditReceiptValidationProbeResultBindingSupport.java"),
         Path.of("src/main/java/com/atlas/tool/impl/NimCreateDurableAuditReceiptValidationResultSupport.java"),
         Path.of("src/main/java/com/atlas/tool/impl/"
-            + "NimCreateDurableAuditValidationResultProbeBindingMigrationSupport.java")
+            + "NimCreateDurableAuditValidationResultProbeBindingMigrationSupport.java"),
+        Path.of("src/main/java/com/atlas/tool/impl/NimCreateDurableAuditReleaseDecisionContractSupport.java"),
+        Path.of("src/main/java/com/atlas/tool/impl/NimCreateDurableAuditCodeReleaseSwitchContractSupport.java")
     );
 
     @Test

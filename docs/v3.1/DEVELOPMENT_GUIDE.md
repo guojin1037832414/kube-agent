@@ -382,3 +382,10 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Do not replace this with `receiptSchemaPolicy()`: receipt schema allows documented forbidden field names, but these validation/probe-result evidence inputs have no documented-field exception.
 - Forged-success scanners in these classes remain separate because they reject caller-supplied validation/release/probe success claims, not credentials.
 - Learning distinction: policy names are architecture. They make the intended security semantics visible at each call site and teach reviewers what must remain different.
+
+### M5.21-91 release/switch shared detector note
+
+- `NimCreateDurableAuditReleaseDecisionContractSupport` and `NimCreateDurableAuditCodeReleaseSwitchContractSupport` now use `NimForbiddenSecretMaterialDetector.nonBooleanNumberValuePolicy()` for secret-material scanning.
+- The usage contract now protects six non-Boolean/Number policy support classes.
+- Release and code-switch forged-claim scanners remain local. They reject authority-shaped caller claims such as `releaseEligible=true`, `writePermitted=true`, `switchState=OPEN`, and typed release credentials.
+- Learning distinction: no-secret is not no-risk. Release authorization also needs source-of-authority checks, digest binding, and explicit code review gates.

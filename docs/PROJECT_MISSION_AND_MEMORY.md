@@ -82,10 +82,27 @@ Current track:
 
 Recently completed:
 
-`M5.21-90 NIM validation/probe-result shared secret detector migration`
+`M5.21-91 NIM release/switch shared secret detector migration`
 
 Latest checkpoint:
 
+- Date: 2026-06-08 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-91 implemented:
+  - Migrated `NimCreateDurableAuditReleaseDecisionContractSupport` to `NimForbiddenSecretMaterialDetector.nonBooleanNumberValuePolicy()`.
+  - Migrated `NimCreateDurableAuditCodeReleaseSwitchContractSupport` to the same shared policy.
+  - Preserved local forged-release and forged-switch scanners because they guard authority/evidence-source forgery, not secret material.
+  - Extended `NimForbiddenSecretMaterialDetectorUsageContractTest` so six non-Boolean/Number policy support classes cannot reintroduce local detector copies or documented-field exceptions.
+  - Added `docs/M5_21_NINETY_FIRST_WAVE_NIM_RELEASE_SWITCH_SHARED_SECRET_DETECTOR_MIGRATION_AUDIT_20260608.md`.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimForbiddenSecretMaterialDetectorUsageContractTest,NimForbiddenSecretMaterialDetectorTest,NimCreateDurableAuditReleaseDecisionContractSupportTest,NimCreateDurableAuditCodeReleaseSwitchContractSupportTest" test`
+  - Final verification passed:
+    - `git diff --check`
+    - `mvn -q test`
+  - Full test note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - Security invariant: no real `8100`, no deployment POST, no runtime write behavior, no release decision signer, no code release switch implementation, no durable writer/probe/receipt implementation, no validation result signer, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Recommended next slice: continue remaining detector migrations only after policy comparison, or return to reviewed durable writer/probe boundary design.
+- Previous checkpoint:
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
 - M5.21-90 implemented:
