@@ -126,3 +126,12 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - 最后还需要代码级 release switch 显式打开，才能考虑接入真实 durable write executor。
 
 这条链路的教学重点是：顶级 Agent 不靠“相信中间对象已经安全”来放行，而是把每一段证据都变成可测试、可复算、可审计的契约。
+
+### M5.21-58 validation result / release decision migration note
+
+- `NimCreateDurableAuditValidationResultMigrationSupport` only defines a future migration plan for `NimDurableAuditReceiptValidationResult` and `NimDurableAuditReleaseDecision`; it does not create real DTOs, Beans, validators, storage writes, or release credentials.
+- Learning distinction: schema describes the expected evidence shape; validation gate describes how evidence must be checked; validation result is a future server-issued fact that the checks passed; release decision is a future server-issued permission to let the write executor proceed.
+- Current migration plan remains `IMPLEMENTATION_HOLD`; `validationStatus=NOT_RUN_UNTIL_REAL_RECEIPT`, `releaseEligible=false`, `releaseDecisionAccepted=false`, `releaseCredentialIssued=false`, and `writeExecutionAllowed=false`.
+- Caller supplied `validationResult`, `releaseDecision`, or legacy `auditReceipt.releaseEligible=true` is treated as a forged release claim, even when the supplied object is empty.
+- Future real write release must bind the M5.21-57 validation plan digest, receipt schema digest, source audit event digest, typed evidence digests, trusted principal, and code release switch.
+- This wave keeps `nim_create` at `httpMethod=NONE + PLACEHOLDER + requiresConfirmation=true`; no real `8100`, no `POST /api/{orgId}/deployment`, no Elasticsearch, no `ISysLogService`, and no `sys_log` write.

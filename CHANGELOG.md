@@ -6,6 +6,25 @@
 
 ---
 
+## [M5.21-58] - NIM durable audit validation result migration contract
+
+**Delivery**: Added a contract-only migration plan for the future `NimDurableAuditReceiptValidationResult` and `NimDurableAuditReleaseDecision` after the M5.21-57 receipt validation gate. The plan separates validation gate rules, migration planning, server-issued validation results, and release decisions. It still creates no real DTO, Bean, validator, I/O, or release credential.
+**Changes**
+- Added `NimCreateDurableAuditValidationResultMigrationSupport`, consuming only `auditContext`, `trustedPrincipalSnapshot`, and `durableAuditReceiptValidationGateReport`.
+- Output includes `durableAuditValidationResultMigrationPlan=NIM_CREATE_DURABLE_AUDIT_VALIDATION_RESULT_MIGRATION_PLAN`, `executionMode=DURABLE_AUDIT_VALIDATION_RESULT_MIGRATION_CONTRACT_ONLY`, and `migrationPlanState=IMPLEMENTATION_HOLD|REJECTED`.
+- Positive input prepares `migrationSequence`, `validationResultContract`, `releaseDecisionContract`, `legacyCompatibilityPolicy`, `releaseCredentialRules`, `failureContract`, and `forbiddenShortcuts`, bound to the M5.21-57 validation plan digest and upstream schema/interface/boundary/writer/availability digests.
+- Current state remains `realValidationResultCreated=false`, `realReleaseDecisionCreated=false`, `storageProbeReceiptValidated=false`, `preWriteDurableAckValidated=false`, `postWriteDurableAckValidated=false`, `digestChainValidated=false`, `trustedPrincipalValidated=false`, `durableReceiptValidationPassed=false`, `releaseEligible=false`, and `writeExecutionAllowed=false`.
+- Positive input is still blocked by `DURABLE_AUDIT_VALIDATION_RESULT_MIGRATION_IMPLEMENTATION_HOLD`.
+- Missing validation gate report is rejected with `DURABLE_AUDIT_RECEIPT_VALIDATION_GATE_REPORT_NOT_READY`.
+- Forged `validationResult`, `releaseDecision`, legacy `auditReceipt.releaseEligible`, `validationStatus=PASS`, or write execution claims are rejected with `DURABLE_AUDIT_VALIDATION_RESULT_MIGRATION_FORGED_RELEASE_CLAIM`.
+- Secret leakage is rejected with `DURABLE_AUDIT_VALIDATION_RESULT_MIGRATION_INPUT_CONTAINS_FORBIDDEN_SECRET`.
+- Added `NimCreateDurableAuditValidationResultMigrationSupportTest`.
+- Added `docs/M5_21_FIFTY_EIGHTH_WAVE_NIM_DURABLE_AUDIT_VALIDATION_RESULT_MIGRATION_AUDIT_20260607.md` and updated memory/index/learning docs.
+**Security**
+- This wave adds no real Java DTO/validator/release gate, no Spring Bean, no Elasticsearch, no `ISysLogService`, no `sys_log` write, no HTTP client, no real `8100` access, and no `POST /api/{orgId}/deployment`.
+- The migration plan is not a validation result, release decision, or release credential; legacy `auditReceipt.releaseEligible` is not trusted as a release source.
+- `nim_create` remains `httpMethod=NONE + PLACEHOLDER + requiresConfirmation=true`.
+
 ## [M5.21-57] - 第五十七批 NIM durable audit receipt validation gate 契约审计
 
 **交付**: 在 M5.21-56 typed ack/receipt schema 之后，新增未来 `NimDurableAuditReceiptValidator` 的 validation gate 契约，先把真实 receipt/ack 出现后必须通过的 digest、phase、status、principal 和 release decision 校验规则固定下来，仍不执行真实校验或 I/O。

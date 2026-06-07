@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-57, NIM durable audit receipt validation gate contract.
+- Current latest wave: M5.21-58, NIM durable audit validation result / release decision migration contract.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -46,6 +46,37 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-58 NIM durable audit validation result / release decision migration contract is implemented and verified:
+  - Added `NimCreateDurableAuditValidationResultMigrationSupport`.
+  - It consumes `auditContext`, `trustedPrincipalSnapshot`, and `durableAuditReceiptValidationGateReport` from M5.21-57.
+  - It outputs `durableAuditValidationResultMigrationPlan=NIM_CREATE_DURABLE_AUDIT_VALIDATION_RESULT_MIGRATION_PLAN`, `executionMode=DURABLE_AUDIT_VALIDATION_RESULT_MIGRATION_CONTRACT_ONLY`, `migrationPlanState=IMPLEMENTATION_HOLD|REJECTED`, `futureValidationResult=NimDurableAuditReceiptValidationResult`, and `futureReleaseDecision=NimDurableAuditReleaseDecision`.
+  - Positive input creates:
+    - `migrationSequence`
+    - `validationResultContract`
+    - `releaseDecisionContract`
+    - `legacyCompatibilityPolicy`
+    - `releaseCredentialRules`
+    - `failureContract`
+    - `forbiddenShortcuts`
+  - Current state explicitly remains `realValidationResultCreated=false`, `realReleaseDecisionCreated=false`, `realStorageTouched=false`, `storageProbeReceiptValidated=false`, `preWriteDurableAckValidated=false`, `postWriteDurableAckValidated=false`, `digestChainValidated=false`, `trustedPrincipalValidated=false`, `durableReceiptValidationPassed=false`, `durableReceiptAccepted=false`, `releaseEligible=false`, `releaseDecisionAccepted=false`, `releaseCredentialIssued=false`, `writeExecutionAllowed=false`, and `legacyAuditReceiptReleaseFlagTrusted=false`.
+  - Positive input remains blocked by `DURABLE_AUDIT_VALIDATION_RESULT_MIGRATION_IMPLEMENTATION_HOLD`.
+  - Missing validation gate report returns `DURABLE_AUDIT_RECEIPT_VALIDATION_GATE_REPORT_NOT_READY`.
+  - Forged validation result, release decision, legacy `auditReceipt.releaseEligible`, validation pass, or write execution claims return `DURABLE_AUDIT_VALIDATION_RESULT_MIGRATION_FORGED_RELEASE_CLAIM`; even an empty caller-supplied `validationResult` is rejected.
+  - Tampered validation plan digest and trusted principal mismatch are rejected before any migration plan is generated.
+  - Secret leakage returns `DURABLE_AUDIT_VALIDATION_RESULT_MIGRATION_INPUT_CONTAINS_FORBIDDEN_SECRET`.
+  - Added `NimCreateDurableAuditValidationResultMigrationSupportTest`.
+  - Added `docs/M5_21_FIFTY_EIGHTH_WAVE_NIM_DURABLE_AUDIT_VALIDATION_RESULT_MIGRATION_AUDIT_20260607.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateDurableAuditValidationResultMigrationSupportTest,NimCreateDurableAuditReceiptValidationGateSupportTest,NimCreateDurableAuditReceiptSchemaSupportTest,NimCreateDurableAuditWriterInterfaceSpecSupportTest,NimCreateDedicatedDurableAuditWriterBoundarySupportTest,NimCreateDurableAuditStorageAvailabilityGateSupportTest,NimCreateDurableAuditWriterPlanSupportTest,NimCreateDurableAuditStorageSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateDurableAuditValidationResultMigrationSupportTest,NimCreateDurableAuditReceiptValidationGateSupportTest,NimCreateDurableAuditReceiptSchemaSupportTest,NimCreateDurableAuditWriterInterfaceSpecSupportTest,NimCreateDedicatedDurableAuditWriterBoundarySupportTest,NimCreateDurableAuditStorageAvailabilityGateSupportTest,NimCreateDurableAuditWriterPlanSupportTest,NimCreateDurableAuditStorageSupportTest,NimCreateAuditWriterSupportTest,NimCreateStateMachineSupportTest,NimCreateDurableWriteExecutorSupportTest,NimCreateWriteExecutionHandoffSupportTest,NimCreateWriteRequestSpecAdapterSupportTest,NimCreateWriteBodyRebuilderSupportTest,NimCreateReadinessHttpAdapterSupportTest,NimCreateReadinessExecutorSupportTest,NimCreateAuditReadinessSupportTest,NimTrustedPolicyProviderSupportTest,NimCreationGateSupportTest,NimTemplateMergeSupportTest,NimDeploymentPreflightToolHttpContractTest,HighRiskMutationToolHttpContractTest,M511AtlasToolHttpContractTest,M520McpManifestSafetyContractTest,M510ArchitectureBoundaryTest" test`
+    - `git diff --check` only reported Windows line-ending warnings.
+    - Secret-pattern static scan found 0 matches for this wave.
+    - Boundary import scan found no new real `ElasticsearchTemplate`, `ISysLogService`, HTTP client, `java.net`, or `POST /api/{orgId}/deployment` dependency in this wave.
+    - `mvn -q test`
+  - Full test note: embedding model download timed out in test profile and degraded as expected; final test result passed.
+  - No real `8100` access; no Elasticsearch connection; no `ISysLogService` call; no `sys_log` write; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
+  - Recovery note: schema, validation gate, migration plan, validation result, and release decision are distinct layers. The migration plan is not a release credential, and legacy `auditReceipt.releaseEligible` must be migrated away before real writes.
 
 - M5.21-57 NIM durable audit receipt validation gate contract is implemented and verified:
   - Added `NimCreateDurableAuditReceiptValidationGateSupport`.
