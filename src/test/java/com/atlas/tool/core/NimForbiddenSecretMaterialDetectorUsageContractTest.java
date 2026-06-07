@@ -31,7 +31,8 @@ class NimForbiddenSecretMaterialDetectorUsageContractTest {
         Path.of("src/main/java/com/atlas/tool/impl/NimCreateDurableAuditStorageAvailabilityGateSupport.java"),
         Path.of("src/main/java/com/atlas/tool/impl/NimCreateDurableAuditStorageProbeExecutorSupport.java"),
         Path.of("src/main/java/com/atlas/tool/impl/NimCreateDedicatedDurableAuditWriterBoundarySupport.java"),
-        Path.of("src/main/java/com/atlas/tool/impl/NimCreateReadinessExecutorSupport.java")
+        Path.of("src/main/java/com/atlas/tool/impl/NimCreateReadinessExecutorSupport.java"),
+        Path.of("src/main/java/com/atlas/tool/impl/NimCreateReadinessHttpAdapterSupport.java")
     );
 
     private static final List<Path> NON_BOOLEAN_NUMBER_POLICY_SUPPORTS = List.of(

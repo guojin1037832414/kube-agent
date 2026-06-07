@@ -6,6 +6,19 @@
 
 ---
 
+## [M5.21-98] - NIM readiness HTTP adapter placeholder-aware secret detector migration
+
+**Delivery**: Migrated the readiness HTTP adapter secret scanner to the shared forbidden secret material detector with the existing API-key placeholder allowlist.
+**Changes**
+- `NimCreateReadinessHttpAdapterSupport` now uses `NimForbiddenSecretMaterialDetector.textValuePolicyAllowing(Set.of(API_KEY_PLACEHOLDER))` instead of a local forbidden secret key/value scanner.
+- Extended `NimForbiddenSecretMaterialDetectorUsageContractTest` so the readiness HTTP adapter cannot reintroduce local detector drift.
+- Added an adapter regression proving `Bearer {input your NGC_API_KEY here}` is allowed only as a placeholder outside forbidden secret keys, while `token=<placeholder>` and real Bearer/API-key material remain rejected.
+- Added `docs/M5_21_NINETY_EIGHTH_WAVE_NIM_READINESS_HTTP_ADAPTER_PLACEHOLDER_AWARE_SECRET_DETECTOR_MIGRATION_AUDIT_20260608.md`.
+**Security**
+- No runtime write behavior was opened.
+- No real `8100`, real NIM service HTTP call, Authorization header sending, request headers/bodies in generated specs, deployment POST, state-machine release binding, durable executor release binding, validation result signer, release decision signer, code release switch implementation, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-97] - NIM readiness executor placeholder-aware secret detector migration
 
 **Delivery**: Migrated the readiness executor secret scanner to the shared forbidden secret material detector with an explicit API-key placeholder allowlist.

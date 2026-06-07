@@ -82,10 +82,29 @@ Current track:
 
 Recently completed:
 
-`M5.21-97 NIM readiness executor placeholder-aware shared secret detector migration`
+`M5.21-98 NIM readiness HTTP adapter placeholder-aware shared secret detector migration`
 
 Latest checkpoint:
 
+- Date: 2026-06-08 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-98 implemented:
+  - Migrated `NimCreateReadinessHttpAdapterSupport` to `NimForbiddenSecretMaterialDetector.textValuePolicyAllowing(Set.of(API_KEY_PLACEHOLDER))`.
+  - Removed the readiness HTTP adapter local forbidden secret key/value scanner copy.
+  - Preserved blocker code:
+    - `READINESS_ADAPTER_CONTAINS_FORBIDDEN_SECRET`
+  - Extended `NimForbiddenSecretMaterialDetectorUsageContractTest` so the readiness HTTP adapter is covered by the shared-detector no-local-copy contract.
+  - Added readiness HTTP adapter regression coverage proving `Bearer {input your NGC_API_KEY here}` is allowed only as a placeholder outside forbidden secret keys, while `token=<placeholder>` and real Bearer/API-key material remain rejected.
+  - Added `docs/M5_21_NINETY_EIGHTH_WAVE_NIM_READINESS_HTTP_ADAPTER_PLACEHOLDER_AWARE_SECRET_DETECTOR_MIGRATION_AUDIT_20260608.md`.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimForbiddenSecretMaterialDetectorUsageContractTest,NimForbiddenSecretMaterialDetectorTest,NimCreateReadinessHttpAdapterSupportTest,NimCreateReadinessExecutorSupportTest,NimCreateAuditReadinessSupportTest,NimCreateStateMachineSupportTest" test`
+  - Final verification passed:
+    - `git diff --check`
+    - `mvn -q test`
+  - Full test note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - Security invariant: no real `8100`, no real NIM service HTTP call, no Authorization header sending, no generated request headers/bodies, no deployment POST, no runtime write behavior, no state-machine release binding implementation, no durable executor release binding implementation, no validation result signer, no release decision signer, no code release switch implementation, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Recommended next slice: compare another remaining older local detector such as `NimCreateAuditWriterSupport`, or return to reviewed durable writer/probe boundary design.
+- Previous checkpoint:
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
 - M5.21-97 implemented:

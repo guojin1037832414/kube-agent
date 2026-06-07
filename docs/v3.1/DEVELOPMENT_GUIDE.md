@@ -437,3 +437,11 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - The placeholder is allowed only as a non-secret explanatory value. It is still rejected when placed under forbidden keys such as `token`, and real `Bearer ...` values remain rejected.
 - Readiness executor remains offline/read-only: no kube-manager `8100`, no real NIM service call, no Authorization header, and no write release authority.
 - Learning distinction: placeholder compatibility should be explicit, parameterized, and tested at both shared-policy and call-site levels.
+
+### M5.21-98 readiness HTTP adapter placeholder-aware detector note
+
+- `NimCreateReadinessHttpAdapterSupport` now uses the same placeholder-aware shared detector policy as the readiness executor.
+- Adapter-generated specs still have `bodyAllowed=false`, `headersAllowed=false`, `authorizationHeaderAllowed=false`, and `realApiKeyAllowed=false`.
+- The fixed API-key placeholder can appear as explanatory readiness-plan text, but not under forbidden keys such as `token`, and not inside service URLs as real credential material.
+- Adapter output remains `REQUEST_SPEC_CONTRACT_ONLY`; it does not perform HTTP, call `8100`, or contact the NIM service.
+- Learning distinction: request-spec compilation is not execution. A top-tier Agent keeps compilation, execution, authorization, and credential handling as separate audited boundaries.

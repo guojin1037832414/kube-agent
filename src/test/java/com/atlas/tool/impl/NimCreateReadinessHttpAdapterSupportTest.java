@@ -250,6 +250,37 @@ class NimCreateReadinessHttpAdapterSupportTest {
     }
 
     @Test
+    void adapter_shouldAllowApiKeyPlaceholderOnlyOutsideForbiddenSecretKeys() {
+        Map<String, Object> planWithDocumentedPlaceholder = mutablePlan();
+        planWithDocumentedPlaceholder.put("operatorHint", NimCreateReadinessExecutorSupport.API_KEY_PLACEHOLDER);
+
+        Map<String, Object> allowed = NimCreateReadinessHttpAdapterSupport.compile(new NimCreateReadinessHttpAdapterSupport.ReadinessHttpAdapterInput(
+            planWithDocumentedPlaceholder,
+            "https://nim.example.com/nim",
+            1
+        ));
+
+        assertEquals("READY_FOR_READ_ONLY_HTTP_GETS", allowed.get("state"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> allowedBlockers = (List<Map<String, Object>>) allowed.get("blockedBy");
+        assertTrue(allowedBlockers.isEmpty());
+
+        Map<String, Object> planWithForbiddenPlaceholder = mutablePlan();
+        planWithForbiddenPlaceholder.put("token", NimCreateReadinessExecutorSupport.API_KEY_PLACEHOLDER);
+
+        Map<String, Object> rejected = NimCreateReadinessHttpAdapterSupport.compile(new NimCreateReadinessHttpAdapterSupport.ReadinessHttpAdapterInput(
+            planWithForbiddenPlaceholder,
+            "https://nim.example.com/nim",
+            1
+        ));
+
+        assertEquals("REJECTED", rejected.get("state"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> rejectedBlockers = (List<Map<String, Object>>) rejected.get("blockedBy");
+        assertHasItem(rejectedBlockers, "READINESS_ADAPTER_CONTAINS_FORBIDDEN_SECRET");
+    }
+
+    @Test
     void stateMachine_shouldRejectReadinessPlanWithoutModelsTargetAndStep() {
         Map<String, Object> readiness = mutablePlan();
         readiness.put("targets", List.of("deployment", "service", "nim-health"));
