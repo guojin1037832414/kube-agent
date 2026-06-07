@@ -193,6 +193,24 @@ class NimCreateWriteRequestSpecAdapterSupportTest {
         assertHasBlocker(blockers, "WRITE_REQUEST_SPEC_INPUT_CONTAINS_FORBIDDEN_SECRET");
     }
 
+    @Test
+    void adapter_shouldRejectNestedSecretMaterialThroughSharedDetector() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> receipt = durableAuditReceipt(audit);
+        Map<String, Object> bodyReport = new LinkedHashMap<>(writeBodyReport(audit, receipt));
+        bodyReport.put("diagnostics", List.of(
+            Map.of("ngcApiKey", "redacted-test-value"),
+            Map.of("note", "token=redacted-test-value")
+        ));
+
+        Map<String, Object> report = writeRequestSpecReport(audit, receipt, bodyReport);
+
+        assertEquals(false, report.get("writeRequestPrepared"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+        assertHasBlocker(blockers, "WRITE_REQUEST_SPEC_INPUT_CONTAINS_FORBIDDEN_SECRET");
+    }
+
     private Map<String, Object> writeRequestSpecReport(Map<String, Object> audit,
                                                        Map<String, Object> receipt,
                                                        Map<String, Object> bodyReport) {

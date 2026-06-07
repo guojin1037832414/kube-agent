@@ -196,6 +196,25 @@ class NimCreateWriteExecutionHandoffSupportTest {
         assertHasBlocker(blockers, "WRITE_EXECUTION_HANDOFF_INPUT_CONTAINS_FORBIDDEN_SECRET");
     }
 
+    @Test
+    void handoff_shouldRejectNestedSecretMaterialThroughSharedDetector() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> receipt = durableAuditReceipt(audit);
+        Map<String, Object> bodyReport = writeBodyReport(audit, receipt);
+        Map<String, Object> requestSpecReport = new LinkedHashMap<>(writeRequestSpecReport(audit, receipt, bodyReport));
+        requestSpecReport.put("diagnostics", List.of(
+            Map.of("Authorization", "Bearer redacted-test-value"),
+            Map.of("note", "secret=redacted-test-value")
+        ));
+
+        Map<String, Object> report = writeExecutionHandoffReport(audit, receipt, bodyReport, requestSpecReport);
+
+        assertEquals(false, report.get("writeExecutionPrepared"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+        assertHasBlocker(blockers, "WRITE_EXECUTION_HANDOFF_INPUT_CONTAINS_FORBIDDEN_SECRET");
+    }
+
     private Map<String, Object> writeExecutionHandoffReport(Map<String, Object> audit,
                                                             Map<String, Object> receipt,
                                                             Map<String, Object> bodyReport,

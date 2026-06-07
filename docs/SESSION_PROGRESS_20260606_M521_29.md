@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-86, shared NIM forbidden secret material detector.
+- Current latest wave: M5.21-87, NIM write request and handoff shared secret detector migration.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -48,6 +48,26 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-87 NIM write request and handoff shared secret detector migration is implemented:
+  - Migrated `src/main/java/com/atlas/tool/impl/NimCreateWriteRequestSpecAdapterSupport.java` to `NimForbiddenSecretMaterialDetector.textValuePolicy()`.
+  - Migrated `src/main/java/com/atlas/tool/impl/NimCreateWriteExecutionHandoffSupport.java` to `NimForbiddenSecretMaterialDetector.textValuePolicy()`.
+  - Kept blocker codes unchanged:
+    - `WRITE_REQUEST_SPEC_INPUT_CONTAINS_FORBIDDEN_SECRET`
+    - `WRITE_REQUEST_SPEC_CONTAINS_FORBIDDEN_SECRET_OR_CONTEXT`
+    - `WRITE_EXECUTION_HANDOFF_INPUT_CONTAINS_FORBIDDEN_SECRET`
+  - Extended `src/test/java/com/atlas/tool/core/NimForbiddenSecretMaterialDetectorUsageContractTest.java` to cover all four migrated support classes.
+  - Added nested secret regression tests in `NimCreateWriteRequestSpecAdapterSupportTest` and `NimCreateWriteExecutionHandoffSupportTest`.
+  - Added `docs/M5_21_EIGHTY_SEVENTH_WAVE_NIM_WRITE_CHAIN_SHARED_SECRET_DETECTOR_MIGRATION_AUDIT_20260608.md`.
+  - Updated `CHANGELOG.md`, `docs/M5_21_WAVE_INDEX_20260606.md`, and `docs/v3.1/DEVELOPMENT_GUIDE.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimForbiddenSecretMaterialDetectorUsageContractTest,NimForbiddenSecretMaterialDetectorTest,NimCreateWriteRequestSpecAdapterSupportTest,NimCreateWriteExecutionHandoffSupportTest" test`
+    - `git diff --check`
+    - `mvn -q test`
+  - Full test note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - H-drive recovery will be synced to `H:\codex重要文件\kube-agent` with manifest `M5_21_87_RECOVERY_SHA256.json`; manifest SHA256 is reported outside this hashed file to avoid circular manifest churn.
+  - No real `8100` access; no deployment POST; no runtime write behavior opened; no service-side HITL bypass; no durable writer/probe/receipt implementation; no validation result; no release decision; no release switch implementation; no Elasticsearch; no `ISysLogService`; no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Next recommended slice: migrate another small homogeneous text-policy group such as `NimCreateDurableWriteExecutorSupport` after comparing policy differences.
 
 - M5.21-86 shared NIM forbidden secret material detector is implemented:
   - Added `src/main/java/com/atlas/tool/core/NimForbiddenSecretMaterialDetector.java`.

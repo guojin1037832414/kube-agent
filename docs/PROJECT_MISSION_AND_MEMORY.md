@@ -82,12 +82,27 @@ Current track:
 
 Recently completed:
 
-`M5.21-86 Shared NIM forbidden secret material detector`
+`M5.21-87 NIM write request and handoff shared secret detector migration`
 
 Latest checkpoint:
 
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-87 implemented:
+  - Migrated `NimCreateWriteRequestSpecAdapterSupport` to `NimForbiddenSecretMaterialDetector.textValuePolicy()`.
+  - Migrated `NimCreateWriteExecutionHandoffSupport` to `NimForbiddenSecretMaterialDetector.textValuePolicy()`.
+  - Extended `NimForbiddenSecretMaterialDetectorUsageContractTest` to cover the four migrated support classes and prevent local duplicate secret scanners from returning.
+  - Added nested secret regression tests in `NimCreateWriteRequestSpecAdapterSupportTest` and `NimCreateWriteExecutionHandoffSupportTest`.
+  - Added `docs/M5_21_EIGHTY_SEVENTH_WAVE_NIM_WRITE_CHAIN_SHARED_SECRET_DETECTOR_MIGRATION_AUDIT_20260608.md`.
+  - Updated `CHANGELOG.md`, `docs/M5_21_WAVE_INDEX_20260606.md`, `docs/SESSION_PROGRESS_20260606_M521_29.md`, and `docs/v3.1/DEVELOPMENT_GUIDE.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimForbiddenSecretMaterialDetectorUsageContractTest,NimForbiddenSecretMaterialDetectorTest,NimCreateWriteRequestSpecAdapterSupportTest,NimCreateWriteExecutionHandoffSupportTest" test`
+    - `git diff --check`
+    - `mvn -q test`
+  - Full test note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - Security invariant: no real `8100`, no deployment POST, no runtime write behavior, no service-side HITL bypass, no durable writer/probe/receipt implementation, no validation result, no release decision, no code release switch implementation, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Recommended next slice: migrate another small homogeneous text-policy group such as `NimCreateDurableWriteExecutorSupport` after comparing policy differences.
+- Previous checkpoint:
 - M5.21-86 implemented:
   - Added `src/main/java/com/atlas/tool/core/NimForbiddenSecretMaterialDetector.java`.
   - Centralized NIM forbidden secret key and secret-looking value detection into a shared helper.

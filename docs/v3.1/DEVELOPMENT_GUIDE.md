@@ -185,6 +185,13 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - The first migration covers only `NimCreateDurableAuditReceiptSchemaSupport` and `NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport`; follow-up waves should migrate small homogeneous groups and keep blocker codes unchanged.
 - Learning distinction: deduplicating safety code is good engineering only when the extracted abstraction makes the security policy matrix more visible, not flatter.
 
+### M5.21-87 NIM write-chain detector migration learning note
+
+- `NimCreateWriteRequestSpecAdapterSupport` and `NimCreateWriteExecutionHandoffSupport` now use the shared detector with `textValuePolicy()`.
+- These classes are different from receipt schema and runtime source guard: they do not need documented-field-name exceptions, and they do not use the strict non-null runtime-source policy.
+- The request spec adapter still keeps a separate protected body-context scanner because identity/audit/context fields are not the same category as secret material.
+- Learning distinction: after introducing a shared safety primitive, migrate in small homogeneous groups. This keeps tests meaningful and prevents "shared code" from becoming an accidental policy rewrite.
+
 ### M5.21-58 validation result / release decision migration note
 
 - `NimCreateDurableAuditValidationResultMigrationSupport` only defines a future migration plan for `NimDurableAuditReceiptValidationResult` and `NimDurableAuditReleaseDecision`; it does not create real DTOs, Beans, validators, storage writes, or release credentials.

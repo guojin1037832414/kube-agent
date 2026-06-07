@@ -21,7 +21,9 @@ class NimForbiddenSecretMaterialDetectorUsageContractTest {
     private static final List<Path> MIGRATED_SUPPORTS = List.of(
         Path.of("src/main/java/com/atlas/tool/impl/NimCreateDurableAuditReceiptSchemaSupport.java"),
         Path.of("src/main/java/com/atlas/tool/impl/"
-            + "NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport.java")
+            + "NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport.java"),
+        Path.of("src/main/java/com/atlas/tool/impl/NimCreateWriteRequestSpecAdapterSupport.java"),
+        Path.of("src/main/java/com/atlas/tool/impl/NimCreateWriteExecutionHandoffSupport.java")
     );
 
     @Test

@@ -6,6 +6,20 @@
 
 ---
 
+## [M5.21-87] - NIM write request and handoff secret detector migration
+
+**Delivery**: Migrated the next homogeneous NIM write-chain contract shells to the shared forbidden secret material detector.
+**Changes**
+- `NimCreateWriteRequestSpecAdapterSupport` now uses `NimForbiddenSecretMaterialDetector.textValuePolicy()` instead of a local forbidden secret key/value scanner.
+- `NimCreateWriteExecutionHandoffSupport` now uses the same shared text-value policy.
+- Extended `NimForbiddenSecretMaterialDetectorUsageContractTest` so the four migrated support classes cannot reintroduce local `FORBIDDEN_SECRET_KEYS`, `looksLikeSecretValue(...)`, `isForbiddenSecretKey(...)`, or `secretBearingValue(...)` copies.
+- Added adapter and handoff nested-secret regression tests for list-carried `ngcApiKey`, `Authorization=Bearer ...`, `token=...`, and `secret=...` material.
+- Added `docs/M5_21_EIGHTY_SEVENTH_WAVE_NIM_WRITE_CHAIN_SHARED_SECRET_DETECTOR_MIGRATION_AUDIT_20260608.md`.
+**Security**
+- No runtime write behavior was opened.
+- No real `8100`, deployment POST, durable writer/probe/receipt implementation, validation result, release decision, release switch, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-86] - Shared NIM forbidden secret material detector
 
 **Delivery**: Centralized the first NIM secret-material scanner without changing existing HOLD/write boundaries.
