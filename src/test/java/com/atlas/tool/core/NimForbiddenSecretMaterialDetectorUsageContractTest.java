@@ -54,7 +54,8 @@ class NimForbiddenSecretMaterialDetectorUsageContractTest {
     private static final List<Path> RECEIPT_SCHEMA_POLICY_SUPPORTS = List.of(
         Path.of("src/main/java/com/atlas/tool/impl/NimCreateDurableAuditReceiptSchemaSupport.java"),
         Path.of("src/main/java/com/atlas/tool/impl/NimCreateDurableAuditReceiptValidationGateSupport.java"),
-        Path.of("src/main/java/com/atlas/tool/impl/NimCreateDurableAuditValidationResultMigrationSupport.java")
+        Path.of("src/main/java/com/atlas/tool/impl/NimCreateDurableAuditValidationResultMigrationSupport.java"),
+        Path.of("src/main/java/com/atlas/tool/impl/NimCreateDurableAuditReleaseDecisionGateSupport.java")
     );
 
     @Test

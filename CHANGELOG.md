@@ -6,6 +6,20 @@
 
 ---
 
+## [M5.21-95] - NIM release decision gate receipt-schema secret detector migration
+
+**Delivery**: Migrated the release-decision-gate documented-field secret scanner to the shared receipt-schema forbidden secret material policy.
+**Changes**
+- `NimCreateDurableAuditReleaseDecisionGateSupport` now uses `NimForbiddenSecretMaterialDetector.receiptSchemaPolicy()` instead of a local forbidden secret key/value scanner.
+- Extended `NimForbiddenSecretMaterialDetectorUsageContractTest` so the release decision gate is covered by the receipt-schema policy group.
+- Added a release-decision-gate regression proving documented field names such as `Authorization`, `apiKey`, and `ngcApiKey` are allowed while `Authorization=Bearer ...` remains rejected.
+- Added `docs/M5_21_NINETY_FIFTH_WAVE_NIM_RELEASE_DECISION_GATE_RECEIPT_SCHEMA_SECRET_DETECTOR_MIGRATION_AUDIT_20260608.md`.
+**Security**
+- Local forged release/write claim scanners were intentionally preserved because they guard authority/execution-source forgery, not credential material.
+- No runtime write behavior was opened.
+- No real `8100`, deployment POST, state-machine release binding, durable executor release binding, validation result signer, release decision signer, code release switch implementation, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-94] - NIM validation result migration receipt-schema secret detector migration
 
 **Delivery**: Migrated the validation-result / release-decision migration-plan documented-field secret scanner to the shared receipt-schema forbidden secret material policy.

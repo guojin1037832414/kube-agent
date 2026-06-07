@@ -82,10 +82,29 @@ Current track:
 
 Recently completed:
 
-`M5.21-94 NIM validation result migration receipt-schema shared secret detector migration`
+`M5.21-95 NIM release decision gate receipt-schema shared secret detector migration`
 
 Latest checkpoint:
 
+- Date: 2026-06-08 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-95 implemented:
+  - Migrated `NimCreateDurableAuditReleaseDecisionGateSupport` to `NimForbiddenSecretMaterialDetector.receiptSchemaPolicy()`.
+  - Removed the release-decision-gate local forbidden secret key/value scanner copy while preserving separate forged release/write claim scanners.
+  - Preserved blocker code:
+    - `DURABLE_AUDIT_RELEASE_DECISION_GATE_INPUT_CONTAINS_FORBIDDEN_SECRET`
+  - Extended `NimForbiddenSecretMaterialDetectorUsageContractTest` so the release decision gate is covered by the receipt-schema policy group.
+  - Added regression coverage proving documented field names such as `Authorization`, `apiKey`, and `ngcApiKey` are allowed while `Authorization=Bearer ...` remains rejected.
+  - Added `docs/M5_21_NINETY_FIFTH_WAVE_NIM_RELEASE_DECISION_GATE_RECEIPT_SCHEMA_SECRET_DETECTOR_MIGRATION_AUDIT_20260608.md`.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimForbiddenSecretMaterialDetectorUsageContractTest,NimForbiddenSecretMaterialDetectorTest,NimCreateDurableAuditReleaseDecisionGateSupportTest,NimCreateDurableAuditValidationResultMigrationSupportTest,NimCreateDurableAuditReceiptValidationGateSupportTest,NimCreateDurableAuditReceiptSchemaSupportTest" test`
+  - Final verification passed:
+    - `git diff --check`
+    - `mvn -q test`
+  - Full test note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - Security invariant: no real `8100`, no deployment POST, no runtime write behavior, no state-machine release binding implementation, no durable executor release binding implementation, no validation result signer, no release decision signer, no code release switch implementation, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Recommended next slice: migrate the final documented-field exception class (`NimCreateStateMachineReleaseDecisionRequirementSupport`) after policy comparison, or return to reviewed durable writer/probe boundary design.
+- Previous checkpoint:
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
 - M5.21-94 implemented:

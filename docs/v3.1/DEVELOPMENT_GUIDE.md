@@ -413,3 +413,11 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Validation/release forged-claim scanning remains local: `validationResult`, `releaseDecision`, legacy `auditReceipt.releaseEligible`, `validationStatus=PASS`, and `writeExecutionAllowed=true` are authority forgeries, not credential leaks.
 - The usage contract now protects validation-result migration from reintroducing a local secret-key blacklist.
 - Learning distinction: policy reuse should follow semantic evidence. Similar-looking scanners are migrated only after comparing what the old local code accepted and rejected.
+
+### M5.21-95 release decision gate receipt-schema detector note
+
+- `NimCreateDurableAuditReleaseDecisionGateSupport` now uses `NimForbiddenSecretMaterialDetector.receiptSchemaPolicy()` for secret-material scanning.
+- Release-decision-gate inputs can still carry migration/contract documentation, so exact documented forbidden field names are allowed while real bearer/API-key material remains rejected.
+- Forged release/write scanning remains local: `releaseDecision`, `releaseDecisionGatePass`, `releaseCredential`, `writePermitted=true`, `writeExecuted=true`, and `realHttpExecutionAllowed=true` are authority/execution forgeries, not credential leaks.
+- The usage contract now protects release-decision gate from reintroducing a local secret-key blacklist.
+- Learning distinction: a release gate is not opened by a clean secret scan. Clean input only means "no credentials leaked"; release still requires server-issued, digest-bound, reviewed evidence.
