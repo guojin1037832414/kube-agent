@@ -82,12 +82,32 @@ Current track:
 
 Recently completed:
 
-`M5.21-80 NIM create defaults / intent HOLD contract`
+`M5.21-81 Default value global safety contract`
 
 Latest checkpoint:
 
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-81 implemented:
+  - Added `DefaultValueSafety` as the shared protected-default filter.
+  - `IntentDefaults` now sanitizes defaults during construction, covering YAML-loaded defaults, reflection/test injection, and future registry construction paths.
+  - Protected keys are normalized and recursively stripped from nested maps/lists.
+  - Security review follow-up added near-synonym coverage for `accessToken`, `clientSecret`, `targetOrgId`, `hitlApproved`, `writeAllowed`, `releaseApproved`, `trustedPolicySource`, `writeBodyRebuildReport`, `success`, `executed`, and related variants.
+  - Protected categories include auth/secret, tenant/principal, HITL, HTTP/write/release, audit/source-switch, fallback, and deployment-success claims.
+  - `DefaultValueRegistryTest` proves dangerous injected defaults such as `confirmed`, `writePermitted`, `releaseEligible`, `Authorization`, `organizationId`, and nested `token` are never applied.
+  - Added `M521DefaultValueSafetyContractTest`, which recursively scans `defaults.yml` and verifies representative protected keys are non-defaultable.
+  - Existing legitimate form defaults remain allowed, including `user_create.role=user`.
+  - Added a Chinese safety note to `defaults.yml`.
+  - Added `docs/M5_21_EIGHTY_FIRST_WAVE_DEFAULT_VALUE_GLOBAL_SAFETY_CONTRACT_AUDIT_20260608.md`.
+  - Updated `CHANGELOG.md`, `docs/M5_21_WAVE_INDEX_20260606.md`, `docs/SESSION_PROGRESS_20260606_M521_29.md`, and `docs/v3.1/DEVELOPMENT_GUIDE.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=DefaultValueRegistryTest,M521DefaultValueSafetyContractTest,M521NimCreateDefaultsIntentHoldContractTest" test`
+    - `mvn -q "-Dtest=DefaultValueRegistryTest,M521DefaultValueSafetyContractTest,M521NimCreateDefaultsIntentHoldContractTest,M513HitlFailClosedContractTest,HighRiskMutationToolHttpContractTest" test`
+    - `git diff --check`
+    - `mvn -q test`
+  - Full test note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - Security invariant: no real `8100`, no deployment POST, no durable writer/probe/receipt, no validation result, no release decision, no code release switch, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+- Previous checkpoint:
 - M5.21-80 implemented:
   - Added `M521NimCreateDefaultsIntentHoldContractTest`.
   - `defaults.yml` may keep `nim_create` form defaults only: `gpuPercentLimits`, `replicas`, and `enableWebSsh`.

@@ -55,4 +55,40 @@ class DefaultValueRegistryTest {
         assertEquals("val", result.get("key"));
         assertEquals(1, result.size());
     }
+
+    @Test
+    void testApply_ProtectedControlDefaultsAreNeverFilled() {
+        DefaultValueRegistry registry = new DefaultValueRegistry();
+        try {
+            java.lang.reflect.Field f = DefaultValueRegistry.class.getDeclaredField("registry");
+            f.setAccessible(true);
+            @SuppressWarnings("unchecked")
+            java.util.Map<String, IntentDefaults> map = (java.util.Map<String, IntentDefaults>) f.get(registry);
+            map.put("dangerous_create", new IntentDefaults("dangerous_create",
+                java.util.Map.of(
+                    "replicas", 1,
+                    "confirmed", true,
+                    "writePermitted", true,
+                    "releaseEligible", true,
+                    "Authorization", "Bearer should-not-appear",
+                    "organizationId", "100002",
+                    "nested", java.util.Map.of("token", "secret-token", "displayName", "safe-draft")
+                )));
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        Map<String, Object> result = registry.apply("dangerous_create", new HashMap<>());
+
+        assertEquals(1, result.get("replicas"));
+        assertFalse(result.containsKey("confirmed"));
+        assertFalse(result.containsKey("writePermitted"));
+        assertFalse(result.containsKey("releaseEligible"));
+        assertFalse(result.containsKey("Authorization"));
+        assertFalse(result.containsKey("organizationId"));
+        assertTrue(result.get("nested") instanceof Map<?, ?>);
+        Map<?, ?> nested = (Map<?, ?>) result.get("nested");
+        assertEquals("safe-draft", nested.get("displayName"));
+        assertFalse(nested.containsKey("token"));
+    }
 }

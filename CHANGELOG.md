@@ -6,6 +6,24 @@
 
 ---
 
+## [M5.21-81] - Default value global safety contract
+
+**Delivery**: Generalized the "defaults are not authorization" rule into the shared default-value infrastructure.
+**Changes**
+- Added `DefaultValueSafety` as the global protected-default filter.
+- `IntentDefaults` now sanitizes default maps at construction time, covering YAML-loaded defaults, test/reflection injection, and future registry construction paths.
+- Protected keys are normalized and recursively stripped from nested maps/lists.
+- Protected near-synonyms such as `accessToken`, `clientSecret`, `targetOrgId`, `hitlApproved`, `writeAllowed`, `releaseApproved`, `trustedPolicySource`, `writeBodyRebuildReport`, `success`, and `executed` are also blocked.
+- `DefaultValueRegistryTest` now proves dangerous injected defaults such as `confirmed`, `writePermitted`, `releaseEligible`, `Authorization`, `organizationId`, and nested `token` are never applied.
+- Added `M521DefaultValueSafetyContractTest` to recursively scan `defaults.yml` and lock protected key examples.
+- Kept legitimate business form defaults such as `user_create.role=user` allowed.
+- Added a Chinese safety note to `defaults.yml`.
+- Added `docs/M5_21_EIGHTY_FIRST_WAVE_DEFAULT_VALUE_GLOBAL_SAFETY_CONTRACT_AUDIT_20260608.md`.
+**Security**
+- No runtime write behavior was opened.
+- No real `8100`, deployment POST, durable writer/probe/receipt, validation result, release decision, release switch, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-80] - NIM create defaults / intent HOLD contract
 
 **Delivery**: Hardened the `nim_create` metadata layer so defaults and intent parameters remain UI/form draft hints only.

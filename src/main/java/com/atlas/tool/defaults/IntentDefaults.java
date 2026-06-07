@@ -13,9 +13,9 @@ public record IntentDefaults(
     Map<String, Object> parameters
 ) {
     public IntentDefaults {
-        parameters = parameters != null
-            ? Collections.unmodifiableMap(parameters)
-            : Collections.emptyMap();
+        parameters = Collections.unmodifiableMap(
+            DefaultValueSafety.sanitizeParameters(intentId, parameters)
+        );
     }
 
     public Object getDefault(String paramName) {

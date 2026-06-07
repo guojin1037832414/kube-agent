@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-80, NIM create defaults / intent HOLD contract.
+- Current latest wave: M5.21-81, Default value global safety contract.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -48,6 +48,26 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-81 Default value global safety contract is implemented:
+  - Added `src/main/java/com/atlas/tool/defaults/DefaultValueSafety.java`.
+  - Updated `src/main/java/com/atlas/tool/defaults/IntentDefaults.java` so all default maps are sanitized at construction time.
+  - Protected keys are normalized and recursively stripped from nested maps/lists.
+  - Security review follow-up added near-synonym coverage for `accessToken`, `clientSecret`, `targetOrgId`, `hitlApproved`, `writeAllowed`, `releaseApproved`, `trustedPolicySource`, `writeBodyRebuildReport`, `success`, `executed`, and related variants.
+  - Protected categories include auth/secret, tenant/principal, HITL, HTTP/write/release, audit/source-switch, fallback, and deployment-success claims.
+  - Updated `src/test/java/com/atlas/tool/defaults/DefaultValueRegistryTest.java` to prove dangerous defaults such as `confirmed`, `writePermitted`, `releaseEligible`, `Authorization`, `organizationId`, and nested `token` are never filled.
+  - Added `src/test/java/com/atlas/tool/defaults/M521DefaultValueSafetyContractTest.java` to recursively scan `defaults.yml` and lock representative protected keys.
+  - Existing business form defaults remain allowed, including `user_create.role=user`.
+  - Added a Chinese safety note to `src/main/resources/defaults.yml`.
+  - Added `docs/M5_21_EIGHTY_FIRST_WAVE_DEFAULT_VALUE_GLOBAL_SAFETY_CONTRACT_AUDIT_20260608.md`.
+  - Updated `CHANGELOG.md`, `docs/M5_21_WAVE_INDEX_20260606.md`, and `docs/v3.1/DEVELOPMENT_GUIDE.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=DefaultValueRegistryTest,M521DefaultValueSafetyContractTest,M521NimCreateDefaultsIntentHoldContractTest" test`
+    - `mvn -q "-Dtest=DefaultValueRegistryTest,M521DefaultValueSafetyContractTest,M521NimCreateDefaultsIntentHoldContractTest,M513HitlFailClosedContractTest,HighRiskMutationToolHttpContractTest" test`
+    - `git diff --check`
+    - `mvn -q test`
+  - Full test note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - No real `8100` access; no deployment POST; no durable writer/probe/receipt; no validation result; no release decision; no release switch; no Elasticsearch; no `ISysLogService`; no `sys_log`; `nim_create` remains HOLD/mock-first.
 
 - M5.21-80 NIM create defaults / intent HOLD contract is implemented:
   - Added `src/test/java/com/atlas/contract/M521NimCreateDefaultsIntentHoldContractTest.java`.

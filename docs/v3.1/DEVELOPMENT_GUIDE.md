@@ -135,6 +135,14 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - While `nim_create` is `PLACEHOLDER`, `NimCreateTool` must not bind `@WithDefaults`, `DefaultValueApplier`, or `DefaultValueRegistry`; any future default injection must remain before/around form drafting, not write authorization.
 - Learning distinction: metadata can describe desired shape, but only server-owned HITL, durable audit, trusted policy, release decision, code switch, and write executor evidence can authorize a future write.
 
+### M5.21-81 default value safety learning note
+
+- `IntentDefaults` is the shared guard point for default values. Any new default registry path should construct `IntentDefaults` instead of applying raw maps directly.
+- `DefaultValueSafety` recursively strips protected defaults such as auth headers, tokens, org/user identity, HITL confirmation, HTTP method/endpoints, write permission, release decisions, audit receipts, source guards, fallback tools, and deployment success fields.
+- Common near-synonyms such as `accessToken`, `clientSecret`, `targetOrgId`, `hitlApproved`, `writeAllowed`, `releaseApproved`, `trustedPolicySource`, `writeBodyRebuildReport`, `success`, and `executed` are also non-defaultable.
+- Legitimate form draft fields remain allowed. For example, `user_create.role=user` is a business default, not an authorization decision.
+- Learning distinction: default values can reduce form friction, but they must not mint authority. Authority must come from permission checks, trusted backend facts, HITL evidence, durable audit, and reviewed release gates.
+
 ### M5.21-58 validation result / release decision migration note
 
 - `NimCreateDurableAuditValidationResultMigrationSupport` only defines a future migration plan for `NimDurableAuditReceiptValidationResult` and `NimDurableAuditReleaseDecision`; it does not create real DTOs, Beans, validators, storage writes, or release credentials.
