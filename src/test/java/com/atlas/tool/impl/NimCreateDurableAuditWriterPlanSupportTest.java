@@ -210,6 +210,35 @@ class NimCreateDurableAuditWriterPlanSupportTest {
         assertHasBlocker(blockers, "DURABLE_AUDIT_WRITER_INPUT_CONTAINS_FORBIDDEN_SECRET");
     }
 
+    @Test
+    void writerPlan_shouldRejectNestedSecretLeakageBeforeAnyRecordTemplate() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+        Map<String, Object> storageReport = new LinkedHashMap<>(storageCandidateReport(audit, principal));
+        storageReport.put("diagnostics", List.of(
+            Map.of("note", "storage candidate remains hold"),
+            Map.of("token", 123)
+        ));
+
+        Map<String, Object> report = NimCreateDurableAuditWriterPlanSupport.plan(
+            new NimCreateDurableAuditWriterPlanSupport.DurableAuditWriterPlanInput(
+                audit,
+                principal,
+                storageReport
+            )
+        );
+
+        assertEquals(NimCreateDurableAuditWriterPlanSupport.REJECTED_STATE, report.get("writerState"));
+        assertEquals(false, report.get("inputAccepted"));
+        assertEquals(false, report.get("realStorageTouched"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> plan = (Map<String, Object>) report.get("writerPlan");
+        assertTrue(plan.isEmpty());
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+        assertHasBlocker(blockers, "DURABLE_AUDIT_WRITER_INPUT_CONTAINS_FORBIDDEN_SECRET");
+    }
+
     private Map<String, Object> storageCandidateReport(Map<String, Object> audit,
                                                        Map<String, Object> principal) {
         return NimCreateDurableAuditStorageSupport.prepare(

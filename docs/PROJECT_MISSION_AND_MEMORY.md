@@ -82,10 +82,30 @@ Current track:
 
 Recently completed:
 
-`M5.21-87 NIM write request and handoff shared secret detector migration`
+`M5.21-88 NIM durable write-chain shared secret detector migration`
 
 Latest checkpoint:
 
+- Date: 2026-06-08 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-88 implemented:
+  - Migrated `NimCreateDurableWriteExecutorSupport` to `NimForbiddenSecretMaterialDetector.textValuePolicy()`.
+  - Migrated `NimCreateDurableAuditWriterPlanSupport` to `NimForbiddenSecretMaterialDetector.textValuePolicy()`.
+  - Migrated `NimCreateDurableAuditWriterInterfaceSpecSupport` to `NimForbiddenSecretMaterialDetector.textValuePolicy()` for input scanning.
+  - Preserved generated interface-spec `requestContract.forbiddenFields` documentation while keeping input secret-like metadata fail-closed.
+  - Extended `NimForbiddenSecretMaterialDetectorUsageContractTest` to cover seven migrated support classes and prevent local duplicate secret scanners from returning.
+  - Added nested/list-carried secret regression tests for durable executor and durable audit writer plan.
+  - Added interface-spec boundary tests for documented field names, `Authorization=Bearer ...`, and numeric forbidden-key values such as `token=123`.
+  - Added `docs/M5_21_EIGHTY_EIGHTH_WAVE_NIM_DURABLE_WRITE_CHAIN_SHARED_SECRET_DETECTOR_MIGRATION_AUDIT_20260608.md`.
+  - Updated `CHANGELOG.md`, `docs/M5_21_WAVE_INDEX_20260606.md`, `docs/SESSION_PROGRESS_20260606_M521_29.md`, and `docs/v3.1/DEVELOPMENT_GUIDE.md`.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimForbiddenSecretMaterialDetectorUsageContractTest,NimForbiddenSecretMaterialDetectorTest,NimCreateDurableWriteExecutorSupportTest,NimCreateDurableAuditWriterPlanSupportTest,NimCreateDurableAuditWriterInterfaceSpecSupportTest" test`
+    - `git diff --check`
+    - `mvn -q test`
+  - Full test note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - Security invariant: no real `8100`, no deployment POST, no runtime write behavior, no service-side HITL bypass, no durable writer/probe/receipt implementation, no validation result, no release decision, no code release switch implementation, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Recommended next slice: finish any remaining duplicate secret-detector migrations only after policy comparison, then continue toward reviewed real durable writer/probe boundaries.
+- Previous checkpoint:
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
 - M5.21-87 implemented:

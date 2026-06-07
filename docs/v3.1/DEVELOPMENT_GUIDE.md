@@ -359,3 +359,11 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - `M521NimCreateToolEntryStaticContractTest` locks the entry to `httpMethod=NONE`, `apiEndpoints={}`, `PLACEHOLDER`, authenticated access, confirmation required, fail-closed execution, and state-machine HOLD reporting.
 - The entry contract forbids HTTP/storage/sys_log/8100 shortcuts and direct write-success state in `NimCreateTool`.
 - Learning distinction: for high-risk Agent tools, removing unused dangerous dependencies is a safety feature. A placeholder entry should not be injectable as a writer.
+
+### M5.21-88 durable write-chain shared detector note
+
+- `NimCreateDurableWriteExecutorSupport`, `NimCreateDurableAuditWriterPlanSupport`, and `NimCreateDurableAuditWriterInterfaceSpecSupport` now use `NimForbiddenSecretMaterialDetector.textValuePolicy()` for input secret scanning.
+- The migrated policy matches the previous local behavior: forbidden-key values fail when `hasText(value)` is true, and recursive map/list string scanning still rejects Bearer, API key, token, password, secret, NGC/NVAIE, and common cloud key shapes.
+- Interface-spec generated `requestContract.forbiddenFields` remains documentation output, not a credential leak. Input metadata that looks like real material, such as `Authorization=Bearer ...`, still fails closed.
+- `NimForbiddenSecretMaterialDetectorUsageContractTest` is now the drift guard for seven migrated NIM support classes. Do not reintroduce local `FORBIDDEN_SECRET_KEYS`, `looksLikeSecretValue(...)`, or `isForbiddenSecretKey(...)` copies in those classes.
+- Learning distinction: shared safety utilities are not one-size-fits-all. Choose `textValuePolicy()`, `receiptSchemaPolicy()`, or `strictRecursivePolicy()` by comparing the old security semantics, then lock the choice with policy-boundary tests.

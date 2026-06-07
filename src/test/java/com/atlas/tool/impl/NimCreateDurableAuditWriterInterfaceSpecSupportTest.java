@@ -72,6 +72,17 @@ class NimCreateDurableAuditWriterInterfaceSpecSupportTest {
         assertEquals(false, request.get("authorizationHeaderFromCallerAllowed"));
         assertEquals(false, request.get("realApiKeyAllowed"));
         assertEquals(boundaryReport.get("boundaryPlanDigest"), request.get("sourceBoundaryPlanDigest"));
+        assertEquals(List.of(
+            "Authorization",
+            "token",
+            "apiKey",
+            "ngcApiKey",
+            "nvaieApiKey",
+            "password",
+            "secret",
+            "callerProvidedUsername",
+            "callerProvidedOrganizationId"
+        ), request.get("forbiddenFields"));
 
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> phases = (List<Map<String, Object>>) request.get("phaseContracts");
@@ -211,6 +222,87 @@ class NimCreateDurableAuditWriterInterfaceSpecSupportTest {
         assertEquals(false, report.get("storageProbeExecuted"));
         assertEquals(false, report.get("preWritePersisted"));
         assertEquals(false, report.get("postWritePersisted"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> spec = (Map<String, Object>) report.get("interfaceSpec");
+        assertTrue(spec.isEmpty());
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+        assertHasBlocker(blockers, "DURABLE_AUDIT_WRITER_INTERFACE_INPUT_CONTAINS_FORBIDDEN_SECRET");
+    }
+
+    @Test
+    void interfaceSpec_shouldAllowDocumentedForbiddenFieldNamesInInputMetadata() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+        Map<String, Object> boundaryReport = new LinkedHashMap<>(boundaryReport(audit, principal));
+        boundaryReport.put("forbiddenFields", List.of(
+            "Authorization",
+            "apiKey",
+            "callerProvidedUsername"
+        ));
+
+        Map<String, Object> report = NimCreateDurableAuditWriterInterfaceSpecSupport.plan(
+            new NimCreateDurableAuditWriterInterfaceSpecSupport.DurableAuditWriterInterfaceSpecInput(
+                audit,
+                principal,
+                boundaryReport
+            )
+        );
+
+        assertEquals(NimCreateDurableAuditWriterInterfaceSpecSupport.HOLD_STATE,
+            report.get("interfaceSpecState"));
+        assertEquals(true, report.get("inputAccepted"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+        assertHasBlocker(blockers, "DURABLE_AUDIT_WRITER_INTERFACE_IMPLEMENTATION_HOLD");
+        assertFalse(blockers.stream().anyMatch(item ->
+            "DURABLE_AUDIT_WRITER_INTERFACE_INPUT_CONTAINS_FORBIDDEN_SECRET".equals(item.get("code"))));
+    }
+
+    @Test
+    void interfaceSpec_shouldRejectSecretLikeTextInsideDocumentedFieldMetadata() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+        Map<String, Object> boundaryReport = new LinkedHashMap<>(boundaryReport(audit, principal));
+        boundaryReport.put("forbiddenFields", List.of("Authorization=Bearer redacted-test-value"));
+
+        Map<String, Object> report = NimCreateDurableAuditWriterInterfaceSpecSupport.plan(
+            new NimCreateDurableAuditWriterInterfaceSpecSupport.DurableAuditWriterInterfaceSpecInput(
+                audit,
+                principal,
+                boundaryReport
+            )
+        );
+
+        assertEquals(NimCreateDurableAuditWriterInterfaceSpecSupport.REJECTED_STATE,
+            report.get("interfaceSpecState"));
+        assertEquals(false, report.get("inputAccepted"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> spec = (Map<String, Object>) report.get("interfaceSpec");
+        assertTrue(spec.isEmpty());
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+        assertHasBlocker(blockers, "DURABLE_AUDIT_WRITER_INTERFACE_INPUT_CONTAINS_FORBIDDEN_SECRET");
+    }
+
+    @Test
+    void interfaceSpec_shouldRejectNumericForbiddenKeyValuesToStayFailClosed() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+        Map<String, Object> boundaryReport = new LinkedHashMap<>(boundaryReport(audit, principal));
+        boundaryReport.put("token", 123);
+
+        Map<String, Object> report = NimCreateDurableAuditWriterInterfaceSpecSupport.plan(
+            new NimCreateDurableAuditWriterInterfaceSpecSupport.DurableAuditWriterInterfaceSpecInput(
+                audit,
+                principal,
+                boundaryReport
+            )
+        );
+
+        assertEquals(NimCreateDurableAuditWriterInterfaceSpecSupport.REJECTED_STATE,
+            report.get("interfaceSpecState"));
+        assertEquals(false, report.get("inputAccepted"));
         @SuppressWarnings("unchecked")
         Map<String, Object> spec = (Map<String, Object>) report.get("interfaceSpec");
         assertTrue(spec.isEmpty());

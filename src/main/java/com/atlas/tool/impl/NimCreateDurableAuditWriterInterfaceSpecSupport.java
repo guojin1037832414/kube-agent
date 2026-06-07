@@ -1,5 +1,7 @@
 package com.atlas.tool.impl;
 
+import com.atlas.tool.core.NimForbiddenSecretMaterialDetector;
+
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -7,9 +9,7 @@ import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
 
 /**
@@ -30,17 +30,6 @@ final class NimCreateDurableAuditWriterInterfaceSpecSupport {
     static final String RESPONSE_TYPE = "NimDurableAuditWriteResult";
 
     private static final String PATH_TEMPLATE = "/api/{orgId}/deployment";
-    private static final Set<String> FORBIDDEN_SECRET_KEYS = Set.of(
-        "apikey",
-        "ngcapikey",
-        "nvaieapikey",
-        "token",
-        "secret",
-        "password",
-        "authorization",
-        "authheader",
-        "bearertoken"
-    );
 
     private NimCreateDurableAuditWriterInterfaceSpecSupport() {
     }
@@ -554,29 +543,10 @@ final class NimCreateDurableAuditWriterInterfaceSpecSupport {
     }
 
     private static boolean containsForbiddenSecretMaterial(Map<String, Object> map) {
-        for (Map.Entry<String, Object> entry : map.entrySet()) {
-            Object value = entry.getValue();
-            if (isForbiddenSecretKey(entry.getKey()) && hasText(value)) {
-                return true;
-            }
-            if (value instanceof String textValue && looksLikeSecretValue(textValue)) {
-                return true;
-            }
-            if (value instanceof Map<?, ?> nested && containsForbiddenSecretMaterial(objectMap(nested))) {
-                return true;
-            }
-            if (value instanceof List<?> list) {
-                for (Object item : list) {
-                    if (item instanceof Map<?, ?> nestedItem && containsForbiddenSecretMaterial(objectMap(nestedItem))) {
-                        return true;
-                    }
-                    if (item instanceof String textItem && looksLikeSecretValue(textItem)) {
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
+        return NimForbiddenSecretMaterialDetector.containsForbiddenSecretMaterial(
+            map,
+            NimForbiddenSecretMaterialDetector.textValuePolicy()
+        );
     }
 
     private static boolean hasForgedSuccessClaim(Map<String, Object> map) {
@@ -629,37 +599,6 @@ final class NimCreateDurableAuditWriterInterfaceSpecSupport {
             }
         }
         return ignored;
-    }
-
-    private static boolean isForbiddenSecretKey(String key) {
-        String normalized = normalizeKey(key);
-        return FORBIDDEN_SECRET_KEYS.contains(normalized)
-            || normalized.endsWith("apikey")
-            || normalized.endsWith("token")
-            || normalized.endsWith("secret")
-            || normalized.endsWith("password")
-            || normalized.endsWith("authorization");
-    }
-
-    private static boolean looksLikeSecretValue(String value) {
-        String trimmed = value.trim();
-        String normalized = normalizeKey(trimmed);
-        if (trimmed.startsWith("Bearer ") && trimmed.length() > "Bearer ".length()) {
-            return true;
-        }
-        return normalized.contains("ngcapikey")
-            || normalized.contains("nvaieapikey")
-            || normalized.contains("authorizationbearer")
-            || normalized.contains("apikey=")
-            || normalized.contains("token=")
-            || normalized.contains("secret=")
-            || normalized.contains("password=")
-            || normalized.contains("authorization=")
-            || trimmed.matches("sk-[A-Za-z0-9]{20,}")
-            || trimmed.matches("AKIA[0-9A-Z]{16}")
-            || trimmed.matches("AIza[0-9A-Za-z_-]{35}")
-            || trimmed.matches("ghp_[A-Za-z0-9]{36}")
-            || trimmed.matches("xox[baprs]-[A-Za-z0-9-]{10,}");
     }
 
     private static String digestFor(Map<String, Object> value) {
@@ -758,10 +697,6 @@ final class NimCreateDurableAuditWriterInterfaceSpecSupport {
         } catch (NumberFormatException ex) {
             return false;
         }
-    }
-
-    private static String normalizeKey(String key) {
-        return key == null ? "" : key.replace("_", "").replace("-", "").toLowerCase(Locale.ROOT);
     }
 
     private static String text(Object value) {

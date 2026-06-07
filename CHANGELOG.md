@@ -6,6 +6,21 @@
 
 ---
 
+## [M5.21-88] - NIM durable write-chain secret detector migration
+
+**Delivery**: Migrated the durable write-chain input scanners to the shared forbidden secret material detector.
+**Changes**
+- `NimCreateDurableWriteExecutorSupport` now uses `NimForbiddenSecretMaterialDetector.textValuePolicy()` instead of a local forbidden secret key/value scanner.
+- `NimCreateDurableAuditWriterPlanSupport` now uses the same shared text-value policy.
+- `NimCreateDurableAuditWriterInterfaceSpecSupport` now uses the same shared text-value policy for input scanning while preserving generated `requestContract.forbiddenFields` documentation.
+- Extended `NimForbiddenSecretMaterialDetectorUsageContractTest` so the seven migrated support classes cannot reintroduce local secret detector copies.
+- Added nested/list-carried secret regression tests and interface-spec policy boundary tests for documented field names, secret-like metadata, and numeric forbidden-key values.
+- Added `docs/M5_21_EIGHTY_EIGHTH_WAVE_NIM_DURABLE_WRITE_CHAIN_SHARED_SECRET_DETECTOR_MIGRATION_AUDIT_20260608.md`.
+**Security**
+- No runtime write behavior was opened.
+- No real `8100`, deployment POST, durable writer/probe/receipt implementation, validation result, release decision, release switch, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-87] - NIM write request and handoff secret detector migration
 
 **Delivery**: Migrated the next homogeneous NIM write-chain contract shells to the shared forbidden secret material detector.
