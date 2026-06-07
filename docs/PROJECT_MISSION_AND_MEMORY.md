@@ -82,10 +82,32 @@ Current track:
 
 Recently completed:
 
-`M5.21-99 NIM audit writer shared secret detector migration`
+`M5.21-100 NIM write body rebuilder shared secret detector migration`
 
 Latest checkpoint:
 
+- Date: 2026-06-08 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-100 implemented:
+  - Migrated `NimCreateWriteBodyRebuilderSupport` to `NimForbiddenSecretMaterialDetector.textValuePolicy()`.
+  - Removed the write body rebuilder local forbidden secret key/value scanner copy.
+  - Preserved local protected context stripping for identity/audit/control-plane fields because it is separate from credential leakage detection.
+  - Preserved blocker codes:
+    - `WRITE_BODY_REBUILD_INPUT_CONTAINS_FORBIDDEN_SECRET`
+    - `WRITE_BODY_CONTAINS_FORBIDDEN_SECRET`
+    - `WRITE_BODY_CONTAINS_FORBIDDEN_FIELD`
+  - Extended `NimForbiddenSecretMaterialDetectorUsageContractTest` so the rebuilder is covered by the shared-detector no-local-copy contract and explicitly locked to `textValuePolicy()`.
+  - Added rebuilder regression coverage proving plain `Authorization: present`, `token=false`, forbidden-key collection values, list-carried `Authorization=Bearer ...` metadata, and allowlisted `commands` carrying `Authorization=Bearer ...` all reject.
+  - Added `docs/M5_21_ONE_HUNDREDTH_WAVE_NIM_WRITE_BODY_REBUILDER_SECRET_DETECTOR_MIGRATION_AUDIT_20260608.md`.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimForbiddenSecretMaterialDetectorUsageContractTest,NimForbiddenSecretMaterialDetectorTest,NimCreateWriteBodyRebuilderSupportTest,NimCreateStateMachineSupportTest,NimCreateWriteRequestSpecAdapterSupportTest,NimCreateWriteExecutionHandoffSupportTest" test`
+  - Final verification passed:
+    - `git diff --check`
+    - `mvn -q test`
+  - Full test note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - Security invariant: no real `8100`, no real NIM service HTTP call, no Authorization header sending, no durable audit write, no deployment POST, no runtime write behavior, no state-machine release binding implementation, no durable executor release binding implementation, no validation result signer, no release decision signer, no code release switch implementation, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Recommended next slice: migrate the remaining large `NimCreateStateMachineSupport` local secret scanner only after separate policy comparison, or continue smaller write-chain safety closures without opening writes.
+- Previous checkpoint:
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
 - M5.21-99 implemented:

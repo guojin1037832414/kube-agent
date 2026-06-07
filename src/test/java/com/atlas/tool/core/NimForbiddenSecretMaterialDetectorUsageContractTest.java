@@ -33,7 +33,8 @@ class NimForbiddenSecretMaterialDetectorUsageContractTest {
         Path.of("src/main/java/com/atlas/tool/impl/NimCreateDedicatedDurableAuditWriterBoundarySupport.java"),
         Path.of("src/main/java/com/atlas/tool/impl/NimCreateReadinessExecutorSupport.java"),
         Path.of("src/main/java/com/atlas/tool/impl/NimCreateReadinessHttpAdapterSupport.java"),
-        Path.of("src/main/java/com/atlas/tool/impl/NimCreateAuditWriterSupport.java")
+        Path.of("src/main/java/com/atlas/tool/impl/NimCreateAuditWriterSupport.java"),
+        Path.of("src/main/java/com/atlas/tool/impl/NimCreateWriteBodyRebuilderSupport.java")
     );
 
     private static final List<Path> NON_BOOLEAN_NUMBER_POLICY_SUPPORTS = List.of(
@@ -73,7 +74,7 @@ class NimForbiddenSecretMaterialDetectorUsageContractTest {
                 .contains("NimForbiddenSecretMaterialDetector.containsForbiddenSecretMaterial")
                 .doesNotContain("FORBIDDEN_SECRET_KEYS")
                 .doesNotContain("looksLikeSecretValue(")
-                .doesNotContain("isForbiddenSecretKey(")
+                .doesNotContain("private static boolean isForbiddenSecretKey(")
                 .doesNotContain("secretBearingValue(")
                 .doesNotContain("isDocumentedForbiddenFieldName(");
         }
@@ -83,6 +84,18 @@ class NimForbiddenSecretMaterialDetectorUsageContractTest {
     void auditWriter_shouldUseTextValuePolicyForSanitizedAuditContext()
         throws IOException {
         String source = read(Path.of("src/main/java/com/atlas/tool/impl/NimCreateAuditWriterSupport.java"));
+
+        assertThat(source)
+            .contains("NimForbiddenSecretMaterialDetector.containsForbiddenSecretMaterial")
+            .contains("NimForbiddenSecretMaterialDetector.textValuePolicy()")
+            .doesNotContain("NimForbiddenSecretMaterialDetector.receiptSchemaPolicy()")
+            .doesNotContain("NimForbiddenSecretMaterialDetector.nonBooleanNumberValuePolicy()");
+    }
+
+    @Test
+    void writeBodyRebuilder_shouldUseTextValuePolicyForControlledBodyInputs()
+        throws IOException {
+        String source = read(Path.of("src/main/java/com/atlas/tool/impl/NimCreateWriteBodyRebuilderSupport.java"));
 
         assertThat(source)
             .contains("NimForbiddenSecretMaterialDetector.containsForbiddenSecretMaterial")
@@ -102,7 +115,7 @@ class NimForbiddenSecretMaterialDetectorUsageContractTest {
                 .contains("NimForbiddenSecretMaterialDetector.nonBooleanNumberValuePolicy()")
                 .doesNotContain("FORBIDDEN_SECRET_KEYS")
                 .doesNotContain("looksLikeSecretValue(")
-                .doesNotContain("isForbiddenSecretKey(")
+                .doesNotContain("private static boolean isForbiddenSecretKey(")
                 .doesNotContain("secretBearingValue(")
                 .doesNotContain("isDocumentedForbiddenFieldName(");
         }
@@ -119,7 +132,7 @@ class NimForbiddenSecretMaterialDetectorUsageContractTest {
                 .contains("NimForbiddenSecretMaterialDetector.strictRecursivePolicy()")
                 .doesNotContain("FORBIDDEN_SECRET_KEYS")
                 .doesNotContain("looksLikeSecretValue(")
-                .doesNotContain("isForbiddenSecretKey(")
+                .doesNotContain("private static boolean isForbiddenSecretKey(")
                 .doesNotContain("secretBearingValue(")
                 .doesNotContain("isDocumentedForbiddenFieldName(");
         }
@@ -136,7 +149,7 @@ class NimForbiddenSecretMaterialDetectorUsageContractTest {
                 .contains("NimForbiddenSecretMaterialDetector.receiptSchemaPolicy()")
                 .doesNotContain("FORBIDDEN_SECRET_KEYS")
                 .doesNotContain("looksLikeSecretValue(")
-                .doesNotContain("isForbiddenSecretKey(")
+                .doesNotContain("private static boolean isForbiddenSecretKey(")
                 .doesNotContain("secretBearingValue(")
                 .doesNotContain("isDocumentedForbiddenFieldName(");
         }

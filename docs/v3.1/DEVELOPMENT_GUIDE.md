@@ -453,3 +453,11 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Do not add an audit-writer allowlist for schema examples. Exact documented forbidden field names belong in receipt-schema/report contexts that use `receiptSchemaPolicy()`, while audit context should carry only redacted evidence.
 - Valid audit context still produces only a mock receipt; clean secret scanning does not create durable storage, release eligibility, or write authority.
 - Learning distinction: durable audit quality starts before persistence. A top-tier Agent redacts credentials at the boundary, then audits sanitized facts rather than raw caller material.
+
+### M5.21-100 write body rebuilder shared detector note
+
+- `NimCreateWriteBodyRebuilderSupport` now uses `NimForbiddenSecretMaterialDetector.textValuePolicy()` for credential leakage scanning.
+- The rebuilder still keeps `PROTECTED_CONTEXT_KEYS` local. `organizationId`, `userId`, audit receipts, HITL confirmations, creation gates, and readiness reports are authority/context fields, not credential values.
+- The shared detector is used both for input surfaces and for the rebuilt body shape; the body allowlist still rejects forbidden secret field names through the shared `isForbiddenSecretKey(...)`.
+- Tests lock the policy with plain `Authorization`, numeric `token`, and list-carried `Authorization=Bearer ...` cases.
+- Learning distinction: one safety helper should not become a bucket for every risk. Credential detectors, protected-context strippers, and forged-authority scanners each protect a different proof boundary.

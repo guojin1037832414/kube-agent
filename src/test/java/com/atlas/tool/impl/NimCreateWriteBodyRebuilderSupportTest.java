@@ -190,6 +190,117 @@ class NimCreateWriteBodyRebuilderSupportTest {
     }
 
     @Test
+    void rebuilder_shouldRejectAuthorizationKeyEvenWithPlainTextValue() {
+        Map<String, Object> preview = new java.util.LinkedHashMap<>(completePreview());
+        preview.put("Authorization", "present");
+        Map<String, Object> audit = completeAuditContext();
+
+        Map<String, Object> report = NimCreateWriteBodyRebuilderSupport.rebuild(
+            new NimCreateWriteBodyRebuilderSupport.WriteBodyRebuildInput(
+                openGate(),
+                preview,
+                audit,
+                durableAuditReceipt(audit)
+            )
+        );
+
+        assertEquals(false, report.get("writeBodyPrepared"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+        assertHasBlocker(blockers, "WRITE_BODY_REBUILD_INPUT_CONTAINS_FORBIDDEN_SECRET");
+    }
+
+    @Test
+    void rebuilder_shouldRejectTokenBooleanToLockTextValuePolicy() {
+        Map<String, Object> preview = new java.util.LinkedHashMap<>(completePreview());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> bodyDraft = new java.util.LinkedHashMap<>((Map<String, Object>) preview.get("bodyDraft"));
+        bodyDraft.put("token", false);
+        preview.put("bodyDraft", bodyDraft);
+        Map<String, Object> audit = completeAuditContext();
+
+        Map<String, Object> report = NimCreateWriteBodyRebuilderSupport.rebuild(
+            new NimCreateWriteBodyRebuilderSupport.WriteBodyRebuildInput(
+                openGate(),
+                preview,
+                audit,
+                durableAuditReceipt(audit)
+            )
+        );
+
+        assertEquals(false, report.get("writeBodyPrepared"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+        assertHasBlocker(blockers, "WRITE_BODY_REBUILD_INPUT_CONTAINS_FORBIDDEN_SECRET");
+    }
+
+    @Test
+    void rebuilder_shouldRejectForbiddenKeyCollectionToAvoidStrictPolicyRegression() {
+        Map<String, Object> preview = new java.util.LinkedHashMap<>(completePreview());
+        preview.put("apiKey", Map.of("source", "caller"));
+        Map<String, Object> audit = completeAuditContext();
+
+        Map<String, Object> report = NimCreateWriteBodyRebuilderSupport.rebuild(
+            new NimCreateWriteBodyRebuilderSupport.WriteBodyRebuildInput(
+                openGate(),
+                preview,
+                audit,
+                durableAuditReceipt(audit)
+            )
+        );
+
+        assertEquals(false, report.get("writeBodyPrepared"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+        assertHasBlocker(blockers, "WRITE_BODY_REBUILD_INPUT_CONTAINS_FORBIDDEN_SECRET");
+    }
+
+    @Test
+    void rebuilder_shouldRejectListCarriedSecretLikeBodyMetadata() {
+        Map<String, Object> preview = new java.util.LinkedHashMap<>(completePreview());
+        preview.put("diagnostics", List.of("Authorization=Bearer real-key-material"));
+        Map<String, Object> audit = completeAuditContext();
+
+        Map<String, Object> report = NimCreateWriteBodyRebuilderSupport.rebuild(
+            new NimCreateWriteBodyRebuilderSupport.WriteBodyRebuildInput(
+                openGate(),
+                preview,
+                audit,
+                durableAuditReceipt(audit)
+            )
+        );
+
+        assertEquals(false, report.get("writeBodyPrepared"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+        assertHasBlocker(blockers, "WRITE_BODY_REBUILD_INPUT_CONTAINS_FORBIDDEN_SECRET");
+    }
+
+    @Test
+    void rebuilder_shouldRejectAllowlistedBodyCommandSecretLikeString() {
+        Map<String, Object> preview = new java.util.LinkedHashMap<>(completePreview());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> bodyDraft = new java.util.LinkedHashMap<>((Map<String, Object>) preview.get("bodyDraft"));
+        bodyDraft.put("commands", List.of("Authorization=Bearer real-key-material"));
+        preview.put("bodyDraft", bodyDraft);
+        Map<String, Object> audit = completeAuditContext();
+
+        Map<String, Object> report = NimCreateWriteBodyRebuilderSupport.rebuild(
+            new NimCreateWriteBodyRebuilderSupport.WriteBodyRebuildInput(
+                openGate(),
+                preview,
+                audit,
+                durableAuditReceipt(audit)
+            )
+        );
+
+        assertEquals(false, report.get("writeBodyPrepared"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+        assertHasBlocker(blockers, "WRITE_BODY_REBUILD_INPUT_CONTAINS_FORBIDDEN_SECRET");
+    }
+
+    @Test
     void rebuilder_shouldRejectUnsafeBodyIdentityFields() {
         Map<String, Object> preview = new java.util.LinkedHashMap<>(completePreview());
         @SuppressWarnings("unchecked")

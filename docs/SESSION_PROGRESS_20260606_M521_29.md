@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-99, NIM audit writer shared secret detector migration.
+- Current latest wave: M5.21-100, NIM write body rebuilder shared secret detector migration.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -48,6 +48,26 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-100 NIM write body rebuilder shared secret detector migration is implemented:
+  - Migrated `src/main/java/com/atlas/tool/impl/NimCreateWriteBodyRebuilderSupport.java` to `NimForbiddenSecretMaterialDetector.textValuePolicy()`.
+  - Removed the write body rebuilder local forbidden secret key/value scanner copy.
+  - Preserved local protected context stripping for identity/audit/control-plane fields because it is separate from credential leakage detection.
+  - Preserved blocker codes:
+    - `WRITE_BODY_REBUILD_INPUT_CONTAINS_FORBIDDEN_SECRET`
+    - `WRITE_BODY_CONTAINS_FORBIDDEN_SECRET`
+    - `WRITE_BODY_CONTAINS_FORBIDDEN_FIELD`
+  - Extended `src/test/java/com/atlas/tool/core/NimForbiddenSecretMaterialDetectorUsageContractTest.java` so the rebuilder is covered by the no-local-copy shared detector contract and explicitly locked to `textValuePolicy()`.
+  - Added `src/test/java/com/atlas/tool/impl/NimCreateWriteBodyRebuilderSupportTest.java` coverage proving plain `Authorization: present`, `token=false`, forbidden-key collection values, list-carried `Authorization=Bearer ...` metadata, and allowlisted `commands` carrying `Authorization=Bearer ...` reject.
+  - Added `docs/M5_21_ONE_HUNDREDTH_WAVE_NIM_WRITE_BODY_REBUILDER_SECRET_DETECTOR_MIGRATION_AUDIT_20260608.md`.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimForbiddenSecretMaterialDetectorUsageContractTest,NimForbiddenSecretMaterialDetectorTest,NimCreateWriteBodyRebuilderSupportTest,NimCreateStateMachineSupportTest,NimCreateWriteRequestSpecAdapterSupportTest,NimCreateWriteExecutionHandoffSupportTest" test`
+  - Final verification passed:
+    - `git diff --check`
+    - `mvn -q test`
+  - Full test note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - No real `8100` access; no real NIM service HTTP call; no Authorization header sending; no durable audit write; no deployment POST; no runtime write behavior opened; no state-machine release binding implementation; no durable executor release binding implementation; no validation result signer; no release decision signer; no code release switch implementation; no Elasticsearch; no `ISysLogService`; no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Next recommended slice: migrate the remaining large `NimCreateStateMachineSupport` local secret scanner only after separate policy comparison, or continue smaller write-chain safety closures without opening writes.
 
 - M5.21-99 NIM audit writer shared secret detector migration is implemented:
   - Migrated `src/main/java/com/atlas/tool/impl/NimCreateAuditWriterSupport.java` to `NimForbiddenSecretMaterialDetector.textValuePolicy()`.
