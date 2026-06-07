@@ -123,6 +123,32 @@ class NimCreateDurableAuditStorageSupportTest {
         assertHasBlocker(blockers, "DURABLE_AUDIT_STORAGE_INPUT_CONTAINS_FORBIDDEN_SECRET");
     }
 
+    @Test
+    void storageCandidate_shouldRejectNestedListSecretMaterialBeforeAnyStoragePlan() {
+        Map<String, Object> principal = new LinkedHashMap<>(trustedPrincipalSnapshot());
+        principal.put("sessionEvidence", List.of(
+            Map.of("note", "server principal only"),
+            Map.of("ngcApiKey", "redacted-test-value")
+        ));
+
+        Map<String, Object> report = NimCreateDurableAuditStorageSupport.prepare(
+            new NimCreateDurableAuditStorageSupport.DurableAuditStorageInput(
+                completeAuditContext(),
+                principal
+            )
+        );
+
+        assertEquals(NimCreateDurableAuditStorageSupport.REJECTED_STATE, report.get("storageState"));
+        assertEquals(false, report.get("inputAccepted"));
+        assertEquals(false, report.get("durableReceiptCanBeIssued"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> plan = (Map<String, Object>) report.get("storagePlan");
+        assertTrue(plan.isEmpty());
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+        assertHasBlocker(blockers, "DURABLE_AUDIT_STORAGE_INPUT_CONTAINS_FORBIDDEN_SECRET");
+    }
+
     private Map<String, Object> completeAuditContext() {
         return Map.ofEntries(
             entry("auditPrepared", true),

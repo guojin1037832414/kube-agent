@@ -165,6 +165,36 @@ class NimCreateDurableAuditStorageAvailabilityGateSupportTest {
         assertHasBlocker(blockers, "STORAGE_AVAILABILITY_GATE_INPUT_CONTAINS_FORBIDDEN_SECRET");
     }
 
+    @Test
+    void availabilityGate_shouldRejectNestedListSecretLeakageBeforeProbePlan() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+        Map<String, Object> writerPlanReport = new LinkedHashMap<>(writerPlanReport(audit, principal));
+        writerPlanReport.put("diagnostics", List.of(
+            Map.of("note", "writer plan remains hold"),
+            Map.of("token", "redacted-test-value")
+        ));
+
+        Map<String, Object> report = NimCreateDurableAuditStorageAvailabilityGateSupport.plan(
+            new NimCreateDurableAuditStorageAvailabilityGateSupport.StorageAvailabilityGateInput(
+                audit,
+                principal,
+                writerPlanReport
+            )
+        );
+
+        assertEquals(NimCreateDurableAuditStorageAvailabilityGateSupport.REJECTED_STATE, report.get("gateState"));
+        assertEquals(false, report.get("inputAccepted"));
+        assertEquals(false, report.get("storageProbeExecuted"));
+        assertEquals(false, report.get("realStorageTouched"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> plan = (Map<String, Object>) report.get("availabilityPlan");
+        assertTrue(plan.isEmpty());
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+        assertHasBlocker(blockers, "STORAGE_AVAILABILITY_GATE_INPUT_CONTAINS_FORBIDDEN_SECRET");
+    }
+
     private Map<String, Object> writerPlanReport(Map<String, Object> audit,
                                                  Map<String, Object> principal) {
         return NimCreateDurableAuditWriterPlanSupport.plan(

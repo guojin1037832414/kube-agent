@@ -26,7 +26,11 @@ class NimForbiddenSecretMaterialDetectorUsageContractTest {
         Path.of("src/main/java/com/atlas/tool/impl/NimCreateWriteExecutionHandoffSupport.java"),
         Path.of("src/main/java/com/atlas/tool/impl/NimCreateDurableWriteExecutorSupport.java"),
         Path.of("src/main/java/com/atlas/tool/impl/NimCreateDurableAuditWriterPlanSupport.java"),
-        Path.of("src/main/java/com/atlas/tool/impl/NimCreateDurableAuditWriterInterfaceSpecSupport.java")
+        Path.of("src/main/java/com/atlas/tool/impl/NimCreateDurableAuditWriterInterfaceSpecSupport.java"),
+        Path.of("src/main/java/com/atlas/tool/impl/NimCreateDurableAuditStorageSupport.java"),
+        Path.of("src/main/java/com/atlas/tool/impl/NimCreateDurableAuditStorageAvailabilityGateSupport.java"),
+        Path.of("src/main/java/com/atlas/tool/impl/NimCreateDurableAuditStorageProbeExecutorSupport.java"),
+        Path.of("src/main/java/com/atlas/tool/impl/NimCreateDedicatedDurableAuditWriterBoundarySupport.java")
     );
 
     @Test

@@ -276,6 +276,44 @@ class NimCreateDurableAuditStorageProbeExecutorSupportTest {
     }
 
     @Test
+    void storageProbeExecutor_shouldRejectNestedListSecretLeakageBeforeAttemptSpec() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+        Map<String, Object> writerPlanReport = writerPlanReport(audit, principal);
+        Map<String, Object> availabilityGateReport = availabilityGateReport(audit, principal, writerPlanReport);
+        Map<String, Object> boundaryReport = writerBoundaryReport(audit, principal, writerPlanReport, availabilityGateReport);
+        Map<String, Object> probeSnapshot = Map.of(
+            "diagnosticOnly", true,
+            "observations", List.of(
+                Map.of("note", "probe not executed"),
+                Map.of("Authorization", "redacted-test-value")
+            )
+        );
+
+        Map<String, Object> report = NimCreateDurableAuditStorageProbeExecutorSupport.plan(
+            new NimCreateDurableAuditStorageProbeExecutorSupport.StorageProbeExecutorInput(
+                audit,
+                principal,
+                availabilityGateReport,
+                boundaryReport,
+                probeSnapshot
+            )
+        );
+
+        assertEquals(NimCreateDurableAuditStorageProbeExecutorSupport.REJECTED_STATE,
+            report.get("probeExecutorState"));
+        assertEquals(false, report.get("inputAccepted"));
+        assertEquals(false, report.get("probeAttemptSpecPrepared"));
+        assertSuccessStatesRemainFalse(report);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> spec = (Map<String, Object>) report.get("probeAttemptSpec");
+        assertTrue(spec.isEmpty());
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+        assertHasBlocker(blockers, "STORAGE_PROBE_EXECUTOR_INPUT_CONTAINS_FORBIDDEN_SECRET");
+    }
+
+    @Test
     void storageProbeExecutor_shouldNotDependOnRealStorageOrNetworkClients() throws Exception {
         String source = Files.readString(Path.of(
             "src/main/java/com/atlas/tool/impl/NimCreateDurableAuditStorageProbeExecutorSupport.java"

@@ -82,10 +82,29 @@ Current track:
 
 Recently completed:
 
-`M5.21-88 NIM durable write-chain shared secret detector migration`
+`M5.21-89 NIM durable audit storage shared secret detector migration`
 
 Latest checkpoint:
 
+- Date: 2026-06-08 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-89 implemented:
+  - Migrated `NimCreateDurableAuditStorageSupport` to `NimForbiddenSecretMaterialDetector.textValuePolicy()`.
+  - Migrated `NimCreateDurableAuditStorageAvailabilityGateSupport` to `NimForbiddenSecretMaterialDetector.textValuePolicy()`.
+  - Migrated `NimCreateDurableAuditStorageProbeExecutorSupport` to `NimForbiddenSecretMaterialDetector.textValuePolicy()` for secret-material scanning only.
+  - Migrated `NimCreateDedicatedDurableAuditWriterBoundarySupport` to `NimForbiddenSecretMaterialDetector.textValuePolicy()` for secret-material scanning only.
+  - Preserved local forged-success scanners in probe executor and dedicated writer boundary because they guard a different evidence-source risk.
+  - Extended `NimForbiddenSecretMaterialDetectorUsageContractTest` to cover eleven migrated support classes.
+  - Added nested/list-carried secret regression tests for all four migrated support classes.
+  - Added `docs/M5_21_EIGHTY_NINTH_WAVE_NIM_DURABLE_AUDIT_STORAGE_SHARED_SECRET_DETECTOR_MIGRATION_AUDIT_20260608.md`.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimForbiddenSecretMaterialDetectorUsageContractTest,NimForbiddenSecretMaterialDetectorTest,NimCreateDurableAuditStorageSupportTest,NimCreateDurableAuditStorageAvailabilityGateSupportTest,NimCreateDedicatedDurableAuditWriterBoundarySupportTest,NimCreateDurableAuditStorageProbeExecutorSupportTest" test`
+    - `git diff --check`
+    - `mvn -q test`
+  - Full test note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - Security invariant: no real `8100`, no deployment POST, no runtime write behavior, no storage probe implementation, no durable writer/probe/receipt implementation, no validation result, no release decision, no code release switch implementation, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Recommended next slice: audit remaining `secretBearingValue(...)` classes for possible strict policy migration, while keeping state-machine/write-body protected-context logic separate.
+- Previous checkpoint:
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
 - M5.21-88 implemented:

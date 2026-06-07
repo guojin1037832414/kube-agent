@@ -300,6 +300,43 @@ class NimCreateDedicatedDurableAuditWriterBoundarySupportTest {
         assertHasBlocker(blockers, "DEDICATED_AUDIT_WRITER_BOUNDARY_INPUT_CONTAINS_FORBIDDEN_SECRET");
     }
 
+    @Test
+    void boundary_shouldRejectNestedListSecretLeakageBeforeAnyBoundaryPlan() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+        Map<String, Object> writerPlanReport = writerPlanReport(audit, principal);
+        Map<String, Object> availabilityGateReport = new LinkedHashMap<>(
+            availabilityGateReport(audit, principal, writerPlanReport)
+        );
+        availabilityGateReport.put("diagnostics", List.of(
+            Map.of("note", "availability remains unknown"),
+            Map.of("token", "redacted-test-value")
+        ));
+
+        Map<String, Object> report = NimCreateDedicatedDurableAuditWriterBoundarySupport.plan(
+            new NimCreateDedicatedDurableAuditWriterBoundarySupport.DedicatedAuditWriterBoundaryInput(
+                audit,
+                principal,
+                writerPlanReport,
+                availabilityGateReport
+            )
+        );
+
+        assertEquals(NimCreateDedicatedDurableAuditWriterBoundarySupport.REJECTED_STATE,
+            report.get("writerBoundaryState"));
+        assertEquals(false, report.get("inputAccepted"));
+        assertEquals(false, report.get("realStorageTouched"));
+        assertEquals(false, report.get("storageProbeExecuted"));
+        assertEquals(false, report.get("preWritePersisted"));
+        assertEquals(false, report.get("postWritePersisted"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> boundaryPlan = (Map<String, Object>) report.get("writerBoundaryPlan");
+        assertTrue(boundaryPlan.isEmpty());
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+        assertHasBlocker(blockers, "DEDICATED_AUDIT_WRITER_BOUNDARY_INPUT_CONTAINS_FORBIDDEN_SECRET");
+    }
+
     private Map<String, Object> availabilityGateReport(Map<String, Object> audit,
                                                        Map<String, Object> principal,
                                                        Map<String, Object> writerPlanReport) {

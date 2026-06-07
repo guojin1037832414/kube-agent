@@ -367,3 +367,10 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Interface-spec generated `requestContract.forbiddenFields` remains documentation output, not a credential leak. Input metadata that looks like real material, such as `Authorization=Bearer ...`, still fails closed.
 - `NimForbiddenSecretMaterialDetectorUsageContractTest` is now the drift guard for seven migrated NIM support classes. Do not reintroduce local `FORBIDDEN_SECRET_KEYS`, `looksLikeSecretValue(...)`, or `isForbiddenSecretKey(...)` copies in those classes.
 - Learning distinction: shared safety utilities are not one-size-fits-all. Choose `textValuePolicy()`, `receiptSchemaPolicy()`, or `strictRecursivePolicy()` by comparing the old security semantics, then lock the choice with policy-boundary tests.
+
+### M5.21-89 durable audit storage shared detector note
+
+- `NimCreateDurableAuditStorageSupport`, `NimCreateDurableAuditStorageAvailabilityGateSupport`, `NimCreateDurableAuditStorageProbeExecutorSupport`, and `NimCreateDedicatedDurableAuditWriterBoundarySupport` now use `NimForbiddenSecretMaterialDetector.textValuePolicy()` for secret-material scanning.
+- The usage contract now protects eleven migrated support classes from local secret-detector drift.
+- Probe executor and dedicated writer boundary intentionally keep their local forged-success recursive scanners. Those guard claims such as `storageAvailable=true`, durable ack, read-after-write, and `DURABLE_RECORDED`, which are evidence-source risks rather than credential leaks.
+- Learning distinction: shared helpers should have crisp responsibility. A top-tier Agent separates credential leakage detection from forged success/release evidence detection, then tests both paths independently.
