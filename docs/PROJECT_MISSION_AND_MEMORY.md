@@ -81,9 +81,43 @@ Current track:
 
 Recently completed:
 
-`M5.21-65 NIM accepted boolean source guard`
+`M5.21-66 NIM durable audit storage probe executor contract`
 
 Latest checkpoint:
+
+- Date: 2026-06-07 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+  - M5.21-66 implemented:
+  - Added `NimCreateDurableAuditStorageProbeExecutorSupport` as a contract-only shell for the future storage probe executor.
+  - Added `NimCreateDurableAuditStorageProbeExecutorSupportTest`.
+  - The support class consumes:
+    - `auditContext`
+    - `trustedPrincipalSnapshot`
+    - `storageAvailabilityGateReport`
+    - `dedicatedAuditWriterBoundaryReport`
+    - optional diagnostic `probeExecutionSnapshot`
+  - The positive path binds M5.21-53 availability gate digest and M5.21-54 writer boundary digest, but still returns `IMPLEMENTATION_HOLD`.
+  - Current success states remain false:
+    - `storageProbeExecuted=false`
+    - `realStorageTouched=false`
+    - `storageAvailable=false`
+    - `durableAckVerified=false`
+    - `readAfterWriteVerified=false`
+    - `preWriteAllowed=false`
+    - `writeExecutionAllowed=false`
+    - `realHttpExecutionAllowed=false`
+    - `durableReceiptCanBeIssued=false`
+  - Forged success claims from audit context, trusted principal, availability gate, writer boundary, or diagnostic snapshot are rejected.
+  - Added source-level guard coverage proving the new support class does not bind Spring annotations, HTTP clients, Elasticsearch, `ISysLogService`, `java.net`, or real storage calls.
+  - Added `docs/M5_21_SIXTY_SIXTH_WAVE_NIM_DURABLE_AUDIT_STORAGE_PROBE_EXECUTOR_AUDIT_20260607.md`.
+  - No real `8100` access; no HTTP client; no Elasticsearch connection; no `ISysLogService` call; no `sys_log` write; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateDurableAuditStorageProbeExecutorSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateDurableAuditStorageProbeExecutorSupportTest,NimCreateDurableAuditStorageAvailabilityGateSupportTest,NimCreateDedicatedDurableAuditWriterBoundarySupportTest,NimCreateDurableAuditWriterPlanSupportTest,NimCreateDurableAuditStorageSupportTest" test`
+    - `mvn -q test`
+    - Full test note: `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0; this remains an accepted degraded-test-path signal, not an M5.21-66 failure.
+    - Final closure also included `git diff --check`, production boundary import scan, static secret scan, H-drive SHA256 sync verification, commit, and push.
+  - Learning note: a storage availability plan is not a storage probe result. The future real probe executor must live inside the dedicated writer boundary and bind availability/writer/audit/principal digests before any pre-write or receipt can be considered.
 
 - Date: 2026-06-07 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.

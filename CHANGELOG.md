@@ -6,6 +6,20 @@
 
 ---
 
+## [M5.21-66] - NIM durable audit storage probe executor contract
+
+**Delivery**: Added a contract-only storage probe executor shell that binds the M5.21-53 availability gate and M5.21-54 dedicated writer boundary before any future real storage probe can be considered.
+**Changes**
+- Added `NimCreateDurableAuditStorageProbeExecutorSupport`.
+- Added `NimCreateDurableAuditStorageProbeExecutorSupportTest`.
+- The positive path returns `IMPLEMENTATION_HOLD` and keeps `storageProbeExecuted=false`, `storageAvailable=false`, `durableAckVerified=false`, `readAfterWriteVerified=false`, `preWriteAllowed=false`, `writeExecutionAllowed=false`, and `durableReceiptCanBeIssued=false`.
+- The executor shell rejects forged probe/storage/ack/read-after-write/write/receipt success claims across audit context, trusted principal, availability gate, writer boundary, and diagnostic snapshot inputs.
+- Added source-level dependency guard coverage for the new support class so it cannot silently bind Spring, HTTP, Elasticsearch, `ISysLogService`, `java.net`, or real storage writes.
+- Added `docs/M5_21_SIXTY_SIXTH_WAVE_NIM_DURABLE_AUDIT_STORAGE_PROBE_EXECUTOR_AUDIT_20260607.md`.
+**Security**
+- This wave does not enable real storage probing or write execution.
+- `nim_create` remains `httpMethod=NONE + PLACEHOLDER + requiresConfirmation=true`, with no real `8100`, no `POST /api/{orgId}/deployment`, no Elasticsearch, no `ISysLogService`, and no `sys_log` write.
+
 ## [M5.21-65] - NIM accepted boolean source guard
 
 **Delivery**: Added a source-level regression guard so future production code cannot consume `releaseDecisionGateReportAccepted` alone as a release approval signal.

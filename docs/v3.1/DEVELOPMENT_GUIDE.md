@@ -186,3 +186,11 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - `M521NimAcceptedBooleanSourceContractTest` scans production source so future code cannot directly read `releaseDecisionGateReportAccepted` as a standalone signal.
 - The only allowed production occurrences are the contract shell outputs and the explicit forbidden-shortcut wording.
 - Use source-level contract tests when a dangerous compatibility field is easy to search for and easy to misuse later.
+
+### M5.21-66 storage probe executor contract note
+
+- `NimCreateDurableAuditStorageProbeExecutorSupport` defines only a future storage probe executor contract; it does not run a real storage probe, bind a storage client, or issue durable ack evidence.
+- The executor contract must consume both the M5.21-53 availability gate report and the M5.21-54 dedicated writer boundary report. A storage probe that is not inside the dedicated writer boundary is a bypass risk.
+- Current output remains `IMPLEMENTATION_HOLD`; `storageProbeExecuted=false`, `storageAvailable=false`, `durableAckVerified=false`, `readAfterWriteVerified=false`, `preWriteAllowed=false`, `writeExecutionAllowed=false`, and `durableReceiptCanBeIssued=false`.
+- Diagnostic probe snapshots are explicitly non-authoritative. Caller or mock supplied `storageAvailable=true`, `availabilityStatus=AVAILABLE`, `durableAckVerified=true`, `readAfterWriteVerified=true`, `writePermitted=true`, or `receiptStatus=DURABLE_RECORDED` remains a forged success claim.
+- Future real implementation must issue a server-side `NimDurableAuditStorageProbeResult` bound to audit event digest, availability plan digest, writer boundary digest, and trusted principal before any pre-write intent can be allowed.

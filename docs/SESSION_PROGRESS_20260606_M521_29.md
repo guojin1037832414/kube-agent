@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-65, NIM accepted boolean source guard.
+- Current latest wave: M5.21-66, NIM durable audit storage probe executor contract.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -46,6 +46,34 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-66 NIM durable audit storage probe executor contract is implemented:
+  - Added `NimCreateDurableAuditStorageProbeExecutorSupport`.
+  - Added `NimCreateDurableAuditStorageProbeExecutorSupportTest`.
+  - The contract shell binds M5.21-53 `storageAvailabilityGateReport` and M5.21-54 `dedicatedAuditWriterBoundaryReport` before preparing a future `probeExecutorPlan` / `probeAttemptSpec`.
+  - Valid inputs still return `IMPLEMENTATION_HOLD`; no diagnostic snapshot is authoritative.
+  - All success/write states remain false:
+    - `storageProbeExecuted=false`
+    - `realStorageTouched=false`
+    - `storageAvailable=false`
+    - `durableAckVerified=false`
+    - `readAfterWriteVerified=false`
+    - `preWriteAllowed=false`
+    - `writePermitted=false`
+    - `writeExecutionAllowed=false`
+    - `realHttpExecutionAllowed=false`
+    - `durableReceiptCanBeIssued=false`
+  - Rejects forged success claims across audit context, trusted principal, availability gate report, writer boundary report, and diagnostic probe snapshot.
+  - Source-level dependency guard proves the new support class does not register Spring annotations, HTTP clients, Elasticsearch, `ISysLogService`, `java.net`, or real storage calls.
+  - Added `docs/M5_21_SIXTY_SIXTH_WAVE_NIM_DURABLE_AUDIT_STORAGE_PROBE_EXECUTOR_AUDIT_20260607.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateDurableAuditStorageProbeExecutorSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateDurableAuditStorageProbeExecutorSupportTest,NimCreateDurableAuditStorageAvailabilityGateSupportTest,NimCreateDedicatedDurableAuditWriterBoundarySupportTest,NimCreateDurableAuditWriterPlanSupportTest,NimCreateDurableAuditStorageSupportTest" test`
+    - `mvn -q test`
+    - Full test note: `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0; this is expected for the current local test environment and does not indicate an M5.21-66 regression.
+    - Final closure also included `git diff --check`, production boundary import scan, static secret scan, H-drive SHA256 sync verification, commit, and push.
+  - No real `8100` access; no HTTP client; no Elasticsearch connection; no `ISysLogService`; no `sys_log` write; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
+  - Recovery note: future real storage probe work must start from `NimCreateDurableAuditStorageProbeExecutorSupport`; it must replace HOLD with reviewed server-issued `NimDurableAuditStorageProbeResult`, not treat availability gate or writer boundary test double as success.
 
 - M5.21-65 NIM accepted boolean source guard is implemented:
   - Added `M521NimAcceptedBooleanSourceContractTest`.
