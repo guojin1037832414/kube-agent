@@ -81,9 +81,54 @@ Current track:
 
 Recently completed:
 
-`M5.21-70 NIM durable audit receipt validation result contract`
+`M5.21-71 NIM durable audit release decision contract`
 
 Latest checkpoint:
+
+- Date: 2026-06-07 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+  - M5.21-71 implemented:
+  - Added `NimCreateDurableAuditReleaseDecisionContractSupport` as an independent contract-only future `NimDurableAuditReleaseDecision` value contract.
+  - Added `NimCreateDurableAuditReleaseDecisionContractSupportTest`.
+  - The support class consumes:
+    - `auditContext`
+    - `trustedPrincipalSnapshot`
+    - `durableAuditReceiptValidationResultContractReport` from M5.21-70
+    - optional caller `callerReleaseEvidence`, which is always non-authoritative in this wave
+  - It binds M5.21-70 `validationResultContractDigest`, future server-issued `validationResultDigest`, future `releaseDecisionDigest`, `codeReleaseSwitchDigest`, source audit event, trusted principal, M5.21-69 enhanced migration, M5.21-68 probe binding/result, M5.21-67 probe executor, M5.21-58 migration, receipt schema, validation plan, writer interface, writer boundary, writer plan, availability plan, and future write-chain digest fields.
+  - The future release decision contract requires `bodyDigest`, `requestSpecDigest`, `handoffDigest`, `auditReceiptId`, and `serverDerivedIdempotencyKey` before any future write execution can be allowed.
+  - It rejects missing M5.21-70 report, tampered `validationResultContractDigest`, invalid upstream HOLD state, forged validation/release/write/gate claims including `releaseDecisionGateReportAccepted=true`, caller-supplied release/validation/receipt evidence, and secret-bearing inputs.
+  - Current success states remain false:
+    - `realReleaseDecisionCreated=false`
+    - `serverIssuedReleaseDecisionAccepted=false`
+    - `realValidationResultAccepted=false`
+    - `validationResultDigestVerified=false`
+    - `validationResultContractDigestVerified=false`
+    - `releaseDecisionDigestVerified=false`
+    - `trustedPrincipalValidated=false`
+    - `codeReleaseSwitchVerified=false`
+    - `stateMachineReleaseBound=false`
+    - `durableExecutorReleaseBound=false`
+    - `releaseDecisionAccepted=false`
+    - `releaseCredentialIssued=false`
+    - `releaseEligible=false`
+    - `writePermitted=false`
+    - `writeExecutionAllowed=false`
+    - `realHttpExecutionAllowed=false`
+    - `realStorageTouched=false`
+  - Added `docs/M5_21_SEVENTY_FIRST_WAVE_NIM_DURABLE_AUDIT_RELEASE_DECISION_CONTRACT_AUDIT_20260607.md`.
+  - No real `8100` access; no HTTP client; no Elasticsearch connection; no `ISysLogService` call; no `sys_log` write; no real `POST /api/{orgId}/deployment` execution; `nim_create` remains HOLD.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateDurableAuditReleaseDecisionContractSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateDurableAuditReleaseDecisionContractSupportTest,NimCreateDurableAuditReceiptValidationResultSupportTest,NimCreateDurableAuditValidationResultProbeBindingMigrationSupportTest,NimCreateDurableAuditValidationResultMigrationSupportTest,NimCreateDurableAuditReceiptValidationProbeResultBindingSupportTest,NimCreateDurableAuditStorageProbeResultSupportTest,NimCreateDurableAuditReceiptValidationGateSupportTest,NimCreateDurableAuditReceiptSchemaSupportTest" test`
+    - `mvn -q test`
+    - `git diff --check`
+    - production boundary import/write-path scan
+    - static secret scan
+    - H-drive SHA256 sync verification
+  - Full test note: `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0; this remains an accepted degraded-test-path signal, not an M5.21-71 failure.
+  - Final closure includes H-drive SHA256 sync verification, commit, and push.
+  - Learning note: M5.21-71 fixes the boundary between validation fact and release fact. A future write path must not treat M5.21-70 validation result contract, caller JSON, legacy `auditReceipt.releaseEligible`, executor success, or `releaseDecisionGateReportAccepted` as `ALLOW_WRITE_EXECUTION`; it must require a reviewed server-issued release decision bound to validation result digest, code release switch, write-chain digests, trusted principal, and audit event.
 
 - Date: 2026-06-07 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.

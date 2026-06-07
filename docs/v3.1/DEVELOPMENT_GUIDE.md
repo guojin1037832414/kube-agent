@@ -227,3 +227,11 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Future PASS also requires typed storage probe receipt, pre-write durable ack, post-write durable ack, and final durable receipt digests, with explicit future fields named `storageProbeReceiptDigest`, `preWriteDurableAckDigest`, `postWriteDurableAckDigest`, and `durableReceiptDigest`. None of those are accepted from caller evidence in this wave.
 - Current output remains `IMPLEMENTATION_HOLD`; `serverIssuedValidationResultRequired=true`, `callerValidationEvidenceAuthoritative=false`, `legacyMigrationReportAloneAllowed=false`, `realStorageTouched=false`, `validationPassed=false`, `releaseEligible=false`, and `writeExecutionAllowed=false`.
 - Learning distinction: a validation result is a server-issued fact, not a plan object, schema, gate, binding report, or caller-supplied JSON object with `validationStatus=PASS`.
+
+### M5.21-71 release decision contract note
+
+- `NimCreateDurableAuditReleaseDecisionContractSupport` defines only the future server-issued `NimDurableAuditReleaseDecision` value contract; it does not create a real release decision, release credential, state-machine release, or durable executor release.
+- The contract consumes the M5.21-70 validation result contract report and requires binding M5.21-70 `validationResultContractDigest`, future server-issued `validationResultDigest`, future `releaseDecisionDigest`, `codeReleaseSwitchDigest`, audit event, trusted principal, and write-chain digests.
+- Future write release also requires `bodyDigest`, `requestSpecDigest`, `handoffDigest`, `auditReceiptId`, and `serverDerivedIdempotencyKey`; these fields must be rechecked by the state machine and durable executor immediately before any real POST can run.
+- Current output remains `IMPLEMENTATION_HOLD`; `serverIssuedReleaseDecisionRequired=true`, `callerReleaseEvidenceAuthoritative=false`, `realReleaseDecisionCreated=false`, `releaseDecisionAccepted=false`, `releaseCredentialIssued=false`, `releaseEligible=false`, `writePermitted=false`, and `writeExecutionAllowed=false`.
+- Learning distinction: validation fact and release fact are two separate server-issued layers. Caller release evidence, legacy `auditReceipt.releaseEligible`, executor success, and `releaseDecisionGateReportAccepted` are not release credentials.

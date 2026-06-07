@@ -6,6 +6,21 @@
 
 ---
 
+## [M5.21-71] - NIM durable audit release decision contract
+
+**Delivery**: Added a contract-only future `NimDurableAuditReleaseDecision` value contract that consumes the M5.21-70 receipt validation result contract and keeps write release held until a reviewed server-issued release decision exists.
+**Changes**
+- Added `NimCreateDurableAuditReleaseDecisionContractSupport`.
+- Added `NimCreateDurableAuditReleaseDecisionContractSupportTest`.
+- Binds M5.21-70 `validationResultContractDigest`, future server-issued `validationResultDigest`, future `releaseDecisionDigest`, `codeReleaseSwitchDigest`, source audit event, trusted principal, M5.21-69 enhanced migration, M5.21-68 probe binding/result, M5.21-67 probe executor, M5.21-58 migration, receipt schema, validation plan, writer interface, writer boundary, writer plan, availability plan, and future write-chain digest fields.
+- Requires future release evidence to explicitly carry `bodyDigest`, `requestSpecDigest`, `handoffDigest`, `auditReceiptId`, and `serverDerivedIdempotencyKey`.
+- Rejects missing or tampered M5.21-70 reports, caller-supplied release/validation/receipt evidence, forged release gate/write claims, and secret-bearing inputs.
+- Keeps `serverIssuedReleaseDecisionRequired=true`, `callerReleaseEvidenceAuthoritative=false`, `realReleaseDecisionCreated=false`, `serverIssuedReleaseDecisionAccepted=false`, `releaseDecisionAccepted=false`, `releaseCredentialIssued=false`, `releaseEligible=false`, `writePermitted=false`, and `writeExecutionAllowed=false`.
+- Added `docs/M5_21_SEVENTY_FIRST_WAVE_NIM_DURABLE_AUDIT_RELEASE_DECISION_CONTRACT_AUDIT_20260607.md`.
+**Security**
+- This wave does not create a real release decision, validation result, DTO, Spring Bean, storage client, release credential, Tool registration, Controller, state-machine release, or write path.
+- `nim_create` remains `httpMethod=NONE + PLACEHOLDER + requiresConfirmation=true`, with no real `8100`, no real deployment POST execution, no Elasticsearch, no `ISysLogService`, and no `sys_log` write.
+
 ## [M5.21-70] - NIM durable audit receipt validation result contract
 
 **Delivery**: Added a contract-only future `NimDurableAuditReceiptValidationResult` value contract that consumes the M5.21-69 enhanced migration report and keeps NIM write release held until a reviewed server-issued validation result exists.
