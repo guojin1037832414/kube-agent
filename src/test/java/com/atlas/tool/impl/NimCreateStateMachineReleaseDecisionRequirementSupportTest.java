@@ -51,6 +51,9 @@ class NimCreateStateMachineReleaseDecisionRequirementSupportTest {
         assertEquals(true, report.get("inputAccepted"));
         assertEquals(true, report.get("stateMachineRequirementPlanPrepared"));
         assertEquals(true, report.get("releaseDecisionGateReportAccepted"));
+        assertEquals("CONTRACT_INPUT_SHAPE_ONLY", report.get("releaseDecisionGateReportAcceptanceScope"));
+        assertEquals(false, report.get("releaseDecisionGateReportAcceptanceIsRealStateMachineRelease"));
+        assertEquals(false, report.get("releaseDecisionGateReportAcceptanceCanEnableWrite"));
         assertEquals(false, report.get("realStateMachineReleaseDecisionGateReportAccepted"));
         assertEquals(false, report.get("releaseDecisionGateDigestVerified"));
         assertEquals(false, report.get("validationResultDigestVerified"));
@@ -181,6 +184,9 @@ class NimCreateStateMachineReleaseDecisionRequirementSupportTest {
             report.get("requirementState"));
         assertEquals(false, report.get("inputAccepted"));
         assertEquals(false, report.get("stateMachineRequirementPlanPrepared"));
+        assertEquals("NOT_ACCEPTED", report.get("releaseDecisionGateReportAcceptanceScope"));
+        assertEquals(false, report.get("releaseDecisionGateReportAcceptanceIsRealStateMachineRelease"));
+        assertEquals(false, report.get("releaseDecisionGateReportAcceptanceCanEnableWrite"));
         assertEquals(false, report.get("writePermitted"));
         assertEquals(false, report.get("writeExecutionAllowed"));
         @SuppressWarnings("unchecked")

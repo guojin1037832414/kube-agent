@@ -96,6 +96,11 @@ final class NimCreateStateMachineReleaseDecisionRequirementSupport {
         result.put("inputAccepted", inputAccepted);
         result.put("stateMachineRequirementPlanPrepared", inputAccepted);
         result.put("releaseDecisionGateReportAccepted", inputAccepted);
+        result.put("releaseDecisionGateReportAcceptanceScope", inputAccepted
+            ? "CONTRACT_INPUT_SHAPE_ONLY"
+            : "NOT_ACCEPTED");
+        result.put("releaseDecisionGateReportAcceptanceIsRealStateMachineRelease", false);
+        result.put("releaseDecisionGateReportAcceptanceCanEnableWrite", false);
         result.put("realStateMachineReleaseDecisionGateReportAccepted", false);
         result.put("releaseDecisionGateDigestVerified", false);
         result.put("validationResultDigestVerified", false);

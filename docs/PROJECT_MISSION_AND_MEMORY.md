@@ -81,9 +81,32 @@ Current track:
 
 Recently completed:
 
-`M5.21-62 NIM state-machine secret list-item coverage matrix`
+`M5.21-63 NIM state-machine gate report acceptance semantics`
 
 Latest checkpoint:
+
+- Date: 2026-06-07 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+  - M5.21-63 implemented:
+  - Clarified `releaseDecisionGateReportAccepted=true` semantics in `NimCreateStateMachineReleaseDecisionRequirementSupport`.
+  - Added output fields:
+    - `releaseDecisionGateReportAcceptanceScope=CONTRACT_INPUT_SHAPE_ONLY|NOT_ACCEPTED`
+    - `releaseDecisionGateReportAcceptanceIsRealStateMachineRelease=false`
+    - `releaseDecisionGateReportAcceptanceCanEnableWrite=false`
+  - Updated `NimCreateStateMachineReleaseDecisionRequirementSupportTest`:
+    - valid contract input now asserts scope `CONTRACT_INPUT_SHAPE_ONLY`
+    - rejected missing gate report now asserts scope `NOT_ACCEPTED`
+    - both paths assert acceptance is not real state-machine release and cannot enable write
+  - Security invariant: `realStateMachineReleaseDecisionGateReportAccepted=false`, `releaseDecisionGateDigestVerified=false`, `stateMachineCanSetWritePermittedNow=false`, `writePermitted=false`, `writeExecutionAllowed=false`, and `realHttpExecutionAllowed=false`.
+  - Added `docs/M5_21_SIXTY_THIRD_WAVE_NIM_STATE_MACHINE_GATE_REPORT_ACCEPTANCE_SEMANTICS_AUDIT_20260607.md`.
+  - No real `8100` access; no HTTP client; no Elasticsearch connection; no `ISysLogService` call; no `sys_log` write; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateStateMachineReleaseDecisionRequirementSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateStateMachineReleaseDecisionRequirementSupportTest,NimCreateDurableAuditReleaseDecisionGateSupportTest,NimCreateDurableAuditValidationResultMigrationSupportTest,NimCreateDurableAuditReceiptValidationGateSupportTest,NimCreateDurableAuditReceiptSchemaSupportTest" test`
+    - `mvn -q test`
+    - Full test note: `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0; this remains an accepted degraded-test-path signal, not an M5.21-63 failure.
+    - Final closure also included `git diff --check`, boundary import scan, static secret scan, H-drive SHA256 sync verification, commit, and push.
+  - Learning note: boolean fields need explicit scope. `accepted=true` is too easy to misread in safety-critical state machines unless the contract says exactly what was accepted and what remains forbidden.
 
 - Date: 2026-06-07 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.

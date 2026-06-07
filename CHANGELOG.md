@@ -6,6 +6,19 @@
 
 ---
 
+## [M5.21-63] - NIM state-machine gate report acceptance semantics
+
+**Delivery**: Clarified the M5.21-60 state-machine release decision gate report acceptance semantics so future implementers cannot confuse contract input-shape acceptance with real state-machine release acceptance.
+**Changes**
+- Added `releaseDecisionGateReportAcceptanceScope=CONTRACT_INPUT_SHAPE_ONLY|NOT_ACCEPTED`.
+- Added `releaseDecisionGateReportAcceptanceIsRealStateMachineRelease=false`.
+- Added `releaseDecisionGateReportAcceptanceCanEnableWrite=false`.
+- Extended `NimCreateStateMachineReleaseDecisionRequirementSupportTest` to assert both accepted-shape and rejected-input semantics.
+- Added `docs/M5_21_SIXTY_THIRD_WAVE_NIM_STATE_MACHINE_GATE_REPORT_ACCEPTANCE_SEMANTICS_AUDIT_20260607.md`.
+**Security**
+- This wave does not modify `NimCreateStateMachineSupport` real release logic and does not enable writes.
+- `nim_create` remains `httpMethod=NONE + PLACEHOLDER + requiresConfirmation=true`, with no real `8100`, no `POST /api/{orgId}/deployment`, no Elasticsearch, no `ISysLogService`, and no `sys_log` write.
+
 ## [M5.21-62] - NIM state-machine secret list-item coverage matrix
 
 **Delivery**: Completed the M5.21-61 secret leakage matrix by proving list-item secret rejection for every M5.21-60 state-machine release decision requirement input.

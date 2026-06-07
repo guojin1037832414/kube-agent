@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-62, NIM state-machine secret list-item coverage matrix.
+- Current latest wave: M5.21-63, NIM state-machine gate report acceptance semantics.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -46,6 +46,25 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-63 NIM state-machine gate report acceptance semantics is implemented:
+  - Updated `NimCreateStateMachineReleaseDecisionRequirementSupport`.
+  - Added explicit acceptance semantics:
+    - `releaseDecisionGateReportAcceptanceScope=CONTRACT_INPUT_SHAPE_ONLY|NOT_ACCEPTED`
+    - `releaseDecisionGateReportAcceptanceIsRealStateMachineRelease=false`
+    - `releaseDecisionGateReportAcceptanceCanEnableWrite=false`
+  - Updated `NimCreateStateMachineReleaseDecisionRequirementSupportTest`.
+  - Valid contract input asserts `CONTRACT_INPUT_SHAPE_ONLY`; rejected missing report asserts `NOT_ACCEPTED`.
+  - Both paths prove the accepted shape is not a real state-machine release and cannot enable write.
+  - Added `docs/M5_21_SIXTY_THIRD_WAVE_NIM_STATE_MACHINE_GATE_REPORT_ACCEPTANCE_SEMANTICS_AUDIT_20260607.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateStateMachineReleaseDecisionRequirementSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateStateMachineReleaseDecisionRequirementSupportTest,NimCreateDurableAuditReleaseDecisionGateSupportTest,NimCreateDurableAuditValidationResultMigrationSupportTest,NimCreateDurableAuditReceiptValidationGateSupportTest,NimCreateDurableAuditReceiptSchemaSupportTest" test`
+    - `mvn -q test`
+    - Full test note: `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0; this is expected for the current local test environment and does not indicate an M5.21-63 regression.
+    - Final closure also included `git diff --check`, boundary import scan, static secret scan, H-drive SHA256 sync verification, commit, and push.
+  - No real `8100` access; no HTTP client; no Elasticsearch connection; no `ISysLogService`; no `sys_log` write; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
+  - Recovery note: future state-machine code must not treat `releaseDecisionGateReportAccepted=true` as release approval. It only means the contract shell accepted input shape and prepared a future requirement plan.
 
 - M5.21-62 NIM state-machine secret list-item coverage matrix is implemented:
   - Updated `NimCreateStateMachineReleaseDecisionRequirementSupportTest`.

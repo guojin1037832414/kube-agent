@@ -165,3 +165,11 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Secret tests should distinguish input surface and nesting shape. A single list-item test proves recursion exists, but it does not prove every input surface is protected against list-carried metadata.
 - The state-machine release decision requirement now tests list-item secret rejection in all three inputs: `auditContext`, `trustedPrincipalSnapshot`, and `durableAuditReleaseDecisionGateReport`.
 - This remains test/docs-only and keeps `nim_create` held. The goal is to sharpen evidence before any future state-machine release gate is wired into production behavior.
+
+### M5.21-63 acceptance semantics note
+
+- `releaseDecisionGateReportAccepted=true` means only that the contract shell accepted the input shape and prepared a future state-machine requirement plan.
+- It is not a real release decision and is not a state-machine acceptance of write permission.
+- The explicit scope is `releaseDecisionGateReportAcceptanceScope=CONTRACT_INPUT_SHAPE_ONLY`; rejected inputs use `NOT_ACCEPTED`.
+- `releaseDecisionGateReportAcceptanceIsRealStateMachineRelease=false` and `releaseDecisionGateReportAcceptanceCanEnableWrite=false` must remain false until a reviewed real state-machine release gate exists.
+- In safety-critical Agent state machines, every boolean `accepted` field should have a scope, otherwise future code can accidentally treat a planning artifact as permission.
