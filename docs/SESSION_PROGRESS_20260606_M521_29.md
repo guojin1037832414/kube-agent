@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-76, NIM code release switch runtime source guard report binding.
+- Current latest wave: M5.21-77, NIM runtime source guard binding static contract.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -48,6 +48,23 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-77 NIM runtime source guard binding static contract is implemented:
+  - Added `src/test/java/com/atlas/contract/M521NimRuntimeSourceGuardBindingContractTest.java`.
+  - The static contract reads `NimCreateStateMachineSupport.java` and `NimCreateDurableWriteExecutorSupport.java`.
+  - It asserts both shells still declare and consume `codeReleaseSwitchRuntimeSourceGuardReport`.
+  - It asserts both shells still call `validateCodeReleaseSwitchRuntimeSourceGuardReport`.
+  - It asserts both shells still expose required source guard report fields and false release/source flags.
+  - It asserts state machine / executor source guard digest cross-checks remain present.
+  - It statically rejects `System.getenv`, `System.getProperty`, `@Value`, Spring registration, real HTTP/storage/sys_log/ES, `8100`, and direct write-success true flags in the binding shells.
+  - Added `docs/M5_21_SEVENTY_SEVENTH_WAVE_NIM_RUNTIME_SOURCE_GUARD_BINDING_STATIC_CONTRACT_AUDIT_20260608.md`.
+  - Updated `CHANGELOG.md`, `docs/M5_21_WAVE_INDEX_20260606.md`, `docs/PROJECT_MISSION_AND_MEMORY.md`, and `docs/v3.1/DEVELOPMENT_GUIDE.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=M521NimRuntimeSourceGuardBindingContractTest" test`
+    - `mvn -q "-Dtest=M521NimRuntimeSourceGuardBindingContractTest,M521NimCodeReleaseSwitchRuntimeSourceGuardContractTest,NimCreateDurableWriteExecutorSupportTest,NimCreateStateMachineSupportTest" test`
+    - `git diff --check`
+  - No runtime code changed in this wave; `nim_create` remains HOLD/mock-first.
+  - Recovery note: this wave protects M5.21-76 from future code drift.
 
 - M5.21-76 NIM code release switch runtime source guard report binding is implemented:
   - Updated `NimCreateDurableWriteExecutorSupport` to require `codeReleaseSwitchRuntimeSourceGuardReport`.

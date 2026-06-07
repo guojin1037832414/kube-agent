@@ -273,3 +273,10 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - The state machine independently validates the same report and checks the durable executor echoes the same source guard/runtime-binding digests.
 - A legal full shell remains held by executor HOLD, switch-contract HOLD, and source-guard HOLD; no report can make `writePermitted`, `writeExecutionAllowed`, `realHttpExecutionAllowed`, `writeAttempted`, or `writeExecuted` true.
 - Learning distinction: source guard binding means "this evidence source has been checked and is still not enough." It is a required fail-closed guard, not a release credential.
+
+### M5.21-77 source guard binding static contract note
+
+- `M521NimRuntimeSourceGuardBindingContractTest` protects the M5.21-76 binding by reading production source directly.
+- The contract requires both current shells to keep `codeReleaseSwitchRuntimeSourceGuardReport` as an input, validation target, digest-binding source, and secret-scan target.
+- The contract rejects environment/property/Spring/HTTP/storage/sys_log/8100 shortcuts and direct write-success true flags in the binding shells.
+- Learning distinction: static source contracts are useful for architectural invariants that are easy to accidentally remove and hard to notice through ordinary happy-path tests.

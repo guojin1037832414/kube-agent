@@ -82,12 +82,32 @@ Current track:
 
 Recently completed:
 
-`M5.21-76 NIM code release switch runtime source guard report binding`
+`M5.21-77 NIM runtime source guard binding static contract`
 
 Latest checkpoint:
 
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-77 implemented:
+  - Added `M521NimRuntimeSourceGuardBindingContractTest`.
+  - The test reads `NimCreateStateMachineSupport.java` and `NimCreateDurableWriteExecutorSupport.java` directly.
+  - It asserts both shells still require `codeReleaseSwitchRuntimeSourceGuardReport`.
+  - It asserts both shells still validate, digest-bind, and secret-scan source guard evidence.
+  - It asserts M5.21-76 binding fields remain false/non-release:
+    - `codeReleaseSwitchRuntimeSourceGuardAcceptedForRelease=false`
+    - `sourceGuardInstalled=false`
+    - `candidateSourceEvidenceAuthoritative=false`
+    - `backendQuerySourceAllowedForRelease=false`
+    - `sysLogBackfillSourceAllowed=false`
+  - It statically rejects env/property/Spring/HTTP/storage/sys_log/8100/write-success shortcuts in the two binding shells.
+  - Added `docs/M5_21_SEVENTY_SEVENTH_WAVE_NIM_RUNTIME_SOURCE_GUARD_BINDING_STATIC_CONTRACT_AUDIT_20260608.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=M521NimRuntimeSourceGuardBindingContractTest" test`
+    - `mvn -q "-Dtest=M521NimRuntimeSourceGuardBindingContractTest,M521NimCodeReleaseSwitchRuntimeSourceGuardContractTest,NimCreateDurableWriteExecutorSupportTest,NimCreateStateMachineSupportTest" test`
+    - `git diff --check`
+  - No runtime behavior changed; no real `8100`, HTTP client, Spring registration, sys_log/ES, or deployment POST.
+  - Learning note: source-level contracts are a strong fit for architecture invariants that can be removed by future edits without breaking ordinary happy-path tests.
+- Previous checkpoint:
 - M5.21-76 implemented:
   - `NimCreateDurableWriteExecutorSupport` now consumes `codeReleaseSwitchRuntimeSourceGuardReport`.
   - `NimCreateStateMachineSupport` now consumes and independently validates the same source guard report.

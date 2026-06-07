@@ -6,6 +6,19 @@
 
 ---
 
+## [M5.21-77] - NIM runtime source guard binding static contract
+
+**Delivery**: Added a source-level contract test that locks the M5.21-76 runtime source-guard report binding into the current state-machine and durable-executor shells.
+**Changes**
+- Added `M521NimRuntimeSourceGuardBindingContractTest`.
+- The contract asserts `NimCreateStateMachineSupport` still declares and validates `codeReleaseSwitchRuntimeSourceGuardReport`, emits required/false release fields, and cross-checks durable executor source guard digests.
+- The contract asserts `NimCreateDurableWriteExecutorSupport` still reads, validates, secret-scans, and digest-binds the same source guard report before accepting the write shell.
+- The contract statically rejects environment/property/Spring/HTTP/storage/sys_log/8100/write-success shortcuts in the two binding shells.
+- Added `docs/M5_21_SEVENTY_SEVENTH_WAVE_NIM_RUNTIME_SOURCE_GUARD_BINDING_STATIC_CONTRACT_AUDIT_20260608.md`.
+**Security**
+- No runtime write behavior changed.
+- `nim_create` remains HOLD/mock-first; no real switch, release credential, HTTP client, Spring registration, kube-manager `8100`, `sys_log`, Elasticsearch, or deployment POST was added.
+
 ## [M5.21-76] - NIM runtime source guard report binding
 
 **Delivery**: Bound the M5.21-75 `codeReleaseSwitchRuntimeSourceGuardReport` into the current state-machine and durable-executor shells as mandatory fail-closed evidence, while keeping `nim_create` held.
