@@ -229,6 +229,45 @@ class NimCreateDedicatedDurableAuditWriterBoundarySupportTest {
     }
 
     @Test
+    void boundary_shouldRejectNestedForgedStorageAndReceiptClaims() {
+        Map<String, Object> audit = new LinkedHashMap<>(completeAuditContext());
+        audit.put("diagnostics", Map.of("storageAvailable", true));
+        Map<String, Object> cleanAudit = completeAuditContext();
+        Map<String, Object> principal = new LinkedHashMap<>(trustedPrincipalSnapshot());
+        principal.put("sessionEvidence", List.of(Map.of(
+            "receiptStatus", NimCreateStateMachineSupport.REQUIRED_AUDIT_RECEIPT_STATUS
+        )));
+        Map<String, Object> cleanPrincipal = trustedPrincipalSnapshot();
+        Map<String, Object> writerPlanReport = writerPlanReport(cleanAudit, cleanPrincipal);
+        Map<String, Object> availabilityGateReport = availabilityGateReport(cleanAudit, cleanPrincipal, writerPlanReport);
+
+        Map<String, Object> report = NimCreateDedicatedDurableAuditWriterBoundarySupport.plan(
+            new NimCreateDedicatedDurableAuditWriterBoundarySupport.DedicatedAuditWriterBoundaryInput(
+                audit,
+                principal,
+                writerPlanReport,
+                availabilityGateReport
+            )
+        );
+
+        assertEquals(NimCreateDedicatedDurableAuditWriterBoundarySupport.REJECTED_STATE,
+            report.get("writerBoundaryState"));
+        assertEquals(false, report.get("inputAccepted"));
+        assertEquals(false, report.get("realStorageTouched"));
+        assertEquals(false, report.get("storageProbeExecuted"));
+        assertEquals(false, report.get("storageAvailable"));
+        assertEquals(false, report.get("preWritePersisted"));
+        assertEquals(false, report.get("postWritePersisted"));
+        assertEquals(false, report.get("durableReceiptCanBeIssued"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> boundaryPlan = (Map<String, Object>) report.get("writerBoundaryPlan");
+        assertTrue(boundaryPlan.isEmpty());
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+        assertHasBlocker(blockers, "DEDICATED_AUDIT_WRITER_BOUNDARY_FORGED_SUCCESS_CLAIM");
+    }
+
+    @Test
     void boundary_shouldRejectSecretLeakageBeforeAnyBoundaryPlan() {
         Map<String, Object> audit = new LinkedHashMap<>(completeAuditContext());
         audit.put("Authorization", "redacted-test-value");

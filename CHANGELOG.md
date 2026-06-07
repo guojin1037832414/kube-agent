@@ -6,6 +6,19 @@
 
 ---
 
+## [M5.21-78] - NIM durable audit writer/probe boundary static contract
+
+**Delivery**: Hardened the future NIM durable audit writer/probe boundary before any real storage or write path exists.
+**Changes**
+- `NimCreateDedicatedDurableAuditWriterBoundarySupport` now recursively rejects forged success claims hidden in nested maps or list items.
+- Added `boundary_shouldRejectNestedForgedStorageAndReceiptClaims` to prove nested `storageAvailable=true` and `receiptStatus=DURABLE_RECORDED` are fail-closed.
+- Added `M521NimDurableAuditWriterProbeBoundaryStaticContractTest`.
+- The static contract reads the dedicated writer boundary, storage probe executor, and the wider durable audit/release chain to lock digest fields and forged-claim blockers.
+- The contract statically rejects Spring/HTTP/storage/sys_log/8100/runtime I/O shortcuts and direct success-state `result.put(..., true)` writes.
+**Security**
+- No real durable writer, storage probe, HTTP client, Spring registration, Elasticsearch, `ISysLogService`, `sys_log`, kube-manager `8100`, durable receipt, release decision, release switch, or deployment POST was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-77] - NIM runtime source guard binding static contract
 
 **Delivery**: Added a source-level contract test that locks the M5.21-76 runtime source-guard report binding into the current state-machine and durable-executor shells.

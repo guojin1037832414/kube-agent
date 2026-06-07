@@ -598,20 +598,43 @@ final class NimCreateDedicatedDurableAuditWriterBoundarySupport {
     }
 
     private static boolean hasForgedSuccessClaim(Map<String, Object> map) {
-        return Boolean.TRUE.equals(map.get("storageProbeExecuted"))
-            || Boolean.TRUE.equals(map.get("storageAvailable"))
-            || "AVAILABLE".equals(text(map.get("availabilityStatus")))
-            || Boolean.TRUE.equals(map.get("preWritePersisted"))
-            || Boolean.TRUE.equals(map.get("postWritePersisted"))
-            || Boolean.TRUE.equals(map.get("preWriteDurable"))
-            || Boolean.TRUE.equals(map.get("postWriteDurable"))
-            || Boolean.TRUE.equals(map.get("durableReceiptCanBeIssued"))
-            || Boolean.TRUE.equals(map.get("durableReceiptIssued"))
-            || Boolean.TRUE.equals(map.get("releaseEligible"))
-            || Boolean.TRUE.equals(map.get("realStorageTouched"))
-            || Boolean.TRUE.equals(map.get("durable"))
-            || NimCreateStateMachineSupport.REQUIRED_AUDIT_RECEIPT_STATUS.equals(text(map.get("receiptStatus")))
-            || NimCreateStateMachineSupport.REQUIRED_AUDIT_STORAGE_MODE.equals(text(map.get("storageMode")));
+        for (Map.Entry<String, Object> entry : map.entrySet()) {
+            Object value = entry.getValue();
+            if (isForgedSuccessClaim(entry.getKey(), value)) {
+                return true;
+            }
+            if (value instanceof Map<?, ?> nested && hasForgedSuccessClaim(objectMap(nested))) {
+                return true;
+            }
+            if (value instanceof List<?> list) {
+                for (Object item : list) {
+                    if (item instanceof Map<?, ?> nestedItem && hasForgedSuccessClaim(objectMap(nestedItem))) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    private static boolean isForgedSuccessClaim(String key, Object value) {
+        return switch (key) {
+            case "storageProbeExecuted",
+                "storageAvailable",
+                "preWritePersisted",
+                "postWritePersisted",
+                "preWriteDurable",
+                "postWriteDurable",
+                "durableReceiptCanBeIssued",
+                "durableReceiptIssued",
+                "releaseEligible",
+                "realStorageTouched",
+                "durable" -> Boolean.TRUE.equals(value);
+            case "availabilityStatus" -> "AVAILABLE".equals(text(value));
+            case "receiptStatus" -> NimCreateStateMachineSupport.REQUIRED_AUDIT_RECEIPT_STATUS.equals(text(value));
+            case "storageMode" -> NimCreateStateMachineSupport.REQUIRED_AUDIT_STORAGE_MODE.equals(text(value));
+            default -> false;
+        };
     }
 
     private static Map<String, Object> forgedSuccessClaimBlocker(String source) {

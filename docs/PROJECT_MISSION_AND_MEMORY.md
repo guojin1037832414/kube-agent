@@ -82,12 +82,30 @@ Current track:
 
 Recently completed:
 
-`M5.21-77 NIM runtime source guard binding static contract`
+`M5.21-78 NIM durable audit writer/probe boundary static contract`
 
 Latest checkpoint:
 
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-78 implemented:
+  - Hardened `NimCreateDedicatedDurableAuditWriterBoundarySupport` so forged success claims are scanned recursively through nested maps and list items.
+  - Added behavior coverage for nested `storageAvailable=true` and list-item `receiptStatus=DURABLE_RECORDED` in `NimCreateDedicatedDurableAuditWriterBoundarySupportTest`.
+  - Added `M521NimDurableAuditWriterProbeBoundaryStaticContractTest`.
+  - The static contract reads the dedicated writer boundary, storage probe executor, and wider durable audit/release chain source files directly.
+  - It locks digest-chain field presence across `storagePlanDigest`, `writerPlanDigest`, `availabilityPlanDigest`, `boundaryPlanDigest`, `interfaceSpecDigest`, `schemaDigest`, `validationPlanDigest`, `probeExecutorPlanDigest`, `probeResultContractDigest`, `bindingPlanDigest`, `enhancedMigrationPlanDigest`, `validationResultContractDigest`, `releaseDecisionContractDigest`, `codeReleaseSwitchContractDigest`, and `sourceGuardMatrixDigest`.
+  - It locks forged-claim blockers across availability gate, dedicated writer boundary, probe executor, probe result, probe-result validation binding, validation result, release decision, code switch, and source guard.
+  - It statically rejects environment/property/Spring/HTTP/storage/sys_log/8100/runtime I/O shortcuts and direct success-state `result.put(..., true)` writes across the NIM durable release chain.
+  - Added `docs/M5_21_SEVENTY_EIGHTH_WAVE_NIM_DURABLE_AUDIT_WRITER_PROBE_BOUNDARY_STATIC_CONTRACT_AUDIT_20260608.md`.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=M521NimDurableAuditWriterProbeBoundaryStaticContractTest,NimCreateDedicatedDurableAuditWriterBoundarySupportTest,NimCreateDurableAuditStorageProbeExecutorSupportTest" test`
+    - `mvn -q "-Dtest=M521NimDurableAuditWriterProbeBoundaryStaticContractTest,NimCreateDedicatedDurableAuditWriterBoundarySupportTest,NimCreateDurableAuditStorageProbeExecutorSupportTest,NimCreateDurableAuditStorageAvailabilityGateSupportTest,NimCreateDurableAuditStorageProbeResultSupportTest,NimCreateDurableAuditReceiptValidationProbeResultBindingSupportTest" test`
+    - `git diff --check`
+    - `mvn -q test`
+  - Full test note: `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0; this remains an accepted degraded-test-path signal, not an M5.21-78 failure.
+  - No real durable writer, storage probe, HTTP client, Spring registration, Elasticsearch, `ISysLogService`, `sys_log`, kube-manager `8100`, durable receipt, release decision, release switch, or deployment POST was added.
+  - Learning note: success-shaped diagnostic data is still caller data unless it is server-issued, typed, digest-bound, and produced by the reviewed side-effect boundary.
+- Previous checkpoint:
 - M5.21-77 implemented:
   - Added `M521NimRuntimeSourceGuardBindingContractTest`.
   - The test reads `NimCreateStateMachineSupport.java` and `NimCreateDurableWriteExecutorSupport.java` directly.

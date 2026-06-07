@@ -280,3 +280,10 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - The contract requires both current shells to keep `codeReleaseSwitchRuntimeSourceGuardReport` as an input, validation target, digest-binding source, and secret-scan target.
 - The contract rejects environment/property/Spring/HTTP/storage/sys_log/8100 shortcuts and direct write-success true flags in the binding shells.
 - Learning distinction: static source contracts are useful for architectural invariants that are easy to accidentally remove and hard to notice through ordinary happy-path tests.
+
+### M5.21-78 durable audit writer/probe boundary static contract note
+
+- `NimCreateDedicatedDurableAuditWriterBoundarySupport` now recursively rejects forged success claims hidden inside nested maps and list items.
+- `M521NimDurableAuditWriterProbeBoundaryStaticContractTest` protects the dedicated writer boundary, storage probe executor, and wider durable audit/release digest chain at source level.
+- The contract keeps future storage/writer/probe integration explicit-review only: no Spring injection, HTTP client, Elasticsearch client, `ISysLogService`, `sys_log`, `8100`, or direct success-state writes may appear in these shells.
+- Learning distinction: success-shaped diagnostic data is still caller data unless it is server-issued, typed, digest-bound, and produced by the reviewed side-effect boundary.
