@@ -461,3 +461,11 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - The shared detector is used both for input surfaces and for the rebuilt body shape; the body allowlist still rejects forbidden secret field names through the shared `isForbiddenSecretKey(...)`.
 - Tests lock the policy with plain `Authorization`, numeric `token`, and list-carried `Authorization=Bearer ...` cases.
 - Learning distinction: one safety helper should not become a bucket for every risk. Credential detectors, protected-context strippers, and forged-authority scanners each protect a different proof boundary.
+
+### M5.21-101 state-machine placeholder-aware detector note
+
+- `NimCreateStateMachineSupport` now uses `NimForbiddenSecretMaterialDetector.textValuePolicyAllowing(Set.of(API_KEY_PLACEHOLDER))` for credential leakage scanning across its guard inputs.
+- The placeholder allowance is deliberately narrow: it only preserves the fixed readiness documentation value outside forbidden keys.
+- The same placeholder still rejects under `token` or assignment-like text such as `token=<placeholder>`, and real Bearer/API-key material remains blocked.
+- The migration is also hardening: suffix-style keys such as `refreshToken` and list/nested `Authorization=Bearer ...` strings now share the stronger detector coverage.
+- Learning distinction: example placeholders can support teaching, but field context still controls authority. A placeholder under a secret-bearing key is unsafe because the key changes the meaning of the value.

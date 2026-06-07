@@ -203,6 +203,148 @@ class NimCreateStateMachineSupportTest {
     }
 
     @Test
+    void stateMachine_shouldAllowDocumentedReadinessApiKeyPlaceholder() {
+        Map<String, Object> readiness = new java.util.LinkedHashMap<>(completeReadinessPlan());
+        readiness.put("operatorHint", NimCreateReadinessExecutorSupport.API_KEY_PLACEHOLDER);
+        Map<String, Object> readinessReport = new java.util.LinkedHashMap<>(completeReadinessExecutionReport());
+
+        Map<String, Object> guard = NimCreateStateMachineSupport.evaluate(new NimCreateStateMachineSupport.ReadinessRequest(
+            Map.of("name", "nim-placeholder"),
+            openGate(),
+            completePreview(),
+            HitlConfirmation.human("thread-1", "nim_create"),
+            completeAuditContext(),
+            completeAuditReceipt(),
+            readiness,
+            readinessReport,
+            NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
+            true
+        ));
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) guard.get("blockedBy");
+        assertNoBlocker(blockers, "READINESS_PLAN_CONTAINS_FORBIDDEN_SECRET");
+        assertNoBlocker(blockers, "READINESS_EXECUTION_REPORT_CONTAINS_FORBIDDEN_SECRET");
+    }
+
+    @Test
+    void stateMachine_shouldRejectSharedDetectorHardenedSecretShapes() {
+        Map<String, Object> audit = new java.util.LinkedHashMap<>(completeAuditContext());
+        audit.put("refreshToken", "present");
+        Map<String, Object> readiness = new java.util.LinkedHashMap<>(completeReadinessPlan());
+        readiness.put("token", NimCreateReadinessExecutorSupport.API_KEY_PLACEHOLDER);
+        readiness.put("diagnostics", List.of("Authorization=Bearer real-key-material"));
+        readiness.put("placeholderAssignment", "token=" + NimCreateReadinessExecutorSupport.API_KEY_PLACEHOLDER);
+
+        Map<String, Object> guard = NimCreateStateMachineSupport.evaluate(new NimCreateStateMachineSupport.ReadinessRequest(
+            Map.of("name", "nim-hardened-secret-shapes"),
+            openGate(),
+            completePreview(),
+            HitlConfirmation.human("thread-1", "nim_create"),
+            audit,
+            completeAuditReceipt(),
+            readiness,
+            completeReadinessExecutionReport(),
+            NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
+            true
+        ));
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) guard.get("blockedBy");
+        assertHasBlocker(blockers, "AUDIT_CONTEXT_CONTAINS_FORBIDDEN_SECRET");
+        assertHasBlocker(blockers, "READINESS_PLAN_CONTAINS_FORBIDDEN_SECRET");
+    }
+
+    @Test
+    void stateMachine_shouldRejectBooleanValuesUnderForbiddenSecretKeys() {
+        Map<String, Object> audit = new java.util.LinkedHashMap<>(completeAuditContext());
+        audit.put("token", false);
+
+        Map<String, Object> guard = NimCreateStateMachineSupport.evaluate(new NimCreateStateMachineSupport.ReadinessRequest(
+            Map.of("name", "nim-boolean-token"),
+            openGate(),
+            completePreview(),
+            HitlConfirmation.human("thread-1", "nim_create"),
+            audit,
+            completeAuditReceipt(),
+            completeReadinessPlan(),
+            completeReadinessExecutionReport(),
+            NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
+            true
+        ));
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) guard.get("blockedBy");
+        assertHasBlocker(blockers, "AUDIT_CONTEXT_CONTAINS_FORBIDDEN_SECRET");
+    }
+
+    @Test
+    void stateMachine_shouldRejectSecretMaterialAcrossWriteAndReleaseReports() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> baseReceipt = completeAuditReceipt();
+        Map<String, Object> baseBodyReport = completeWriteBodyRebuildReport(audit, baseReceipt);
+        Map<String, Object> baseRequestSpecReport = completeWriteRequestSpecReport(audit, baseReceipt, baseBodyReport);
+        Map<String, Object> baseHandoffReport = completeWriteExecutionHandoffReport(
+            audit,
+            baseReceipt,
+            baseBodyReport,
+            baseRequestSpecReport
+        );
+        Map<String, Object> baseCodeSwitchReport = completeCodeReleaseSwitchContractReport(audit);
+        Map<String, Object> baseSourceGuardReport = completeCodeReleaseSwitchRuntimeSourceGuardReport(audit);
+        Map<String, Object> baseExecutorReport = completeDurableWriteExecutorReport(
+            baseHandoffReport,
+            baseRequestSpecReport,
+            baseCodeSwitchReport,
+            baseSourceGuardReport
+        );
+
+        Map<String, Object> receipt = new java.util.LinkedHashMap<>(baseReceipt);
+        receipt.put("Authorization", "Bearer real-key-material");
+        Map<String, Object> bodyReport = new java.util.LinkedHashMap<>(baseBodyReport);
+        bodyReport.put("diagnostics", List.of("Authorization=Bearer real-key-material"));
+        Map<String, Object> requestSpecReport = new java.util.LinkedHashMap<>(baseRequestSpecReport);
+        requestSpecReport.put("refreshToken", "present");
+        Map<String, Object> handoffReport = new java.util.LinkedHashMap<>(baseHandoffReport);
+        handoffReport.put("token", false);
+        Map<String, Object> codeSwitchReport = new java.util.LinkedHashMap<>(baseCodeSwitchReport);
+        codeSwitchReport.put("placeholderAssignment", "token=" + NimCreateReadinessExecutorSupport.API_KEY_PLACEHOLDER);
+        Map<String, Object> sourceGuardReport = new java.util.LinkedHashMap<>(baseSourceGuardReport);
+        sourceGuardReport.put("customAuthorization", "present");
+        Map<String, Object> executorReport = new java.util.LinkedHashMap<>(baseExecutorReport);
+        executorReport.put("registry.password", "present");
+
+        Map<String, Object> guard = NimCreateStateMachineSupport.evaluate(new NimCreateStateMachineSupport.ReadinessRequest(
+            Map.of("name", "nim-report-secret-coverage"),
+            openGate(),
+            completePreview(),
+            HitlConfirmation.human("thread-1", "nim_create"),
+            audit,
+            receipt,
+            bodyReport,
+            requestSpecReport,
+            handoffReport,
+            codeSwitchReport,
+            sourceGuardReport,
+            executorReport,
+            completeReadinessPlan(),
+            completeReadinessExecutionReport(),
+            NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
+            true
+        ));
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) guard.get("blockedBy");
+        assertHasBlocker(blockers, "AUDIT_RECEIPT_CONTAINS_FORBIDDEN_SECRET");
+        assertHasBlocker(blockers, "WRITE_BODY_REBUILD_REPORT_CONTAINS_FORBIDDEN_SECRET");
+        assertHasBlocker(blockers, "WRITE_REQUEST_SPEC_REPORT_CONTAINS_FORBIDDEN_SECRET");
+        assertHasBlocker(blockers, "WRITE_EXECUTION_HANDOFF_REPORT_CONTAINS_FORBIDDEN_SECRET");
+        assertHasBlocker(blockers, "CODE_RELEASE_SWITCH_CONTRACT_REPORT_CONTAINS_FORBIDDEN_SECRET");
+        assertHasBlocker(blockers, "CODE_RELEASE_SWITCH_RUNTIME_SOURCE_GUARD_REPORT_CONTAINS_FORBIDDEN_SECRET");
+        assertHasBlocker(blockers, "DURABLE_WRITE_EXECUTOR_REPORT_CONTAINS_FORBIDDEN_SECRET");
+    }
+
+    @Test
     void stateMachine_shouldRequireDurableWriteExecutorReportAfterHandoffBeforeFutureWrite() {
         Map<String, Object> audit = completeAuditContext();
         Map<String, Object> receipt = completeAuditReceipt();
@@ -1148,5 +1290,10 @@ class NimCreateStateMachineSupportTest {
     private void assertHasBlocker(List<Map<String, Object>> blockers, String code) {
         assertTrue(blockers.stream().anyMatch(item -> code.equals(item.get("code"))),
             "expected blocker code: " + code + ", actual blockers: " + blockers);
+    }
+
+    private void assertNoBlocker(List<Map<String, Object>> blockers, String code) {
+        assertFalse(blockers.stream().anyMatch(item -> code.equals(item.get("code"))),
+            "unexpected blocker code: " + code + ", actual blockers: " + blockers);
     }
 }

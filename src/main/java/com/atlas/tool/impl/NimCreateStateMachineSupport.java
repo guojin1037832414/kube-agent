@@ -1,6 +1,7 @@
 package com.atlas.tool.impl;
 
 import com.atlas.hitl.HitlConfirmation;
+import com.atlas.tool.core.NimForbiddenSecretMaterialDetector;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -46,17 +47,10 @@ final class NimCreateStateMachineSupport {
         "nim-models"
     );
 
-    private static final Set<String> FORBIDDEN_SECRET_KEYS = Set.of(
-        "apikey",
-        "ngcapikey",
-        "nvaieapikey",
-        "token",
-        "secret",
-        "password",
-        "authorization",
-        "authheader",
-        "bearertoken"
-    );
+    private static final NimForbiddenSecretMaterialDetector.DetectionPolicy SECRET_DETECTION_POLICY =
+        NimForbiddenSecretMaterialDetector.textValuePolicyAllowing(
+            Set.of(NimCreateReadinessExecutorSupport.API_KEY_PLACEHOLDER)
+        );
 
     private NimCreateStateMachineSupport() {
     }
@@ -1570,47 +1564,7 @@ final class NimCreateStateMachineSupport {
     }
 
     private static boolean containsForbiddenSecretMaterial(Map<String, Object> map) {
-        for (Map.Entry<String, Object> entry : map.entrySet()) {
-            String normalizedKey = entry.getKey() == null
-                ? ""
-                : entry.getKey().replace("_", "").replace("-", "").toLowerCase(java.util.Locale.ROOT);
-            if (FORBIDDEN_SECRET_KEYS.contains(normalizedKey) && hasText(entry.getValue())) {
-                return true;
-            }
-            Object value = entry.getValue();
-            if (value instanceof String textValue && looksLikeSecretValue(textValue)) {
-                return true;
-            }
-            if (value instanceof Map<?, ?> nested && containsForbiddenSecretMaterial(objectMap(nested))) {
-                return true;
-            }
-            if (value instanceof List<?> list) {
-                for (Object item : list) {
-                    if (item instanceof Map<?, ?> nestedItem && containsForbiddenSecretMaterial(objectMap(nestedItem))) {
-                        return true;
-                    }
-                    if (item instanceof String textItem && looksLikeSecretValue(textItem)) {
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
-    }
-
-    private static boolean looksLikeSecretValue(String value) {
-        String trimmed = value.trim();
-        if (NimCreateReadinessExecutorSupport.API_KEY_PLACEHOLDER.equals(trimmed)) {
-            return false;
-        }
-        if (trimmed.startsWith("Bearer ") && trimmed.length() > "Bearer ".length()) {
-            return true;
-        }
-        return trimmed.matches("sk-[A-Za-z0-9]{20,}")
-            || trimmed.matches("AKIA[0-9A-Z]{16}")
-            || trimmed.matches("AIza[0-9A-Za-z_-]{35}")
-            || trimmed.matches("ghp_[A-Za-z0-9]{36}")
-            || trimmed.matches("xox[baprs]-[A-Za-z0-9-]{10,}");
+        return NimForbiddenSecretMaterialDetector.containsForbiddenSecretMaterial(map, SECRET_DETECTION_POLICY);
     }
 
     private static Map<String, Object> blocker(String code, String message, String source) {

@@ -6,6 +6,21 @@
 
 ---
 
+## [M5.21-101] - NIM state-machine placeholder-aware secret detector migration
+
+**Delivery**: Migrated the NIM create state-machine secret scanner to the shared forbidden secret material detector with an explicit readiness API-key placeholder allowance.
+**Changes**
+- `NimCreateStateMachineSupport` now uses `NimForbiddenSecretMaterialDetector.textValuePolicyAllowing(Set.of(API_KEY_PLACEHOLDER))` instead of a large local forbidden secret key/value scanner.
+- Removed the state-machine local `FORBIDDEN_SECRET_KEYS`, local `looksLikeSecretValue(...)`, and local recursive scanner copy.
+- Extended `NimForbiddenSecretMaterialDetectorUsageContractTest` so the state machine cannot reintroduce local detector drift and is locked away from receipt-schema, non-Boolean/Number, and strict-recursive policies.
+- Added state-machine regressions proving the documented readiness placeholder is allowed only in non-forbidden hint positions, while `refreshToken`, `token=false`, forbidden-key placeholders, `token=<placeholder>`, list-carried `Authorization=Bearer ...`, and secret material across receipt/write/release reports all reject.
+- Added `docs/M5_21_ONE_HUNDRED_FIRST_WAVE_NIM_STATE_MACHINE_PLACEHOLDER_AWARE_SECRET_DETECTOR_MIGRATION_AUDIT_20260608.md`.
+**Security**
+- This is deliberate hardening: shared detection now catches suffix-style secret keys and assignment-like secret strings that the older local state-machine scanner did not fully cover.
+- No runtime write behavior was opened.
+- No real `8100`, real NIM service HTTP call, Authorization header sending, durable audit write, deployment POST, state-machine release binding, durable executor release binding, validation result signer, release decision signer, code release switch implementation, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-100] - NIM write body rebuilder secret detector migration
 
 **Delivery**: Migrated the controlled write body rebuilder secret scanner to the shared forbidden secret material detector while preserving separate protected-context stripping.

@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-100, NIM write body rebuilder shared secret detector migration.
+- Current latest wave: M5.21-101, NIM state-machine placeholder-aware shared secret detector migration.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -48,6 +48,28 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-101 NIM state-machine placeholder-aware shared secret detector migration is implemented:
+  - Migrated `src/main/java/com/atlas/tool/impl/NimCreateStateMachineSupport.java` to `NimForbiddenSecretMaterialDetector.textValuePolicyAllowing(Set.of(API_KEY_PLACEHOLDER))`.
+  - Removed the state-machine local forbidden secret key/value scanner copy.
+  - Preserved forged release/write/source-guard claim checks as local authority guards because they are separate from credential leakage detection.
+  - Preserved blocker codes such as:
+    - `AUDIT_CONTEXT_CONTAINS_FORBIDDEN_SECRET`
+    - `AUDIT_RECEIPT_CONTAINS_FORBIDDEN_SECRET`
+    - `READINESS_PLAN_CONTAINS_FORBIDDEN_SECRET`
+    - `READINESS_EXECUTION_REPORT_CONTAINS_FORBIDDEN_SECRET`
+  - Extended `src/test/java/com/atlas/tool/core/NimForbiddenSecretMaterialDetectorUsageContractTest.java` so the state machine is covered by the no-local-copy shared detector contract and explicitly locked to placeholder-aware text policy.
+  - Added `src/test/java/com/atlas/tool/impl/NimCreateStateMachineSupportTest.java` coverage proving the fixed readiness placeholder is allowed only outside forbidden secret keys, while `refreshToken`, `token=false`, forbidden-key placeholders, `token=<placeholder>`, list-carried `Authorization=Bearer ...`, and secret material across receipt/write/release reports reject.
+  - Added `docs/M5_21_ONE_HUNDRED_FIRST_WAVE_NIM_STATE_MACHINE_PLACEHOLDER_AWARE_SECRET_DETECTOR_MIGRATION_AUDIT_20260608.md`.
+  - Policy note: this is deliberate hardening, not a loose compatibility refactor. The shared detector catches suffix-style secret keys and assignment-like secret strings that the older local scanner did not fully cover.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimForbiddenSecretMaterialDetectorUsageContractTest,NimForbiddenSecretMaterialDetectorTest,NimCreateStateMachineSupportTest,NimCreateAuditReadinessSupportTest,NimCreateAuditWriterSupportTest,NimCreateReadinessExecutorSupportTest,NimCreateReadinessHttpAdapterSupportTest" test`
+  - Final verification passed:
+    - `git diff --check`
+    - `mvn -q test`
+  - Full test note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - No real `8100` access; no real NIM service HTTP call; no Authorization header sending; no durable audit write; no deployment POST; no runtime write behavior opened; no state-machine release binding implementation; no durable executor release binding implementation; no validation result signer; no release decision signer; no code release switch implementation; no Elasticsearch; no `ISysLogService`; no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Next recommended slice: continue remaining local detector cleanup only after per-call-site policy comparison, or return to durable audit/release binding design without opening writes.
 
 - M5.21-100 NIM write body rebuilder shared secret detector migration is implemented:
   - Migrated `src/main/java/com/atlas/tool/impl/NimCreateWriteBodyRebuilderSupport.java` to `NimForbiddenSecretMaterialDetector.textValuePolicy()`.

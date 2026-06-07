@@ -34,7 +34,8 @@ class NimForbiddenSecretMaterialDetectorUsageContractTest {
         Path.of("src/main/java/com/atlas/tool/impl/NimCreateReadinessExecutorSupport.java"),
         Path.of("src/main/java/com/atlas/tool/impl/NimCreateReadinessHttpAdapterSupport.java"),
         Path.of("src/main/java/com/atlas/tool/impl/NimCreateAuditWriterSupport.java"),
-        Path.of("src/main/java/com/atlas/tool/impl/NimCreateWriteBodyRebuilderSupport.java")
+        Path.of("src/main/java/com/atlas/tool/impl/NimCreateWriteBodyRebuilderSupport.java"),
+        Path.of("src/main/java/com/atlas/tool/impl/NimCreateStateMachineSupport.java")
     );
 
     private static final List<Path> NON_BOOLEAN_NUMBER_POLICY_SUPPORTS = List.of(
@@ -102,6 +103,20 @@ class NimForbiddenSecretMaterialDetectorUsageContractTest {
             .contains("NimForbiddenSecretMaterialDetector.textValuePolicy()")
             .doesNotContain("NimForbiddenSecretMaterialDetector.receiptSchemaPolicy()")
             .doesNotContain("NimForbiddenSecretMaterialDetector.nonBooleanNumberValuePolicy()");
+    }
+
+    @Test
+    void stateMachine_shouldUsePlaceholderAwareTextValuePolicyForGuardInputs()
+        throws IOException {
+        String source = read(Path.of("src/main/java/com/atlas/tool/impl/NimCreateStateMachineSupport.java"));
+
+        assertThat(source)
+            .contains("NimForbiddenSecretMaterialDetector.containsForbiddenSecretMaterial")
+            .contains("NimForbiddenSecretMaterialDetector.textValuePolicyAllowing")
+            .contains("NimCreateReadinessExecutorSupport.API_KEY_PLACEHOLDER")
+            .doesNotContain("NimForbiddenSecretMaterialDetector.receiptSchemaPolicy()")
+            .doesNotContain("NimForbiddenSecretMaterialDetector.nonBooleanNumberValuePolicy()")
+            .doesNotContain("NimForbiddenSecretMaterialDetector.strictRecursivePolicy()");
     }
 
     @Test
