@@ -397,3 +397,11 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - The usage contract now has an explicit strict-recursive policy group for runtime source guard and runtime binding classes.
 - Do not migrate documented-field exception classes into this strict group; they need separate policy review.
 - Learning distinction: a shared detector is safest when the call site names the policy. The policy name tells reviewers which old semantic is being preserved.
+
+### M5.21-93 receipt validation gate receipt-schema detector note
+
+- `NimCreateDurableAuditReceiptValidationGateSupport` now uses `NimForbiddenSecretMaterialDetector.receiptSchemaPolicy()` for secret-material scanning.
+- `receiptSchemaPolicy()` allows exact documented forbidden field names such as `Authorization`, `apiKey`, and `ngcApiKey` in schema/interface documentation, including direct string values and list values.
+- The same policy still rejects real secret material such as `Authorization=Bearer ...`, API-key/token/password/secret assignments, and common cloud/token key shapes.
+- Receipt validation gate forged-success scanners remain local because `validationStatus=PASS`, `releaseEligible=true`, typed receipt/ack objects, and real-storage claims are evidence-source forgeries rather than credential leaks.
+- Learning distinction: top-tier Agent safety separates "this input leaks credentials" from "this input forges authority." Both are blockers, but they deserve different code paths and tests.

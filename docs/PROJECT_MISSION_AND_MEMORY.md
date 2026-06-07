@@ -82,10 +82,31 @@ Current track:
 
 Recently completed:
 
-`M5.21-92 NIM runtime binding strict shared secret detector migration`
+`M5.21-93 NIM receipt validation gate receipt-schema shared secret detector migration`
 
 Latest checkpoint:
 
+- Date: 2026-06-08 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-93 implemented:
+  - Extended `NimForbiddenSecretMaterialDetector.receiptSchemaPolicy()` so documented forbidden field names are allowed for direct string values as well as list values.
+  - Migrated `NimCreateDurableAuditReceiptValidationGateSupport` to `NimForbiddenSecretMaterialDetector.receiptSchemaPolicy()`.
+  - Removed the receipt-validation-gate local forbidden secret key/value scanner copy while preserving separate forged validation/success claim scanners.
+  - Preserved blocker code:
+    - `DURABLE_AUDIT_RECEIPT_VALIDATION_GATE_INPUT_CONTAINS_FORBIDDEN_SECRET`
+  - Extended `NimForbiddenSecretMaterialDetectorUsageContractTest` with a receipt-schema policy support group covering receipt schema and receipt validation gate classes.
+  - Added regression coverage proving documented field names such as `Authorization`, `apiKey`, and `ngcApiKey` are allowed while `Authorization=Bearer ...` remains rejected.
+  - Added `docs/M5_21_NINETY_THIRD_WAVE_NIM_RECEIPT_VALIDATION_GATE_RECEIPT_SCHEMA_SECRET_DETECTOR_MIGRATION_AUDIT_20260608.md`.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimForbiddenSecretMaterialDetectorUsageContractTest,NimForbiddenSecretMaterialDetectorTest,NimCreateDurableAuditReceiptValidationGateSupportTest,NimCreateDurableAuditReceiptSchemaSupportTest" test`
+  - Intermediate verification passed:
+    - `git diff --check`
+  - Final verification passed:
+    - `mvn -q test`
+  - Full test note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - Security invariant: no real `8100`, no deployment POST, no runtime write behavior, no receipt validator implementation, no storage probe implementation, no durable writer/probe/receipt implementation, no validation result signer, no release decision signer, no code release switch implementation, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Recommended next slice: migrate the remaining documented-field exception classes only after comparing their old semantics with `receiptSchemaPolicy()`, or return to reviewed durable writer/probe boundary design.
+- Previous checkpoint:
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
 - M5.21-92 implemented:

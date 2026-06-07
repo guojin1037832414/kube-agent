@@ -62,6 +62,14 @@ class NimForbiddenSecretMaterialDetectorTest {
             NimForbiddenSecretMaterialDetector.receiptSchemaPolicy()
         ));
         assertFalse(NimForbiddenSecretMaterialDetector.containsForbiddenSecretMaterial(
+            Map.of("documentedHeader", "Authorization"),
+            NimForbiddenSecretMaterialDetector.receiptSchemaPolicy()
+        ));
+        assertFalse(NimForbiddenSecretMaterialDetector.containsForbiddenSecretMaterial(
+            Map.of("documentedKey", "ngcApiKey"),
+            NimForbiddenSecretMaterialDetector.receiptSchemaPolicy()
+        ));
+        assertFalse(NimForbiddenSecretMaterialDetector.containsForbiddenSecretMaterial(
             Map.of("token", true, "password", 0),
             NimForbiddenSecretMaterialDetector.receiptSchemaPolicy()
         ));

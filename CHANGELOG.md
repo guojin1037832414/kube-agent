@@ -6,6 +6,21 @@
 
 ---
 
+## [M5.21-93] - NIM receipt validation gate receipt-schema secret detector migration
+
+**Delivery**: Migrated the receipt-validation-gate documented-field secret scanner to the shared receipt-schema forbidden secret material policy.
+**Changes**
+- `NimForbiddenSecretMaterialDetector.receiptSchemaPolicy()` now applies documented-field-name allowances to direct string values as well as list values.
+- `NimCreateDurableAuditReceiptValidationGateSupport` now uses `NimForbiddenSecretMaterialDetector.receiptSchemaPolicy()` instead of a local forbidden secret key/value scanner.
+- Extended `NimForbiddenSecretMaterialDetectorUsageContractTest` with a receipt-schema policy group covering receipt schema and receipt validation gate classes.
+- Added regressions proving documented field names such as `Authorization`, `apiKey`, and `ngcApiKey` are allowed while `Authorization=Bearer ...` remains rejected.
+- Added `docs/M5_21_NINETY_THIRD_WAVE_NIM_RECEIPT_VALIDATION_GATE_RECEIPT_SCHEMA_SECRET_DETECTOR_MIGRATION_AUDIT_20260608.md`.
+**Security**
+- Local forged validation/success claim scanners were intentionally preserved because they guard authority/evidence-source forgery, not credential material.
+- No runtime write behavior was opened.
+- No real `8100`, deployment POST, receipt validator, storage probe, durable writer/probe/receipt implementation, validation result signer, release decision signer, code release switch implementation, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-92] - NIM runtime binding strict secret detector migration
 
 **Delivery**: Migrated the code-release-switch runtime-binding secret scanner to the shared strict recursive forbidden secret material policy.

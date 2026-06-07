@@ -260,6 +260,44 @@ class NimCreateDurableAuditReceiptValidationGateSupportTest {
         assertHasBlocker(blockers, "DURABLE_AUDIT_RECEIPT_VALIDATION_GATE_INPUT_CONTAINS_FORBIDDEN_SECRET");
     }
 
+    @Test
+    void validationGate_shouldAllowDocumentedForbiddenFieldNamesButRejectRealSecretMaterial() {
+        Map<String, Object> audit = new LinkedHashMap<>(completeAuditContext());
+        Map<String, Object> principal = new LinkedHashMap<>(trustedPrincipalSnapshot());
+        principal.put("documentedForbiddenFieldNames", List.of("Authorization", "apiKey", "ngcApiKey"));
+        Map<String, Object> cleanPrincipal = trustedPrincipalSnapshot();
+
+        Map<String, Object> allowedReport = NimCreateDurableAuditReceiptValidationGateSupport.plan(
+            new NimCreateDurableAuditReceiptValidationGateSupport.DurableAuditReceiptValidationGateInput(
+                audit,
+                principal,
+                receiptSchemaReport(audit, cleanPrincipal)
+            )
+        );
+
+        assertEquals(NimCreateDurableAuditReceiptValidationGateSupport.HOLD_STATE, allowedReport.get("gateState"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> allowedBlockers = (List<Map<String, Object>>) allowedReport.get("blockedBy");
+        assertFalse(allowedBlockers.stream().anyMatch(item ->
+            "DURABLE_AUDIT_RECEIPT_VALIDATION_GATE_INPUT_CONTAINS_FORBIDDEN_SECRET".equals(item.get("code"))));
+
+        Map<String, Object> leakedPrincipal = new LinkedHashMap<>(trustedPrincipalSnapshot());
+        leakedPrincipal.put("documentedForbiddenFieldNames", List.of("Authorization=Bearer abcdefghijklmnop"));
+
+        Map<String, Object> rejectedReport = NimCreateDurableAuditReceiptValidationGateSupport.plan(
+            new NimCreateDurableAuditReceiptValidationGateSupport.DurableAuditReceiptValidationGateInput(
+                audit,
+                leakedPrincipal,
+                receiptSchemaReport(audit, cleanPrincipal)
+            )
+        );
+
+        assertEquals(NimCreateDurableAuditReceiptValidationGateSupport.REJECTED_STATE, rejectedReport.get("gateState"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> rejectedBlockers = (List<Map<String, Object>>) rejectedReport.get("blockedBy");
+        assertHasBlocker(rejectedBlockers, "DURABLE_AUDIT_RECEIPT_VALIDATION_GATE_INPUT_CONTAINS_FORBIDDEN_SECRET");
+    }
+
     private Map<String, Object> receiptSchemaReport(Map<String, Object> audit,
                                                     Map<String, Object> principal) {
         return NimCreateDurableAuditReceiptSchemaSupport.plan(

@@ -72,7 +72,9 @@ public final class NimForbiddenSecretMaterialDetector {
             if (isForbiddenSecretKey(key) && secretBearingValue(value, safePolicy)) {
                 return true;
             }
-            if (value instanceof String textValue && looksLikeSecretValue(textValue)) {
+            if (value instanceof String textValue
+                && looksLikeSecretValue(textValue)
+                && !safePolicy.allowsSecretLikeValue(textValue)) {
                 return true;
             }
             if (value instanceof Map<?, ?> nested && containsForbiddenSecretMaterial(nested, safePolicy)) {
@@ -123,7 +125,7 @@ public final class NimForbiddenSecretMaterialDetector {
             }
             if (item instanceof String textItem
                 && looksLikeSecretValue(textItem)
-                && !policy.allowsSecretLikeListValue(textItem)) {
+                && !policy.allowsSecretLikeValue(textItem)) {
                 return true;
             }
         }
@@ -176,19 +178,19 @@ public final class NimForbiddenSecretMaterialDetector {
 
     public record DetectionPolicy(
         ForbiddenKeyValuePolicy forbiddenKeyValuePolicy,
-        Set<String> allowedSecretLikeListValues
+        Set<String> allowedSecretLikeValues
     ) {
         public DetectionPolicy {
             forbiddenKeyValuePolicy = forbiddenKeyValuePolicy == null
                 ? ForbiddenKeyValuePolicy.NON_BLANK_VALUE
                 : forbiddenKeyValuePolicy;
-            allowedSecretLikeListValues = allowedSecretLikeListValues == null
+            allowedSecretLikeValues = allowedSecretLikeValues == null
                 ? Set.of()
-                : normalizedCopy(allowedSecretLikeListValues);
+                : normalizedCopy(allowedSecretLikeValues);
         }
 
-        private boolean allowsSecretLikeListValue(String value) {
-            return allowedSecretLikeListValues.contains(normalizeKey(value));
+        private boolean allowsSecretLikeValue(String value) {
+            return allowedSecretLikeValues.contains(normalizeKey(value));
         }
 
         private static Set<String> normalizedCopy(Set<String> values) {
