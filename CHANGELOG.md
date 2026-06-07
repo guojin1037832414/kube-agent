@@ -6,6 +6,21 @@
 
 ---
 
+## [M5.21-103] - NIM protected context detector contract
+
+**Delivery**: Extracted NIM write-chain protected-context detection into a shared helper and hardened nested context rejection before any future write request can be compiled.
+**Changes**
+- Added `NimProtectedContextDetector` for NIM write DTO/request body protected-context keys.
+- `NimCreateWriteBodyRebuilderSupport` and `NimCreateWriteRequestSpecAdapterSupport` now delegate protected-context checks to the shared detector instead of carrying separate local key lists/scanners.
+- The shared detector normalizes `_`, `-`, `.`, and spaces, and recursively scans nested maps/lists.
+- Added `WRITE_BODY_CONTAINS_FORBIDDEN_CONTEXT` for allowlisted body fields that carry nested authority/context data.
+- Added detector tests, write-chain regressions, and `NimProtectedContextDetectorUsageContractTest` to prevent local protected-context scanner drift.
+- Added `docs/M5_21_ONE_HUNDRED_THIRD_WAVE_NIM_PROTECTED_CONTEXT_DETECTOR_AUDIT_20260608.md`.
+**Security**
+- This is write-chain contract hardening only; it does not open runtime writes.
+- No real `8100`, real NIM service HTTP call, Authorization header sending, durable audit write, deployment POST, state-machine release binding, durable executor release binding, validation result signer, release decision signer, code release switch implementation, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-102] - NIM secret detector global drift contract
 
 **Delivery**: Added a dynamic static contract that prevents future `NimCreate*.java` support classes from reintroducing local secret scanner forks.

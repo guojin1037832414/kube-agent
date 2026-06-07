@@ -77,6 +77,16 @@ class NimCreateWriteRequestSpecAdapterSupportTest {
         assertEquals("llama-nim", body.get("name"));
         assertEquals("nvcr.io/nim/llama:1.0", body.get("image"));
         assertFalse(body.containsKey("organizationId"));
+        assertFalse(body.containsKey("orgId"));
+        assertFalse(body.containsKey("userId"));
+        assertFalse(body.containsKey("conversationId"));
+        assertFalse(body.containsKey("requestId"));
+        assertFalse(body.containsKey("auditContext"));
+        assertFalse(body.containsKey("auditReceipt"));
+        assertFalse(body.containsKey("hitlConfirmation"));
+        assertFalse(body.containsKey("creationGate"));
+        assertFalse(body.containsKey("readinessPlan"));
+        assertFalse(body.containsKey("readinessExecutionReport"));
         assertFalse(body.containsKey("token"));
 
         @SuppressWarnings("unchecked")
@@ -209,6 +219,29 @@ class NimCreateWriteRequestSpecAdapterSupportTest {
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
         assertHasBlocker(blockers, "WRITE_REQUEST_SPEC_INPUT_CONTAINS_FORBIDDEN_SECRET");
+    }
+
+    @Test
+    void adapter_shouldRejectNestedProtectedContextThroughSharedDetector() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> receipt = durableAuditReceipt(audit);
+        Map<String, Object> bodyReport = new LinkedHashMap<>(writeBodyReport(audit, receipt));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> body = new LinkedHashMap<>((Map<String, Object>) bodyReport.get("body"));
+        body.put("autoScaleConfig", Map.of("minReplicas", 1, "conversation-id", "conv-1"));
+        body.put("commands", List.of(Map.of("write_request_spec_report", "caller-forged")));
+        bodyReport.put("body", body);
+
+        Map<String, Object> report = writeRequestSpecReport(audit, receipt, bodyReport);
+
+        assertEquals(false, report.get("writeRequestPrepared"));
+        assertEquals("", report.get("requestSpecDigest"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> spec = (Map<String, Object>) report.get("requestSpec");
+        assertTrue(spec.isEmpty());
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+        assertHasBlocker(blockers, "WRITE_REQUEST_SPEC_CONTAINS_FORBIDDEN_SECRET_OR_CONTEXT");
     }
 
     private Map<String, Object> writeRequestSpecReport(Map<String, Object> audit,

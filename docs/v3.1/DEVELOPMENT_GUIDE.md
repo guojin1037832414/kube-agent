@@ -457,7 +457,7 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 ### M5.21-100 write body rebuilder shared detector note
 
 - `NimCreateWriteBodyRebuilderSupport` now uses `NimForbiddenSecretMaterialDetector.textValuePolicy()` for credential leakage scanning.
-- The rebuilder still keeps `PROTECTED_CONTEXT_KEYS` local. `organizationId`, `userId`, audit receipts, HITL confirmations, creation gates, and readiness reports are authority/context fields, not credential values.
+- Protected context is now handled by `NimProtectedContextDetector` as of M5.21-103. `organizationId`, `userId`, audit receipts, HITL confirmations, creation gates, and readiness reports are authority/context fields, not credential values.
 - The shared detector is used both for input surfaces and for the rebuilt body shape; the body allowlist still rejects forbidden secret field names through the shared `isForbiddenSecretKey(...)`.
 - Tests lock the policy with plain `Authorization`, numeric `token`, and list-carried `Authorization=Bearer ...` cases.
 - Learning distinction: one safety helper should not become a bucket for every risk. Credential detectors, protected-context strippers, and forged-authority scanners each protect a different proof boundary.
@@ -476,3 +476,12 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Any such source must delegate to `NimForbiddenSecretMaterialDetector.containsForbiddenSecretMaterial` and must not carry local forbidden-key or secret-looking-value matchers.
 - The existing hand-written groups still lock exact policy choices; the dynamic scanner catches future omissions from those lists.
 - Learning distinction: policy tests and drift tests answer different questions. A policy test says "which shared policy is correct here"; a drift test says "do not fork the safety primitive again."
+
+### M5.21-103 protected context detector note
+
+- `NimProtectedContextDetector` now owns NIM write-chain protected-context key detection.
+- This detector is intentionally separate from both `NimForbiddenSecretMaterialDetector` and `ProtectedToolParameterFilter`.
+- It normalizes `_`, `-`, `.`, and spaces, then recursively scans maps/lists so allowlisted DTO containers cannot smuggle tenant identity, audit receipts, HITL confirmations, creation gates, readiness evidence, or request-spec reports.
+- `NimCreateWriteBodyRebuilderSupport` now fails with `WRITE_BODY_CONTAINS_FORBIDDEN_CONTEXT` when a rebuilt body contains nested protected context.
+- `NimCreateWriteRequestSpecAdapterSupport` still fails the final request body with `WRITE_REQUEST_SPEC_CONTAINS_FORBIDDEN_SECRET_OR_CONTEXT` for compatibility.
+- Learning distinction: credential leakage, protected Tool parameters, and protected write-chain context are different proof boundaries. They may share names like `organizationId`, but they should not share one overly broad utility.

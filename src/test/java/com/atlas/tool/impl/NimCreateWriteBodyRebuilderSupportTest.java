@@ -65,6 +65,15 @@ class NimCreateWriteBodyRebuilderSupportTest {
         assertEquals(true, body.get("enableSecondNetwork"));
         assertFalse(body.containsKey("organizationId"));
         assertFalse(body.containsKey("orgId"));
+        assertFalse(body.containsKey("userId"));
+        assertFalse(body.containsKey("conversationId"));
+        assertFalse(body.containsKey("requestId"));
+        assertFalse(body.containsKey("auditContext"));
+        assertFalse(body.containsKey("auditReceipt"));
+        assertFalse(body.containsKey("hitlConfirmation"));
+        assertFalse(body.containsKey("creationGate"));
+        assertFalse(body.containsKey("readinessPlan"));
+        assertFalse(body.containsKey("readinessExecutionReport"));
         assertFalse(body.containsKey("token"));
         assertFalse(body.containsKey("ngcApiKey"));
         assertFalse(body.containsKey("ignoredCallerField"));
@@ -298,6 +307,38 @@ class NimCreateWriteBodyRebuilderSupportTest {
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
         assertHasBlocker(blockers, "WRITE_BODY_REBUILD_INPUT_CONTAINS_FORBIDDEN_SECRET");
+    }
+
+    @Test
+    void rebuilder_shouldRejectNestedProtectedContextThroughSharedDetector() {
+        Map<String, Object> preview = new java.util.LinkedHashMap<>(completePreview());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> bodyDraft = new java.util.LinkedHashMap<>((Map<String, Object>) preview.get("bodyDraft"));
+        bodyDraft.put("autoScaleConfig", Map.of("minReplicas", 1, "organization_id", "100002"));
+        bodyDraft.put("commands", List.of(
+            Map.of("name", "start"),
+            Map.of("auditReceipt", Map.of("receiptId", "nim-audit-durable-req-1"))
+        ));
+        preview.put("bodyDraft", bodyDraft);
+        Map<String, Object> audit = completeAuditContext();
+
+        Map<String, Object> report = NimCreateWriteBodyRebuilderSupport.rebuild(
+            new NimCreateWriteBodyRebuilderSupport.WriteBodyRebuildInput(
+                openGate(),
+                preview,
+                audit,
+                durableAuditReceipt(audit)
+            )
+        );
+
+        assertEquals(false, report.get("writeBodyPrepared"));
+        assertEquals("", report.get("bodyDigest"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> body = (Map<String, Object>) report.get("body");
+        assertTrue(body.isEmpty());
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+        assertHasBlocker(blockers, "WRITE_BODY_CONTAINS_FORBIDDEN_CONTEXT");
     }
 
     @Test

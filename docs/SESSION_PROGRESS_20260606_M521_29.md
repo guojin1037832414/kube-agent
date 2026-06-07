@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-102, NIM secret detector global drift static contract.
+- Current latest wave: M5.21-103, NIM protected context detector contract.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -48,6 +48,25 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-103 NIM protected context detector contract is implemented:
+  - Added `src/main/java/com/atlas/tool/impl/NimProtectedContextDetector.java`.
+  - Migrated `src/main/java/com/atlas/tool/impl/NimCreateWriteBodyRebuilderSupport.java` and `src/main/java/com/atlas/tool/impl/NimCreateWriteRequestSpecAdapterSupport.java` to shared protected-context detection.
+  - Removed duplicated local protected context key lists and local recursive request-spec protected context scanner.
+  - The detector normalizes `_`, `-`, `.`, and spaces, and recursively scans nested maps/lists.
+  - Added `WRITE_BODY_CONTAINS_FORBIDDEN_CONTEXT` for allowlisted body fields that carry nested tenant/audit/HITL/readiness/request-spec context.
+  - Added `src/test/java/com/atlas/tool/impl/NimProtectedContextDetectorTest.java`.
+  - Added `src/test/java/com/atlas/tool/impl/NimProtectedContextDetectorUsageContractTest.java`.
+  - Extended write-body and request-spec tests for nested protected context rejection.
+  - Added `docs/M5_21_ONE_HUNDRED_THIRD_WAVE_NIM_PROTECTED_CONTEXT_DETECTOR_AUDIT_20260608.md`.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimProtectedContextDetectorTest,NimProtectedContextDetectorUsageContractTest,NimCreateWriteBodyRebuilderSupportTest,NimCreateWriteRequestSpecAdapterSupportTest,NimCreateStateMachineSupportTest" test`
+  - Final verification passed:
+    - `git diff --check`
+    - `mvn -q test`
+  - Full test note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - No real `8100` access; no real NIM service HTTP call; no Authorization header sending; no durable audit write; no deployment POST; no runtime write behavior opened; no state-machine release binding implementation; no durable executor release binding implementation; no validation result signer; no release decision signer; no code release switch implementation; no Elasticsearch; no `ISysLogService`; no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Next recommended slice: continue write-chain authority/context hardening or return to durable audit/release binding design without opening writes.
 
 - M5.21-102 NIM secret detector global drift static contract is implemented:
   - Added dynamic coverage to `src/test/java/com/atlas/tool/core/NimForbiddenSecretMaterialDetectorUsageContractTest.java`.

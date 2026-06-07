@@ -9,9 +9,7 @@ import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
 
 /**
@@ -30,22 +28,6 @@ final class NimCreateWriteRequestSpecAdapterSupport {
 
     private static final String PATH_TEMPLATE = "/api/{orgId}/deployment";
     private static final String BODY_SOURCE = "CONTROLLED_REBUILDER_BODY_COPY";
-    private static final Set<String> PROTECTED_BODY_KEYS = Set.of(
-        "orgid",
-        "organizationid",
-        "userid",
-        "conversationid",
-        "sessionid",
-        "requestid",
-        "auditcontext",
-        "auditreceipt",
-        "hitlconfirmation",
-        "creationgate",
-        "readinessplan",
-        "readinessexecutionreport",
-        "writerequestspecreport"
-    );
-
     private NimCreateWriteRequestSpecAdapterSupport() {
     }
 
@@ -227,7 +209,7 @@ final class NimCreateWriteRequestSpecAdapterSupport {
             ));
             return;
         }
-        if (containsProtectedBodyContext(body) || containsForbiddenSecretMaterial(body)) {
+        if (NimProtectedContextDetector.containsProtectedContext(body) || containsForbiddenSecretMaterial(body)) {
             blockers.add(blocker(
                 "WRITE_REQUEST_SPEC_CONTAINS_FORBIDDEN_SECRET_OR_CONTEXT",
                 "POST request spec 的 body 不得携带 organizationId/userId/conversationId/token/password/secret/API Key。",
@@ -314,26 +296,6 @@ final class NimCreateWriteRequestSpecAdapterSupport {
                 source
             ));
         }
-    }
-
-    private static boolean containsProtectedBodyContext(Map<String, Object> map) {
-        for (Map.Entry<String, Object> entry : map.entrySet()) {
-            if (PROTECTED_BODY_KEYS.contains(normalizeKey(entry.getKey()))) {
-                return true;
-            }
-            Object value = entry.getValue();
-            if (value instanceof Map<?, ?> nested && containsProtectedBodyContext(objectMap(nested))) {
-                return true;
-            }
-            if (value instanceof List<?> list) {
-                for (Object item : list) {
-                    if (item instanceof Map<?, ?> nestedItem && containsProtectedBodyContext(objectMap(nestedItem))) {
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
     }
 
     private static boolean containsForbiddenSecretMaterial(Map<String, Object> map) {
@@ -439,10 +401,6 @@ final class NimCreateWriteRequestSpecAdapterSupport {
 
     private static boolean safeIdentifier(Object value) {
         return text(value).matches("[A-Za-z0-9_-]{1,64}");
-    }
-
-    private static String normalizeKey(String key) {
-        return key == null ? "" : key.replace("_", "").replace("-", "").toLowerCase(Locale.ROOT);
     }
 
     private static String text(Object value) {

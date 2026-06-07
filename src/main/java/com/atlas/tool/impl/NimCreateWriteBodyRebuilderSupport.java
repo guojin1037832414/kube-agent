@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -65,20 +64,6 @@ final class NimCreateWriteBodyRebuilderSupport {
         "displayName",
         "image",
         "templateId"
-    );
-    private static final Set<String> PROTECTED_CONTEXT_KEYS = Set.of(
-        "orgid",
-        "organizationid",
-        "userid",
-        "conversationid",
-        "sessionid",
-        "requestid",
-        "auditcontext",
-        "auditreceipt",
-        "hitlconfirmation",
-        "creationgate",
-        "readinessplan",
-        "readinessexecutionreport"
     );
     private static final Set<String> NON_NEGATIVE_NUMBER_FIELDS = Set.of(
         "cpuLimits",
@@ -242,7 +227,8 @@ final class NimCreateWriteBodyRebuilderSupport {
             if (!BODY_ALLOWLIST.contains(key)) {
                 continue;
             }
-            if (isProtectedContextKey(key) || NimForbiddenSecretMaterialDetector.isForbiddenSecretKey(key)) {
+            if (NimProtectedContextDetector.isProtectedContextKey(key)
+                || NimForbiddenSecretMaterialDetector.isForbiddenSecretKey(key)) {
                 blockers.add(blocker(
                     "WRITE_BODY_CONTAINS_FORBIDDEN_FIELD",
                     "DeploymentDTO 写入 body 不得包含受保护上下文、token、password、secret 或 API Key 字段: " + key,
@@ -304,6 +290,13 @@ final class NimCreateWriteBodyRebuilderSupport {
                 ));
             }
         }
+        if (NimProtectedContextDetector.containsProtectedContext(body)) {
+            blockers.add(blocker(
+                "WRITE_BODY_CONTAINS_FORBIDDEN_CONTEXT",
+                "Controlled write body must not carry protected context inside allowlisted fields.",
+                "write-body"
+            ));
+        }
         if (containsForbiddenSecretMaterial(body)) {
             blockers.add(blocker(
                 "WRITE_BODY_CONTAINS_FORBIDDEN_SECRET",
@@ -348,10 +341,6 @@ final class NimCreateWriteBodyRebuilderSupport {
             map,
             NimForbiddenSecretMaterialDetector.textValuePolicy()
         );
-    }
-
-    private static boolean isProtectedContextKey(String key) {
-        return PROTECTED_CONTEXT_KEYS.contains(normalizeKey(key));
     }
 
     private static boolean safeDeploymentName(Object value) {
@@ -478,10 +467,6 @@ final class NimCreateWriteBodyRebuilderSupport {
         Map<String, Object> copy = new LinkedHashMap<>();
         map.forEach((key, item) -> copy.put(String.valueOf(key), item));
         return copy;
-    }
-
-    private static String normalizeKey(String key) {
-        return key == null ? "" : key.replace("_", "").replace("-", "").toLowerCase(Locale.ROOT);
     }
 
     private static String text(Object value) {

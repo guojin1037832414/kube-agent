@@ -82,12 +82,29 @@ Current track:
 
 Recently completed:
 
-`M5.21-102 NIM secret detector global drift static contract`
+`M5.21-103 NIM protected context detector contract`
 
 Latest checkpoint:
 
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-103 implemented:
+  - Added `NimProtectedContextDetector` for NIM write-chain DTO/request body protected-context detection.
+  - Migrated `NimCreateWriteBodyRebuilderSupport` and `NimCreateWriteRequestSpecAdapterSupport` away from local protected-context key lists/scanners.
+  - The shared detector normalizes `_`, `-`, `.`, and spaces, and recursively scans maps/lists.
+  - Added `WRITE_BODY_CONTAINS_FORBIDDEN_CONTEXT` so allowlisted body containers such as `autoScaleConfig` and `commands` cannot smuggle tenant/audit/HITL/readiness/request-spec context.
+  - Preserved the request-spec boundary blocker `WRITE_REQUEST_SPEC_CONTAINS_FORBIDDEN_SECRET_OR_CONTEXT`.
+  - Added `NimProtectedContextDetectorTest`, `NimProtectedContextDetectorUsageContractTest`, and write-chain regressions.
+  - Added `docs/M5_21_ONE_HUNDRED_THIRD_WAVE_NIM_PROTECTED_CONTEXT_DETECTOR_AUDIT_20260608.md`.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimProtectedContextDetectorTest,NimProtectedContextDetectorUsageContractTest,NimCreateWriteBodyRebuilderSupportTest,NimCreateWriteRequestSpecAdapterSupportTest,NimCreateStateMachineSupportTest" test`
+  - Final verification passed:
+    - `git diff --check`
+    - `mvn -q test`
+  - Full test note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - Security invariant: no real `8100`, no real NIM service HTTP call, no Authorization header sending, no durable audit write, no deployment POST, no runtime write behavior, no state-machine release binding implementation, no durable executor release binding implementation, no validation result signer, no release decision signer, no code release switch implementation, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Recommended next slice: continue write-chain authority/context hardening or return to durable audit/release binding design, still without opening writes.
+- Previous checkpoint:
 - M5.21-102 implemented:
   - Added dynamic coverage to `NimForbiddenSecretMaterialDetectorUsageContractTest`.
   - The new contract walks `src/main/java/com/atlas/tool/impl`, selects every `NimCreate*.java` source containing `containsForbiddenSecretMaterial(`, and requires delegation to `NimForbiddenSecretMaterialDetector.containsForbiddenSecretMaterial`.
