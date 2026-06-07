@@ -33,6 +33,15 @@ class NimForbiddenSecretMaterialDetectorUsageContractTest {
         Path.of("src/main/java/com/atlas/tool/impl/NimCreateDedicatedDurableAuditWriterBoundarySupport.java")
     );
 
+    private static final List<Path> NON_BOOLEAN_NUMBER_POLICY_SUPPORTS = List.of(
+        Path.of("src/main/java/com/atlas/tool/impl/NimCreateDurableAuditStorageProbeResultSupport.java"),
+        Path.of("src/main/java/com/atlas/tool/impl/"
+            + "NimCreateDurableAuditReceiptValidationProbeResultBindingSupport.java"),
+        Path.of("src/main/java/com/atlas/tool/impl/NimCreateDurableAuditReceiptValidationResultSupport.java"),
+        Path.of("src/main/java/com/atlas/tool/impl/"
+            + "NimCreateDurableAuditValidationResultProbeBindingMigrationSupport.java")
+    );
+
     @Test
     void migratedNimSupports_shouldUseSharedDetectorWithoutLocalSecretMaterialLists()
         throws IOException {
@@ -41,6 +50,23 @@ class NimForbiddenSecretMaterialDetectorUsageContractTest {
 
             assertThat(source)
                 .contains("NimForbiddenSecretMaterialDetector.containsForbiddenSecretMaterial")
+                .doesNotContain("FORBIDDEN_SECRET_KEYS")
+                .doesNotContain("looksLikeSecretValue(")
+                .doesNotContain("isForbiddenSecretKey(")
+                .doesNotContain("secretBearingValue(")
+                .doesNotContain("isDocumentedForbiddenFieldName(");
+        }
+    }
+
+    @Test
+    void nonBooleanNumberPolicySupports_shouldUseSharedDetectorWithoutLocalSecretMaterialLists()
+        throws IOException {
+        for (Path path : NON_BOOLEAN_NUMBER_POLICY_SUPPORTS) {
+            String source = read(path);
+
+            assertThat(source)
+                .contains("NimForbiddenSecretMaterialDetector.containsForbiddenSecretMaterial")
+                .contains("NimForbiddenSecretMaterialDetector.nonBooleanNumberValuePolicy()")
                 .doesNotContain("FORBIDDEN_SECRET_KEYS")
                 .doesNotContain("looksLikeSecretValue(")
                 .doesNotContain("isForbiddenSecretKey(")

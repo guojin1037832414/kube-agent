@@ -72,6 +72,22 @@ class NimForbiddenSecretMaterialDetectorTest {
     }
 
     @Test
+    void nonBooleanNumberValuePolicy_shouldAllowStateScalarsButRejectSecretObjects() {
+        assertFalse(NimForbiddenSecretMaterialDetector.containsForbiddenSecretMaterial(
+            Map.of("token", false, "apiKey", 0),
+            NimForbiddenSecretMaterialDetector.nonBooleanNumberValuePolicy()
+        ));
+        assertTrue(NimForbiddenSecretMaterialDetector.containsForbiddenSecretMaterial(
+            Map.of("token", List.of(Map.of("nested", "present"))),
+            NimForbiddenSecretMaterialDetector.nonBooleanNumberValuePolicy()
+        ));
+        assertTrue(NimForbiddenSecretMaterialDetector.containsForbiddenSecretMaterial(
+            Map.of("note", List.of("Authorization=Bearer abcdefghijklmnop")),
+            NimForbiddenSecretMaterialDetector.nonBooleanNumberValuePolicy()
+        ));
+    }
+
+    @Test
     void strictRecursivePolicy_shouldRejectAnyNonNullForbiddenKeyValueIncludingNestedClaims() {
         assertTrue(NimForbiddenSecretMaterialDetector.containsForbiddenSecretMaterial(
             Map.of("token", false),

@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-89, NIM durable audit storage shared secret detector migration.
+- Current latest wave: M5.21-90, NIM validation/probe-result shared secret detector migration.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -48,6 +48,26 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-90 NIM validation/probe-result shared secret detector migration is implemented:
+  - Added `src/main/java/com/atlas/tool/core/NimForbiddenSecretMaterialDetector.java` policy helper `nonBooleanNumberValuePolicy()`.
+  - Migrated `src/main/java/com/atlas/tool/impl/NimCreateDurableAuditStorageProbeResultSupport.java` to `NimForbiddenSecretMaterialDetector.nonBooleanNumberValuePolicy()`.
+  - Migrated `src/main/java/com/atlas/tool/impl/NimCreateDurableAuditReceiptValidationProbeResultBindingSupport.java` to the same shared policy.
+  - Migrated `src/main/java/com/atlas/tool/impl/NimCreateDurableAuditReceiptValidationResultSupport.java` to the same shared policy.
+  - Migrated `src/main/java/com/atlas/tool/impl/NimCreateDurableAuditValidationResultProbeBindingMigrationSupport.java` to the same shared policy.
+  - Preserved separate forged-success scanners in all four classes; those scanners guard probe/validation/release success forgery, not secret material.
+  - Preserved blocker codes:
+    - `STORAGE_PROBE_RESULT_INPUT_CONTAINS_FORBIDDEN_SECRET`
+    - `PROBE_RESULT_VALIDATION_BINDING_INPUT_CONTAINS_FORBIDDEN_SECRET`
+    - `DURABLE_AUDIT_RECEIPT_VALIDATION_RESULT_INPUT_CONTAINS_FORBIDDEN_SECRET`
+    - `VALIDATION_RESULT_PROBE_BINDING_MIGRATION_INPUT_CONTAINS_FORBIDDEN_SECRET`
+  - Extended `src/test/java/com/atlas/tool/core/NimForbiddenSecretMaterialDetectorUsageContractTest.java` with a policy-specific group for these four migrated support classes.
+  - Added `src/test/java/com/atlas/tool/core/NimForbiddenSecretMaterialDetectorTest.java` coverage for Boolean/Number state scalar allowance and nested secret object rejection.
+  - Added `docs/M5_21_NINETIETH_WAVE_NIM_VALIDATION_PROBE_RESULT_SHARED_SECRET_DETECTOR_MIGRATION_AUDIT_20260608.md`.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimForbiddenSecretMaterialDetectorUsageContractTest,NimForbiddenSecretMaterialDetectorTest,NimCreateDurableAuditStorageProbeResultSupportTest,NimCreateDurableAuditReceiptValidationProbeResultBindingSupportTest,NimCreateDurableAuditReceiptValidationResultSupportTest,NimCreateDurableAuditValidationResultProbeBindingMigrationSupportTest" test`
+  - No real `8100` access; no deployment POST; no runtime write behavior opened; no storage probe implementation; no durable writer/probe/receipt implementation; no validation result signer; no release decision; no release switch implementation; no Elasticsearch; no `ISysLogService`; no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Next recommended slice: continue remaining detector migrations only after policy comparison, or return to reviewed durable writer/probe boundary design.
 
 - M5.21-89 NIM durable audit storage shared secret detector migration is implemented:
   - Migrated `src/main/java/com/atlas/tool/impl/NimCreateDurableAuditStorageSupport.java` to `NimForbiddenSecretMaterialDetector.textValuePolicy()`.

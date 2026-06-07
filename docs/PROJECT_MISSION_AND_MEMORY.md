@@ -82,10 +82,27 @@ Current track:
 
 Recently completed:
 
-`M5.21-89 NIM durable audit storage shared secret detector migration`
+`M5.21-90 NIM validation/probe-result shared secret detector migration`
 
 Latest checkpoint:
 
+- Date: 2026-06-08 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-90 implemented:
+  - Added `NimForbiddenSecretMaterialDetector.nonBooleanNumberValuePolicy()` for NIM evidence contracts that allow Boolean/Number state scalars under forbidden keys but reject non-blank secret-bearing values, nested secret objects, and secret-like strings.
+  - Migrated `NimCreateDurableAuditStorageProbeResultSupport` to the shared non-Boolean/Number policy.
+  - Migrated `NimCreateDurableAuditReceiptValidationProbeResultBindingSupport` to the same shared policy.
+  - Migrated `NimCreateDurableAuditReceiptValidationResultSupport` to the same shared policy.
+  - Migrated `NimCreateDurableAuditValidationResultProbeBindingMigrationSupport` to the same shared policy.
+  - Preserved local forged-success scanners in all four classes because they guard validation/probe/release evidence-source forgery, not secret material.
+  - Extended `NimForbiddenSecretMaterialDetectorUsageContractTest` with a policy-specific group for these four support classes.
+  - Added detector policy tests proving `token=false` and `apiKey=0` remain allowed state scalars while nested secret objects and secret-like strings fail closed.
+  - Added `docs/M5_21_NINETIETH_WAVE_NIM_VALIDATION_PROBE_RESULT_SHARED_SECRET_DETECTOR_MIGRATION_AUDIT_20260608.md`.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimForbiddenSecretMaterialDetectorUsageContractTest,NimForbiddenSecretMaterialDetectorTest,NimCreateDurableAuditStorageProbeResultSupportTest,NimCreateDurableAuditReceiptValidationProbeResultBindingSupportTest,NimCreateDurableAuditReceiptValidationResultSupportTest,NimCreateDurableAuditValidationResultProbeBindingMigrationSupportTest" test`
+  - Security invariant: no real `8100`, no deployment POST, no runtime write behavior, no storage probe implementation, no durable writer/probe/receipt implementation, no validation result signer, no release decision, no code release switch implementation, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Recommended next slice: continue remaining detector migrations only after policy comparison, or return to reviewed durable writer/probe boundary design.
+- Previous checkpoint:
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
 - M5.21-89 implemented:

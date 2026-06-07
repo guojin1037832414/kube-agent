@@ -374,3 +374,11 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - The usage contract now protects eleven migrated support classes from local secret-detector drift.
 - Probe executor and dedicated writer boundary intentionally keep their local forged-success recursive scanners. Those guard claims such as `storageAvailable=true`, durable ack, read-after-write, and `DURABLE_RECORDED`, which are evidence-source risks rather than credential leaks.
 - Learning distinction: shared helpers should have crisp responsibility. A top-tier Agent separates credential leakage detection from forged success/release evidence detection, then tests both paths independently.
+
+### M5.21-90 validation/probe-result shared detector note
+
+- `NimForbiddenSecretMaterialDetector.nonBooleanNumberValuePolicy()` is the shared policy for validation/probe-result evidence shells that allow Boolean/Number state scalars under forbidden keys while rejecting non-blank secret-bearing values, nested secret objects, and secret-like strings.
+- `NimCreateDurableAuditStorageProbeResultSupport`, `NimCreateDurableAuditReceiptValidationProbeResultBindingSupport`, `NimCreateDurableAuditReceiptValidationResultSupport`, and `NimCreateDurableAuditValidationResultProbeBindingMigrationSupport` now use that policy.
+- Do not replace this with `receiptSchemaPolicy()`: receipt schema allows documented forbidden field names, but these validation/probe-result evidence inputs have no documented-field exception.
+- Forged-success scanners in these classes remain separate because they reject caller-supplied validation/release/probe success claims, not credentials.
+- Learning distinction: policy names are architecture. They make the intended security semantics visible at each call site and teach reviewers what must remain different.

@@ -6,6 +6,24 @@
 
 ---
 
+## [M5.21-90] - NIM validation/probe-result secret detector migration
+
+**Delivery**: Migrated validation/probe-result evidence scanners to a shared no-exception forbidden secret material policy.
+**Changes**
+- Added `NimForbiddenSecretMaterialDetector.nonBooleanNumberValuePolicy()` for contracts that allow Boolean/Number state scalars under forbidden keys but reject non-blank secret-bearing values and secret-like strings.
+- `NimCreateDurableAuditStorageProbeResultSupport` now uses the shared non-Boolean/Number policy.
+- `NimCreateDurableAuditReceiptValidationProbeResultBindingSupport` now uses the same shared policy.
+- `NimCreateDurableAuditReceiptValidationResultSupport` now uses the same shared policy.
+- `NimCreateDurableAuditValidationResultProbeBindingMigrationSupport` now uses the same shared policy.
+- Extended `NimForbiddenSecretMaterialDetectorUsageContractTest` so these four migrated support classes cannot reintroduce local secret detector copies or documented-field exceptions.
+- Added direct policy tests for Boolean/Number state scalar allowance versus nested secret object rejection.
+- Added `docs/M5_21_NINETIETH_WAVE_NIM_VALIDATION_PROBE_RESULT_SHARED_SECRET_DETECTOR_MIGRATION_AUDIT_20260608.md`.
+**Security**
+- Local forged-success scanners were intentionally preserved because they guard evidence-source and validation/release forgery, not credential material.
+- No runtime write behavior was opened.
+- No real `8100`, deployment POST, storage probe, durable writer/probe/receipt implementation, validation result signer, release decision, release switch, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-89] - NIM durable audit storage secret detector migration
 
 **Delivery**: Migrated the durable audit storage/probe-boundary input scanners to the shared forbidden secret material detector.
