@@ -335,10 +335,14 @@ class NimCreateStateMachineReleaseDecisionRequirementSupportTest {
                 audit.put("token", "redacted-test-value")),
             leakCase("audit nested password", (audit, principal, gateReport) ->
                 audit.put("callerMetadata", Map.of("password", "redacted-test-value"))),
+            leakCase("audit list item token", (audit, principal, gateReport) ->
+                audit.put("callerEvents", List.of(Map.of("token", "redacted-test-value")))),
             leakCase("trusted principal top-level secret", (audit, principal, gateReport) ->
                 principal.put("secret", "redacted-test-value")),
             leakCase("trusted principal nested authorization", (audit, principal, gateReport) ->
                 principal.put("headers", Map.of("Authorization", "redacted-test-value"))),
+            leakCase("trusted principal list item password", (audit, principal, gateReport) ->
+                principal.put("sessionEvidence", List.of(Map.of("password", "redacted-test-value")))),
             leakCase("gate report top-level ngc api key", (audit, principal, gateReport) ->
                 gateReport.put("ngcApiKey", "redacted-test-value")),
             leakCase("gate report nested nvaie api key", (audit, principal, gateReport) ->

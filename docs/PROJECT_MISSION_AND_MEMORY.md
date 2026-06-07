@@ -81,9 +81,28 @@ Current track:
 
 Recently completed:
 
-`M5.21-61 NIM state-machine release decision requirement secret coverage hardening`
+`M5.21-62 NIM state-machine secret list-item coverage matrix`
 
 Latest checkpoint:
+
+- Date: 2026-06-07 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+  - M5.21-62 implemented:
+  - Followed multi-expert M5.21-61 review suggestion to complete list-item secret coverage for every M5.21-60 state-machine release decision requirement input.
+  - This wave changes tests and docs only; it does not modify production release logic.
+  - Added two additional secret leakage cases to `NimCreateStateMachineReleaseDecisionRequirementSupportTest`:
+    - `auditContext.callerEvents[].token`
+    - `trustedPrincipalSnapshot.sessionEvidence[].password`
+  - Together with the existing `durableAuditReleaseDecisionGateReport.diagnosticEvents[].token` case, all three inputs now have list-item secret rejection coverage.
+  - Each case continues to prove `STATE_MACHINE_RELEASE_DECISION_REQUIREMENT_INPUT_CONTAINS_FORBIDDEN_SECRET`, empty `stateMachineRequirementPlan`, and `writePermitted=false`, `writeExecutionAllowed=false`, `realHttpExecutionAllowed=false`.
+  - Added `docs/M5_21_SIXTY_SECOND_WAVE_NIM_STATE_MACHINE_SECRET_LIST_MATRIX_AUDIT_20260607.md`.
+  - Security invariant: no real `8100` access; no HTTP client; no Elasticsearch connection; no `ISysLogService` call; no `sys_log` write; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateStateMachineReleaseDecisionRequirementSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateStateMachineReleaseDecisionRequirementSupportTest,NimCreateDurableAuditReleaseDecisionGateSupportTest,NimCreateDurableAuditValidationResultMigrationSupportTest,NimCreateDurableAuditReceiptValidationGateSupportTest,NimCreateDurableAuditReceiptSchemaSupportTest" test`
+    - `mvn -q test`
+    - Full test note: `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0; this remains an accepted degraded-test-path signal, not an M5.21-62 failure.
+  - Learning note: matrix completeness matters. If a gate consumes three evidence inputs, list-based secret payloads should be rejected on all three, not just globally somewhere in the contract.
 
 - Date: 2026-06-07 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.

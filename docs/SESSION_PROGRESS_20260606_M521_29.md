@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-61, NIM state-machine release decision requirement secret coverage hardening.
+- Current latest wave: M5.21-62, NIM state-machine secret list-item coverage matrix.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -46,6 +46,23 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-62 NIM state-machine secret list-item coverage matrix is implemented:
+  - Updated `NimCreateStateMachineReleaseDecisionRequirementSupportTest`.
+  - This wave is test/docs-only and does not change production release logic.
+  - Added list-item secret leak cases for:
+    - `auditContext.callerEvents[].token`
+    - `trustedPrincipalSnapshot.sessionEvidence[].password`
+  - Existing M5.21-61 coverage already included `durableAuditReleaseDecisionGateReport.diagnosticEvents[].token`; all three M5.21-60 contract inputs now have list-item secret coverage.
+  - Expected output remains `REJECTED`, empty `stateMachineRequirementPlan`, `STATE_MACHINE_RELEASE_DECISION_REQUIREMENT_INPUT_CONTAINS_FORBIDDEN_SECRET`, and all write flags false.
+  - Added `docs/M5_21_SIXTY_SECOND_WAVE_NIM_STATE_MACHINE_SECRET_LIST_MATRIX_AUDIT_20260607.md`.
+  - Verification passed:
+    - `mvn -q "-Dtest=NimCreateStateMachineReleaseDecisionRequirementSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateStateMachineReleaseDecisionRequirementSupportTest,NimCreateDurableAuditReleaseDecisionGateSupportTest,NimCreateDurableAuditValidationResultMigrationSupportTest,NimCreateDurableAuditReceiptValidationGateSupportTest,NimCreateDurableAuditReceiptSchemaSupportTest" test`
+    - `mvn -q test`
+    - Full test note: `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0; this is expected for the current local test environment and does not indicate an M5.21-62 regression.
+  - No real `8100` access; no HTTP client; no Elasticsearch connection; no `ISysLogService`; no `sys_log` write; no `POST /api/{orgId}/deployment`; `nim_create` remains HOLD.
+  - Recovery note: this wave turns the M5.21-61 expert suggestion into executable matrix coverage. Future secret tests should describe which input surface and which nesting shape they protect.
 
 - M5.21-61 NIM state-machine release decision requirement secret coverage hardening is implemented:
   - Updated `NimCreateStateMachineReleaseDecisionRequirementSupportTest`.

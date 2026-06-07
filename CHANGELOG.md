@@ -6,6 +6,17 @@
 
 ---
 
+## [M5.21-62] - NIM state-machine secret list-item coverage matrix
+
+**Delivery**: Completed the M5.21-61 secret leakage matrix by proving list-item secret rejection for every M5.21-60 state-machine release decision requirement input.
+**Changes**
+- Added `auditContext.callerEvents[].token` and `trustedPrincipalSnapshot.sessionEvidence[].password` leak cases to `NimCreateStateMachineReleaseDecisionRequirementSupportTest`.
+- The existing gate-report list-item case remains in place, so `auditContext`, `trustedPrincipalSnapshot`, and `durableAuditReleaseDecisionGateReport` now each have list-item coverage.
+- Added `docs/M5_21_SIXTY_SECOND_WAVE_NIM_STATE_MACHINE_SECRET_LIST_MATRIX_AUDIT_20260607.md`.
+**Security**
+- This wave is test/docs-only; no production release logic changed.
+- `nim_create` remains `httpMethod=NONE + PLACEHOLDER + requiresConfirmation=true`, with no real `8100`, no `POST /api/{orgId}/deployment`, no Elasticsearch, no `ISysLogService`, and no `sys_log` write.
+
 ## [M5.21-61] - NIM state-machine release decision requirement secret coverage hardening
 
 **Delivery**: Hardened the M5.21-60 state-machine release decision report requirement tests by expanding forbidden secret leakage coverage across every contract input and nested evidence shape.

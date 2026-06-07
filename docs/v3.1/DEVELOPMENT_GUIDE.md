@@ -159,3 +159,9 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Covered keys include `token`, `password`, `secret`, `Authorization`, `ngcApiKey`, and `nvaieApiKey`.
 - A rejected secret case must never fall through to the positive HOLD path; it must return `REJECTED`, empty `stateMachineRequirementPlan`, `writePermitted=false`, `writeExecutionAllowed=false`, and `realHttpExecutionAllowed=false`.
 - Test data should use redacted values when key-name detection is enough; avoid embedding credential-shaped fake tokens unless a test specifically needs value-pattern detection.
+
+### M5.21-62 list-item matrix note
+
+- Secret tests should distinguish input surface and nesting shape. A single list-item test proves recursion exists, but it does not prove every input surface is protected against list-carried metadata.
+- The state-machine release decision requirement now tests list-item secret rejection in all three inputs: `auditContext`, `trustedPrincipalSnapshot`, and `durableAuditReleaseDecisionGateReport`.
+- This remains test/docs-only and keeps `nim_create` held. The goal is to sharpen evidence before any future state-machine release gate is wired into production behavior.
