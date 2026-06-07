@@ -214,6 +214,41 @@ class NimCreateReadinessExecutorSupportTest {
     }
 
     @Test
+    void executor_shouldAllowApiKeyPlaceholderOnlyOutsideForbiddenSecretKeys() {
+        Map<String, Object> planWithDocumentedPlaceholder = new java.util.LinkedHashMap<>(readinessPlan());
+        planWithDocumentedPlaceholder.put("operatorHint", NimCreateReadinessExecutorSupport.API_KEY_PLACEHOLDER);
+
+        Map<String, Object> allowed = NimCreateReadinessExecutorSupport.evaluate(new NimCreateReadinessExecutorSupport.ReadinessExecutionInput(
+            planWithDocumentedPlaceholder,
+            deploymentResponse(List.of(deployment("llama-nim", "http", "https://nim.example.com/nim"))),
+            Map.of("live", true),
+            Map.of("data", List.of(Map.of("id", "llama"))),
+            1
+        ));
+
+        assertEquals("READY", allowed.get("state"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> allowedBlockers = (List<Map<String, Object>>) allowed.get("blockedBy");
+        assertTrue(allowedBlockers.isEmpty());
+
+        Map<String, Object> planWithForbiddenPlaceholder = new java.util.LinkedHashMap<>(readinessPlan());
+        planWithForbiddenPlaceholder.put("token", NimCreateReadinessExecutorSupport.API_KEY_PLACEHOLDER);
+
+        Map<String, Object> rejected = NimCreateReadinessExecutorSupport.evaluate(new NimCreateReadinessExecutorSupport.ReadinessExecutionInput(
+            planWithForbiddenPlaceholder,
+            deploymentResponse(List.of(deployment("llama-nim", "http", "https://nim.example.com/nim"))),
+            Map.of("live", true),
+            Map.of("data", List.of(Map.of("id", "llama"))),
+            1
+        ));
+
+        assertEquals("REJECTED", rejected.get("state"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> rejectedBlockers = (List<Map<String, Object>>) rejected.get("blockedBy");
+        assertHasItem(rejectedBlockers, "READINESS_CONTAINS_FORBIDDEN_SECRET");
+    }
+
+    @Test
     void executor_shouldTimeoutAtMaxAttemptWithoutLiveHealth() {
         Map<String, Object> report = NimCreateReadinessExecutorSupport.evaluate(new NimCreateReadinessExecutorSupport.ReadinessExecutionInput(
             readinessPlan(),

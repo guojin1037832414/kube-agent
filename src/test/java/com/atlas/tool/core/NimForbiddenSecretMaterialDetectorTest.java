@@ -50,6 +50,28 @@ class NimForbiddenSecretMaterialDetectorTest {
     }
 
     @Test
+    void textValuePolicyAllowing_shouldAllowOnlyConfiguredSecretLikePlaceholders() {
+        assertFalse(NimForbiddenSecretMaterialDetector.containsForbiddenSecretMaterial(
+            Map.of("placeholder", "Bearer {input your NGC_API_KEY here}"),
+            NimForbiddenSecretMaterialDetector.textValuePolicyAllowing(
+                java.util.Set.of("Bearer {input your NGC_API_KEY here}")
+            )
+        ));
+        assertTrue(NimForbiddenSecretMaterialDetector.containsForbiddenSecretMaterial(
+            Map.of("placeholder", "Bearer real-key-material"),
+            NimForbiddenSecretMaterialDetector.textValuePolicyAllowing(
+                java.util.Set.of("Bearer {input your NGC_API_KEY here}")
+            )
+        ));
+        assertTrue(NimForbiddenSecretMaterialDetector.containsForbiddenSecretMaterial(
+            Map.of("token", "Bearer {input your NGC_API_KEY here}"),
+            NimForbiddenSecretMaterialDetector.textValuePolicyAllowing(
+                java.util.Set.of("Bearer {input your NGC_API_KEY here}")
+            )
+        ));
+    }
+
+    @Test
     void receiptSchemaPolicy_shouldAllowDocumentedForbiddenFieldNamesButRejectRealSecrets() {
         Map<String, Object> documentedFieldNames = Map.of(
             "requestContract", Map.of(

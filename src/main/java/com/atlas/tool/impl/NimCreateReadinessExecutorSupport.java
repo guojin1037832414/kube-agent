@@ -1,5 +1,7 @@
 package com.atlas.tool.impl;
 
+import com.atlas.tool.core.NimForbiddenSecretMaterialDetector;
+
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -31,17 +33,6 @@ final class NimCreateReadinessExecutorSupport {
     private static final Set<String> READ_ONLY_METHODS = Set.of(
         "GET",
         "EXTRACT_FROM_DEPLOYMENT_RESPONSE"
-    );
-    private static final Set<String> FORBIDDEN_SECRET_KEYS = Set.of(
-        "apikey",
-        "ngcapikey",
-        "nvaieapikey",
-        "token",
-        "secret",
-        "password",
-        "authorization",
-        "authheader",
-        "bearertoken"
     );
     private static final Pattern HTTP_URL_PATTERN = Pattern.compile(
         "^(https?)://([^/@?#:\\s]+|\\[[0-9A-Fa-f:.]+])(?::\\d{1,5})?([^?#\\s]*)?(?:\\?[^#\\s]*)?(?:#\\S*)?$"
@@ -456,49 +447,10 @@ final class NimCreateReadinessExecutorSupport {
     }
 
     private static boolean containsForbiddenSecretMaterial(Map<String, Object> map) {
-        for (Map.Entry<String, Object> entry : map.entrySet()) {
-            String normalizedKey = normalizeKey(entry.getKey());
-            Object value = entry.getValue();
-            if (FORBIDDEN_SECRET_KEYS.contains(normalizedKey) && hasText(value)) {
-                return true;
-            }
-            if (value instanceof String textValue && looksLikeSecretValue(textValue)) {
-                return true;
-            }
-            if (value instanceof Map<?, ?> nested && containsForbiddenSecretMaterial(objectMap(nested))) {
-                return true;
-            }
-            if (value instanceof List<?> list) {
-                for (Object item : list) {
-                    if (item instanceof Map<?, ?> nestedItem && containsForbiddenSecretMaterial(objectMap(nestedItem))) {
-                        return true;
-                    }
-                    if (item instanceof String textItem && looksLikeSecretValue(textItem)) {
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
-    }
-
-    private static boolean looksLikeSecretValue(String value) {
-        String trimmed = value.trim();
-        if (API_KEY_PLACEHOLDER.equals(trimmed)) {
-            return false;
-        }
-        if (trimmed.startsWith("Bearer ") && trimmed.length() > "Bearer ".length()) {
-            return true;
-        }
-        return trimmed.matches("sk-[A-Za-z0-9]{20,}")
-            || trimmed.matches("AKIA[0-9A-Z]{16}")
-            || trimmed.matches("AIza[0-9A-Za-z_-]{35}")
-            || trimmed.matches("ghp_[A-Za-z0-9]{36}")
-            || trimmed.matches("xox[baprs]-[A-Za-z0-9-]{10,}");
-    }
-
-    private static String normalizeKey(String key) {
-        return key == null ? "" : key.replace("_", "").replace("-", "").toLowerCase(Locale.ROOT);
+        return NimForbiddenSecretMaterialDetector.containsForbiddenSecretMaterial(
+            map,
+            NimForbiddenSecretMaterialDetector.textValuePolicyAllowing(Set.of(API_KEY_PLACEHOLDER))
+        );
     }
 
     private static int positiveInt(Object value, int fallback) {

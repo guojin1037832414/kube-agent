@@ -429,3 +429,11 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - The state-machine requirement still keeps forged release/write scanning local. Caller-supplied `releaseDecision`, `validationResult`, `releaseCredential`, `writePermitted=true`, `writeExecutionAllowed=true`, deployment ids, and write results are authority/evidence forgeries.
 - Valid state-machine requirement input still produces `IMPLEMENTATION_HOLD`; a clean secret scan cannot unlock a future write path.
 - Learning distinction: shared utilities should cover a single proof type. Credential-leak detection can be shared broadly, but release authority must remain tied to server-issued, digest-bound evidence and reviewed state-machine gates.
+
+### M5.21-97 readiness executor placeholder-aware detector note
+
+- `NimForbiddenSecretMaterialDetector.textValuePolicyAllowing(...)` exists for narrow, explicit compatibility exceptions such as `Bearer {input your NGC_API_KEY here}`.
+- `NimCreateReadinessExecutorSupport` now uses that shared detector policy instead of carrying a local secret scanner copy.
+- The placeholder is allowed only as a non-secret explanatory value. It is still rejected when placed under forbidden keys such as `token`, and real `Bearer ...` values remain rejected.
+- Readiness executor remains offline/read-only: no kube-manager `8100`, no real NIM service call, no Authorization header, and no write release authority.
+- Learning distinction: placeholder compatibility should be explicit, parameterized, and tested at both shared-policy and call-site levels.

@@ -36,6 +36,10 @@ public final class NimForbiddenSecretMaterialDetector {
         return new DetectionPolicy(ForbiddenKeyValuePolicy.NON_BLANK_VALUE, Set.of());
     }
 
+    public static DetectionPolicy textValuePolicyAllowing(Set<String> allowedSecretLikeValues) {
+        return new DetectionPolicy(ForbiddenKeyValuePolicy.NON_BLANK_VALUE, allowedSecretLikeValues);
+    }
+
     public static DetectionPolicy nonBooleanNumberValuePolicy() {
         return new DetectionPolicy(ForbiddenKeyValuePolicy.NON_BOOLEAN_NUMBER_VALUE, Set.of());
     }
