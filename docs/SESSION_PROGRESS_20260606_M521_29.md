@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-93, NIM receipt validation gate receipt-schema shared secret detector migration.
+- Current latest wave: M5.21-94, NIM validation result migration receipt-schema shared secret detector migration.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -48,6 +48,23 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-94 NIM validation result migration receipt-schema shared secret detector migration is implemented:
+  - Migrated `src/main/java/com/atlas/tool/impl/NimCreateDurableAuditValidationResultMigrationSupport.java` to `NimForbiddenSecretMaterialDetector.receiptSchemaPolicy()`.
+  - Removed the validation-result migration local forbidden secret key/value scanner copy while preserving separate forged validation/release claim scanners.
+  - Preserved blocker code:
+    - `DURABLE_AUDIT_VALIDATION_RESULT_MIGRATION_INPUT_CONTAINS_FORBIDDEN_SECRET`
+  - Extended `src/test/java/com/atlas/tool/core/NimForbiddenSecretMaterialDetectorUsageContractTest.java` so validation-result migration is covered by the receipt-schema policy group.
+  - Added `src/test/java/com/atlas/tool/impl/NimCreateDurableAuditValidationResultMigrationSupportTest.java` coverage proving documented field names such as `Authorization`, `apiKey`, and `ngcApiKey` are allowed while `Authorization=Bearer ...` remains rejected.
+  - Added `docs/M5_21_NINETY_FOURTH_WAVE_NIM_VALIDATION_RESULT_MIGRATION_RECEIPT_SCHEMA_SECRET_DETECTOR_MIGRATION_AUDIT_20260608.md`.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimForbiddenSecretMaterialDetectorUsageContractTest,NimForbiddenSecretMaterialDetectorTest,NimCreateDurableAuditValidationResultMigrationSupportTest,NimCreateDurableAuditReceiptValidationGateSupportTest,NimCreateDurableAuditReceiptSchemaSupportTest" test`
+  - Final verification passed:
+    - `git diff --check`
+    - `mvn -q test`
+  - Full test note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - No real `8100` access; no deployment POST; no runtime write behavior opened; no receipt validator implementation; no storage probe implementation; no durable writer/probe/receipt implementation; no validation result signer; no release decision signer; no code release switch implementation; no Elasticsearch; no `ISysLogService`; no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Next recommended slice: compare and migrate remaining documented-field exception classes (`NimCreateDurableAuditReleaseDecisionGateSupport`, `NimCreateStateMachineReleaseDecisionRequirementSupport`) one at a time, or return to reviewed durable writer/probe boundary design.
 
 - M5.21-93 NIM receipt validation gate receipt-schema shared secret detector migration is implemented:
   - Extended `src/main/java/com/atlas/tool/core/NimForbiddenSecretMaterialDetector.java` so `receiptSchemaPolicy()` allows documented forbidden field names in direct string values as well as list values.

@@ -405,3 +405,11 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - The same policy still rejects real secret material such as `Authorization=Bearer ...`, API-key/token/password/secret assignments, and common cloud/token key shapes.
 - Receipt validation gate forged-success scanners remain local because `validationStatus=PASS`, `releaseEligible=true`, typed receipt/ack objects, and real-storage claims are evidence-source forgeries rather than credential leaks.
 - Learning distinction: top-tier Agent safety separates "this input leaks credentials" from "this input forges authority." Both are blockers, but they deserve different code paths and tests.
+
+### M5.21-94 validation result migration receipt-schema detector note
+
+- `NimCreateDurableAuditValidationResultMigrationSupport` now uses `NimForbiddenSecretMaterialDetector.receiptSchemaPolicy()` for secret-material scanning.
+- This migration-plan shell can still carry schema/validation documentation containers, so exact documented forbidden field names remain allowed while real bearer/API-key material is rejected.
+- Validation/release forged-claim scanning remains local: `validationResult`, `releaseDecision`, legacy `auditReceipt.releaseEligible`, `validationStatus=PASS`, and `writeExecutionAllowed=true` are authority forgeries, not credential leaks.
+- The usage contract now protects validation-result migration from reintroducing a local secret-key blacklist.
+- Learning distinction: policy reuse should follow semantic evidence. Similar-looking scanners are migrated only after comparing what the old local code accepted and rejected.

@@ -357,6 +357,47 @@ class NimCreateDurableAuditValidationResultMigrationSupportTest {
             "DURABLE_AUDIT_VALIDATION_RESULT_MIGRATION_INPUT_CONTAINS_FORBIDDEN_SECRET");
     }
 
+    @Test
+    void migrationPlan_shouldAllowDocumentedForbiddenFieldNamesButRejectRealSecretMaterial() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = new LinkedHashMap<>(trustedPrincipalSnapshot());
+        principal.put("documentedForbiddenFieldNames", List.of("Authorization", "apiKey", "ngcApiKey"));
+        Map<String, Object> cleanPrincipal = trustedPrincipalSnapshot();
+
+        Map<String, Object> allowedReport = NimCreateDurableAuditValidationResultMigrationSupport.plan(
+            new NimCreateDurableAuditValidationResultMigrationSupport.DurableAuditValidationResultMigrationInput(
+                audit,
+                principal,
+                validationGateReport(audit, cleanPrincipal)
+            )
+        );
+
+        assertEquals(NimCreateDurableAuditValidationResultMigrationSupport.HOLD_STATE,
+            allowedReport.get("migrationPlanState"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> allowedBlockers = (List<Map<String, Object>>) allowedReport.get("blockedBy");
+        assertFalse(allowedBlockers.stream().anyMatch(item ->
+            "DURABLE_AUDIT_VALIDATION_RESULT_MIGRATION_INPUT_CONTAINS_FORBIDDEN_SECRET".equals(item.get("code"))));
+
+        Map<String, Object> leakedPrincipal = new LinkedHashMap<>(trustedPrincipalSnapshot());
+        leakedPrincipal.put("documentedForbiddenFieldNames", List.of("Authorization=Bearer abcdefghijklmnop"));
+
+        Map<String, Object> rejectedReport = NimCreateDurableAuditValidationResultMigrationSupport.plan(
+            new NimCreateDurableAuditValidationResultMigrationSupport.DurableAuditValidationResultMigrationInput(
+                audit,
+                leakedPrincipal,
+                validationGateReport(audit, cleanPrincipal)
+            )
+        );
+
+        assertEquals(NimCreateDurableAuditValidationResultMigrationSupport.REJECTED_STATE,
+            rejectedReport.get("migrationPlanState"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> rejectedBlockers = (List<Map<String, Object>>) rejectedReport.get("blockedBy");
+        assertHasBlocker(rejectedBlockers,
+            "DURABLE_AUDIT_VALIDATION_RESULT_MIGRATION_INPUT_CONTAINS_FORBIDDEN_SECRET");
+    }
+
     private Map<String, Object> validationGateReport(Map<String, Object> audit,
                                                      Map<String, Object> principal) {
         return NimCreateDurableAuditReceiptValidationGateSupport.plan(
