@@ -6,7 +6,7 @@
 - Primary workspace recovery folder: `F:\gitProject\kube-agent\codex-memory\kube-agent\current`
 - Historical external memory folder: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.29-7, default Agent API authorization guard.
+- Current latest wave: M5.30-1, durable audit storage foundation.
 - Phase update: HPC / Slurm / BCM and NIM are paused and moved to Phase 2 by user direction.
 - Phase 1 focus: deliver the top-tier Agent core through generic manager Agent foundations, safe read/query validation, non-HPC/NIM manager function coverage, Tool metadata quality, HITL/audit execution boundary, traceability, recovery, evaluation, teaching documentation, and vue-kube-manager workflow integration.
 - Phase boundary clarification: moving NIM / HPC / Slurm / BCM to Phase 2 postpones specialist domain plugins only; it does not reduce Phase 1 standards.
@@ -55,6 +55,44 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.30-1 durable audit storage foundation is implemented:
+  - Added a small durable audit boundary:
+    - `AgentAuditDurableSink` is the replaceable append-only storage interface.
+    - `AgentAuditDurabilityStatus` is the structured readiness contract for diagnostics and execution gates.
+    - `AgentAuditProperties` exposes `atlas.audit.durable.enabled`, `atlas.audit.durable.fail-closed-for-high-risk`, and `atlas.audit.durable.path`.
+  - Added `JsonlAgentAuditDurableSink` as the first implementation:
+    - writes JSONL append-only audit records;
+    - stores only redacted evidence;
+    - does not persist raw principal, organization, conversation, reason text, endpoint strings, or parameter values.
+  - `InMemoryAgentAuditRecorder` now remains the admin diagnostic ring buffer, but can also append to the durable sink and expose `durability` in snapshots.
+  - `SafeToolExecutor` now has a durable audit pre-execution gate for high-risk operations:
+    - applies to `CREATE`, `UPDATE`, `DELETE`, `ACTION`, and `PLACEHOLDER`;
+    - blocks before `BaseTool.execute(...)` when durable audit fail-closed is required but not ready;
+    - ordinary `READ` and `SENSITIVE_READ` compatibility remains unaffected by default.
+  - Configuration defaults:
+    - durable audit disabled by default for local/dev compatibility;
+    - production can enable `ATLAS_AUDIT_DURABLE_ENABLED=true`;
+    - production high-risk writes can require `ATLAS_AUDIT_DURABLE_FAIL_CLOSED_FOR_HIGH_RISK=true`.
+  - Verification passed:
+    - `mvn -q "-DskipTests" validate`
+    - `mvn -q "-Dtest=AgentAuditRecorderTest,JsonlAgentAuditDurableSinkTest,SafeToolExecutorTest" test`
+    - `mvn -q "-Dtest=AgentAuditRecorderTest,JsonlAgentAuditDurableSinkTest,AgentAuditTelemetryPublisherTest,AgentAuditTelemetryProjectorTest,SafeToolExecutorTest,ObservabilityControllerTest" test`
+    - `mvn -q test`
+    - `git diff --check`
+  - Learning result:
+    - Top-tier Agent audit is not ordinary log writing. It is a structured evidence channel that can become a release gate: if a dangerous action cannot be recorded durably, the Agent must be able to refuse execution.
+  - Intentional migration boundary:
+    - This slice does not add database/Elasticsearch/Kafka storage yet.
+    - This slice checks durable audit readiness before high-risk execution. Future real writes still need durable pre-write receipt, idempotency key, and post-write readback before release.
+    - It does not enable real kube-manager write/create/delete/state-changing calls.
+    - NIM/HPC/Slurm/BCM remain Phase 2.
+  - Next Phase 1 technical slices:
+    - admin-only durable audit query API and indexed trace/audit lookup;
+    - frontend replay timeline DTOs;
+    - Agent eval reports;
+    - RAG/persistent Memory and read-only MCP schema adapter;
+    - OTel span/timeline mapping for request/intent/plan/LLM/tool/HTTP/HITL/final answer.
 
 - M5.29-7 default Agent API authorization guard is implemented:
   - `AgentSecurityConfig` now enables method security through `@EnableMethodSecurity`.

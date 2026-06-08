@@ -85,6 +85,43 @@ After each completed chunk of meaningful work:
 
 Do not revert unrelated dirty worktree changes. If the worktree contains unrelated existing changes, only stage/commit the files belonging to the completed chunk.
 
+## Latest Phase 1 Memory - 2026-06-09 M5.30-1
+
+- Latest completed wave: M5.30-1 durable audit storage foundation.
+- Mainline technology decision:
+  - Continue stable `Spring Boot 3.5.14 + Spring AI 1.1.7 + Java 17` for the buildable Phase 1 branch.
+  - Use latest Agent engineering patterns through verified contracts: durable audit, OTel-compatible projection, Spring Security, SafeToolExecutor, eval, replay, MCP schema adapter.
+  - Keep Java 21/25, Spring Boot 4, Spring AI 2, full MCP broker, A2A, and OTel GenAI/Agent experimental semantics in compatibility-matrix work until tests prove them safe.
+- M5.30-1 delivered:
+  - `AgentAuditDurableSink`
+  - `AgentAuditDurabilityStatus`
+  - `AgentAuditProperties`
+  - `JsonlAgentAuditDurableSink`
+  - optional `atlas.audit.durable.*` configuration
+  - `InMemoryAgentAuditRecorder` durable append integration
+  - admin snapshot durability status
+  - `SafeToolExecutor` high-risk durable-audit readiness gate
+- Security boundary:
+  - Durable JSONL records are redacted and append-only.
+  - High-risk `CREATE` / `UPDATE` / `DELETE` / `ACTION` / `PLACEHOLDER` can fail closed before real Tool execution if production requires durable audit and the sink is unavailable.
+  - No real kube-manager write/create/delete/state-changing call was enabled.
+  - NIM/HPC/Slurm/BCM remain Phase 2.
+- Verification:
+  - `mvn -q "-DskipTests" validate`
+  - `mvn -q "-Dtest=AgentAuditRecorderTest,JsonlAgentAuditDurableSinkTest,SafeToolExecutorTest" test`
+  - `mvn -q "-Dtest=AgentAuditRecorderTest,JsonlAgentAuditDurableSinkTest,AgentAuditTelemetryPublisherTest,AgentAuditTelemetryProjectorTest,SafeToolExecutorTest,ObservabilityControllerTest" test`
+  - `mvn -q test`
+  - `git diff --check`
+- Design note:
+  - M5.30-1 is a durable audit foundation, not the final write-release protocol. Future controlled writes still need durable pre-write receipt, idempotency key, post-write readback, retention/index metadata, and admin-only query before any real kube-manager state-changing call is released.
+- Next recommended Phase 1 slices:
+  - admin-only durable audit query API with traceId/auditId lookup;
+  - frontend replay timeline DTOs;
+  - Agent eval reports and must-block red-team suite;
+  - persistent Memory/RAG;
+  - read-only MCP schema adapter;
+  - complete OTel span/timeline mapping.
+
 ## Current Long-Running Track
 
 Current track:

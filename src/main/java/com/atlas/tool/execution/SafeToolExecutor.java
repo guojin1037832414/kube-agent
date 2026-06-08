@@ -1,6 +1,7 @@
 package com.atlas.tool.execution;
 
 import com.atlas.audit.AgentAuditEvent;
+import com.atlas.audit.AgentAuditDurabilityStatus;
 import com.atlas.audit.AgentAuditEventFactory;
 import com.atlas.audit.AgentAuditOutcome;
 import com.atlas.audit.AgentAuditRecorder;
@@ -149,6 +150,11 @@ public class SafeToolExecutor {
                 return result;
             }
 
+            SafeToolExecutionResult durableGate = verifyDurableAuditGate(request, metadata, traceId, orgId, auditPrincipal);
+            if (durableGate != null) {
+                return durableGate;
+            }
+
             BaseTool tool = toolOpt.get();
             Map<String, Object> toolParams;
             try {
@@ -220,6 +226,34 @@ public class SafeToolExecutor {
             log.warn("[AgentAudit] 诊断审计记录失败: traceId={}, intentId={}",
                 traceId, request != null ? request.intentId() : "", ex);
         }
+    }
+
+    private SafeToolExecutionResult verifyDurableAuditGate(SafeToolExecutionRequest request,
+                                                           ToolMetadata metadata,
+                                                           String traceId,
+                                                           String orgId,
+                                                           AgentPrincipal auditPrincipal) {
+        AgentAuditDurabilityStatus status = auditRecorder.durabilityStatus();
+        if (metadata == null || !isHighRiskOperation(metadata) || !status.failClosedForHighRisk()) {
+            return null;
+        }
+        if (!status.enabled() || !status.ready() || !status.durableRetention()) {
+            String message = "AGENT_AUDIT_DURABLE_REQUIRED: high-risk Tool execution requires ready durable audit storage";
+            SafeToolExecutionResult result = SafeToolExecutionResult.notExecuted(message, traceId);
+            recordAudit(request, metadata, traceId, orgId, auditPrincipal, AgentAuditOutcome.BLOCKED, false, false, result.answer());
+            return result;
+        }
+        return null;
+    }
+
+    private boolean isHighRiskOperation(ToolMetadata metadata) {
+        if (metadata.operationType() == null) {
+            return false;
+        }
+        return switch (metadata.operationType()) {
+            case CREATE, UPDATE, DELETE, ACTION, PLACEHOLDER -> true;
+            case UNKNOWN, READ, SENSITIVE_READ -> false;
+        };
     }
 
     private AgentPrincipal currentAuditPrincipal() {

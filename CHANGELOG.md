@@ -6,6 +6,26 @@
 
 ---
 
+## [M5.30-1] - Durable audit storage foundation
+
+**Delivery**: Added the first durable audit foundation for top-tier Agent evidence: an optional redacted JSONL sink, explicit durability status, and a pre-execution fail-closed gate for high-risk Tool operations when durable audit is configured as mandatory.
+**Changes**
+- Added `AgentAuditDurableSink`, `AgentAuditDurabilityStatus`, and `AgentAuditProperties`.
+- Added `JsonlAgentAuditDurableSink` as an append-only redacted durable audit implementation, configured by `atlas.audit.durable.*`.
+- Extended `InMemoryAgentAuditRecorder` so the existing admin snapshot remains fast while optionally appending durable redacted evidence.
+- Exposed durable audit status in `replayCapabilities` / `durability` snapshot data.
+- Added `SafeToolExecutor` durable audit gate: high-risk `CREATE` / `UPDATE` / `DELETE` / `ACTION` / `PLACEHOLDER` Tool execution can fail closed before `BaseTool.execute(...)` when durable evidence is required but unavailable.
+**Verification**
+- `mvn -q "-DskipTests" validate` passed.
+- `mvn -q "-Dtest=AgentAuditRecorderTest,JsonlAgentAuditDurableSinkTest,SafeToolExecutorTest" test` passed.
+- `mvn -q "-Dtest=AgentAuditRecorderTest,JsonlAgentAuditDurableSinkTest,AgentAuditTelemetryPublisherTest,AgentAuditTelemetryProjectorTest,SafeToolExecutorTest,ObservabilityControllerTest" test` passed.
+- `mvn -q test` passed.
+- `git diff --check` passed.
+**Security**
+- JSONL durable records store redacted evidence only: no raw principal, organization, conversation, reason text, endpoint strings, or parameter values.
+- Ordinary read/query behavior remains compatible when durable audit is disabled.
+- Future production writes can turn on `ATLAS_AUDIT_DURABLE_FAIL_CLOSED_FOR_HIGH_RISK=true` so dangerous actions cannot run without durable audit readiness.
+
 ## [M5.29-7] - Default Agent API authorization guard
 
 **Delivery**: Closed the incremental `permitAll` compatibility window for Agent APIs by making `/api/agent/**` authenticated by default, while keeping only explicit bootstrap/health endpoints open.

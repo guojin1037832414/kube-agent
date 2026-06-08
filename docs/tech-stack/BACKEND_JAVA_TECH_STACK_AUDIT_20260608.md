@@ -72,11 +72,13 @@ M5.28-1 完成后，后端主语言审计结论进一步明确：`Java + Spring`
 - M5.29-5 已把 `ConversationController` 会话元数据 owner 迁移到 `AgentPrincipalResolver`，并将 `/api/agent/conversations`、`/api/agent/conversations/**` 迁移到 `.authenticated()`。
 - M5.29-6 已把 Chat/SSE/Graph/HITL 运行时身份迁移到 `AgentPrincipalResolver + SessionStore + ConversationStore` 的可信快照，并将 `/api/agent/chat/stream`、`/api/agent/chat/graph`、`/api/agent/hitl/**` 迁移到 `.authenticated()`。
 - M5.29-7 已启用 `@EnableMethodSecurity`，将 `/api/agent/**` 收口为默认 `.authenticated()` 兜底，并为 `ObservabilityController#snapshot()` 增加方法级 admin guard。
+- M5.30-1 已为审计增加可插拔 durable sink、redacted JSONL 实现、durability snapshot 和高风险 Tool durable-audit fail-closed gate。
 
 仍需要升级的部分：
 
 - Spring Security 主线仍在迁移：M5.29-1 已完成 Bearer 身份桥接和诊断面保护，M5.29-2 已完成统一 principal resolver，M5.29-3 已完成审计 actor 可信快照，M5.29-4 已完成 `X-Session-Id` 会话桥接和 memory/mcp 首批端点授权，M5.29-5 已完成 conversation owner/endpoint 迁移，M5.29-6 已完成 Chat/SSE/Graph/HITL runtime identity 迁移，M5.29-7 已完成 `/api/agent/**` 默认认证兜底和观测方法级 admin guard；后续需要为 durable audit、未来写相邻服务和更细粒度 controller 方法补充 method-level policy，并做 guard 去重；
-- 审计仍是 `InMemoryAgentAuditRecorder` 诊断实现，`durableRetention=false`，不能替代可查询、可保留、可权限控制的持久审计；
+- 审计已从纯 `InMemoryAgentAuditRecorder` 进入第一阶段 durable foundation：M5.30-1 可选写入 redacted JSONL，并能对高风险 Tool 做 durable-audit fail-closed；但还不能替代完整生产审计，因为 admin-only 查询 API、索引、保留策略、数据库/搜索存储和导出能力仍未完成；
+- M5.30-1 的 durable gate 是“执行前 readiness gate”，不是完整写释放协议；真实写操作仍必须在后续引入 durable pre-write receipt、idempotency key、post-write readback、retention/index metadata 和 admin-only query；
 - SpotBugs / SBOM / coverage / secret scan / Agent eval 还没有全部变成失败即阻断的硬门禁；
 - Resilience4j read retry 还应继续细分异常和状态码：网络异常、超时、429、502、503、504 可考虑重试，400、401、403、404 不应重试；
 - OpenTelemetry 还需要把 request、intent、plan、LLM、Tool、HTTP、HITL、audit、final answer 映射为同一 trace 下的 span/timeline；
@@ -116,8 +118,8 @@ M5.28-1 完成后，后端主语言审计结论进一步明确：`Java + Spring`
    - `AuthTokenFilter` 可以保留为兼容桥，但生产鉴权、角色和端点策略应由 Spring Security 承担。
 
 7. 持久审计主线化。
-   - `InMemoryAgentAuditRecorder` 继续作为诊断快照；高风险写、敏感读、HITL 阻断、权限拒绝和 Tool 异常必须进入 append-only durable audit。
-   - 持久审计需要 admin-only 查询、脱敏、保留策略、traceId/auditId 索引和高风险写 pre-write fail-closed gate。
+   - M5.30-1 已保留 `InMemoryAgentAuditRecorder` 作为诊断快照，并增加 `AgentAuditDurableSink`、redacted JSONL、durability status 和高风险 Tool pre-execute fail-closed gate。
+   - 下一步需要 admin-only 查询、脱敏保留策略、traceId/auditId 索引、数据库/搜索存储替换和前端 replay timeline 对接。
 
 ## P1 改进清单
 

@@ -60,7 +60,7 @@ class AgentAuditRecorderTest {
         assertThat(recorder.snapshot()).containsEntry("totalEvents", 3L)
             .containsEntry("blockedEvents", 1L)
             .containsEntry("errorEvents", 1L);
-        assertThat(recorder.snapshot()).containsKeys("schemaVersion", "generatedAt", "replayCapabilities");
+        assertThat(recorder.snapshot()).containsKeys("schemaVersion", "generatedAt", "replayCapabilities", "durability");
     }
 
     @Test
@@ -125,6 +125,37 @@ class AgentAuditRecorderTest {
             .containsEntry("durableRetention", false);
     }
 
+    @Test
+    @SuppressWarnings("unchecked")
+    void snapshot_shouldExposeDurableRetentionStatusWhenSinkIsEnabled() {
+        InMemoryAgentAuditRecorder recorder = new InMemoryAgentAuditRecorder(
+            null,
+            new StaticDurableSink(new AgentAuditDurabilityStatus(
+                true,
+                true,
+                true,
+                true,
+                "jsonl",
+                "target/agent-audit/agent-audit.jsonl",
+                1,
+                0,
+                ""
+            ))
+        );
+
+        Map<String, Object> snapshot = recorder.snapshot();
+        Map<String, Object> capabilities = (Map<String, Object>) snapshot.get("replayCapabilities");
+        Map<String, Object> durability = (Map<String, Object>) snapshot.get("durability");
+
+        assertThat(capabilities).containsEntry("durableRetention", true);
+        assertThat(durability)
+            .containsEntry("enabled", true)
+            .containsEntry("ready", true)
+            .containsEntry("durableRetention", true)
+            .containsEntry("failClosedForHighRisk", true)
+            .containsEntry("storageType", "jsonl");
+    }
+
     private AgentAuditEvent event(String auditId, AgentAuditOutcome outcome) {
         return new AgentAuditEvent(
             auditId,
@@ -146,5 +177,22 @@ class AgentAuditRecorderTest {
             outcome.name(),
             Map.of("count", 0, "keys", java.util.List.of())
         );
+    }
+
+    private static final class StaticDurableSink implements AgentAuditDurableSink {
+        private final AgentAuditDurabilityStatus status;
+
+        private StaticDurableSink(AgentAuditDurabilityStatus status) {
+            this.status = status;
+        }
+
+        @Override
+        public void append(AgentAuditEvent event) {
+        }
+
+        @Override
+        public AgentAuditDurabilityStatus status() {
+            return status;
+        }
     }
 }

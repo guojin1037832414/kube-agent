@@ -1,6 +1,7 @@
 package com.atlas.tool.execution;
 
 import com.atlas.audit.AgentAuditEvent;
+import com.atlas.audit.AgentAuditDurabilityStatus;
 import com.atlas.audit.AgentAuditOutcome;
 import com.atlas.audit.AgentAuditRecorder;
 import com.atlas.audit.InMemoryAgentAuditRecorder;
@@ -352,6 +353,44 @@ class SafeToolExecutorTest {
         assertTrue(event.reason().contains(HitlGuard.HITL_REQUIRED_CODE)
                 || event.reason().contains("高风险操作"),
             "审计事件应记录阻断原因");
+    }
+
+    @Test
+    void executeIntent_shouldFailClosedForHighRiskToolWhenDurableAuditRequiredButUnavailable() {
+        RecordingDeleteTool deleteTool = new RecordingDeleteTool();
+        RecordingAuditRecorder auditRecorder = new RecordingAuditRecorder(new AgentAuditDurabilityStatus(
+            false,
+            true,
+            false,
+            true,
+            "none",
+            "",
+            0,
+            0,
+            ""
+        ));
+        SafeToolExecutor executor = newExecutor(auditRecorder, deleteTool);
+
+        SafeToolExecutionResult result = executor.executeIntent(new SafeToolExecutionRequest(
+            "test.delete",
+            Map.of("name", "danger"),
+            "user-A",
+            "token-A",
+            "100002",
+            "conv-durable-required",
+            "trc_durable_required",
+            HitlConfirmation.human("thread-1", "test.delete"),
+            SafeToolExecutionSource.GRAPH_TOOL_CALL
+        ));
+
+        assertFalse(result.executed(), "High-risk Tool must fail closed before execute when durable audit is required but unavailable");
+        assertTrue(result.answer().contains("AGENT_AUDIT_DURABLE_REQUIRED"));
+        assertNull(deleteTool.lastParams, "Durable audit gate must run before the real Tool.execute call");
+        assertEquals(1, auditRecorder.events.size(), "Durable gate block must still emit an audit event");
+        AgentAuditEvent event = auditRecorder.events.get(0);
+        assertEquals(AgentAuditOutcome.BLOCKED, event.outcome());
+        assertEquals("test.delete", event.intentId());
+        assertEquals("trc_durable_required", event.traceId());
     }
 
     @Test
@@ -918,6 +957,25 @@ class SafeToolExecutorTest {
             if (!"keyword".equals(key)) {
                 assertFalse(lastParams.containsKey(key), key + " 不得透传给业务 Tool");
             }
+        }
+    }
+
+    private static final class RecordingAuditRecorder implements AgentAuditRecorder {
+        private final List<AgentAuditEvent> events = new java.util.ArrayList<>();
+        private final AgentAuditDurabilityStatus status;
+
+        private RecordingAuditRecorder(AgentAuditDurabilityStatus status) {
+            this.status = status;
+        }
+
+        @Override
+        public void record(AgentAuditEvent event) {
+            events.add(event);
+        }
+
+        @Override
+        public AgentAuditDurabilityStatus durabilityStatus() {
+            return status;
         }
     }
 

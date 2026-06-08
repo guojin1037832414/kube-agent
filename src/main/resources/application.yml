@@ -75,6 +75,12 @@ atlas:
     command-confirm-template: "请输入'确认{action}{target}'以继续操作"
 
   # --- 6大Agent路由 ---
+  audit:
+    durable:
+      enabled: ${ATLAS_AUDIT_DURABLE_ENABLED:false}
+      fail-closed-for-high-risk: ${ATLAS_AUDIT_DURABLE_FAIL_CLOSED_FOR_HIGH_RISK:false}
+      path: ${ATLAS_AUDIT_DURABLE_PATH:target/agent-audit/agent-audit.jsonl}
+
   agent-routing:
     default-agent: "query"
     # 意图前缀 → Agent映射

@@ -124,6 +124,14 @@ M5.29-7 已把剩余 Agent API 面收口到默认认证兜底：
 - `ObservabilityController#snapshot()` 叠加方法级 admin guard，形成 URL matcher + method security 的双层保护；
 - 新增 Agent Controller 默认不会因 `.anyRequest().permitAll()` 匿名暴露。
 
+M5.30-1 已把 durable audit 推进到可验证底座：
+
+- `AgentAuditDurableSink` 定义持久审计写入边界，后续可替换为数据库、搜索存储、Kafka 或安全日志服务；
+- `JsonlAgentAuditDurableSink` 提供第一版 redacted append-only JSONL 实现；
+- `InMemoryAgentAuditRecorder` 继续提供快速诊断快照，同时可选写入 durable sink；
+- admin snapshot 新增 `durability` 与 `durableRetention` 能力描述；
+- `SafeToolExecutor` 对高风险 `CREATE` / `UPDATE` / `DELETE` / `ACTION` / `PLACEHOLDER` 增加 durable audit readiness gate，生产可配置为缺少持久证据时 fail closed。
+
 ## 最新 Agent 标准的落地顺序
 
 以下技术代表 2026 年 Agent 工程的先进方向，但必须按可验证顺序接入：
@@ -184,7 +192,7 @@ Spring Boot 4.0.x 官方系统要求是 Java 17+，但它会同时带来 Spring 
 - HTTP 韧性：M5.28 已把 GET 接入 Resilience4j read retry/circuit/bulkhead；写请求接入 circuit/bulkhead 但默认不自动重试，后续必须绑定 idempotency key / audit / HITL 后才能考虑受控重试。
 - 连接治理：从简单 request factory 过渡到连接池或 WebClient，并暴露连接池指标。
 - OpenTelemetry：M5.23/M5.24/M5.25/M5.26/M5.27 已完成 traceId 内核、HTTP 出口传播、审计事件模型、审计 telemetry projection 和审计 Observation 发布；后续要把 intent、plan、tool、HTTP、HITL、audit、final answer 映射为 span/timeline/audit 统一证据链。
-- 审计持久化：M5.25 已完成内存诊断 recorder；下一步要把敏感读、高风险写、HITL 阻断、Tool 异常接入可查询、可保留、可权限控制的脱敏持久化审计存储。
+- 审计持久化：M5.25 已完成内存诊断 recorder，M5.30-1 已完成可插拔 durable sink、redacted JSONL 和高风险 fail-closed gate；下一步要增加 admin-only 查询 API、trace/audit 索引、保留策略和数据库/搜索存储替换实现。
 - CI 门禁：SBOM、SCA、SpotBugs、覆盖率、secret scan、Agent eval 必须进入发布流程。
 - 安全主干：M5.29-1 已引入 Spring Security `SecurityFilterChain` 并完成 observability/actuator 第一层保护；M5.29-2 已新增 `AgentPrincipalResolver` 统一当前主体解析；M5.29-3 已让 SafeToolExecutor 审计 actor 绑定统一 principal 快照；M5.29-4 已桥接前端 `X-Session-Id` 并把 memory/mcp 首批非聊天端点迁移到 `.authenticated()`；M5.29-5 已把 conversation 元数据 owner 迁移到 trusted principal 并保护 conversations 端点；M5.29-6 已迁移 chat/SSE/HITL runtime identity；M5.29-7 已把 `/api/agent/**` 收口为默认 authenticated 并开启方法级安全。后续重点转向更细粒度方法授权、durable audit、eval 和 replay。
 

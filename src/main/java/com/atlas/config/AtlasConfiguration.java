@@ -2,6 +2,7 @@ package com.atlas.config;
 
 import com.atlas.intent.EmbeddingMatcher;
 import com.atlas.intent.IntentRouter;
+import com.atlas.audit.AgentAuditProperties;
 import com.atlas.intent.config.IntentsLoader;
 import com.atlas.intent.embedding.*;
 import com.atlas.intent.llm.L3IntentClassifier;
@@ -30,7 +31,7 @@ import org.springframework.core.env.Environment;
  * @since 3.1.0
  */
 @Configuration
-@EnableConfigurationProperties(EmbeddingConfig.class)
+@EnableConfigurationProperties({EmbeddingConfig.class, AgentAuditProperties.class})
 public class AtlasConfiguration {
 
     private static final Logger log = LoggerFactory.getLogger(AtlasConfiguration.class);

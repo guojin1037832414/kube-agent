@@ -67,7 +67,10 @@ class AgentAuditTelemetryPublisherTest {
     @Test
     void recorder_shouldPreferTelemetryAwareConstructorInSpringContext() throws NoSuchMethodException {
         Constructor<InMemoryAgentAuditRecorder> constructor =
-            InMemoryAgentAuditRecorder.class.getConstructor(AgentAuditTelemetryPublisher.class);
+            InMemoryAgentAuditRecorder.class.getConstructor(
+                AgentAuditTelemetryPublisher.class,
+                AgentAuditDurableSink.class
+            );
 
         assertThat(constructor.getAnnotation(Autowired.class)).isNotNull();
     }

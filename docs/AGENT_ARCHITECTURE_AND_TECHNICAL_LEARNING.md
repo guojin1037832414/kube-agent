@@ -136,6 +136,44 @@ M5.29-7 的默认安全姿态：
 
 学习重点：顶级 Agent 的 Web 安全不是“把当前已知接口列完”就结束，而是要让未来未知接口默认落在更安全的一边。端点级 matcher 负责 HTTP 入口，方法级授权负责业务方法边界，`SafeToolExecutor` 负责 Tool 执行边界；三层各守一段，系统才不会因为一次新 Controller 合并就漏出匿名能力。
 
+## M5.30 持久审计与执行门禁
+
+M5.30-1 把审计从“内存诊断快照”推进到“可替换的持久证据通道”：
+
+```text
+SafeToolExecutor
+    |
+    |-- emits AgentAuditEvent
+    v
+InMemoryAgentAuditRecorder
+    |
+    |-- recentEvents / admin snapshot
+    |-- telemetry Observation
+    |-- optional AgentAuditDurableSink
+             |
+             v
+        JsonlAgentAuditDurableSink
+        (redacted append-only JSONL)
+```
+
+新增的关键契约：
+
+- `AgentAuditDurableSink`：持久审计写入边界。后续可以替换成 PostgreSQL、Elasticsearch、Kafka、sys_log 或安全日志服务。
+- `AgentAuditDurabilityStatus`：持久审计是否启用、是否 ready、是否 durableRetention、是否要求高风险 fail-closed 的结构化状态。
+- `JsonlAgentAuditDurableSink`：第一版可验证实现，写入脱敏 JSONL，不保存 raw principal、raw reason、raw endpoint 或参数值。
+- `atlas.audit.durable.*`：用环境变量控制是否启用、是否高风险 fail-closed、写入路径。
+
+最重要的安全变化是：`SafeToolExecutor` 现在能在高风险 Tool 真正执行之前检查 durable audit readiness。如果生产打开 `ATLAS_AUDIT_DURABLE_FAIL_CLOSED_FOR_HIGH_RISK=true`，而持久审计没有 ready，`CREATE`、`UPDATE`、`DELETE`、`ACTION`、`PLACEHOLDER` 会在 `BaseTool.execute(...)` 前被阻断。
+
+学习重点：顶级 Agent 的审计不是“事后写日志”。它是执行授权链的一部分。普通日志只能帮助排查；持久审计门禁可以回答“如果这次危险动作无法留下证据，系统是否应该拒绝执行”。这也是未来受控写操作、回放时间线、管理员审计查询、Agent eval 和发布门禁的共同底座。
+
+当前边界：
+
+- 开发默认不启用 durable audit，避免本地运行被文件系统状态干扰。
+- JSONL 是第一阶段可验证实现，不是最终存储形态。
+- 管理员查询 API、索引、保留策略、导出和数据库/搜索存储仍是后续 Phase 1 切片。
+- 这一版的门禁发生在高风险 Tool 执行前：它能证明“没有可写持久审计时不执行危险动作”。未来若要释放真实写操作，还必须叠加 durable pre-write receipt、idempotency key、post-write readback 和管理员可查询索引，不能只依赖执行后的日志 append。
+
 ## 一期与二期范围
 
 2026-06-08 用户明确调整优先级：HPC / Slurm / BCM 与 NIM 相关能力先暂停，统一作为二期项目再继续添加和真实化。

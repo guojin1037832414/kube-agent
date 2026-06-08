@@ -3,10 +3,10 @@ package com.atlas.audit;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -14,10 +14,11 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * 内存 Agent 审计记录器。
+ * In-memory Agent audit recorder with an optional durable sink.
  *
- * <p>M5.25 的目标是先把审计事件语义打通到执行边界。该实现只保留最近事件用于诊断和测试，
- * 不替代后续数据库/安全日志/事件流持久化。</p>
+ * <p>The in-memory ring buffer is still the fast diagnostic view used by tests
+ * and admin snapshots. The durable sink is an append-only evidence channel that
+ * can be swapped later without changing SafeToolExecutor audit semantics.</p>
  */
 @Service
 public class InMemoryAgentAuditRecorder implements AgentAuditRecorder, AgentAuditSnapshotProvider {
@@ -31,14 +32,21 @@ public class InMemoryAgentAuditRecorder implements AgentAuditRecorder, AgentAudi
     private final AtomicLong blockedEvents = new AtomicLong();
     private final AtomicLong errorEvents = new AtomicLong();
     private final AgentAuditTelemetryPublisher telemetryPublisher;
+    private final AgentAuditDurableSink durableSink;
 
     public InMemoryAgentAuditRecorder() {
-        this(null);
+        this(null, AgentAuditDurableSink.noop());
     }
 
     @Autowired
-    public InMemoryAgentAuditRecorder(AgentAuditTelemetryPublisher telemetryPublisher) {
+    public InMemoryAgentAuditRecorder(AgentAuditTelemetryPublisher telemetryPublisher,
+                                      AgentAuditDurableSink durableSink) {
         this.telemetryPublisher = telemetryPublisher;
+        this.durableSink = durableSink != null ? durableSink : AgentAuditDurableSink.noop();
+    }
+
+    public InMemoryAgentAuditRecorder(AgentAuditTelemetryPublisher telemetryPublisher) {
+        this(telemetryPublisher, AgentAuditDurableSink.noop());
     }
 
     @Override
@@ -59,6 +67,7 @@ public class InMemoryAgentAuditRecorder implements AgentAuditRecorder, AgentAudi
                 recentEvents.removeLast();
             }
         }
+        appendDurable(event);
         publishTelemetry(event);
     }
 
@@ -78,6 +87,7 @@ public class InMemoryAgentAuditRecorder implements AgentAuditRecorder, AgentAudi
             "schemaVersion", SNAPSHOT_SCHEMA_VERSION,
             "generatedAt", Instant.now(Clock.systemUTC()),
             "replayCapabilities", replayCapabilities(),
+            "durability", durabilityStatus().toDiagnosticMap(),
             "totalEvents", totalEvents.get(),
             "blockedEvents", blockedEvents.get(),
             "errorEvents", errorEvents.get(),
@@ -85,6 +95,10 @@ public class InMemoryAgentAuditRecorder implements AgentAuditRecorder, AgentAudi
                 .map(this::diagnosticSummary)
                 .toList()
         );
+    }
+
+    public AgentAuditDurabilityStatus durabilityStatus() {
+        return durableSink.status();
     }
 
     private Map<String, Object> replayCapabilities() {
@@ -95,7 +109,7 @@ public class InMemoryAgentAuditRecorder implements AgentAuditRecorder, AgentAudi
             "containsRawPrincipal", false,
             "containsRawReason", false,
             "containsRawParameterValues", false,
-            "durableRetention", false
+            "durableRetention", durabilityStatus().durableRetention()
         );
     }
 
@@ -162,7 +176,8 @@ public class InMemoryAgentAuditRecorder implements AgentAuditRecorder, AgentAudi
             || lowerName.contains("credential")
             || lowerName.contains("authorization")
             || lowerName.contains("apikey")
-            || lowerName.contains("api_key")) {
+            || lowerName.contains("api_key")
+            || lowerName.contains("token")) {
             return "<redacted>";
         }
         return name.length() <= 80 ? name : name.substring(0, 80) + "...";
@@ -178,6 +193,14 @@ public class InMemoryAgentAuditRecorder implements AgentAuditRecorder, AgentAudi
         );
     }
 
+    private void appendDurable(AgentAuditEvent event) {
+        try {
+            durableSink.append(event);
+        } catch (RuntimeException ignored) {
+            // Durable failures are exposed through durabilityStatus().
+        }
+    }
+
     private void publishTelemetry(AgentAuditEvent event) {
         if (telemetryPublisher == null) {
             return;
@@ -185,7 +208,7 @@ public class InMemoryAgentAuditRecorder implements AgentAuditRecorder, AgentAudi
         try {
             telemetryPublisher.publish(event);
         } catch (RuntimeException ignored) {
-            // 诊断链路必须非致命：审计记录已经进入内存快照，Observation 发布失败不能改写 Tool 执行结果。
+            // Telemetry publication is diagnostic and must not rewrite the Tool result.
         }
     }
 }

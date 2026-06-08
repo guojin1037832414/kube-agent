@@ -10,6 +10,10 @@ public interface AgentAuditRecorder {
 
     void record(AgentAuditEvent event);
 
+    default AgentAuditDurabilityStatus durabilityStatus() {
+        return AgentAuditDurabilityStatus.disabled();
+    }
+
     static AgentAuditRecorder noop() {
         return event -> {
         };
