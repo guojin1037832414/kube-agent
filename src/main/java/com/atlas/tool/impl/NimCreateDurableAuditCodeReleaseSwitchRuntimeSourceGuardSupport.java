@@ -295,6 +295,73 @@ final class NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport {
         return true;
     }
 
+    static boolean closedSourceGuardContractValid(Map<String, Object> contract,
+                                                  List<Map<String, Object>> sourceGuardMatrix,
+                                                  String sourceRuntimeBindingContractDigest,
+                                                  String sourceCodeReleaseSwitchContractDigest,
+                                                  String sourceAuditEventDigest,
+                                                  String trustedPrincipalDigest) {
+        if (contract.isEmpty()
+            || sourceGuardMatrix.isEmpty()
+            || !hasText(sourceRuntimeBindingContractDigest)
+            || !hasText(sourceCodeReleaseSwitchContractDigest)
+            || !hasText(sourceAuditEventDigest)
+            || !hasText(trustedPrincipalDigest)) {
+            return false;
+        }
+        List<Map<String, Object>> contractMatrix = listOfMaps(contract.get("sourceGuardMatrix"));
+        return hasExactlyKeys(contract, sourceGuardContractKeys())
+            && "CODE_RELEASE_SWITCH_RUNTIME_SOURCE_GUARD_REQUIRED".equals(text(contract.get("contractBoundary")))
+            && NimCreateStateMachineSupport.TARGET_TOOL.equals(text(contract.get("targetTool")))
+            && Boolean.TRUE.equals(contract.get("futureOnly"))
+            && Boolean.FALSE.equals(contract.get("instanceAllowedNow"))
+            && NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport.BINDING_CONTRACT_NAME.equals(
+                text(contract.get("sourceRuntimeBindingContract")))
+            && sourceRuntimeBindingContractDigest.equals(text(contract.get("sourceRuntimeBindingContractDigest")))
+            && sourceCodeReleaseSwitchContractDigest.equals(text(contract.get("sourceCodeReleaseSwitchContractDigest")))
+            && sourceAuditEventDigest.equals(text(contract.get("sourceAuditEventDigest")))
+            && trustedPrincipalDigest.equals(text(contract.get("trustedPrincipalDigest")))
+            && "PLANNING_AND_GUARD_ONLY".equals(text(contract.get("currentAcceptedSourceScope")))
+            && stringList(contract.get("acceptedSourcesForCurrentRelease")).isEmpty()
+            && stringList(contract.get("contractShapeSourcesAcceptedForPlanning")).equals(
+                contractShapeSourcesAcceptedForPlanning())
+            && stringList(contract.get("dangerousReleaseCredentialFieldNames")).equals(
+                dangerousReleaseCredentialFieldNames())
+            && contractMatrix.equals(sourceGuardMatrix)
+            && closedSourceGuardMatrixValid(contractMatrix, sourceRuntimeBindingContractDigest)
+            && objectMap(contract.get("acceptanceRules")).equals(acceptanceRules())
+            && objectMap(contract.get("failureContract")).equals(failureContract())
+            && stringList(contract.get("forbiddenShortcuts")).equals(forbiddenShortcuts())
+            && !hasForgedRuntimeSourceClaim(contract)
+            && !containsForbiddenSecretMaterial(contract);
+    }
+
+    private static List<String> sourceGuardContractKeys() {
+        return List.of(
+            "contractBoundary",
+            "targetTool",
+            "futureOnly",
+            "instanceAllowedNow",
+            "sourceRuntimeBindingContract",
+            "sourceRuntimeBindingContractDigest",
+            "sourceCodeReleaseSwitchContractDigest",
+            "sourceAuditEventDigest",
+            "trustedPrincipalDigest",
+            "currentAcceptedSourceScope",
+            "acceptedSourcesForCurrentRelease",
+            "contractShapeSourcesAcceptedForPlanning",
+            "dangerousReleaseCredentialFieldNames",
+            "sourceGuardMatrix",
+            "acceptanceRules",
+            "failureContract",
+            "forbiddenShortcuts"
+        );
+    }
+
+    private static boolean hasExactlyKeys(Map<String, Object> map, List<String> keys) {
+        return map.size() == keys.size() && map.keySet().containsAll(keys);
+    }
+
     private static boolean sourceGuardRowClosed(Map<String, Object> row) {
         boolean futureAuthoritativeCandidate = Boolean.TRUE.equals(row.get("futureAuthoritativeCandidate"));
         boolean acceptedForPlanningNow = Boolean.TRUE.equals(row.get("acceptedForPlanningNow"));

@@ -453,6 +453,36 @@ class NimCreateDurableWriteExecutorSupportTest {
     }
 
     @Test
+    void executorShell_shouldRejectDigestConsistentRuntimeSourceGuardContractExtraShapeField() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> receipt = durableAuditReceipt(audit);
+        Map<String, Object> bodyReport = writeBodyReport(audit, receipt);
+        Map<String, Object> requestSpecReport = writeRequestSpecReport(audit, receipt, bodyReport);
+        Map<String, Object> handoffReport = writeExecutionHandoffReport(audit, receipt, bodyReport, requestSpecReport);
+        Map<String, Object> codeSwitchReport = codeReleaseSwitchContractReport(audit);
+        Map<String, Object> sourceGuardReport = withDigestConsistentRuntimeSourceGuardContractExtraShapeField(
+            codeReleaseSwitchRuntimeSourceGuardReport(audit)
+        );
+
+        Map<String, Object> report = NimCreateDurableWriteExecutorSupport.prepare(
+            new NimCreateDurableWriteExecutorSupport.WriteExecutionInput(
+                handoffReport,
+                requestSpecReport,
+                codeSwitchReport,
+                sourceGuardReport
+            )
+        );
+
+        assertEquals(NimCreateDurableWriteExecutorSupport.REJECTED_STATE, report.get("executionState"));
+        assertEquals(false, report.get("inputAccepted"));
+        assertEquals(false, report.get("writeExecuted"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+        assertHasBlocker(blockers,
+            "CODE_RELEASE_SWITCH_RUNTIME_SOURCE_GUARD_REPORT_NOT_TRUSTED_FOR_DURABLE_EXECUTOR");
+    }
+
+    @Test
     void executorShell_shouldRejectForgedRuntimeSourceGuardReleaseClaims() {
         Map<String, Object> audit = completeAuditContext();
         Map<String, Object> receipt = durableAuditReceipt(audit);
@@ -1053,6 +1083,23 @@ class NimCreateDurableWriteExecutorSupportTest {
         forgedMatrix.add(forgedReleaseMatrixRow());
         contract.put("sourceGuardMatrix", forgedMatrix);
         forgedReport.put("sourceGuardMatrix", forgedMatrix);
+        forgedReport.put("sourceGuardContract", contract);
+        forgedReport.put("sourceGuardMatrixDigest", sha256(contract));
+        return forgedReport;
+    }
+
+    private Map<String, Object> withDigestConsistentRuntimeSourceGuardContractExtraShapeField(
+        Map<String, Object> sourceGuardReport
+    ) {
+        Map<String, Object> forgedReport = new LinkedHashMap<>(sourceGuardReport);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> contract = new LinkedHashMap<>(
+            (Map<String, Object>) forgedReport.get("sourceGuardContract")
+        );
+        contract.put("contractShapeExtensionPolicy", Map.of(
+            "source", "forged-extra-shape",
+            "acceptedScope", "planning-only"
+        ));
         forgedReport.put("sourceGuardContract", contract);
         forgedReport.put("sourceGuardMatrixDigest", sha256(contract));
         return forgedReport;

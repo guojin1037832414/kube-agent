@@ -549,3 +549,10 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Extra rows are rejected even when top-level and nested matrices match and `sourceGuardMatrixDigest` is recomputed.
 - Every accepted row remains fail-closed: no current release authority, no current write permission, no current write execution, and both downstream rechecks required.
 - Learning distinction: a source taxonomy is not an extensible caller-provided list. New source families require reviewed code, tests, docs, and release governance, not a digest-consistent JSON append.
+
+### M5.21-112 runtime source guard closed contract shape note
+
+- `closedSourceGuardContractValid(...)` now validates the nested `sourceGuardContract` as a closed contract, not only a digest-bearing map.
+- State-machine and durable-executor validators require the exact contract key set plus exact nested `acceptanceRules`, `failureContract`, `forbiddenShortcuts`, planning sources, dangerous fields, and closed matrix.
+- Extra contract fields are rejected even when all known values remain valid and `sourceGuardMatrixDigest` is recomputed.
+- Learning distinction: a hash tells you an object did not change after it was hashed; it does not prove that unreviewed object shape is safe. Top-tier Agent proof objects need both digest binding and closed schema validation.

@@ -596,6 +596,13 @@ final class NimCreateDurableWriteExecutorSupport {
             && NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport.closedSourceGuardMatrixValid(
                 matrix,
                 text(report.get("sourceRuntimeBindingContractDigest")))
+            && NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport.closedSourceGuardContractValid(
+                contract,
+                matrix,
+                text(report.get("sourceRuntimeBindingContractDigest")),
+                text(report.get("sourceCodeReleaseSwitchContractDigest")),
+                text(report.get("sourceAuditEventDigest")),
+                text(report.get("trustedPrincipalDigest")))
             && Boolean.TRUE.equals(acceptanceRules.get("failClosed"))
             && Integer.valueOf(0).equals(acceptanceRules.get("currentReleaseSourceCount"))
             && Boolean.FALSE.equals(acceptanceRules.get("contractReportAcceptedForRelease"))

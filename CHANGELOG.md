@@ -6,6 +6,18 @@
 
 ---
 
+## [M5.21-112] - NIM runtime source guard closed contract shape
+
+**Delivery**: Hardened nested runtime source guard contract validation so digest-consistent reports cannot add unreviewed contract fields while preserving all known values.
+**Changes**
+- `NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport` now exposes `closedSourceGuardContractValid(...)` for exact nested `sourceGuardContract` shape validation.
+- `NimCreateStateMachineSupport` and `NimCreateDurableWriteExecutorSupport` now require the nested source guard contract to match the expected key set, matrix, planning sources, dangerous fields, acceptance rules, failure contract, and forbidden shortcuts.
+- Added digest-consistent forged source guard regressions that add an extra nested `contractShapeExtensionPolicy`, recompute `sourceGuardMatrixDigest`, and still expect state-machine / durable-executor rejection.
+**Security**
+- This is source-governance contract-shape hardening only; it does not open runtime writes or a real code release switch.
+- No real `8100`, real NIM service HTTP call, Authorization header sending, durable audit write, deployment POST, state-machine release binding implementation, durable executor release binding implementation, validation result signer, release decision signer, code release switch implementation, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-111] - NIM runtime source guard closed matrix taxonomy contract
 
 **Delivery**: Hardened runtime source guard matrix validation so digest-consistent reports cannot extend the HOLD matrix with extra current-release authority rows.
