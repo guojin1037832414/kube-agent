@@ -82,12 +82,27 @@ Current track:
 
 Recently completed:
 
-`M5.21-112 NIM runtime source guard closed contract shape`
+`M5.21-113 NIM runtime source guard closed top-level lists`
 
 Latest checkpoint:
 
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-113 implemented:
+  - Hardened `NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport` with shared `closedSourceGuardReportListsValid(...)` validation.
+  - `NimCreateStateMachineSupport` and `NimCreateDurableWriteExecutorSupport` now reject top-level source guard report list supersets, including extra `forbiddenReleaseSources`, even when nested contract and digest remain valid.
+  - Added forged source guard regressions that append `FORGED_TOP_LEVEL_FORBIDDEN_SOURCE_EXTENSION` to top-level `forbiddenReleaseSources` while keeping nested `sourceGuardContract` unchanged.
+  - Added `docs/M5_21_ONE_HUNDRED_THIRTEENTH_WAVE_NIM_RUNTIME_SOURCE_GUARD_CLOSED_TOP_LEVEL_LISTS_AUDIT_20260608.md`.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimCreateStateMachineSupportTest#stateMachine_shouldRejectDigestConsistentRuntimeSourceGuardTopLevelExtraForbiddenSource,NimCreateDurableWriteExecutorSupportTest#executorShell_shouldRejectDigestConsistentRuntimeSourceGuardTopLevelExtraForbiddenSource" test`
+    - `mvn -q "-Dtest=NimCreateStateMachineSupportTest,NimCreateDurableWriteExecutorSupportTest" test`
+  - Final verification passed:
+    - `git diff --check`
+    - `mvn -q test`
+    - Full Maven note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - Security invariant: no real `8100`, no real NIM service HTTP call, no Authorization header sending, no durable audit write, no deployment POST, no runtime write behavior, no state-machine release binding implementation, no durable executor release binding implementation, no validation result signer, no release decision signer, no code release switch implementation, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Recommended next slice: continue closing adjacent proof surfaces that still use "contains required fields" instead of exact source-owned shape, or continue release-binding proof design without opening writes.
+- Previous checkpoint:
 - M5.21-112 implemented:
   - Hardened `NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport` with shared `closedSourceGuardContractValid(...)` validation.
   - `NimCreateStateMachineSupport` and `NimCreateDurableWriteExecutorSupport` now require nested `sourceGuardContract` to match the exact expected key set and exact nested rules/lists/matrix.

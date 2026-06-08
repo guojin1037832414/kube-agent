@@ -6,6 +6,18 @@
 
 ---
 
+## [M5.21-113] - NIM runtime source guard closed top-level lists
+
+**Delivery**: Hardened top-level runtime source guard report lists so downstream consumers reject digest-valid reports that extend mirror taxonomy fields.
+**Changes**
+- `NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport` now exposes `closedSourceGuardReportListsValid(...)` for exact top-level source guard report list validation.
+- `NimCreateStateMachineSupport` and `NimCreateDurableWriteExecutorSupport` now require exact top-level `acceptedSourcesForCurrentRelease`, `contractShapeSourcesAcceptedForPlanning`, `forbiddenReleaseSources`, and `dangerousReleaseCredentialFieldNames`.
+- Added forged source guard regressions that append an extra top-level `forbiddenReleaseSources` value while leaving nested contract and digest valid; both downstream consumers reject it.
+**Security**
+- This is source-governance mirror-list hardening only; it does not open runtime writes or a real code release switch.
+- No real `8100`, real NIM service HTTP call, Authorization header sending, durable audit write, deployment POST, state-machine release binding implementation, durable executor release binding implementation, validation result signer, release decision signer, code release switch implementation, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-112] - NIM runtime source guard closed contract shape
 
 **Delivery**: Hardened nested runtime source guard contract validation so digest-consistent reports cannot add unreviewed contract fields while preserving all known values.

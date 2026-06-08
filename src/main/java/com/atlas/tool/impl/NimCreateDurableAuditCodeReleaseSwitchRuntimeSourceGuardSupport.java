@@ -336,6 +336,18 @@ final class NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport {
             && !containsForbiddenSecretMaterial(contract);
     }
 
+    static boolean closedSourceGuardReportListsValid(Map<String, Object> report) {
+        if (report.isEmpty()) {
+            return false;
+        }
+        return stringList(report.get("acceptedSourcesForCurrentRelease")).isEmpty()
+            && stringList(report.get("contractShapeSourcesAcceptedForPlanning")).equals(
+                contractShapeSourcesAcceptedForPlanning())
+            && stringList(report.get("forbiddenReleaseSources")).equals(forbiddenReleaseSources())
+            && stringList(report.get("dangerousReleaseCredentialFieldNames")).equals(
+                dangerousReleaseCredentialFieldNames());
+    }
+
     private static List<String> sourceGuardContractKeys() {
         return List.of(
             "contractBoundary",

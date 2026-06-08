@@ -483,6 +483,36 @@ class NimCreateDurableWriteExecutorSupportTest {
     }
 
     @Test
+    void executorShell_shouldRejectDigestConsistentRuntimeSourceGuardTopLevelExtraForbiddenSource() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> receipt = durableAuditReceipt(audit);
+        Map<String, Object> bodyReport = writeBodyReport(audit, receipt);
+        Map<String, Object> requestSpecReport = writeRequestSpecReport(audit, receipt, bodyReport);
+        Map<String, Object> handoffReport = writeExecutionHandoffReport(audit, receipt, bodyReport, requestSpecReport);
+        Map<String, Object> codeSwitchReport = codeReleaseSwitchContractReport(audit);
+        Map<String, Object> sourceGuardReport = withDigestConsistentRuntimeSourceGuardTopLevelExtraForbiddenSource(
+            codeReleaseSwitchRuntimeSourceGuardReport(audit)
+        );
+
+        Map<String, Object> report = NimCreateDurableWriteExecutorSupport.prepare(
+            new NimCreateDurableWriteExecutorSupport.WriteExecutionInput(
+                handoffReport,
+                requestSpecReport,
+                codeSwitchReport,
+                sourceGuardReport
+            )
+        );
+
+        assertEquals(NimCreateDurableWriteExecutorSupport.REJECTED_STATE, report.get("executionState"));
+        assertEquals(false, report.get("inputAccepted"));
+        assertEquals(false, report.get("writeExecuted"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+        assertHasBlocker(blockers,
+            "CODE_RELEASE_SWITCH_RUNTIME_SOURCE_GUARD_REPORT_NOT_TRUSTED_FOR_DURABLE_EXECUTOR");
+    }
+
+    @Test
     void executorShell_shouldRejectForgedRuntimeSourceGuardReleaseClaims() {
         Map<String, Object> audit = completeAuditContext();
         Map<String, Object> receipt = durableAuditReceipt(audit);
@@ -1102,6 +1132,19 @@ class NimCreateDurableWriteExecutorSupportTest {
         ));
         forgedReport.put("sourceGuardContract", contract);
         forgedReport.put("sourceGuardMatrixDigest", sha256(contract));
+        return forgedReport;
+    }
+
+    private Map<String, Object> withDigestConsistentRuntimeSourceGuardTopLevelExtraForbiddenSource(
+        Map<String, Object> sourceGuardReport
+    ) {
+        Map<String, Object> forgedReport = new LinkedHashMap<>(sourceGuardReport);
+        @SuppressWarnings("unchecked")
+        List<String> forbiddenSources = new java.util.ArrayList<>(
+            (List<String>) forgedReport.get("forbiddenReleaseSources")
+        );
+        forbiddenSources.add("FORGED_TOP_LEVEL_FORBIDDEN_SOURCE_EXTENSION");
+        forgedReport.put("forbiddenReleaseSources", forbiddenSources);
         return forgedReport;
     }
 

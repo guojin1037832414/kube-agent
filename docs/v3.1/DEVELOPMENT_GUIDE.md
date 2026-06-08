@@ -556,3 +556,10 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - State-machine and durable-executor validators require the exact contract key set plus exact nested `acceptanceRules`, `failureContract`, `forbiddenShortcuts`, planning sources, dangerous fields, and closed matrix.
 - Extra contract fields are rejected even when all known values remain valid and `sourceGuardMatrixDigest` is recomputed.
 - Learning distinction: a hash tells you an object did not change after it was hashed; it does not prove that unreviewed object shape is safe. Top-tier Agent proof objects need both digest binding and closed schema validation.
+
+### M5.21-113 runtime source guard closed top-level lists note
+
+- `closedSourceGuardReportListsValid(...)` now validates top-level runtime source guard report lists as exact source-owned mirrors.
+- State-machine and durable-executor validators reject extra top-level `forbiddenReleaseSources` values even when the nested contract and digest remain valid.
+- Closed top-level lists now cover current release sources, planning sources, forbidden release sources, and dangerous release credential field names.
+- Learning distinction: top-level mirrors can become future authority if code reads them. Treat them as closed proof fields, not as extensible explanatory metadata.

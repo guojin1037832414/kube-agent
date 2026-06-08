@@ -546,6 +546,7 @@ final class NimCreateDurableWriteExecutorSupport {
             && Boolean.TRUE.equals(report.get("reviewedCodeSwitchDigestRequired"))
             && Boolean.TRUE.equals(report.get("stateMachineDigestRecheckRequired"))
             && Boolean.TRUE.equals(report.get("durableExecutorDigestRecheckRequired"))
+            && NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport.closedSourceGuardReportListsValid(report)
             && listIsEmpty(report.get("acceptedSourcesForCurrentRelease"))
             && planningSources.containsAll(List.of(
                 "M5.21-72_CODE_RELEASE_SWITCH_CONTRACT_REPORT",
