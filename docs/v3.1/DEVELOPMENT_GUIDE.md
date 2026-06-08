@@ -517,3 +517,11 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - This closes a forged-report class where the handoff can remain internally digest-consistent, update nested pre-write audit evidence, and recompute the server-derived idempotency key while drifting away from the request spec adapter source evidence.
 - The new regression recomputes both `handoffDigest` and the idempotency key from the forged handoff evidence; durable executor validation still rejects the report because cross-report source evidence no longer matches.
 - Learning distinction: self-consistency is not enough for a durable Agent proof. Each downstream boundary must verify that the evidence still belongs to the same upstream request/audit chain.
+
+### M5.21-108 code switch runtime release-decision binding note
+
+- `NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport` now re-validates the nested `releaseDecisionBinding` inside a code release switch contract report.
+- Runtime binding validation checks that nested release-decision source digest, validation-result contract digest, source proof digests, trusted principal digest, and fail-closed booleans still match the trusted switch report.
+- The regression mutates `releaseDecisionBinding.sourceReleaseDecisionContractDigest` and recomputes `codeReleaseSwitchContractDigest`; runtime binding still rejects the report because nested release-decision evidence no longer belongs to the same switch proof.
+- This remains contract-only: no server-owned switch issuer, no state-machine write release, no durable executor release, and no real POST were introduced.
+- Learning distinction: digest consistency over a container proves the container was recomputed, not that every nested evidence binding is semantically anchored. Downstream runtime gates must re-check the nested release proof they will eventually depend on.

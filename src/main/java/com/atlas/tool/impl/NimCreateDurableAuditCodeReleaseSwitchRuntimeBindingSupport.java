@@ -350,6 +350,7 @@ final class NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport {
         }
 
         Map<String, Object> contract = objectMap(report.get("codeReleaseSwitchContract"));
+        Map<String, Object> releaseDecisionBinding = objectMap(contract.get("releaseDecisionBinding"));
         Map<String, Object> stateMachineBinding = objectMap(contract.get("stateMachineBinding"));
         Map<String, Object> durableExecutorBinding = objectMap(contract.get("durableExecutorBinding"));
         Map<String, Object> template = objectMap(contract.get("currentTemplate"));
@@ -399,6 +400,7 @@ final class NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport {
             && sourceDigestFieldsMatch(report, contract)
             && digestFor(auditContext).equals(text(contract.get("sourceAuditEventDigest")))
             && digestFor(principal).equals(text(contract.get("trustedPrincipalDigest")))
+            && releaseDecisionBindingValid(report, releaseDecisionBinding)
             && stateMachineBindingValid(report, stateMachineBinding)
             && durableExecutorBindingValid(durableExecutorBinding)
             && requiredFields.containsAll(requiredSwitchEvidenceFields())
@@ -430,6 +432,23 @@ final class NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport {
         if (hasForgedRuntimeReleaseClaim(report)) {
             blockers.add(forgedRuntimeClaimBlocker("durableAuditCodeReleaseSwitchContractReport"));
         }
+    }
+
+    private static boolean releaseDecisionBindingValid(Map<String, Object> report,
+                                                       Map<String, Object> binding) {
+        return text(report.get("sourceReleaseDecisionContractDigest")).equals(
+                text(binding.get("sourceReleaseDecisionContractDigest")))
+            && text(report.get("sourceValidationResultContractDigest")).equals(
+                text(binding.get("sourceValidationResultContractDigest")))
+            && sourceDigestFieldsMatch(report, binding)
+            && text(report.get("trustedPrincipalDigest")).equals(text(binding.get("trustedPrincipalDigest")))
+            && Boolean.TRUE.equals(binding.get("futureReleaseDecisionDigestRequired"))
+            && Boolean.TRUE.equals(binding.get("futureValidationResultDigestRequired"))
+            && Boolean.TRUE.equals(binding.get("mustBindServerIssuedReleaseDecisionDigest"))
+            && Boolean.TRUE.equals(binding.get("mustBindServerIssuedValidationResultDigest"))
+            && Boolean.TRUE.equals(binding.get("mustBindTrustedPrincipalDigest"))
+            && Boolean.TRUE.equals(binding.get("mustBindAuditEventDigest"))
+            && Boolean.FALSE.equals(binding.get("callerReleaseDecisionAllowed"));
     }
 
     private static boolean stateMachineBindingValid(Map<String, Object> report,

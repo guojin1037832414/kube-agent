@@ -6,6 +6,17 @@
 
 ---
 
+## [M5.21-108] - NIM code release switch runtime release-decision binding contract
+
+**Delivery**: Hardened code release switch runtime binding validation so the nested `releaseDecisionBinding` inside the switch contract must match the trusted switch report evidence, not merely sit inside a digest-consistent contract.
+**Changes**
+- `NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport` now validates nested `releaseDecisionBinding` source release-decision digest, validation-result digest, source proof digests, trusted principal digest, and fail-closed release flags.
+- Added a digest-consistent forged switch report regression that drifts nested `releaseDecisionBinding.sourceReleaseDecisionContractDigest` and recomputes `codeReleaseSwitchContractDigest`; runtime binding still rejects it.
+**Security**
+- This is release-proof hardening only; it does not open runtime writes or a real code release switch.
+- No real `8100`, real NIM service HTTP call, Authorization header sending, durable audit write, deployment POST, state-machine release binding implementation, durable executor release binding implementation, validation result signer, release decision signer, code release switch implementation, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-107] - NIM durable handoff source evidence binding contract
 
 **Delivery**: Hardened durable executor handoff validation so handoff source evidence must match the request spec adapter evidence, not merely be internally digest-consistent.

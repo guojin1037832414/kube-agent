@@ -2,11 +2,16 @@ package com.atlas.tool.impl;
 
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import static java.util.Map.entry;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -243,6 +248,36 @@ class NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupportTest {
     }
 
     @Test
+    void runtimeBinding_shouldRejectDigestConsistentReleaseDecisionBindingDrift() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+        Map<String, Object> switchReport = withDriftedReleaseDecisionBinding(
+            codeReleaseSwitchContractReport(audit, principal),
+            "b".repeat(64)
+        );
+
+        Map<String, Object> report = NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport.plan(
+            new NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport
+                .CodeReleaseSwitchRuntimeBindingInput(
+                audit,
+                principal,
+                switchReport,
+                Map.of(),
+                Map.of()
+            )
+        );
+
+        assertEquals(NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport.REJECTED_STATE,
+            report.get("bindingState"));
+        assertEquals(false, report.get("inputAccepted"));
+        assertRuntimeStatesRemainFalse(report);
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+        assertHasBlocker(blockers,
+            "CODE_RELEASE_SWITCH_CONTRACT_REPORT_INVALID_FOR_RUNTIME_BINDING");
+    }
+
+    @Test
     void runtimeBinding_shouldRejectForgedRuntimeReleaseEvidence() {
         Map<String, Object> audit = completeAuditContext();
         Map<String, Object> principal = trustedPrincipalSnapshot();
@@ -414,6 +449,24 @@ class NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupportTest {
                 Map.of()
             )
         );
+    }
+
+    private Map<String, Object> withDriftedReleaseDecisionBinding(Map<String, Object> switchReport,
+                                                                  String releaseDecisionContractDigest) {
+        Map<String, Object> forgedReport = new LinkedHashMap<>(switchReport);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> contract = new LinkedHashMap<>(
+            (Map<String, Object>) forgedReport.get("codeReleaseSwitchContract")
+        );
+        @SuppressWarnings("unchecked")
+        Map<String, Object> releaseDecisionBinding = new LinkedHashMap<>(
+            (Map<String, Object>) contract.get("releaseDecisionBinding")
+        );
+        releaseDecisionBinding.put("sourceReleaseDecisionContractDigest", releaseDecisionContractDigest);
+        contract.put("releaseDecisionBinding", releaseDecisionBinding);
+        forgedReport.put("codeReleaseSwitchContract", contract);
+        forgedReport.put("codeReleaseSwitchContractDigest", digestFor(contract));
+        return forgedReport;
     }
 
     private Map<String, Object> releaseDecisionContractReport(Map<String, Object> audit,
@@ -630,5 +683,52 @@ class NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupportTest {
     private void assertHasBlocker(List<Map<String, Object>> blockers, String code) {
         assertTrue(blockers.stream().anyMatch(item -> code.equals(item.get("code"))),
             "expected blocker code: " + code + ", actual blockers: " + blockers);
+    }
+
+    private String digestFor(Map<String, Object> value) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance(NimCreateAuditWriterSupport.DIGEST_ALGORITHM);
+            return HexFormat.of().formatHex(digest.digest(canonical(value).getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IllegalStateException("JDK missing SHA-256 digest algorithm", ex);
+        }
+    }
+
+    private String canonical(Object value) {
+        if (value == null) {
+            return "null";
+        }
+        if (value instanceof Map<?, ?> map) {
+            Map<String, Object> sorted = new TreeMap<>();
+            map.forEach((key, item) -> sorted.put(String.valueOf(key), item));
+            StringBuilder builder = new StringBuilder("{");
+            boolean first = true;
+            for (Map.Entry<String, Object> entry : sorted.entrySet()) {
+                if (!first) {
+                    builder.append(",");
+                }
+                first = false;
+                builder.append(escape(entry.getKey())).append("=").append(canonical(entry.getValue()));
+            }
+            return builder.append("}").toString();
+        }
+        if (value instanceof List<?> list) {
+            StringBuilder builder = new StringBuilder("[");
+            for (int i = 0; i < list.size(); i++) {
+                if (i > 0) {
+                    builder.append(",");
+                }
+                builder.append(canonical(list.get(i)));
+            }
+            return builder.append("]").toString();
+        }
+        return escape(value.toString());
+    }
+
+    private String escape(String value) {
+        return value.replace("\\", "\\\\")
+            .replace("\n", "\\n")
+            .replace("\r", "\\r")
+            .replace("\t", "\\t");
     }
 }
