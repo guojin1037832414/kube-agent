@@ -254,11 +254,17 @@ M5.22-4 收口 legacy core `AtlasToolCallback`：
 
 学习重点：安全债务不能因为“旧入口可能很少用”就继续保留。顶级 Agent 的执行边界要求所有可能通向真实 Tool 的路径都共享同一个内核；低频 legacy path 也必须可审计、可测试、可失败关闭。
 
-当前剩余直接执行债务：
+M5.22-5 收口 `AtlasOrchestrator` legacy fallback：
 
-- `AtlasOrchestrator` legacy fallback
+- 传统 `IntentRouter` fallback 不再做本地 HITL + `tool.execute(toolParams)`；
+- `AtlasOrchestrator` 注入 `SafeToolExecutor`，构造 `SafeToolExecutionRequest`；
+- 执行来源标记为 `ORCHESTRATOR_FALLBACK`；
+- 旧 SSE 与结果润色体验保留，但安全语义由 `SafeToolExecutor` 统一负责；
+- `M4Px4ToolExecuteEntrypointContractTest` 的临时直接执行白名单已归零。
 
-这个入口收口后，`SafeToolExecutor` 才能成为一期 Agent Core 中唯一永久真实 `BaseTool.execute(...)` 边界。
+学习重点：顶级 Agent 的安全不是“主路径很安全”就够了，fallback 同样是生产攻击面。现在 Graph tool_call、Plan execute_node、Spring AI callback、手写 ReAct、legacy callback 和 Orchestrator fallback 都共享同一个执行边界。以后任何新增路径如果想调用真实 Tool，必须先回答：为什么不能复用 `SafeToolExecutor`？
+
+当前执行边界状态：生产代码中唯一永久真实 `BaseTool.execute(...)` 位置是 `SafeToolExecutor`。
 
 ### Java 后端技术栈审计
 

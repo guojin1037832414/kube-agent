@@ -129,10 +129,13 @@ class M513HitlFailClosedContractTest {
             .contains("safeToolExecutor.executeIntent(request)")
             .doesNotContain("meta.instance().execute(");
 
-        assertGuardBeforeExecute(read(ORCHESTRATOR),
-            "hitlGuard.verifyByIntentId(toolRegistry, result.intentId(), null)",
-            "tool.execute(toolParams)",
-            "AtlasOrchestrator legacy fallback");
+        String orchestrator = read(ORCHESTRATOR);
+        assertThat(orchestrator)
+            .as("AtlasOrchestrator legacy fallback 必须委托 SafeToolExecutor，不能直接执行 BaseTool")
+            .contains("new SafeToolExecutionRequest(")
+            .contains("SafeToolExecutionSource.ORCHESTRATOR_FALLBACK")
+            .contains("safeToolExecutor.executeIntent(executionRequest)")
+            .doesNotContain("tool.execute(toolParams)");
 
         String bridgeCallback = read(BRIDGE_CALLBACK);
         assertThat(bridgeCallback)

@@ -8,6 +8,7 @@ import com.atlas.orchestrator.polish.ToolResultPolishingService;
 import com.atlas.react.ReActEventSinkRegistry;
 import com.atlas.store.SessionStore;
 import com.atlas.tool.core.ToolRegistry;
+import com.atlas.tool.execution.SafeToolExecutor;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -36,6 +37,7 @@ class AtlasOrchestratorJsonTest {
             mock(UserPermissionContext.class),
             mock(KubeManagerHttpClient.class),
             mock(HitlGuard.class),
+            mock(SafeToolExecutor.class),
             mock(ReActEventSinkRegistry.class),
             mock(TimedDecisionCache.class),
             mock(ToolResultPolishingService.class),
@@ -75,6 +77,7 @@ class AtlasOrchestratorJsonTest {
             mock(UserPermissionContext.class),
             mock(KubeManagerHttpClient.class),
             mock(HitlGuard.class),
+            mock(SafeToolExecutor.class),
             mock(ReActEventSinkRegistry.class),
             mock(TimedDecisionCache.class),
             mock(ToolResultPolishingService.class),

@@ -93,10 +93,29 @@ Current track:
 
 Recently completed:
 
-`M5.22-4 Legacy core ToolCallback safe execution`
+`M5.22-5 Orchestrator fallback safe execution closure`
 
 Latest checkpoint:
 
+- Date: 2026-06-08 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.22-5 implemented:
+  - Migrated `src/main/java/com/atlas/orchestrator/AtlasOrchestrator.java` legacy IntentRouter fallback from local HITL + direct `tool.execute(toolParams)` to `SafeToolExecutor`.
+  - Added `SafeToolExecutionSource.ORCHESTRATOR_FALLBACK`.
+  - Updated `AtlasOrchestratorJsonTest` constructor wiring.
+  - `M4Px4ToolExecuteEntrypointContractTest` temporary direct execute allowlist is now empty.
+- Verification:
+  - `mvn -q "-Dtest=M513HitlFailClosedContractTest,M4Px4ToolExecuteEntrypointContractTest,AtlasOrchestratorJsonTest" test`
+- Scope boundary:
+  - Phase 1 Agent Core safety hardening only.
+  - No NIM/HPC/Slurm/BCM Phase 2 implementation was resumed.
+  - No new real write/create/delete/state-changing kube-manager call was opened.
+- Security result:
+  - Production code now has exactly one permanent real `BaseTool.execute(...)` boundary: `SafeToolExecutor`.
+- Next technical follow-up:
+  - Add traceId propagation through intent, plan, tool, HTTP, HITL, audit, and final answer.
+
+- Previous checkpoint:
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
 - M5.22-4 implemented:

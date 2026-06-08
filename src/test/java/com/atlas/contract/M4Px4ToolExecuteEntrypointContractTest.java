@@ -91,17 +91,7 @@ class M4Px4ToolExecuteEntrypointContractTest {
      * 任何新增裸 {@code execute(...)} 调用都不应直接加入这里，除非经过 Review 明确说明原因、
      * 风险、优先级和迁移到 SafeToolExecutor 的路径。</p>
      */
-    private static final List<TemporaryAllowedExecuteCall> TEMPORARY_DIRECT_EXECUTE_ALLOWLIST = List.of(
-        new TemporaryAllowedExecuteCall(
-            "AtlasOrchestrator legacy fallback",
-            "src/main/java/com/atlas/orchestrator/AtlasOrchestrator.java",
-            "tool.execute(toolParams)",
-            "legacy fallback 执行路径为兼容旧编排保留，迁移前需要确认是否仍被主链路调用。",
-            "如果 fallback 仍可达则委托 SafeToolExecutor；如果不可达则删除 fallback 分支。",
-            "P2",
-            "legacy fallback 继续裸执行会造成 Graph 新链路安全、旧编排链路安全语义不一致。"
-        )
-    );
+    private static final List<TemporaryAllowedExecuteCall> TEMPORARY_DIRECT_EXECUTE_ALLOWLIST = List.of();
 
     /**
      * 生产代码中的 BaseTool 直接执行入口必须全部可见、可解释、可收口。
@@ -189,8 +179,8 @@ class M4Px4ToolExecuteEntrypointContractTest {
     @Test
     void temporaryAllowlist_shouldDocumentReasonAndMigrationTarget() {
         assertThat(TEMPORARY_DIRECT_EXECUTE_ALLOWLIST)
-            .as("Graph Bridge AtlasToolCallback、ReActEngine 与 core AtlasToolCallback 已迁移到 SafeToolExecutor；剩余历史直接执行入口必须继续收敛")
-            .hasSize(1);
+            .as("Graph Bridge AtlasToolCallback、ReActEngine、core AtlasToolCallback 与 AtlasOrchestrator fallback 已迁移到 SafeToolExecutor；不应再保留历史直接执行入口")
+            .isEmpty();
 
         for (TemporaryAllowedExecuteCall allowed : TEMPORARY_DIRECT_EXECUTE_ALLOWLIST) {
             assertThat(allowed.entranceName()).as(allowed.file() + " 必须说明入口名称").isNotBlank();

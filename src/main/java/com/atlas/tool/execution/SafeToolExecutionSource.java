@@ -22,5 +22,8 @@ public enum SafeToolExecutionSource {
     REACT_ENGINE,
 
     /** Spring AI ToolCallback 桥接入口，后续可逐步迁移复用。 */
-    TOOL_CALLBACK
+    TOOL_CALLBACK,
+
+    /** 传统 IntentRouter fallback 执行入口。 */
+    ORCHESTRATOR_FALLBACK
 }

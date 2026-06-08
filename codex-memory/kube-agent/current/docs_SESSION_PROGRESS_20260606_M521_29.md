@@ -6,7 +6,7 @@
 - Primary workspace recovery folder: `F:\gitProject\kube-agent\codex-memory\kube-agent\current`
 - Historical external memory folder: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.22-4, legacy core ToolCallback safe execution.
+- Current latest wave: M5.22-5, Orchestrator fallback safe execution closure.
 - Phase update: HPC / Slurm / BCM and NIM are paused and moved to Phase 2 by user direction.
 - Phase 1 focus: deliver the top-tier Agent core through generic manager Agent foundations, safe read/query validation, non-HPC/NIM manager function coverage, Tool metadata quality, HITL/audit execution boundary, traceability, recovery, evaluation, teaching documentation, and vue-kube-manager workflow integration.
 - Phase boundary clarification: moving NIM / HPC / Slurm / BCM to Phase 2 postpones specialist domain plugins only; it does not reduce Phase 1 standards.
@@ -55,6 +55,17 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.22-5 Orchestrator fallback safe execution closure is implemented:
+  - `src/main/java/com/atlas/orchestrator/AtlasOrchestrator.java` no longer directly calls `tool.execute(toolParams)` in the legacy IntentRouter fallback.
+  - Orchestrator fallback now constructs `SafeToolExecutionRequest` and delegates to `SafeToolExecutor` with `SafeToolExecutionSource.ORCHESTRATOR_FALLBACK`.
+  - Legacy SSE/polishing behavior remains, but permission/HITL/protected-parameter/ThreadLocal semantics are centralized in `SafeToolExecutor`.
+  - `M4Px4ToolExecuteEntrypointContractTest` temporary direct execute allowlist is now empty.
+  - Verification passed:
+    - `mvn -q "-Dtest=M513HitlFailClosedContractTest,M4Px4ToolExecuteEntrypointContractTest,AtlasOrchestratorJsonTest" test`
+  - No NIM/HPC/Slurm/BCM Phase 2 implementation was resumed and no new write path was opened.
+  - Production code now has exactly one permanent real `BaseTool.execute(...)` boundary: `SafeToolExecutor`.
+  - Next Phase 1 technical slice: wire traceId through intent/plan/tool/http/HITL/audit/final answer.
 
 - M5.22-4 legacy core ToolCallback safe execution is implemented:
   - `src/main/java/com/atlas/tool/core/AtlasToolCallback.java` no longer directly calls `tool.execute(params)`.

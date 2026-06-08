@@ -10,6 +10,10 @@ import com.atlas.store.SessionStore;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.tool.core.BaseTool;
 import com.atlas.tool.core.ToolRegistry;
+import com.atlas.tool.execution.SafeToolExecutionRequest;
+import com.atlas.tool.execution.SafeToolExecutionResult;
+import com.atlas.tool.execution.SafeToolExecutionSource;
+import com.atlas.tool.execution.SafeToolExecutor;
 import com.atlas.orchestrator.polish.ToolResultPolishingService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,6 +62,7 @@ public class AtlasOrchestrator {
     private final Executor asyncExecutor;
     private final KubeManagerHttpClient kubeManagerClient;
     private final HitlGuard hitlGuard;
+    private final SafeToolExecutor safeToolExecutor;
 
     /** ReAct SSE 过程事件运行期注册表，避免把 Lambda/SseEmitter 放入 Graph State。 */
     private final ReActEventSinkRegistry reactEventSinkRegistry;
@@ -104,6 +109,7 @@ public class AtlasOrchestrator {
                              UserPermissionContext userPermissionContext,
                              KubeManagerHttpClient kubeManagerClient,
                              HitlGuard hitlGuard,
+                             SafeToolExecutor safeToolExecutor,
                              ReActEventSinkRegistry reactEventSinkRegistry,
                              TimedDecisionCache decisionCache,
                              ToolResultPolishingService polishingService,
@@ -121,6 +127,7 @@ public class AtlasOrchestrator {
         this.userPermissionContext = userPermissionContext;
         this.kubeManagerClient = kubeManagerClient;
         this.hitlGuard = hitlGuard;
+        this.safeToolExecutor = safeToolExecutor;
         this.reactEventSinkRegistry = reactEventSinkRegistry;
         this.decisionCache = decisionCache;
         this.polishingService = polishingService;
@@ -238,7 +245,7 @@ public class AtlasOrchestrator {
                     "agent", result.agent()
                 ));
 
-                // 4. Tool 执行 — 直接通过 ToolRegistry（P0 删除 Agent 包装层）
+                // 4. Tool 执行 — legacy fallback 也必须委托 SafeToolExecutor
                 Optional<BaseTool> toolOpt = toolRegistry.findByIntentId(result.intentId());
 
                 if (toolOpt.isPresent()) {
@@ -265,15 +272,31 @@ public class AtlasOrchestrator {
                             toolParams.put("userId", finalUserId);
                             toolParams.put("organizationId", orgId);
 
-                            HitlGuard.Decision hitlDecision = hitlGuard.verifyByIntentId(toolRegistry, result.intentId(), null);
-                            if (!hitlDecision.allowed()) {
-                                log.warn("[Orchestrator] HITL 守卫阻止 legacy fallback 工具执行: intentId={}", result.intentId());
-                                emit(emitter, "content", Map.of("content", hitlDecision.message()));
+                            SafeToolExecutionRequest executionRequest = new SafeToolExecutionRequest(
+                                result.intentId(),
+                                toolParams,
+                                finalUserId,
+                                finalToken,
+                                orgId,
+                                finalSessionId,
+                                null,
+                                SafeToolExecutionSource.ORCHESTRATOR_FALLBACK
+                            );
+                            SafeToolExecutionResult executionResult = safeToolExecutor.executeIntent(executionRequest);
+                            if (!executionResult.executed()) {
+                                log.warn("[Orchestrator] SafeToolExecutor 阻止 legacy fallback 工具执行: intentId={}, reason={}",
+                                    result.intentId(), executionResult.answer());
+                                emit(emitter, "content", Map.of("content", executionResult.answer()));
                                 emit(emitter, "done", Map.of());
                                 return;
                             }
 
-                            Map<String, Object> toolResult = tool.execute(toolParams);
+                            Map<String, Object> toolResult = executionResult.toolResult() != null
+                                ? executionResult.toolResult() : Map.of(
+                                    "success", executionResult.success(),
+                                    "message", executionResult.answer() != null ? executionResult.answer() : "",
+                                    "data", Map.of()
+                                );
                             boolean success = Boolean.TRUE.equals(toolResult.get("success"));
                             String message = toolResult.get("message") != null
                                 ? toolResult.get("message").toString() : "";

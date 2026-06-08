@@ -6,6 +6,20 @@
 
 ---
 
+## [M5.22-5] - Orchestrator fallback safe execution closure
+
+**Delivery**: Migrated the last legacy `AtlasOrchestrator` fallback Tool execution path into `SafeToolExecutor`.
+**Changes**
+- `AtlasOrchestrator` now injects `SafeToolExecutor` and constructs `SafeToolExecutionRequest` with `SafeToolExecutionSource.ORCHESTRATOR_FALLBACK`.
+- Legacy IntentRouter fallback keeps its SSE/polishing behavior, but no longer performs local HITL + direct `tool.execute(toolParams)`.
+- `SafeToolExecutionSource` now includes `ORCHESTRATOR_FALLBACK` for audit and future source-aware policy.
+- `M4Px4ToolExecuteEntrypointContractTest` temporary direct execute allowlist is now empty.
+**Verification**
+- `mvn -q "-Dtest=M513HitlFailClosedContractTest,M4Px4ToolExecuteEntrypointContractTest,AtlasOrchestratorJsonTest" test` passed.
+**Security**
+- Production code now has exactly one permanent real `BaseTool.execute(...)` boundary: `SafeToolExecutor`.
+- No new real write/create/delete/state-changing kube-manager call was opened.
+
 ## [M5.22-4] - Legacy core ToolCallback safe execution
 
 **Delivery**: Migrated the legacy `com.atlas.tool.core.AtlasToolCallback` path into the shared `SafeToolExecutor` kernel.
