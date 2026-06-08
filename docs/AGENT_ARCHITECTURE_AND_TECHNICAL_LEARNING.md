@@ -420,6 +420,30 @@ M5.28-1 把 HTTP 韧性从“依赖和配置已经存在”推进到真实业务
 
 学习重点：顶级 Agent 的先进性不是“哪个语言看起来更 AI”，而是主控制面能不能证明每次执行安全、可追踪、可审计、可评测、可恢复。框架版本是入口，工程闭环才是主体。
 
+### M5.29 Spring Security 身份桥接
+
+M5.29-1 把安全入口从“普通 Servlet Filter + ThreadLocal”推进到 Spring Security 主线。以前 `AuthTokenFilter` 只把 Bearer Token 绑定到 `UserPermissionContext`，后续 controller、Tool 和 HTTP outlet 依赖这个 ThreadLocal 判断当前用户。这个方式能工作，但它不是标准 Web 安全主干：端点授权、方法级授权、审计 actor 提取和 actuator 保护都很难统一。
+
+本轮新增 `AgentSecurityConfig`，核心设计是：
+
+- `SecurityFilterChain` 成为 Web 安全入口，session 策略为 `STATELESS`；
+- 关闭默认 CSRF、HTTP Basic、form login 和 logout，避免 API 服务静默出现另一套浏览器/Basic 认证入口；
+- 显式提供 `agentUserDetailsService`，让 Spring Boot 不再生成默认开发用户，身份来源只来自 kube-manager Bearer session 桥接；
+- `/api/agent/observability/**` 和除 health/info 之外的 `/actuator/**` 先进入 admin-only；
+- 普通 Agent API 暂时 `permitAll`，这是为了小步迁移，不代表最终鉴权完成；
+- `AuthTokenFilter` 在请求入口和出口都清理 `SecurityContext` 与 ThreadLocal，防止线程复用导致身份串线；
+- 有效缓存 Token 会被映射成 `Authentication`，role 统一转成 `ROLE_*`，但 raw Bearer Token 不写入 `Authentication.credentials`。
+
+为什么不一次性锁全 `/api/agent/**`：当前聊天、SSE、HITL resume、会话 bootstrap 里仍有历史认证/上下文传递路径。顶级工程不是一刀切把系统打断，而是先把高敏诊断面和 actuator 收口，再逐步把剩余 API 迁移到标准 endpoint/method authorization。这样每一步都有测试、可回滚、可恢复记忆。
+
+本轮测试分三层：
+
+- `AuthTokenFilterSecurityContextTest`：验证 Bearer session 到 `Authentication` 的桥接、未知 token 不认证、入口/出口清理残留上下文；
+- `AgentSecurityConfigContractTest`：锁住 stateless、关闭默认登录入口、admin-only matcher 和暂时兼容放行策略；
+- `AgentSecurityConfigWebMvcTest`：用真实 MockMvc 过滤链验证 observability/actuator 的 403/200 行为和普通 Agent API 的兼容放行。
+
+学习重点：安全主线化不是“加一个 starter”这么简单。顶级 Agent 的身份事实要逐步统一到标准 `SecurityContext`，但执行层仍必须保留 `SafeToolExecutor`、Tool 风险元数据、HITL、trace 和 audit。Spring Security 负责 Web 入口授权，Agent 执行边界负责证明“这个 Tool 为什么可以执行”。
+
 ### Fail-Closed
 
 当证据缺失、来源不可信、格式不完整、digest 不匹配、词表扩展未审查时，系统必须拒绝，而不是降级为“试试看”。

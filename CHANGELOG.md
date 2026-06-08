@@ -6,6 +6,24 @@
 
 ---
 
+## [M5.29-1] - Spring Security identity bridge
+
+**Delivery**: Introduced the first Spring Security mainline bridge so kube-agent can start moving identity and endpoint authorization from ad-hoc ThreadLocal checks toward standard `SecurityFilterChain` / `Authentication` without breaking existing Agent chat and SSE flows.
+**Changes**
+- Added `spring-boot-starter-security`.
+- Added `AgentSecurityConfig` with stateless security, disabled CSRF/basic/form/logout defaults, explicit kube-manager Bearer-session identity source, and admin-only protection for `/api/agent/observability/**` plus non-health Actuator endpoints.
+- Converted `AuthTokenFilter` from a standalone ordered servlet component into a Spring Security filter registered inside the filter chain.
+- `AuthTokenFilter` now clears stale request context on entry and exit, maps cached Bearer sessions from `UserPermissionContext` into `UsernamePasswordAuthenticationToken`, and keeps raw Bearer tokens out of `Authentication.credentials`.
+- Kept ordinary Agent APIs temporarily `permitAll` as an incremental migration guard so existing chat/SSE/session bootstrap flows are not broken while endpoint-by-endpoint authorization is moved into Spring Security.
+- Added unit, source-contract, and MockMvc filter-chain tests for identity bridging, stale context cleanup, role mapping, observability/actuator protection, and temporary ordinary API compatibility.
+- Corrected the Spring AI Alibaba ADR so A2A is documented as an ecosystem/compatibility direction rather than implemented kube-agent Agent Card / JSON-RPC A2A support.
+**Verification**
+- `mvn -q "-Dtest=AuthTokenFilterSecurityContextTest,AgentSecurityConfigContractTest,AgentSecurityConfigWebMvcTest,UserPermissionContextTest,ObservabilityControllerTest" test` passed.
+**Security**
+- Admin diagnostics and non-health Actuator endpoints are protected by Spring Security roles.
+- Raw Bearer token remains in the legacy ThreadLocal compatibility layer for kube-manager forwarding and is not copied into `SecurityContext` credentials.
+- This is a first identity bridge, not full API authorization completion; later slices must migrate remaining Agent APIs to explicit endpoint/method authorization and unify principal resolution.
+
 ## [M5.28-1] - kube-manager HTTP resilience policy
 
 **Delivery**: Moved kube-manager business HTTP resilience from Spring Retry annotations into an explicit Resilience4j policy with a safer READ/WRITE split.

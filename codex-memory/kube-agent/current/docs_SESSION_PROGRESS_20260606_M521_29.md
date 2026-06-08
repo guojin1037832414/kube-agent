@@ -6,7 +6,7 @@
 - Primary workspace recovery folder: `F:\gitProject\kube-agent\codex-memory\kube-agent\current`
 - Historical external memory folder: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.28-1, kube-manager HTTP resilience policy.
+- Current latest wave: M5.29-1, Spring Security identity bridge.
 - Phase update: HPC / Slurm / BCM and NIM are paused and moved to Phase 2 by user direction.
 - Phase 1 focus: deliver the top-tier Agent core through generic manager Agent foundations, safe read/query validation, non-HPC/NIM manager function coverage, Tool metadata quality, HITL/audit execution boundary, traceability, recovery, evaluation, teaching documentation, and vue-kube-manager workflow integration.
 - Phase boundary clarification: moving NIM / HPC / Slurm / BCM to Phase 2 postpones specialist domain plugins only; it does not reduce Phase 1 standards.
@@ -55,6 +55,30 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.29-1 Spring Security identity bridge is implemented:
+  - Added `spring-boot-starter-security`.
+  - Added `src/main/java/com/atlas/auth/AgentSecurityConfig.java`.
+  - `AgentSecurityConfig` uses stateless Spring Security, disables CSRF/basic/form/logout defaults, and provides an explicit kube-agent `UserDetailsService` so Boot does not generate a default development user.
+  - `/api/agent/observability/**` and non-health/info `/actuator/**` are admin-only through Spring Security.
+  - `/actuator/health` and `/actuator/info` remain open.
+  - Ordinary Agent APIs remain `permitAll` for this first migration slice, so existing chat/SSE/session bootstrap flows are not broken before endpoint-by-endpoint authorization is ready.
+  - `AuthTokenFilter` is now registered by `SecurityFilterChain`, clears stale `SecurityContext` and ThreadLocal data at request entry/exit, bridges cached Bearer sessions to `Authentication`, and does not put the raw Bearer token into `Authentication.credentials`.
+  - Added:
+    - `src/test/java/com/atlas/auth/AuthTokenFilterSecurityContextTest.java`
+    - `src/test/java/com/atlas/auth/AgentSecurityConfigContractTest.java`
+    - `src/test/java/com/atlas/auth/AgentSecurityConfigWebMvcTest.java`
+  - Updated `UserPermissionContextTest` to clear `CURRENT_ORG_ID` as well as token ThreadLocal.
+  - Corrected `docs/v3.1/ADR-008-SPRING_AI_ALIBABA.md`: A2A is an ecosystem/compatibility direction, not implemented kube-agent Agent Card / JSON-RPC A2A support.
+  - Verification passed:
+    - `mvn -q "-Dtest=AuthTokenFilterSecurityContextTest,AgentSecurityConfigContractTest,AgentSecurityConfigWebMvcTest,UserPermissionContextTest,ObservabilityControllerTest" test`
+  - Multi-expert note:
+    - Archimedes agreed this is an acceptable incremental migration: protect observability/actuator first, keep ordinary Agent APIs compatible for now, and document that this is not full API authorization completion.
+  - Next Phase 1 technical slices:
+    - unify principal resolution between `SecurityContext` and `UserPermissionContext`;
+    - migrate remaining `/api/agent/**` endpoints to explicit authorization;
+    - add durable audit storage and frontend replay timeline DTOs;
+    - continue RAG/persistent Memory/read-only MCP/Agent eval.
 
 - M5.28-1 kube-manager HTTP resilience policy is implemented:
   - Added `src/main/java/com/atlas/http/KubeManagerHttpResiliencePolicy.java`.

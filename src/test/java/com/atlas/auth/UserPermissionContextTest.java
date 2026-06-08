@@ -32,11 +32,13 @@ class UserPermissionContextTest {
         ctx = new UserPermissionContext();
         // 清理 ThreadLocal，避免测试污染
         UserPermissionContext.CURRENT_TOKEN.remove();
+        UserPermissionContext.CURRENT_ORG_ID.remove();
     }
 
     @AfterEach
     void tearDown() {
         UserPermissionContext.CURRENT_TOKEN.remove();
+        UserPermissionContext.CURRENT_ORG_ID.remove();
     }
 
     // ═══════════════════════════════════════════════════════════

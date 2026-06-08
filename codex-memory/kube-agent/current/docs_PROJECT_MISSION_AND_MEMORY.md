@@ -93,10 +93,33 @@ Current track:
 
 Recently completed:
 
-`M5.28-1 kube-manager HTTP resilience policy`
+`M5.29-1 Spring Security identity bridge`
 
 Latest checkpoint:
 
+- Date: 2026-06-09 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.29-1 implemented:
+  - Added `spring-boot-starter-security`.
+  - Added `AgentSecurityConfig` as the first standard Spring Security `SecurityFilterChain`.
+  - Protected `/api/agent/observability/**` and non-health/info `/actuator/**` with admin roles.
+  - Kept ordinary Agent APIs temporarily `permitAll` to avoid breaking existing chat/SSE/session bootstrap during incremental migration.
+  - Converted `AuthTokenFilter` into a Spring Security bridge that maps cached kube-manager Bearer sessions into `Authentication`, clears stale contexts on entry/exit, and keeps raw tokens out of `Authentication.credentials`.
+  - Added `AuthTokenFilterSecurityContextTest`, `AgentSecurityConfigContractTest`, and `AgentSecurityConfigWebMvcTest`.
+  - Corrected A2A documentation overclaim in `docs/v3.1/ADR-008-SPRING_AI_ALIBABA.md`.
+- Verification:
+  - `mvn -q "-Dtest=AuthTokenFilterSecurityContextTest,AgentSecurityConfigContractTest,AgentSecurityConfigWebMvcTest,UserPermissionContextTest,ObservabilityControllerTest" test`
+- Scope boundary:
+  - Phase 1 generic Agent Core security-mainline migration only.
+  - No NIM/HPC/Slurm/BCM Phase 2 implementation was resumed.
+  - No real write/create/delete/state-changing kube-manager call was opened.
+- Security result:
+  - Admin diagnostics and management endpoints are now protected by Spring Security roles.
+  - This is an identity bridge and diagnostic-surface lock, not the final whole-API authorization state.
+- Next technical follow-up:
+  - Build a unified principal resolver, migrate remaining `/api/agent/**` endpoints to explicit authorization, and continue durable audit / frontend replay DTO / RAG Memory / read-only MCP / Agent eval.
+
+- Previous checkpoint:
 - Date: 2026-06-09 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
 - M5.28-1 implemented:

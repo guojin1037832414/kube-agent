@@ -1,0 +1,131 @@
+﻿{
+    "project":  "kube-agent",
+    "milestone":  "M5.29-1",
+    "title":  "Spring Security identity bridge",
+    "generatedAt":  "2026-06-09T02:16:35+08:00",
+    "workspace":  "F:\\gitProject\\kube-agent",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "verification":  [
+                         "mvn -q \"-Dtest=AuthTokenFilterSecurityContextTest,AgentSecurityConfigContractTest,AgentSecurityConfigWebMvcTest,UserPermissionContextTest,ObservabilityControllerTest\" test",
+                         "mvn -q -DskipTests validate",
+                         "mvn -q test",
+                         "git diff --check"
+                     ],
+    "files":  [
+                  {
+                      "path":  "pom.xml",
+                      "sha256":  "034d96f855b5c690dd6d299b2dcbfea50a04b986adebd88b92f743c1c73b0885",
+                      "bytes":  14341
+                  },
+                  {
+                      "path":  "CHANGELOG.md",
+                      "sha256":  "375f2a9e27552bab953d6bbd1914d274ea27f931cca81874cb568ab9ea3bccd7",
+                      "bytes":  271534
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/auth/AuthTokenFilter.java",
+                      "sha256":  "197c4780ad8bb6816d871608e9565083d877d0c4d11d14f7df94de873a5de320",
+                      "bytes":  3476
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/auth/AgentSecurityConfig.java",
+                      "sha256":  "50c02e1c056352d8444a3ec6f8eae75882ec26224cf42dcac5b1ac2d319a9aff",
+                      "bytes":  2638
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/auth/UserPermissionContext.java",
+                      "sha256":  "54676e19710d34f80fe427246d02d39e2d9413620e1d859d4cacd253a70dbef1",
+                      "bytes":  8500
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/auth/AuthTokenFilterSecurityContextTest.java",
+                      "sha256":  "3bc4d4d7c22721e2eef5e625526404c67f9edc5802969340c59ffe3e12e0fcbe",
+                      "bytes":  5013
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/auth/AgentSecurityConfigContractTest.java",
+                      "sha256":  "a6157ac61c8368c881db2a6c6cc55a86e9de98f362e9cad2bcefa41dd287e467",
+                      "bytes":  2475
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/auth/AgentSecurityConfigWebMvcTest.java",
+                      "sha256":  "14b5a74d0d9d98c519c06d2bf1e921f52fdccb0675636bce011265bf5f3a06fc",
+                      "bytes":  3841
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/auth/UserPermissionContextTest.java",
+                      "sha256":  "1a0710849208c73f21ee1d5db7c536c5403b2e6d2ccb052e95800c10593bc051",
+                      "bytes":  7684
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/ObservabilityControllerTest.java",
+                      "sha256":  "e5bc110fb8bbce5b50f71ac03b65ec43ab7d9379f2b3afcdf49aaec15776001b",
+                      "bytes":  2488
+                  },
+                  {
+                      "path":  "docs/PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "ecce6a5f854c0fc0fe23589053118788561cbd99fedfb554f77b9e4362b24dc7",
+                      "bytes":  295419
+                  },
+                  {
+                      "path":  "docs/SESSION_PROGRESS_20260606_M521_29.md",
+                      "sha256":  "635e5dd5fbfb75e7ead567f6fadd6f4754162d1577a890861995bae0c999e336",
+                      "bytes":  295831
+                  },
+                  {
+                      "path":  "docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "c6f2945326b4e5f818c53cde151a14884e9462dabdbc5b7b753321c8c8258f9d",
+                      "bytes":  61114
+                  },
+                  {
+                      "path":  "docs/tech-stack/BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "f5955dea4f3a950f0adca15304cfbfb63e36139f4e00521f82251da59c126a8b",
+                      "bytes":  16205
+                  },
+                  {
+                      "path":  "docs/tech-stack/BACKEND_JAVA_TECH_STACK_AUDIT_20260608.md",
+                      "sha256":  "0d6956a9b75d6f6554cb9aab664f8add2a48f7296d7d56910c7b9afb2384856e",
+                      "bytes":  11900
+                  },
+                  {
+                      "path":  "docs/v3.1/ADR-008-SPRING_AI_ALIBABA.md",
+                      "sha256":  "71e578db244edc41594a69b8846e991cc40a33612637a7d9c86aeddeb749c061",
+                      "bytes":  7856
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/RECOVERY_STATUS.md",
+                      "sha256":  "dcc350ae4bbc097b8113d10c358de46a68a42e472b26cf2b6f4840ca3cbbc3f6",
+                      "bytes":  12475
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/CHANGELOG.md",
+                      "sha256":  "375f2a9e27552bab953d6bbd1914d274ea27f931cca81874cb568ab9ea3bccd7",
+                      "bytes":  271534
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "ecce6a5f854c0fc0fe23589053118788561cbd99fedfb554f77b9e4362b24dc7",
+                      "bytes":  295419
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_SESSION_PROGRESS_20260606_M521_29.md",
+                      "sha256":  "635e5dd5fbfb75e7ead567f6fadd6f4754162d1577a890861995bae0c999e336",
+                      "bytes":  295831
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "c6f2945326b4e5f818c53cde151a14884e9462dabdbc5b7b753321c8c8258f9d",
+                      "bytes":  61114
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "f5955dea4f3a950f0adca15304cfbfb63e36139f4e00521f82251da59c126a8b",
+                      "bytes":  16205
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_JAVA_TECH_STACK_AUDIT_20260608.md",
+                      "sha256":  "0d6956a9b75d6f6554cb9aab664f8add2a48f7296d7d56910c7b9afb2384856e",
+                      "bytes":  11900
+                  }
+              ]
+}

@@ -42,7 +42,9 @@ Atlas v3.1 P2 阶段原本规划自行实现：
 | 状态持久化 | ✅ Checkpoint | 支持 MemorySaver / Redis / 文件 |
 | Streaming SSE | ✅ 原生支持 | Graph 有 StreamingExample |
 | MCP 支持 | ✅ v0.14.0 | 与 Atlas 未来 MCP Server 方向一致 |
-| A2A (Agent-to-Agent) | ✅ 已支持 | Nacos 集成，分布式 Agent 通信 |
+| A2A (Agent-to-Agent) | 🧪 兼容矩阵 / 实验方向 | Spring AI Alibaba 生态存在分布式 Agent / Nacos 方向，但 kube-agent 当前尚未实现 Agent Card、JSON-RPC A2A adapter 或跨 Agent 互操作协议 |
+
+> 2026-06-09 修订：原表格把 A2A 写成“已支持”过于乐观。准确状态是：框架生态有相关方向，kube-agent 目前仍以内部多专家角色、Graph 编排、`SafeToolExecutor`、trace 和 audit 为主线；A2A 进入兼容矩阵，不能替代当前安全执行边界。
 
 ### 核心模块结构
 

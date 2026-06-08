@@ -74,6 +74,14 @@ M5.28-1 已把 Resilience4j 推进到 kube-manager 业务 HTTP 出口：
 - 移除旧 `HttpRetryConfig` 和 Spring Retry 注解路径，避免写操作被统一方法注解误重试；
 - 写请求重试继续 HOLD，直到 idempotency key、durable audit、HITL 和 release evidence 全部具备。
 
+M5.29-1 已把 Spring Security 推进到 HTTP 安全入口：
+
+- 新增 `AgentSecurityConfig`，用 `SecurityFilterChain` 承接标准 Web 安全主线；
+- `AuthTokenFilter` 作为 Security filter 注册，负责把 kube-manager Bearer session 从 `UserPermissionContext` 桥接成标准 `Authentication`；
+- `/api/agent/observability/**` 与非 health/info 的 `/actuator/**` 已由 Spring Security admin role 保护；
+- 关闭默认 basic/form/logout，并用显式 no-op `UserDetailsService` 避免 Spring Boot 生成默认开发用户；
+- 普通 Agent API 暂时保持 `permitAll`，后续按端点和方法级授权逐步迁移。
+
 ## 最新 Agent 标准的落地顺序
 
 以下技术代表 2026 年 Agent 工程的先进方向，但必须按可验证顺序接入：
@@ -136,7 +144,7 @@ Spring Boot 4.0.x 官方系统要求是 Java 17+，但它会同时带来 Spring 
 - OpenTelemetry：M5.23/M5.24/M5.25/M5.26/M5.27 已完成 traceId 内核、HTTP 出口传播、审计事件模型、审计 telemetry projection 和审计 Observation 发布；后续要把 intent、plan、tool、HTTP、HITL、audit、final answer 映射为 span/timeline/audit 统一证据链。
 - 审计持久化：M5.25 已完成内存诊断 recorder；下一步要把敏感读、高风险写、HITL 阻断、Tool 异常接入可查询、可保留、可权限控制的脱敏持久化审计存储。
 - CI 门禁：SBOM、SCA、SpotBugs、覆盖率、secret scan、Agent eval 必须进入发布流程。
-- 安全主干：逐步引入 Spring Security `SecurityFilterChain`，把身份事实从 ThreadLocal 兼容层迁移到标准 `Authentication`。
+- 安全主干：M5.29-1 已引入 Spring Security `SecurityFilterChain` 并完成 observability/actuator 第一层保护；后续把剩余 API、controller guard、audit actor 和方法级授权逐步迁移到标准 `Authentication`。
 
 ## 多专家审计后的 Phase 1 技术优先级
 
@@ -150,7 +158,7 @@ Spring Boot 4.0.x 官方系统要求是 Java 17+，但它会同时带来 Spring 
 | P0 | CI 从报告生成升级为硬门禁 | SpotBugs/SCA/secret scan/coverage/Agent eval 失败能阻断合并或发布 |
 | P0 | `SafeToolExecutor` 唯一真实执行边界持续守护 | 新增 Graph/ReAct/ToolCallback/插件入口不能直调 `BaseTool.execute(...)` |
 | P1 | Micrometer + OpenTelemetry span 化 | request、intent、plan、LLM、tool、HTTP、HITL、audit、final answer 能在同一 trace 下回放 |
-| P1 | Spring Security 主线化 | 可信身份从 ThreadLocal 兼容层迁移到标准 `Authentication/SecurityContext` |
+| P1 | Spring Security 主线化 | M5.29-1 已完成第一层身份桥接和诊断面保护；下一步迁移剩余 `/api/agent/**` 授权、principal resolver 与方法级授权 |
 | P1 | Testcontainers 真实集成测试 | 覆盖 kube-manager HTTP contract、鉴权失败、trace header、重试/熔断边界 |
 | P2 | Java 21/25 与 Spring Boot 4 / Spring AI 2 兼容矩阵 | 先在 CI matrix 或试验分支验证，不破坏当前可恢复主线 |
 

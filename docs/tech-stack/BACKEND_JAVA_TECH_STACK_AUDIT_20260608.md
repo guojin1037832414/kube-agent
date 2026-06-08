@@ -65,10 +65,11 @@ M5.28-1 完成后，后端主语言审计结论进一步明确：`Java + Spring`
 - `Micrometer Observation + OpenTelemetry OTLP` 已进入审计 telemetry 链路；
 - `CycloneDX SBOM`、`JaCoCo`、`SpotBugs`、`ArchUnit`、`Testcontainers` 已进入工程底座；
 - Spring AI / Spring AI Alibaba 被用于模型、ToolCallback 和 Graph/Agent 编排接入，但不承担最终安全授权。
+- M5.29-1 已接入 Spring Security `SecurityFilterChain`，把 kube-manager Bearer session 桥接为标准 `Authentication`，并保护 observability/actuator 诊断面。
 
 仍需要升级的部分：
 
-- 生产入口仍缺标准 Spring Security `SecurityFilterChain` / `Authentication` 主线，当前 `AuthTokenFilter` 只在存在 Bearer Token 时绑定上下文，不能替代全局鉴权策略；
+- Spring Security 主线仍是第一阶段：M5.29-1 已完成身份桥接和诊断面保护，但普通 Agent API 仍为兼容迁移保留 `permitAll`，后续需要 endpoint/method authorization、统一 principal resolver 和 controller guard 去重；
 - 审计仍是 `InMemoryAgentAuditRecorder` 诊断实现，`durableRetention=false`，不能替代可查询、可保留、可权限控制的持久审计；
 - SpotBugs / SBOM / coverage / secret scan / Agent eval 还没有全部变成失败即阻断的硬门禁；
 - Resilience4j read retry 还应继续细分异常和状态码：网络异常、超时、429、502、503、504 可考虑重试，400、401、403、404 不应重试；
@@ -99,7 +100,8 @@ M5.28-1 完成后，后端主语言审计结论进一步明确：`Java + Spring`
    - 当前 `spotbugs-maven-plugin` 仍配置 `failOnError=false`，这适合早期收敛报告，但不适合作为最终发布门禁。
 
 6. 标准安全入口主线化。
-   - 引入 Spring Security `SecurityFilterChain`，保护 `/api/**`、`/api/agent/observability/**`、`/actuator/**` 等入口。
+   - 已完成第一层：M5.29-1 引入 Spring Security `SecurityFilterChain`，保护 `/api/agent/observability/**` 和 `/actuator/**` 管理面。
+   - 下一步：把剩余 `/api/agent/**` 从兼容放行迁移到显式 endpoint/method authorization。
    - `AuthTokenFilter` 可以保留为兼容桥，但生产鉴权、角色和端点策略应由 Spring Security 承担。
 
 7. 持久审计主线化。
@@ -109,7 +111,7 @@ M5.28-1 完成后，后端主语言审计结论进一步明确：`Java + Spring`
 ## P1 改进清单
 
 1. Spring Security 身份事实迁移。
-   - 逐步把 `UserPermissionContext` ThreadLocal 兼容层迁移到 `SecurityContext` / `Authentication`。
+   - M5.29-1 已把缓存 Bearer session 桥接到 `SecurityContext` / `Authentication`。
    - ThreadLocal 可保留为 legacy bridge，但权限事实不能长期散落。
 
 2. OpenTelemetry / audit 主线化。
