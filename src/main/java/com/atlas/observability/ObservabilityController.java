@@ -39,6 +39,7 @@ public class ObservabilityController {
     private final AgentReplayTimelineService replayTimelineService;
     private final AgentEvalReportService evalReportService;
     private final AgentEvalSuiteCatalogService evalSuiteCatalogService;
+    private final AgentEvalTraceSetCatalogService evalTraceSetCatalogService;
     private final AgentPrincipalResolver principalResolver;
 
     public ObservabilityController(AgentMetricsService metricsService,
@@ -47,6 +48,7 @@ public class ObservabilityController {
                                    AgentReplayTimelineService replayTimelineService,
                                    AgentEvalReportService evalReportService,
                                    AgentEvalSuiteCatalogService evalSuiteCatalogService,
+                                   AgentEvalTraceSetCatalogService evalTraceSetCatalogService,
                                    AgentPrincipalResolver principalResolver) {
         this.metricsService = metricsService;
         this.auditSnapshotProvider = auditSnapshotProvider;
@@ -54,6 +56,7 @@ public class ObservabilityController {
         this.replayTimelineService = replayTimelineService;
         this.evalReportService = evalReportService;
         this.evalSuiteCatalogService = evalSuiteCatalogService;
+        this.evalTraceSetCatalogService = evalTraceSetCatalogService;
         this.principalResolver = principalResolver;
     }
 
@@ -206,6 +209,32 @@ public class ObservabilityController {
             .map(response -> ResponseEntity.ok(ApiResponse.ok(response)))
             .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(ApiResponse.fail("未知的 Agent eval suite: " + suiteId)));
+    }
+
+    /** List versioned golden/red-team trace sets that bind curated evidence anchors to eval suites. */
+    @GetMapping("/eval/trace-sets")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentEvalTraceSetCatalogResponse>> evalTraceSets() {
+        ResponseEntity<ApiResponse<AgentEvalTraceSetCatalogResponse>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return ResponseEntity.ok(ApiResponse.ok(evalTraceSetCatalogService.catalog()));
+    }
+
+    /** Run the suite attached to a trace set; empty trace sets fail closed until real captures are curated. */
+    @PostMapping("/eval/trace-sets/{traceSetId}/gate")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentEvalTraceSetGateArtifact>> evalTraceSetGate(@PathVariable String traceSetId,
+                                                                                       @RequestBody(required = false) AgentEvalSuiteRequest request) {
+        ResponseEntity<ApiResponse<AgentEvalTraceSetGateArtifact>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return evalTraceSetCatalogService.gate(traceSetId, request)
+            .map(response -> ResponseEntity.ok(ApiResponse.ok(response)))
+            .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.fail("Unknown Agent eval trace set: " + traceSetId)));
     }
 
     private <T> ResponseEntity<ApiResponse<T>> requireAdmin() {

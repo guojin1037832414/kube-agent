@@ -10,7 +10,38 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.36-1
+## Latest Phase 1 Core Memory - M5.37-1
+
+M5.37-1 adds the first versioned golden/red-team trace set catalog for deterministic Agent eval gates.
+
+Delivered:
+
+- Added `AgentEvalTraceSetDefinition`, `AgentEvalTraceSetCatalogResponse`, `AgentEvalTraceSetGateArtifact`, and `AgentEvalTraceSetCatalogService`.
+- Added classpath catalog source `src/main/resources/observability/eval-trace-sets.json`.
+- Added admin-only `GET /api/agent/observability/eval/trace-sets`.
+- Added admin-only `POST /api/agent/observability/eval/trace-sets/{traceSetId}/gate`.
+- Built-in Phase 1 trace sets:
+  - `phase1-core-golden`
+  - `phase1-redaction-regression`
+  - `phase1-high-risk-prewrite`
+  - `phase1-red-team-safety`
+- Trace sets intentionally ship with empty `traceIds`. They describe evidence requirements and fail closed until real persisted redacted replay captures are curated.
+- Trace-set gates ignore request-provided trace ids, so local ad-hoc anchors cannot silently replace the curated catalog evidence.
+
+Security boundary:
+
+- Trace-set catalog and gate endpoints are admin-only at URL and method levels.
+- Catalog/gate output remains deterministic, redacted-only, non-executing, `llmUsed=false`, `externalCalls=false`, `toolExecution=false`, and `kubeManagerCalls=false`.
+- No LLM, Tool execution, kube-manager call, network call, durable write, or raw audit export is added.
+- NIM / HPC / Slurm / BCM remain Phase 2 paused scope.
+
+Learning point: a top-tier Agent needs two separate eval abstractions. A suite defines the quality standard, while a trace set defines the curated evidence source used to prove that standard. Empty curated evidence must fail closed; otherwise CI can accidentally turn "no data" into "pass".
+
+Latest verified command:
+
+- `mvn -q "-Dtest=AgentEvalTraceSetCatalogServiceTest,AgentEvalSuiteCatalogServiceTest,AgentEvalReportServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+## Previous Phase 1 Core Memory - M5.36-1
 
 M5.36-1 turns named eval suites into compact machine-readable CI / release gate artifacts.
 

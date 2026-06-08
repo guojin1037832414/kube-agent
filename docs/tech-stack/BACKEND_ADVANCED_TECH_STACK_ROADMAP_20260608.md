@@ -394,3 +394,17 @@ M5.36-1 delivers the first machine-readable CI/release gate artifact for named e
 - The existing `/run` endpoint remains the richer human/admin diagnostic path.
 
 Technology judgment: CI should consume compact contracts, not frontend-sized diagnostic payloads. This keeps release workflows fast and auditable while preserving the ability to drill down by trace id when a gate fails. The next advanced steps are persisted golden/red-team trace sets, CI job wiring, Vue replay/eval workbench integration, and signed release decision metadata.
+
+## M5.37-1 Update - Versioned Eval Trace Set Catalog
+
+M5.37-1 implements the next eval roadmap item: curated golden/red-team trace sets are now versioned control-plane objects.
+
+- `GET /api/agent/observability/eval/trace-sets` returns the trace set catalog.
+- `POST /api/agent/observability/eval/trace-sets/{traceSetId}/gate` runs the trace set's attached named suite and returns `AgentEvalTraceSetGateArtifact`.
+- Catalog source is `classpath:observability/eval-trace-sets.json`.
+- Built-in trace set ids are `phase1-core-golden`, `phase1-redaction-regression`, `phase1-high-risk-prewrite`, and `phase1-red-team-safety`.
+- Trace sets start with empty `traceIds` intentionally; missing curated evidence fails closed instead of passing as an empty success.
+- Request-provided trace ids are ignored by trace-set gates, so ad-hoc local evidence cannot silently replace curated catalog evidence.
+- The catalog/gate contracts state `redactedOnly=true`, `deterministic=true`, `llmUsed=false`, `externalCalls=false`, `toolExecution=false`, and `kubeManagerCalls=false`.
+
+Technology judgment: this completes the first typed eval chain for Phase 1: suite = quality standard, trace set = curated evidence source, gate artifact = machine-readable release decision. The next advanced steps are CI workflow wiring around trace-set gates, frontend replay/eval workbench integration, and persisted capture jobs that populate real redacted trace ids.

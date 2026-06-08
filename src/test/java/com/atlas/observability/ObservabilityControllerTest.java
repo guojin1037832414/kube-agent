@@ -26,13 +26,15 @@ class ObservabilityControllerTest {
     private final InMemoryAgentAuditRecorder auditRecorder = new InMemoryAgentAuditRecorder();
     private final AgentReplayTimelineService replayTimelineService = new AgentReplayTimelineService(auditRecorder);
     private final AgentEvalReportService evalReportService = new AgentEvalReportService(replayTimelineService);
+    private final AgentEvalSuiteCatalogService evalSuiteCatalogService = new AgentEvalSuiteCatalogService(evalReportService);
     private final ObservabilityController controller = new ObservabilityController(
         new AgentMetricsService(new SimpleMeterRegistry()),
         auditRecorder,
         auditRecorder,
         replayTimelineService,
         evalReportService,
-        new AgentEvalSuiteCatalogService(evalReportService),
+        evalSuiteCatalogService,
+        new AgentEvalTraceSetCatalogService(evalSuiteCatalogService, new com.fasterxml.jackson.databind.ObjectMapper()),
         new AgentPrincipalResolver(userPermissionContext)
     );
 
@@ -662,6 +664,96 @@ class ObservabilityControllerTest {
         String bodyText = artifact.toString();
         assertThat(bodyText)
             .contains("trc_eval_gate")
+            .doesNotContain("conv-sensitive", "user-sensitive", "org-sensitive", "secret-token-value", "/api/org-sensitive")
+            .doesNotContain("reports=", "replay=");
+    }
+
+    @Test
+    void evalTraceSets_shouldRequireAdminUser() {
+        ResponseEntity<ApiResponse<AgentEvalTraceSetCatalogResponse>> anonymous = controller.evalTraceSets();
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentEvalTraceSetCatalogResponse>> user = controller.evalTraceSets();
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void evalTraceSets_shouldReturnCatalogForAdminUser() {
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentEvalTraceSetCatalogResponse>> response = controller.evalTraceSets();
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        AgentEvalTraceSetCatalogResponse catalog = response.getBody().getData();
+        assertThat(catalog.schemaVersion()).isEqualTo("agent-eval-trace-set-catalog.v1");
+        assertThat(catalog.traceSets()).extracting(AgentEvalTraceSetDefinition::id)
+            .contains("phase1-core-golden", "phase1-redaction-regression", "phase1-high-risk-prewrite");
+        assertThat(catalog.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("toolExecution", false)
+            .containsEntry("kubeManagerCalls", false);
+        assertThat(catalog.toString())
+            .doesNotContain("conv-sensitive", "user-sensitive", "org-sensitive", "secret-token-value", "/api/org-sensitive");
+    }
+
+    @Test
+    void evalTraceSetGate_shouldRequireAdminUserAndRejectUnknownTraceSet() {
+        ResponseEntity<ApiResponse<AgentEvalTraceSetGateArtifact>> anonymous =
+            controller.evalTraceSetGate("phase1-core-golden", null);
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentEvalTraceSetGateArtifact>> missing =
+            controller.evalTraceSetGate("missing-trace-set", null);
+
+        assertThat(missing.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(missing.getBody()).isNotNull();
+        assertThat(missing.getBody().isSuccess()).isFalse();
+    }
+
+    @Test
+    void evalTraceSetGate_shouldReturnFailClosedArtifactForEmptyTraceSet() {
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentEvalTraceSetGateArtifact>> response = controller.evalTraceSetGate(
+            "phase1-core-golden",
+            new AgentEvalSuiteRequest(java.util.List.of("trc_request_override_must_not_run"), null, null, null)
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        AgentEvalTraceSetGateArtifact artifact = response.getBody().getData();
+        assertThat(artifact.schemaVersion()).isEqualTo("agent-eval-trace-set-gate.v1");
+        assertThat(artifact.traceSetId()).isEqualTo("phase1-core-golden");
+        assertThat(artifact.suiteId()).isEqualTo("release-gate-strict");
+        assertThat(artifact.pass()).isFalse();
+        assertThat(artifact.emptyInput()).isTrue();
+        assertThat(artifact.traceIds()).isEmpty();
+        assertThat(artifact.gatePolicy())
+            .containsEntry("artifactOnly", true)
+            .containsEntry("embeddedReports", false)
+            .containsEntry("embeddedReplay", false)
+            .containsEntry("requestTraceIdsIgnored", true);
+        assertThat(artifact.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("llmUsed", false)
+            .containsEntry("externalCalls", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("kubeManagerCalls", false);
+        String bodyText = artifact.toString();
+        assertThat(bodyText)
+            .doesNotContain("trc_request_override_must_not_run")
             .doesNotContain("conv-sensitive", "user-sensitive", "org-sensitive", "secret-token-value", "/api/org-sensitive")
             .doesNotContain("reports=", "replay=");
     }

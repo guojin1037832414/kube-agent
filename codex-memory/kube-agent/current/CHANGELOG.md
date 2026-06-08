@@ -6,6 +6,24 @@
 
 ---
 
+## [M5.37-1] - Eval trace set catalog foundation
+
+**Delivery**: Added a versioned golden/red-team trace set catalog foundation for deterministic Agent eval gates.
+**Changes**
+- Added `AgentEvalTraceSetDefinition`, `AgentEvalTraceSetCatalogResponse`, `AgentEvalTraceSetGateArtifact`, and `AgentEvalTraceSetCatalogService`.
+- Added classpath catalog source `observability/eval-trace-sets.json`.
+- Added admin-only `GET /api/agent/observability/eval/trace-sets`.
+- Added admin-only `POST /api/agent/observability/eval/trace-sets/{traceSetId}/gate`.
+- Built in Phase 1 trace set definitions for `phase1-core-golden`, `phase1-redaction-regression`, `phase1-high-risk-prewrite`, and `phase1-red-team-safety`.
+- Trace set entries intentionally start with empty `traceIds`; they fail closed until real persisted redacted replay captures are curated.
+- Request-provided trace ids are ignored for trace-set gates to prevent ad-hoc overrides from masquerading as curated evidence.
+**Verification**
+- `mvn -q "-Dtest=AgentEvalTraceSetCatalogServiceTest,AgentEvalSuiteCatalogServiceTest,AgentEvalReportServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed.
+**Security**
+- Trace set catalog and gate endpoints are protected by observability admin URL rules plus method-level `@PreAuthorize`.
+- Catalog/gate output remains deterministic, redacted-only, non-executing, `llmUsed=false`, `externalCalls=false`, `toolExecution=false`, and `kubeManagerCalls=false`.
+- This slice adds no kube-manager write/create/delete/state-changing behavior and does not reopen NIM/HPC/Slurm/BCM scope.
+
 ## [M5.36-1] - Agent eval CI gate artifact
 
 **Delivery**: Added a compact machine-readable named eval suite gate artifact for CI and release workflow consumers.

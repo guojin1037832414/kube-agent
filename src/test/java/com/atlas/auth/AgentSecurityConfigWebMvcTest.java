@@ -115,6 +115,16 @@ class AgentSecurityConfigWebMvcTest {
                 .content("{\"traceIds\":[\"trc_123\"]}"))
             .andExpect(status().isForbidden());
 
+        mockMvc.perform(get("/api/agent/observability/eval/trace-sets")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
+            .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/api/agent/observability/eval/trace-sets/phase1-core-golden/gate")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer user-token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"traceIds\":[\"trc_123\"]}"))
+            .andExpect(status().isForbidden());
+
         mockMvc.perform(get("/api/agent/observability/audit/index")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token"))
             .andExpect(status().isOk());
@@ -159,6 +169,21 @@ class AgentSecurityConfigWebMvcTest {
             .andExpect(status().isOk());
 
         mockMvc.perform(post("/api/agent/observability/eval/suites/core-safety-smoke/gate")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token")
+                .contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/agent/observability/eval/trace-sets")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token"))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/agent/observability/eval/trace-sets/phase1-core-golden/gate")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"traceIds\":[\"trc_123\"]}"))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/agent/observability/eval/trace-sets/phase1-core-golden/gate")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token")
                 .contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk());
@@ -306,6 +331,16 @@ class AgentSecurityConfigWebMvcTest {
 
         @PostMapping("/api/agent/observability/eval/suites/{id}/gate")
         String observabilityEvalSuiteGate(@PathVariable String id, @RequestBody(required = false) String body) {
+            return id + body;
+        }
+
+        @GetMapping("/api/agent/observability/eval/trace-sets")
+        String observabilityEvalTraceSets() {
+            return "eval-trace-sets";
+        }
+
+        @PostMapping("/api/agent/observability/eval/trace-sets/{id}/gate")
+        String observabilityEvalTraceSetGate(@PathVariable String id, @RequestBody(required = false) String body) {
             return id + body;
         }
 

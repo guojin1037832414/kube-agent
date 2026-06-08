@@ -1,0 +1,142 @@
+[
+  {
+    "id": "phase1-core-golden",
+    "title": "Phase 1 Core Golden Trace Set",
+    "purpose": "Stable golden evidence anchors for ordinary kube-manager read, diagnosis, replay, and safety workflows.",
+    "phase": "Phase 1 top-tier kube-manager Agent Core",
+    "suiteId": "release-gate-strict",
+    "traceIds": [],
+    "evidenceRequirements": [
+      "Populate traceIds only with persisted redacted replay captures.",
+      "Do not add synthetic trace IDs that CI would treat as real evidence.",
+      "No raw principal, organization, conversation, endpoint, reason, or parameter values."
+    ],
+    "tags": ["phase1", "golden", "ci", "release-gate"],
+    "curationPolicy": {
+      "versionedSource": "classpath:observability/eval-trace-sets.json",
+      "requiresRealAuditCapture": true,
+      "placeholderTraceIds": false,
+      "failClosedWhenEmpty": true,
+      "requestTraceIdOverrideAllowed": false
+    },
+    "guarantees": {
+      "redactedOnly": true,
+      "containsRawPrincipal": false,
+      "containsRawOrganization": false,
+      "containsRawConversation": false,
+      "containsRawEndpoints": false,
+      "containsRawReason": false,
+      "containsRawParameterValues": false,
+      "deterministic": true,
+      "llmUsed": false,
+      "externalCalls": false,
+      "toolExecution": false,
+      "kubeManagerCalls": false
+    }
+  },
+  {
+    "id": "phase1-redaction-regression",
+    "title": "Phase 1 Redaction Regression Trace Set",
+    "purpose": "Curated privacy regression anchors proving replay/eval outputs stay redacted-only.",
+    "phase": "Phase 1 top-tier kube-manager Agent Core",
+    "suiteId": "redaction-regression",
+    "traceIds": [],
+    "evidenceRequirements": [
+      "Populate traceIds only with persisted redacted replay captures.",
+      "Include protected-parameter cases in raw audit storage while exposing only redacted replay DTOs.",
+      "No raw principal, organization, conversation, endpoint, reason, or parameter values."
+    ],
+    "tags": ["phase1", "privacy", "security", "redaction"],
+    "curationPolicy": {
+      "versionedSource": "classpath:observability/eval-trace-sets.json",
+      "requiresRealAuditCapture": true,
+      "placeholderTraceIds": false,
+      "failClosedWhenEmpty": true,
+      "requestTraceIdOverrideAllowed": false
+    },
+    "guarantees": {
+      "redactedOnly": true,
+      "containsRawPrincipal": false,
+      "containsRawOrganization": false,
+      "containsRawConversation": false,
+      "containsRawEndpoints": false,
+      "containsRawReason": false,
+      "containsRawParameterValues": false,
+      "deterministic": true,
+      "llmUsed": false,
+      "externalCalls": false,
+      "toolExecution": false,
+      "kubeManagerCalls": false
+    }
+  },
+  {
+    "id": "phase1-high-risk-prewrite",
+    "title": "Phase 1 High Risk Prewrite Trace Set",
+    "purpose": "High-risk PRE_EXECUTION and FINAL evidence anchors for write-like Tool decisions.",
+    "phase": "Phase 1 top-tier kube-manager Agent Core",
+    "suiteId": "high-risk-prewrite",
+    "traceIds": [],
+    "evidenceRequirements": [
+      "Populate traceIds only with persisted redacted replay captures.",
+      "Capture CREATE, UPDATE, DELETE, ACTION, or PLACEHOLDER decisions with durable PRE_EXECUTION evidence before FINAL evidence.",
+      "No raw principal, organization, conversation, endpoint, reason, or parameter values."
+    ],
+    "tags": ["phase1", "high-risk", "durable-audit", "hitl"],
+    "curationPolicy": {
+      "versionedSource": "classpath:observability/eval-trace-sets.json",
+      "requiresRealAuditCapture": true,
+      "placeholderTraceIds": false,
+      "failClosedWhenEmpty": true,
+      "requestTraceIdOverrideAllowed": false
+    },
+    "guarantees": {
+      "redactedOnly": true,
+      "containsRawPrincipal": false,
+      "containsRawOrganization": false,
+      "containsRawConversation": false,
+      "containsRawEndpoints": false,
+      "containsRawReason": false,
+      "containsRawParameterValues": false,
+      "deterministic": true,
+      "llmUsed": false,
+      "externalCalls": false,
+      "toolExecution": false,
+      "kubeManagerCalls": false
+    }
+  },
+  {
+    "id": "phase1-red-team-safety",
+    "title": "Phase 1 Red Team Safety Trace Set",
+    "purpose": "Adversarial safety anchors for prompt-injection, protected parameter, and policy-bypass regression gates.",
+    "phase": "Phase 1 top-tier kube-manager Agent Core",
+    "suiteId": "release-gate-strict",
+    "traceIds": [],
+    "evidenceRequirements": [
+      "Populate traceIds only with persisted redacted replay captures.",
+      "Capture adversarial user intent and policy-bypass attempts as redacted replay evidence.",
+      "No raw principal, organization, conversation, endpoint, reason, or parameter values."
+    ],
+    "tags": ["phase1", "red-team", "safety", "policy"],
+    "curationPolicy": {
+      "versionedSource": "classpath:observability/eval-trace-sets.json",
+      "requiresRealAuditCapture": true,
+      "placeholderTraceIds": false,
+      "failClosedWhenEmpty": true,
+      "requestTraceIdOverrideAllowed": false
+    },
+    "guarantees": {
+      "redactedOnly": true,
+      "containsRawPrincipal": false,
+      "containsRawOrganization": false,
+      "containsRawConversation": false,
+      "containsRawEndpoints": false,
+      "containsRawReason": false,
+      "containsRawParameterValues": false,
+      "deterministic": true,
+      "llmUsed": false,
+      "externalCalls": false,
+      "toolExecution": false,
+      "kubeManagerCalls": false
+    }
+  }
+]
