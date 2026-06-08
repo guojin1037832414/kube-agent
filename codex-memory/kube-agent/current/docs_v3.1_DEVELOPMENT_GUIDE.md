@@ -634,3 +634,16 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Validation gate schema validation requires exact equality for all three receipt-schema-owned lists.
 - Extra future failure, type, or success-claim values are rejected even when `schemaDigest` is recomputed.
 - Learning distinction: a digest proves object integrity, not semantic approval. Release-proof vocabularies still need source-owned exact validation before downstream gates can trust them.
+
+### M5.21-124 validation gate failure/shortcut lists closed note
+
+- Durable audit receipt validation gate generation now exposes source-owned closed lists for validation failure statuses and forbidden shortcuts.
+- Validation result migration requires exact equality for both validation-gate-owned lists.
+- Extra future failure or shortcut values are rejected even when `validationPlanDigest` is recomputed.
+- Learning distinction: forbidden shortcuts are negative release protocol, not explanatory prose. They must evolve through reviewed source code, tests, and documentation.
+
+### Architecture and technical learning map note
+
+- Maintain `docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md` as the long-lived architecture and technical-learning map.
+- Each meaningful wave should add not only what changed, but why the technique matters for building a top-tier Agent.
+- Learning distinction: this repository is both production software and a teaching system. Architecture, tests, docs, and recovery memory should help a future reader reconstruct the reasoning path.

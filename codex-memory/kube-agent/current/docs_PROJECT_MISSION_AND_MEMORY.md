@@ -91,10 +91,30 @@ Current track:
 
 Recently completed:
 
-`M5.21-123 NIM receipt schema failure/test-double lists closed`
+`M5.21-124 NIM validation gate failure/shortcut lists closed`
 
 Latest checkpoint:
 
+- Date: 2026-06-08 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- Teaching principle:
+  - This project is not only delivering software. It is also a teaching system for mastering Agent engineering.
+  - Maintain `docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md` as the long-lived architecture and technical-learning map.
+- M5.21-124 implemented:
+  - Hardened `NimCreateDurableAuditReceiptValidationGateSupport` so `validationPlan.failureContract.failureStatuses` and `validationPlan.forbiddenShortcuts` are source-owned helper lists.
+  - Hardened `NimCreateDurableAuditValidationResultMigrationSupport` so migration planning rejects digest-consistent validation gate reports with extra failure status or forbidden-shortcut values.
+  - Added regressions that append fake future values, recompute `validationPlanDigest`, and still expect `DURABLE_AUDIT_RECEIPT_VALIDATION_GATE_REPORT_INVALID_FOR_MIGRATION_PLAN`.
+  - Added `docs/M5_21_ONE_HUNDRED_TWENTY_FOURTH_WAVE_NIM_VALIDATION_GATE_FAILURE_SHORTCUT_LISTS_CLOSED_AUDIT_20260608.md`.
+  - Added `docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md` and linked it from `docs/INDEX.md`.
+  - Targeted verification passed:
+    - `git diff --check`
+    - `mvn -q "-Dtest=NimCreateDurableAuditReceiptValidationGateSupportTest,NimCreateDurableAuditValidationResultMigrationSupportTest" test`
+  - Final verification passed:
+    - `mvn -q test`
+    - Full Maven note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - Security invariant: no real `8100`, no real NIM service HTTP call, no Authorization header sending, no durable audit write, no deployment POST, no runtime write behavior, no state-machine release binding implementation, no durable executor release binding implementation, no validation result signer, no release decision signer, no code release switch implementation, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Recommended next slice: close validation result migration's own failure/shortcut lists before downstream release decision gate consumes them, or consider exact `digestChainRules.rules` validation if rule rows become release criteria.
+- Previous checkpoint:
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
 - M5.21-123 implemented:
