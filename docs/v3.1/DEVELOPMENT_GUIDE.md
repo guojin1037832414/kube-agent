@@ -509,3 +509,11 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Durable executor validation can recompute the same key from handoff source evidence plus request spec digest, without trusting caller-provided key material.
 - Forged keys that are syntactically valid and digest-consistent still fail if they are not the server-derived value.
 - Learning distinction: idempotency is both a retry-safety mechanism and an authority boundary. A top-tier Agent verifies who derived the key and what evidence it binds, not just whether it has the expected prefix.
+
+### M5.21-107 handoff source evidence binding note
+
+- `NimCreateDurableWriteExecutorSupport` now treats handoff source evidence and request spec adapter evidence as one bound proof chain.
+- A handoff report must match the trusted request spec report on audit receipt id, audit event digest, request id, conversation id, user id, and organization id.
+- This closes a forged-report class where the handoff can remain internally digest-consistent, update nested pre-write audit evidence, and recompute the server-derived idempotency key while drifting away from the request spec adapter source evidence.
+- The new regression recomputes both `handoffDigest` and the idempotency key from the forged handoff evidence; durable executor validation still rejects the report because cross-report source evidence no longer matches.
+- Learning distinction: self-consistency is not enough for a durable Agent proof. Each downstream boundary must verify that the evidence still belongs to the same upstream request/audit chain.

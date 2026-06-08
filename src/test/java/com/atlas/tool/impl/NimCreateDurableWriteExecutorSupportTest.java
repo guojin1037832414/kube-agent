@@ -621,6 +621,46 @@ class NimCreateDurableWriteExecutorSupportTest {
         assertHasBlocker(blockers, "WRITE_EXECUTION_HANDOFF_REPORT_NOT_TRUSTED_FOR_DURABLE_EXECUTOR");
     }
 
+    @Test
+    void executorShell_shouldRejectDigestConsistentHandoffAuditReceiptDriftFromRequestSpecEvidence() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> receipt = durableAuditReceipt(audit);
+        Map<String, Object> bodyReport = writeBodyReport(audit, receipt);
+        Map<String, Object> requestSpecReport = writeRequestSpecReport(audit, receipt, bodyReport);
+        Map<String, Object> trustedHandoffReport = writeExecutionHandoffReport(
+            audit,
+            receipt,
+            bodyReport,
+            requestSpecReport
+        );
+        Map<String, Object> handoffReport = withDriftedHandoffAuditReceiptEvidence(
+            trustedHandoffReport,
+            requestSpecReport,
+            "nim-audit-durable-other",
+            "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210"
+        );
+        Map<String, Object> codeSwitchReport = codeReleaseSwitchContractReport(audit);
+        Map<String, Object> sourceGuardReport = codeReleaseSwitchRuntimeSourceGuardReport(audit);
+
+        Map<String, Object> report = NimCreateDurableWriteExecutorSupport.prepare(
+            new NimCreateDurableWriteExecutorSupport.WriteExecutionInput(
+                handoffReport,
+                requestSpecReport,
+                codeSwitchReport,
+                sourceGuardReport
+            )
+        );
+
+        assertEquals(NimCreateDurableWriteExecutorSupport.REJECTED_STATE, report.get("executionState"));
+        assertEquals(false, report.get("inputAccepted"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> attemptSpec = (Map<String, Object>) report.get("executionAttemptSpec");
+        assertTrue(attemptSpec.isEmpty());
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+        assertHasBlocker(blockers, "WRITE_EXECUTION_HANDOFF_REPORT_NOT_TRUSTED_FOR_DURABLE_EXECUTOR");
+    }
+
     private Map<String, Object> writeExecutionHandoffReport(Map<String, Object> audit,
                                                             Map<String, Object> receipt,
                                                             Map<String, Object> bodyReport,
@@ -750,6 +790,37 @@ class NimCreateDurableWriteExecutorSupportTest {
         return forgedReport;
     }
 
+    private Map<String, Object> withDriftedHandoffAuditReceiptEvidence(Map<String, Object> handoffReport,
+                                                                       Map<String, Object> requestSpecReport,
+                                                                       String receiptId,
+                                                                       String eventDigest) {
+        Map<String, Object> forgedReport = new LinkedHashMap<>(handoffReport);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> handoffPlan = new LinkedHashMap<>(
+            (Map<String, Object>) forgedReport.get("executionHandoffPlan")
+        );
+        @SuppressWarnings("unchecked")
+        Map<String, Object> preWriteAuditHandoff = new LinkedHashMap<>(
+            (Map<String, Object>) handoffPlan.get("preWriteAuditHandoff")
+        );
+        preWriteAuditHandoff.put("receiptId", receiptId);
+        preWriteAuditHandoff.put("eventDigest", eventDigest);
+        forgedReport.put("sourceAuditReceiptId", receiptId);
+        forgedReport.put("sourceAuditEventDigest", eventDigest);
+        String forgedKey = serverDerivedIdempotencyKeyFromHandoffEvidence(forgedReport, requestSpecReport);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> idempotency = new LinkedHashMap<>(
+            (Map<String, Object>) handoffPlan.get("idempotency")
+        );
+        idempotency.put("key", forgedKey);
+        handoffPlan.put("idempotency", idempotency);
+        handoffPlan.put("preWriteAuditHandoff", preWriteAuditHandoff);
+        forgedReport.put("idempotencyKey", forgedKey);
+        forgedReport.put("executionHandoffPlan", handoffPlan);
+        forgedReport.put("handoffDigest", sha256(handoffPlan));
+        return forgedReport;
+    }
+
     private Map<String, Object> withExtraHandoffPlanField(Map<String, Object> handoffReport,
                                                           String key,
                                                           Object value) {
@@ -771,6 +842,20 @@ class NimCreateDurableWriteExecutorSupportTest {
         } catch (NoSuchAlgorithmException ex) {
             throw new IllegalStateException(ex);
         }
+    }
+
+    private String serverDerivedIdempotencyKeyFromHandoffEvidence(Map<String, Object> handoffReport,
+                                                                  Map<String, Object> requestSpecReport) {
+        String seed = String.join("\n", List.of(
+            text(handoffReport.get("sourceRequestId")),
+            text(handoffReport.get("sourceConversationId")),
+            text(handoffReport.get("sourceUserId")),
+            text(handoffReport.get("organizationId")),
+            text(handoffReport.get("sourceAuditReceiptId")),
+            text(handoffReport.get("sourceAuditEventDigest")),
+            text(requestSpecReport.get("requestSpecDigest"))
+        ));
+        return "nim-create-" + sha256(Map.of("seed", seed)).substring(0, 32);
     }
 
     private String canonical(Object value) {

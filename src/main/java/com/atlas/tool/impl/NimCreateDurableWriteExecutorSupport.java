@@ -307,6 +307,7 @@ final class NimCreateDurableWriteExecutorSupport {
             && NimCreateAuditReadinessSupport.BACKEND_ENDPOINT.equals(text(handoffReport.get("backendEndpoint")))
             && PATH_TEMPLATE.equals(text(handoffReport.get("pathTemplate")))
             && text(requestSpecReport.get("organizationId")).equals(text(handoffReport.get("organizationId")))
+            && handoffSourceEvidenceMatchesRequestSpecReport(handoffReport, requestSpecReport)
             && EXECUTOR_NAME.equals(text(handoffReport.get("futureExecutor")))
             && Boolean.FALSE.equals(handoffReport.get("releaseCredential"))
             && Boolean.FALSE.equals(handoffReport.get("realHttpExecutionAllowed"))
@@ -338,6 +339,16 @@ final class NimCreateDurableWriteExecutorSupport {
                 "write-execution-handoff"
             ));
         }
+    }
+
+    private static boolean handoffSourceEvidenceMatchesRequestSpecReport(Map<String, Object> handoffReport,
+                                                                         Map<String, Object> requestSpecReport) {
+        return text(requestSpecReport.get("sourceAuditReceiptId")).equals(text(handoffReport.get("sourceAuditReceiptId")))
+            && text(requestSpecReport.get("sourceAuditEventDigest")).equals(text(handoffReport.get("sourceAuditEventDigest")))
+            && text(requestSpecReport.get("sourceRequestId")).equals(text(handoffReport.get("sourceRequestId")))
+            && text(requestSpecReport.get("sourceConversationId")).equals(text(handoffReport.get("sourceConversationId")))
+            && text(requestSpecReport.get("sourceUserId")).equals(text(handoffReport.get("sourceUserId")))
+            && text(requestSpecReport.get("organizationId")).equals(text(handoffReport.get("organizationId")));
     }
 
     private static boolean handoffPlanContractValid(Map<String, Object> handoffReport,

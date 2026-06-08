@@ -6,6 +6,17 @@
 
 ---
 
+## [M5.21-107] - NIM durable handoff source evidence binding contract
+
+**Delivery**: Hardened durable executor handoff validation so handoff source evidence must match the request spec adapter evidence, not merely be internally digest-consistent.
+**Changes**
+- `NimCreateDurableWriteExecutorSupport` now cross-checks handoff `sourceAuditReceiptId`, `sourceAuditEventDigest`, `sourceRequestId`, `sourceConversationId`, `sourceUserId`, and `organizationId` against the trusted request spec report.
+- Added a digest-consistent forged handoff regression that drifts audit receipt evidence, updates `preWriteAuditHandoff`, recomputes the server-derived idempotency key, and recomputes `handoffDigest`; durable executor still rejects it.
+**Security**
+- This is proof-chain hardening only; it does not open runtime writes.
+- No real `8100`, real NIM service HTTP call, Authorization header sending, durable audit write, deployment POST, state-machine release binding, durable executor release binding, validation result signer, release decision signer, code release switch implementation, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-106] - NIM durable idempotency derivation binding contract
 
 **Delivery**: Bound downstream durable executor and state-machine validation to the same server-derived idempotency key formula used by the handoff generator.

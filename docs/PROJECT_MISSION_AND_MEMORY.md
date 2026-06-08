@@ -82,12 +82,22 @@ Current track:
 
 Recently completed:
 
-`M5.21-106 NIM durable idempotency derivation binding contract`
+`M5.21-107 NIM durable handoff source evidence binding contract`
 
 Latest checkpoint:
 
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-107 implemented:
+  - Hardened `NimCreateDurableWriteExecutorSupport` so durable executor handoff validation cross-checks handoff source evidence against the trusted request spec report.
+  - Handoff `sourceAuditReceiptId`, `sourceAuditEventDigest`, `sourceRequestId`, `sourceConversationId`, `sourceUserId`, and `organizationId` must now match request spec adapter evidence.
+  - Added a digest-consistent forged handoff regression that drifts audit receipt evidence, updates `preWriteAuditHandoff`, recomputes the server-derived idempotency key, and recomputes `handoffDigest`; durable executor still rejects it.
+  - Added `docs/M5_21_ONE_HUNDRED_SEVENTH_WAVE_NIM_DURABLE_HANDOFF_SOURCE_EVIDENCE_BINDING_CONTRACT_AUDIT_20260608.md`.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimCreateDurableWriteExecutorSupportTest" test`
+  - Security invariant: no real `8100`, no real NIM service HTTP call, no Authorization header sending, no durable audit write, no deployment POST, no runtime write behavior, no state-machine release binding implementation, no durable executor release binding implementation, no validation result signer, no release decision signer, no code release switch implementation, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Recommended next slice: continue cross-report evidence binding toward release-decision / validation-result proof design without opening writes.
+- Previous checkpoint:
 - M5.21-106 implemented:
   - Exposed `NimCreateWriteExecutionHandoffSupport.serverDerivedIdempotencyKey(...)` as the shared server-derived idempotency proof helper.
   - Added `serverDerivedIdempotencyKeyFromHandoffEvidence(...)` so the durable executor can recompute the same key from handoff source evidence plus request spec digest.
