@@ -6,6 +6,20 @@
 
 ---
 
+## [M5.21-114] - NIM runtime binding required fields closed list
+
+**Delivery**: Hardened runtime source guard validation of the upstream runtime binding required-evidence field list.
+**Changes**
+- `NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport` now requires `requiredFutureRuntimeEvidenceDigestFields` from the M5.21-73 runtime binding contract to exactly match the source-owned list.
+- Added a digest-consistent forged runtime binding regression that appends `forgedFutureRuntimeEvidenceDigest`, recomputes `runtimeBindingContractDigest`, and still expects source guard rejection.
+**Verification**
+- Targeted source guard regression and full source guard test class passed.
+- Final `git diff --check` and `mvn -q test` passed; full Maven degraded to L1 embedding mode after local `model.onnx` download timeout but exited 0.
+**Security**
+- This is runtime proof-list hardening only; it does not open runtime writes or a real code release switch.
+- No real `8100`, real NIM service HTTP call, Authorization header sending, durable audit write, deployment POST, state-machine release binding implementation, durable executor release binding implementation, validation result signer, release decision signer, code release switch implementation, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-113] - NIM runtime source guard closed top-level lists
 
 **Delivery**: Hardened top-level runtime source guard report lists so downstream consumers reject digest-valid reports that extend mirror taxonomy fields.

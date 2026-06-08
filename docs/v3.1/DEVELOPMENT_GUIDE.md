@@ -563,3 +563,9 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - State-machine and durable-executor validators reject extra top-level `forbiddenReleaseSources` values even when the nested contract and digest remain valid.
 - Closed top-level lists now cover current release sources, planning sources, forbidden release sources, and dangerous release credential field names.
 - Learning distinction: top-level mirrors can become future authority if code reads them. Treat them as closed proof fields, not as extensible explanatory metadata.
+
+### M5.21-114 runtime binding required fields closed list note
+
+- Runtime source guard validation now requires M5.21-73 `requiredFutureRuntimeEvidenceDigestFields` to exactly match the source-owned runtime evidence list.
+- Extra future evidence field names are rejected even when `runtimeBindingContractDigest` is recomputed.
+- Learning distinction: future release proof slots are part of the safety protocol. They cannot be expanded by caller JSON just because a digest was recomputed.

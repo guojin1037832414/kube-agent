@@ -625,7 +625,7 @@ final class NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport {
             && digestFor(principal).equals(text(contract.get("trustedPrincipalDigest")))
             && stateMachineRuntimeBindingValid(report, stateMachineBinding)
             && durableExecutorRuntimeBindingValid(report, durableExecutorBinding)
-            && requiredFields.containsAll(requiredRuntimeEvidenceFields())
+            && requiredFields.equals(requiredRuntimeEvidenceFields())
             && SWITCH_LOCKED.equals(text(template.get("switchState")))
             && Boolean.FALSE.equals(template.get("codeReleaseSwitchContractReportAccepted"))
             && Boolean.FALSE.equals(template.get("codeReleaseSwitchDigestVerified"))

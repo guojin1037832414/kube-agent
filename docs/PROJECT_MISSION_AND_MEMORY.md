@@ -82,12 +82,26 @@ Current track:
 
 Recently completed:
 
-`M5.21-113 NIM runtime source guard closed top-level lists`
+`M5.21-114 NIM runtime binding required fields closed list`
 
 Latest checkpoint:
 
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-114 implemented:
+  - Hardened `NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport` so M5.21-73 `runtimeBindingContract.requiredFutureRuntimeEvidenceDigestFields` must exactly match the source-owned runtime evidence field list.
+  - Added a digest-consistent forged runtime binding regression that appends `forgedFutureRuntimeEvidenceDigest`, recomputes `runtimeBindingContractDigest`, and still expects source guard rejection.
+  - Added `docs/M5_21_ONE_HUNDRED_FOURTEENTH_WAVE_NIM_RUNTIME_BINDING_REQUIRED_FIELDS_CLOSED_LIST_AUDIT_20260608.md`.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupportTest#sourceGuard_shouldRejectDigestConsistentRuntimeBindingExtraFutureEvidenceField" test`
+    - `mvn -q "-Dtest=NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupportTest" test`
+  - Final verification passed:
+    - `git diff --check`
+    - `mvn -q test`
+    - Full Maven note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - Security invariant: no real `8100`, no real NIM service HTTP call, no Authorization header sending, no durable audit write, no deployment POST, no runtime write behavior, no state-machine release binding implementation, no durable executor release binding implementation, no validation result signer, no release decision signer, no code release switch implementation, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Recommended next slice: continue closing required-evidence lists in adjacent release decision and code release switch contracts, or continue release-binding proof design without opening writes.
+- Previous checkpoint:
 - M5.21-113 implemented:
   - Hardened `NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport` with shared `closedSourceGuardReportListsValid(...)` validation.
   - `NimCreateStateMachineSupport` and `NimCreateDurableWriteExecutorSupport` now reject top-level source guard report list supersets, including extra `forbiddenReleaseSources`, even when nested contract and digest remain valid.
