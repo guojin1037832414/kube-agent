@@ -3,6 +3,7 @@ package com.atlas.tool.execution;
 import com.atlas.auth.UserPermissionContext;
 import com.atlas.hitl.HitlConfirmation;
 import com.atlas.hitl.HitlGuard;
+import com.atlas.observability.AgentTraceContext;
 import com.atlas.tool.annotation.AtlasToolMapping;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.tool.core.BaseTool;
@@ -39,6 +40,7 @@ class SafeToolExecutorTest {
     void tearDown() {
         UserPermissionContext.CURRENT_TOKEN.remove();
         UserPermissionContext.CURRENT_ORG_ID.remove();
+        AgentTraceContext.clear();
     }
 
     @Test
@@ -191,6 +193,68 @@ class SafeToolExecutorTest {
             "执行完成后 token ThreadLocal 必须恢复为执行前快照");
         assertEquals(previousOrgId, UserPermissionContext.getCurrentOrgId(),
             "执行完成后 orgId ThreadLocal 必须恢复为执行前快照");
+    }
+
+    @Test
+    void executeIntent_shouldPropagateRequestTraceIdToResultToolResultAndGraphUpdates() {
+        RecordingReadTool readTool = new RecordingReadTool();
+        SafeToolExecutor executor = newExecutor(readTool);
+
+        SafeToolExecutionResult result = executor.executeIntent(new SafeToolExecutionRequest(
+            "test.read",
+            Map.of("keyword", "gpu", "traceId", "forged-business-trace"),
+            "user-A",
+            "token-A",
+            "100002",
+            "conv-trace-A",
+            "trc_fixed_trace_001",
+            null,
+            SafeToolExecutionSource.GRAPH_TOOL_CALL
+        ));
+
+        assertTrue(result.executed(), "READ Tool 应正常执行");
+        assertEquals("trc_fixed_trace_001", result.traceId(), "执行结果顶层应携带同一个 traceId");
+        assertEquals("trc_fixed_trace_001", result.toolResult().get("traceId"), "结构化 Tool 结果应携带 traceId");
+        assertEquals("trc_fixed_trace_001", result.toGraphUpdates().get("traceId"), "Graph updates 应可继续传递 traceId");
+        assertFalse(readTool.lastParams.containsKey("traceId"), "traceId 是控制平面字段，不得作为业务参数透传给 Tool");
+    }
+
+    @Test
+    void executeIntent_shouldGenerateTraceIdWhenMissingAndRestoreOuterTraceScope() {
+        RecordingReadTool readTool = new RecordingReadTool();
+        SafeToolExecutor executor = newExecutor(readTool);
+
+        try (AgentTraceContext.Scope ignored = AgentTraceContext.bind("trc_outer_scope")) {
+            SafeToolExecutionResult result = executor.executeIntent(new SafeToolExecutionRequest(
+                "test.read",
+                Map.of("keyword", "gpu"),
+                "user-A",
+                "token-A",
+                "100002",
+                "conv-trace-B",
+                null,
+                SafeToolExecutionSource.GRAPH_TOOL_CALL
+            ));
+
+            assertTrue(result.executed(), "READ Tool 应正常执行");
+            assertEquals("trc_outer_scope", result.traceId(), "未显式传入 traceId 时应复用当前上下文");
+            assertEquals("trc_outer_scope", result.toolResult().get("traceId"));
+            assertEquals("trc_outer_scope", AgentTraceContext.currentTraceId(), "执行完成后必须恢复外层 trace scope");
+        }
+
+        SafeToolExecutionResult generated = executor.executeIntent(new SafeToolExecutionRequest(
+            "test.read",
+            Map.of("keyword", "node"),
+            "user-A",
+            "token-A",
+            "100002",
+            "conv-trace-C",
+            null,
+            SafeToolExecutionSource.GRAPH_TOOL_CALL
+        ));
+
+        assertTrue(generated.traceId().matches("trc_[0-9a-f]{32}"), "没有请求 traceId 且无外层上下文时应自动生成 traceId");
+        assertNull(AgentTraceContext.currentTraceId(), "执行结束后不应把自动生成的 traceId 泄露到线程池");
     }
 
     @Test

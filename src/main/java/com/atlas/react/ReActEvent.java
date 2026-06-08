@@ -26,7 +26,13 @@ public record ReActEvent(
 
     /** 创建思考事件。 */
     public static ReActEvent thinking(int step, String content) {
-        return new ReActEvent("thinking", step, content, "", true, Map.of());
+        return thinking(step, content, Map.of());
+    }
+
+    /** 创建带扩展元数据的思考事件。 */
+    public static ReActEvent thinking(int step, String content, Map<String, Object> metadata) {
+        return new ReActEvent("thinking", step, content, "", true,
+            metadata != null ? metadata : Map.of());
     }
 
     /** 创建工具开始事件。 */
@@ -71,21 +77,47 @@ public record ReActEvent(
 
     /** 创建 Observation 事件。 */
     public static ReActEvent observation(int step, String tool, String observation, boolean truncated) {
+        return observation(step, tool, observation, truncated, Map.of());
+    }
+
+    /** 创建带扩展元数据的 Observation 事件。 */
+    public static ReActEvent observation(int step,
+                                         String tool,
+                                         String observation,
+                                         boolean truncated,
+                                         Map<String, Object> extraMetadata) {
         String preview = observation == null ? "" : observation;
         if (preview.length() > 500) {
             preview = preview.substring(0, 500) + "...";
         }
+        Map<String, Object> metadata = new java.util.LinkedHashMap<>();
+        metadata.put("truncated", truncated);
+        if (extraMetadata != null && !extraMetadata.isEmpty()) {
+            metadata.putAll(extraMetadata);
+        }
         return new ReActEvent("observation", step, preview, tool, true,
-            Map.of("truncated", truncated));
+            metadata);
     }
 
     /** 创建最终内容事件。 */
     public static ReActEvent content(int step, String content) {
-        return new ReActEvent("content", step, content != null ? content : "", "", true, Map.of());
+        return content(step, content, Map.of());
+    }
+
+    /** 创建带扩展元数据的最终内容事件。 */
+    public static ReActEvent content(int step, String content, Map<String, Object> metadata) {
+        return new ReActEvent("content", step, content != null ? content : "", "", true,
+            metadata != null ? metadata : Map.of());
     }
 
     /** 创建错误事件。 */
     public static ReActEvent error(int step, String content) {
-        return new ReActEvent("error", step, content != null ? content : "", "", false, Map.of());
+        return error(step, content, Map.of());
+    }
+
+    /** 创建带扩展元数据的错误事件。 */
+    public static ReActEvent error(int step, String content, Map<String, Object> metadata) {
+        return new ReActEvent("error", step, content != null ? content : "", "", false,
+            metadata != null ? metadata : Map.of());
     }
 }

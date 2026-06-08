@@ -6,6 +6,23 @@
 
 ---
 
+## [M5.23-1] - Agent trace context kernel
+
+**Delivery**: Added the first end-to-end Agent trace kernel for the top-tier Phase 1 Agent Core.
+**Changes**
+- Added `AgentTraceContext` with ThreadLocal + MDC binding, stable `trc_` trace generation, nested scope restoration, and safe external trace candidate validation.
+- Extended `SafeToolExecutionRequest` / `SafeToolExecutionResult` so traceId travels through SafeToolExecutor, structured Tool results, and Graph state updates.
+- Propagated traceId through `AtlasOrchestrator`, `/chat/graph`, `HITLController` resume, `ReActEngine`, `AtlasGraphConfig`, Graph Bridge callback, and legacy core callback paths.
+- ReAct timeline events now carry traceId metadata on thinking/tool_start/tool_done/observation/content/error while keeping traceId out of business Tool params and ReAct memory.
+- `ProtectedToolParameterFilter` now treats `traceId`, `trace_id`, `traceparent`, and `tracestate` as protected control-plane fields.
+- Added `AgentTraceContextTest` and `M523TracePropagationContractTest`; expanded SafeToolExecutor and ReAct E2E tests for trace propagation and forged-trace rejection.
+**Verification**
+- `mvn -q "-Dtest=AgentTraceContextTest,SafeToolExecutorTest,ReActEngineMultiStepE2ETest,M523TracePropagationContractTest,M513HitlFailClosedContractTest,AtlasOrchestratorJsonTest" test` passed.
+**Security**
+- User-provided `X-Trace-Id` / action `traceId` cannot inject whitespace/control values into MDC or override business Tool execution parameters.
+- HITL confirm/clarify resume preserves the checkpoint traceId and emits a `trace` SSE event before continuing execution.
+- No new real write/create/delete/state-changing kube-manager call was opened.
+
 ## [M5.22-5] - Orchestrator fallback safe execution closure
 
 **Delivery**: Migrated the last legacy `AtlasOrchestrator` fallback Tool execution path into `SafeToolExecutor`.

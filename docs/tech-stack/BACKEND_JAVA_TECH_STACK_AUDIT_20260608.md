@@ -56,12 +56,13 @@ Spring AI 的 Tool Calling、ChatClient、模型抽象非常适合接入大模�
 ## P0 改进清单
 
 1. 继续收口所有真实 Tool 执行入口到 `SafeToolExecutor`。
-   - 已完成：Graph Bridge `AtlasToolCallback`、`ReActEngine`。
-   - 剩余：legacy `com.atlas.tool.core.AtlasToolCallback`、`AtlasOrchestrator` fallback。
+   - 已完成：Graph Bridge `AtlasToolCallback`、`ReActEngine`、legacy `com.atlas.tool.core.AtlasToolCallback`、`AtlasOrchestrator` fallback。
+   - 当前状态：生产代码唯一永久真实 `BaseTool.execute(...)` 边界是 `SafeToolExecutor`。
 
 2. 建立端到端 traceId。
-   - 覆盖 intent、plan、ReAct、tool_start/tool_done、HTTP、HITL、audit、final answer。
-   - 前端工作台必须能回放关键证据，而不是只展示最终文本。
+   - M5.23-1 已完成第一层内核：`AgentTraceContext`、MDC、`SafeToolExecutionRequest/Result`、Orchestrator、`/chat/graph`、HITL resume、ReAct、Graph `tool_call/execute_node`、ToolCallback 入口和 SSE timeline metadata。
+   - 下一步：把同一 traceId 传播到 kube-manager HTTP outlet、审计事件、OpenTelemetry span、前端工作台回放和 eval 报告。
+   - 前端工作台必须能按 trace 回放关键证据，而不是只展示最终文本。
 
 3. 把 Resilience4j 真正接入 kube-manager HTTP 出口。
    - READ 可配置 retry/time limiter/circuit breaker。
@@ -80,19 +81,23 @@ Spring AI 的 Tool Calling、ChatClient、模型抽象非常适合接入大模�
    - 逐步把 `UserPermissionContext` ThreadLocal 兼容层迁移到 `SecurityContext` / `Authentication`。
    - ThreadLocal 可保留为 legacy bridge，但权限事实不能长期散落。
 
-2. Java 21/25 兼容矩阵。
+2. OpenTelemetry / audit 主线化。
+   - 把 `traceId` 映射为 OTel trace/span 结构，逐步补充 GenAI/Tool/HTTP/HITL span 属性。
+   - 审计事件至少绑定 actor、organizationId、conversationId、traceId、tool、operationType、risk、decision、result 摘要。
+
+3. Java 21/25 兼容矩阵。
    - CI 增加 Java 21/25 job。
    - 验证 ONNX Runtime、DJL tokenizer、Spring AI Alibaba Graph、Knife4j、Testcontainers、OTel、Resilience4j。
 
-3. Spring Boot 4 / Spring AI 2 试验分支。
+4. Spring Boot 4 / Spring AI 2 试验分支。
    - 验证 Spring Framework 7、Servlet 6.1、Tomcat 11、Spring AI 2 Tool API 对现有代码的影响。
    - 通过矩阵后再讨论主线迁移。
 
-4. HTTP 客户端工程化。
+5. HTTP 客户端工程化。
    - 从散落的简单 HTTP 调用收敛到统一 outlet。
    - 配置连接池、超时、重试、熔断、指标、trace propagation、错误分类。
 
-5. Agent eval 套件。
+6. Agent eval 套件。
    - 覆盖意图识别、Tool 选择、参数抽取、多步 ReAct、中文口语、模糊资源名、安全红队和 must-block。
 
 ## P2 改进清单
@@ -122,4 +127,3 @@ Spring AI 的 Tool Calling、ChatClient、模型抽象非常适合接入大模�
 ## 审计判断
 
 后端 Java 主语言不是短板，短板在于统一安全执行、trace/audit/eval、HTTP outlet 和质量门禁还没有完全主线化。M5.22 的正确优先级不是重写语言栈，而是把所有执行入口、观测链路和发布门禁收敛成一个可证明的 Agent Core。
-

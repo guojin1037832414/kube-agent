@@ -2,6 +2,7 @@ package com.atlas.tool.core;
 
 import com.atlas.auth.UserPermissionContext;
 import com.atlas.hitl.HitlGuard;
+import com.atlas.observability.AgentTraceContext;
 import com.atlas.tool.execution.SafeToolExecutionRequest;
 import com.atlas.tool.execution.SafeToolExecutionResult;
 import com.atlas.tool.execution.SafeToolExecutionSource;
@@ -108,6 +109,7 @@ public class AtlasToolCallback implements ToolCallback {
                 UserPermissionContext.CURRENT_TOKEN.get(),
                 UserPermissionContext.getCurrentOrgId(),
                 "",
+                AgentTraceContext.currentOrNew(""),
                 null,
                 SafeToolExecutionSource.TOOL_CALLBACK
             ));

@@ -6,6 +6,7 @@ import com.atlas.http.KubeManagerHttpClient;
 import com.atlas.intent.IntentRouter;
 import com.atlas.intent.core.IntentResult;
 import com.atlas.hitl.HitlGuard;
+import com.atlas.observability.AgentTraceContext;
 import com.atlas.store.SessionStore;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.tool.core.BaseTool;
@@ -217,12 +218,14 @@ public class AtlasOrchestrator {
         final var finalSessionId = sessionId;
         final var finalToken = capturedToken;
         final var finalOrgId = capturedOrgId;  // ← P3.1 新增
+        final var finalTraceId = AgentTraceContext.currentOrNew(httpReq.getHeader("X-Trace-Id"));
 
         Runnable asyncTask = () -> {
-            try {
+            try (AgentTraceContext.Scope ignored = AgentTraceContext.bind(finalTraceId)) {
+                emit(emitter, "trace", Map.of("traceId", finalTraceId));
                 // Phase 1: Supervisor Graph 优先路由（AtlasBrain 决策 + 条件边）
                 if (supervisorGraph != null) {
-                    runSupervisorGraph(request, emitter, finalUserId, finalSessionId, finalToken, finalOrgId);
+                    runSupervisorGraph(request, emitter, finalUserId, finalSessionId, finalToken, finalOrgId, finalTraceId);
                     return;
                 }
 
@@ -279,6 +282,7 @@ public class AtlasOrchestrator {
                                 finalToken,
                                 orgId,
                                 finalSessionId,
+                                finalTraceId,
                                 null,
                                 SafeToolExecutionSource.ORCHESTRATOR_FALLBACK
                             );
@@ -295,6 +299,7 @@ public class AtlasOrchestrator {
                                 ? executionResult.toolResult() : Map.of(
                                     "success", executionResult.success(),
                                     "message", executionResult.answer() != null ? executionResult.answer() : "",
+                                    "traceId", executionResult.traceId(),
                                     "data", Map.of()
                                 );
                             boolean success = Boolean.TRUE.equals(toolResult.get("success"));
@@ -407,6 +412,7 @@ public class AtlasOrchestrator {
         String sessionId = userId + "-graph-" + System.currentTimeMillis();
         String capturedToken = userPermissionContext.getCurrentToken();
         String capturedOrgId = UserPermissionContext.getCurrentOrgId();
+        String traceId = AgentTraceContext.currentOrNew("");
 
         // 连接限流
         if (userConnections.getOrDefault(userId, 0) >= MAX_PER_USER) {
@@ -424,7 +430,8 @@ public class AtlasOrchestrator {
 
         // 异步执行 Graph stream
         Runnable graphTask = () -> {
-            try {
+            try (AgentTraceContext.Scope ignored = AgentTraceContext.bind(traceId)) {
+                emit(emitter, "trace", Map.of("traceId", traceId));
                 Set<String> emittedStructuredClarifications = ConcurrentHashMap.newKeySet();
                 Map<String, Object> inputs = new java.util.HashMap<>();
                 inputs.put("input", Optional.ofNullable(request.userQuery()).orElse(""));
@@ -433,6 +440,7 @@ public class AtlasOrchestrator {
                 inputs.put("token", Optional.ofNullable(capturedToken).orElse(""));
                 inputs.put("orgId", Optional.ofNullable(capturedOrgId).orElse(""));
                 inputs.put("organizationId", Optional.ofNullable(capturedOrgId).orElse(""));
+                inputs.put("traceId", traceId);
                 // M5.13 fail-closed：新会话不是人工确认恢复，必须显式清空确认 marker，防止 checkpoint/同线程状态继承。
                 inputs.put("hitl_confirmation", null);
 
@@ -543,7 +551,7 @@ public class AtlasOrchestrator {
      * 保持与 /chat/graph 相同的 SSE 事件约定。
      */
     private void runSupervisorGraph(ChatRequest request, SseEmitter emitter,
-                                     String userId, String sessionId, String token, String orgId) {
+                                    String userId, String sessionId, String token, String orgId, String traceId) {
         try {
             // ReAct 事件流会在执行过程中主动发送 content；这里记录是否已发送最终内容，
             // 防止 react_node 完成后再从 state 里重复推送同一份最终答案。
@@ -569,6 +577,7 @@ public class AtlasOrchestrator {
             inputs.put("token", Optional.ofNullable(token).orElse(""));
             inputs.put("orgId", Optional.ofNullable(orgId).orElse("")); // ← P3.1: 显式传入 orgId
             inputs.put("organizationId", Optional.ofNullable(orgId).orElse(""));
+            inputs.put("traceId", AgentTraceContext.currentOrNew(traceId));
             // M5.13 fail-closed：普通新请求永远不携带服务端确认 marker；只有 HITLController.confirmAndResume 可注入。
             inputs.put("hitl_confirmation", null);
             // M3.2 修复：Graph State 只能保存可序列化纯数据，真实事件回调放入运行期 registry。

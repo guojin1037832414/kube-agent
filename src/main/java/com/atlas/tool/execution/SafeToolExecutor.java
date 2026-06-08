@@ -2,6 +2,7 @@ package com.atlas.tool.execution;
 
 import com.atlas.auth.UserPermissionContext;
 import com.atlas.hitl.HitlGuard;
+import com.atlas.observability.AgentTraceContext;
 import com.atlas.tool.core.BaseTool;
 import com.atlas.tool.core.ProtectedToolParameterFilter;
 import com.atlas.tool.core.ToolParameterNormalizer;
@@ -60,18 +61,27 @@ public class SafeToolExecutor {
      * @return 安全执行结果
      */
     public SafeToolExecutionResult executeIntent(SafeToolExecutionRequest request) {
+        String traceId = request != null
+            ? AgentTraceContext.currentOrNew(request.traceId())
+            : AgentTraceContext.currentOrNew("");
+        try (AgentTraceContext.Scope ignored = AgentTraceContext.bind(traceId)) {
+            return executeIntentWithTrace(request, traceId);
+        }
+    }
+
+    private SafeToolExecutionResult executeIntentWithTrace(SafeToolExecutionRequest request, String traceId) {
         if (request == null) {
-            return SafeToolExecutionResult.notExecuted("[无执行请求] SafeToolExecutor 未收到有效请求");
+            return SafeToolExecutionResult.notExecuted("[无执行请求] SafeToolExecutor 未收到有效请求", traceId);
         }
         String intentId = request.intentId();
         if (intentId == null || intentId.isBlank()) {
-            return SafeToolExecutionResult.notExecuted("[无目标意图] 未指定要执行的 Tool 意图");
+            return SafeToolExecutionResult.notExecuted("[无目标意图] 未指定要执行的 Tool 意图", traceId);
         }
 
         String orgId = resolveTrustedOrgId(request.orgId());
         if (orgId == null || orgId.isBlank()) {
             return SafeToolExecutionResult.notExecuted(
-                "❌ 安全上下文缺失：无法确定当前用户所属组织，请重新登录后再试。");
+                "❌ 安全上下文缺失：无法确定当前用户所属组织，请重新登录后再试。", traceId);
         }
 
         String previousToken = UserPermissionContext.CURRENT_TOKEN.get();
@@ -81,18 +91,18 @@ public class SafeToolExecutor {
             Optional<BaseTool> toolOpt = toolRegistry.findByIntentId(intentId);
             if (toolOpt.isEmpty()) {
                 return SafeToolExecutionResult.notExecuted(
-                    "⚠️ 意图 '" + intentId + "' 已识别，暂无对应 Tool 实现。");
+                    "⚠️ 意图 '" + intentId + "' 已识别，暂无对应 Tool 实现。", traceId);
             }
 
             if (!toolRegistry.canExecuteIntent(intentId)) {
                 return SafeToolExecutionResult.notExecuted(
-                    "❌ 权限不足：无权执行 '" + intentId + "'");
+                    "❌ 权限不足：无权执行 '" + intentId + "'", traceId);
             }
 
             HitlGuard.Decision hitlDecision = hitlGuard.verifyByIntentId(
                 toolRegistry, intentId, request.confirmation());
             if (!hitlDecision.allowed()) {
-                return SafeToolExecutionResult.notExecuted(hitlDecision.message());
+                return SafeToolExecutionResult.notExecuted(hitlDecision.message(), traceId);
             }
 
             BaseTool tool = toolOpt.get();
@@ -100,7 +110,7 @@ public class SafeToolExecutor {
             try {
                 toolParams = buildTrustedToolParams(request, orgId, tool);
             } catch (IllegalStateException ex) {
-                return SafeToolExecutionResult.notExecuted("❌ " + ex.getMessage());
+                return SafeToolExecutionResult.notExecuted("❌ " + ex.getMessage(), traceId);
             }
             try {
                 Map<String, Object> rawResult = tool.execute(toolParams);
@@ -110,11 +120,11 @@ public class SafeToolExecutor {
                 if ("TOOL_EXECUTION_ERROR".equals(String.valueOf(errorCode))) {
                     String message = rawResult.get("message") != null
                         ? rawResult.get("message").toString() : "Tool 执行异常";
-                    return SafeToolExecutionResult.notExecuted("❌ Tool 执行异常: " + message);
+                    return SafeToolExecutionResult.notExecuted("❌ Tool 执行异常: " + message, traceId);
                 }
-                return toExecutionResult(intentId, rawResult);
+                return toExecutionResult(intentId, rawResult, traceId);
             } catch (Exception ex) {
-                return SafeToolExecutionResult.notExecuted("❌ Tool 执行异常: " + ex.getMessage());
+                return SafeToolExecutionResult.notExecuted("❌ Tool 执行异常: " + ex.getMessage(), traceId);
             }
         } finally {
             restoreThreadLocalContext(previousToken, previousOrgId);
@@ -236,7 +246,7 @@ public class SafeToolExecutor {
         }
     }
 
-    private SafeToolExecutionResult toExecutionResult(String intentId, Map<String, Object> toolResult) {
+    private SafeToolExecutionResult toExecutionResult(String intentId, Map<String, Object> toolResult, String traceId) {
         Map<String, Object> result = toolResult != null ? toolResult : Map.of();
         boolean success = Boolean.TRUE.equals(result.get("success"));
         String message = result.get("message") != null ? result.get("message").toString() : "";
@@ -251,6 +261,7 @@ public class SafeToolExecutor {
         structured.put("success", success);
         structured.put("message", message);
         structured.put("tool", intentId);
+        structured.put("traceId", traceId);
         structured.put("data", data != null ? data : Map.of());
         if (result.get("errorCode") != null) {
             structured.put("errorCode", result.get("errorCode"));
@@ -262,6 +273,6 @@ public class SafeToolExecutor {
             // 给 Graph / SSE / 前端一个稳定布尔位：这是可被继续澄清的问题，而不是普通异常。
             structured.put("requiresClarification", true);
         }
-        return SafeToolExecutionResult.executed(success, summary, structured);
+        return SafeToolExecutionResult.executed(success, summary, structured, traceId);
     }
 }

@@ -505,6 +505,7 @@ public class AtlasGraphConfig {
                         state.value("token").map(Object::toString).orElse(""),
                         state.value("orgId").map(Object::toString).orElse(""),
                         state.value("conversation_id").map(Object::toString).orElse(""),
+                        state.value("traceId").map(Object::toString).orElse(""),
                         null,
                         SafeToolExecutionSource.PLAN_EXECUTE_NODE
                     );
@@ -742,6 +743,7 @@ public class AtlasGraphConfig {
                 state.value("token").map(Object::toString).orElse(""),
                 orgId,
                 state.value("conversation_id").map(Object::toString).orElse(""),
+                state.value("traceId").map(Object::toString).orElse(""),
                 confirmation,
                 SafeToolExecutionSource.GRAPH_TOOL_CALL
             );

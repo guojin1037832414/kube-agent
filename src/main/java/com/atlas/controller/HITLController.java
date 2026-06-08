@@ -8,6 +8,7 @@ import com.atlas.brain.BrainDecision;
 import com.atlas.auth.UserPermissionContext;
 import com.atlas.auth.async.AsyncContextHolder;
 import com.atlas.hitl.HitlConfirmation;
+import com.atlas.observability.AgentTraceContext;
 import com.atlas.orchestrator.AtlasOrchestrator;
 import com.atlas.orchestrator.StreamingEmitter;
 import com.atlas.orchestrator.SseEvent;
@@ -169,7 +170,11 @@ public class HITLController {
             return;
         }
         CompletableFuture.runAsync(
-            AsyncContextHolder.wrap(() -> resumeGraph(threadId, decision, confirmation, emitter), context.token(), context.orgId()),
+            AsyncContextHolder.wrap(() -> {
+                try (AgentTraceContext.Scope ignored = AgentTraceContext.bind(context.traceId())) {
+                    resumeGraph(threadId, decision, confirmation, emitter, context.traceId());
+                }
+            }, context.token(), context.orgId()),
             asyncExecutor
         );
     }
@@ -186,12 +191,17 @@ public class HITLController {
                     .or(() -> oldState.value("organizationId"))
                     .map(Object::toString)
                     .orElse("");
-                return new CheckpointContext(token, orgId);
+                String traceId = oldState.value("traceId")
+                    .map(Object::toString)
+                    .map(value -> AgentTraceContext.safeCandidateOrBlank(value))
+                    .filter(value -> !value.isBlank())
+                    .orElseGet(() -> AgentTraceContext.currentOrNew(""));
+                return new CheckpointContext(token, orgId, traceId);
             }
         } catch (Exception e) {
             log.warn("[HITL] checkpoint 安全上下文读取失败: {}", e.getMessage());
         }
-        return new CheckpointContext("", "");
+        return new CheckpointContext("", "", AgentTraceContext.currentOrNew(""));
     }
 
     /**
@@ -202,20 +212,23 @@ public class HITLController {
     private void resumeGraph(String threadId,
                              BrainDecision newDecision,
                              HitlConfirmation confirmation,
-                             SseEmitter emitter) {
+                             SseEmitter emitter,
+                             String traceId) {
         try {
             RunnableConfig config = RunnableConfig.builder().threadId(threadId).build();
 
             // 1. 构建输入：新决策 + 澄清输入
             Map<String, Object> inputs = new HashMap<>();
-        inputs.put("brain_decision", newDecision);
-        if (confirmation != null) {
-            inputs.put("hitl_confirmation", confirmation);
-        } else {
-            // M5.13 fail-closed 修复：clarify/resume 不是人工确认，必须显式清空旧确认 marker，
-            // 防止同一 thread/checkpoint 中历史确认被后续恢复流程继承并绕过新的 HITL。
-            inputs.put("hitl_confirmation", null);
-        }
+            inputs.put("brain_decision", newDecision);
+            inputs.put("traceId", AgentTraceContext.currentOrNew(traceId));
+            emitSse(emitter, "trace", Map.of("traceId", inputs.get("traceId")));
+            if (confirmation != null) {
+                inputs.put("hitl_confirmation", confirmation);
+            } else {
+                // M5.13 fail-closed 修复：clarify/resume 不是人工确认，必须显式清空旧确认 marker，
+                // 防止同一 thread/checkpoint 中历史确认被后续恢复流程继承并绕过新的 HITL。
+                inputs.put("hitl_confirmation", null);
+            }
             inputs.put("input", String.valueOf(
                 newDecision.parameters().getOrDefault("clarified_input", "")
             ));
@@ -233,6 +246,8 @@ public class HITLController {
                     });
                     oldState.value("organizationId").ifPresent(v -> inputs.putIfAbsent("organizationId", v));
                     oldState.value("conversation_id").ifPresent(v -> inputs.put("conversation_id", v));
+                    oldState.value("traceId").ifPresent(v ->
+                        inputs.put("traceId", AgentTraceContext.currentOrNew(String.valueOf(v))));
                     oldState.value("messages").ifPresent(v -> inputs.put("messages", v));
                     log.debug("[HITL] 从 checkpoint 恢复上下文: threadId={}", threadId);
                 }
@@ -408,7 +423,7 @@ public class HITLController {
         return sb.toString();
     }
 
-    private record CheckpointContext(String token, String orgId) {
+    private record CheckpointContext(String token, String orgId, String traceId) {
     }
 
     // ── 请求 DTO ────────────────────────────────────

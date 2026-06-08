@@ -20,7 +20,8 @@ public record SafeToolExecutionResult(
     Map<String, Object> toolResult,
     String errorCode,
     Object suggestions,
-    boolean requiresClarification
+    boolean requiresClarification,
+    String traceId
 ) {
 
     /**
@@ -30,7 +31,11 @@ public record SafeToolExecutionResult(
      * @return 执行结果
      */
     public static SafeToolExecutionResult notExecuted(String answer) {
-        return new SafeToolExecutionResult(false, false, answer, null, null, null, false);
+        return notExecuted(answer, "");
+    }
+
+    public static SafeToolExecutionResult notExecuted(String answer, String traceId) {
+        return new SafeToolExecutionResult(false, false, answer, null, null, null, false, traceId);
     }
 
     /**
@@ -44,13 +49,20 @@ public record SafeToolExecutionResult(
     public static SafeToolExecutionResult executed(boolean success,
                                                    String answer,
                                                    Map<String, Object> toolResult) {
+        return executed(success, answer, toolResult, "");
+    }
+
+    public static SafeToolExecutionResult executed(boolean success,
+                                                   String answer,
+                                                   Map<String, Object> toolResult,
+                                                   String traceId) {
         String errorCode = toolResult != null && toolResult.get("errorCode") != null
             ? toolResult.get("errorCode").toString() : null;
         Object suggestions = toolResult != null ? toolResult.get("suggestions") : null;
         // Tool 已执行但返回结构化失败建议时，上层应把它当成“需要澄清/补参”的强信号，
         // 而不是普通文本失败。比如 GPU 创建缺少 gpuSpec 时，前端可以直接渲染澄清选项。
         boolean requiresClarification = !success && (errorCode != null || suggestions != null);
-        return new SafeToolExecutionResult(true, success, answer, toolResult, errorCode, suggestions, requiresClarification);
+        return new SafeToolExecutionResult(true, success, answer, toolResult, errorCode, suggestions, requiresClarification, traceId);
     }
 
     /**
@@ -72,6 +84,9 @@ public record SafeToolExecutionResult(
         }
         if (requiresClarification) {
             updates.put("requires_clarification", true);
+        }
+        if (traceId != null && !traceId.isBlank()) {
+            updates.put("traceId", traceId);
         }
         return updates;
     }

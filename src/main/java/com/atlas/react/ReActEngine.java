@@ -2,6 +2,7 @@ package com.atlas.react;
 
 import com.atlas.auth.UserPermissionContext;
 import com.atlas.observability.AgentMetricsService;
+import com.atlas.observability.AgentTraceContext;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.hitl.HitlGuard;
 import com.atlas.tool.core.ProtectedToolParameterFilter;
@@ -175,7 +176,18 @@ public class ReActEngine {
     public ReActResult runWithEvents(String userQuery,
                                      Map<String, Object> initialParams,
                                      ReActEventSink eventSink) {
+        String traceId = AgentTraceContext.currentOrNew(trustedString(initialParams, "traceId", ""));
+        try (AgentTraceContext.Scope ignored = AgentTraceContext.bind(traceId)) {
+            return runWithEventsTraced(userQuery, initialParams, eventSink, traceId);
+        }
+    }
+
+    private ReActResult runWithEventsTraced(String userQuery,
+                                            Map<String, Object> initialParams,
+                                            ReActEventSink eventSink,
+                                            String traceId) {
         ReActEventSink sink = eventSink != null ? eventSink : ReActEventSink.NOOP;
+        Map<String, Object> traceMetadata = traceMetadata(traceId);
         long totalStartMs = System.currentTimeMillis();
         ReActMemory memory = new ReActMemory(objectMapper);
 
@@ -189,7 +201,8 @@ public class ReActEngine {
             while (steps < DEFAULT_MAX_STEPS) {
                 steps++;
                 log.debug("[ReActEngine] ===== 第 {} 轮开始 =====", steps);
-                emitEvent(sink, ReActEvent.thinking(steps, "步骤 " + steps + "：正在分析问题并规划下一步..."));
+                emitEvent(sink, ReActEvent.thinking(steps, "步骤 " + steps + "：正在分析问题并规划下一步...",
+                    traceMetadata));
 
                 // 1. 构建当前轮次系统提示词
                 String systemPrompt = promptBuilder.buildSystemPrompt(userQuery, memory);
@@ -202,7 +215,8 @@ public class ReActEngine {
                     log.warn("[ReActEngine] 第 {} 轮 LLM 超时", steps);
                     stopReason = "timeout";
                     finalAnswer = generateTimeoutSummary(memory, userQuery);
-                    emitEvent(sink, ReActEvent.error(steps, "LLM 调用超时，已基于现有信息生成兜底摘要"));
+                    emitEvent(sink, ReActEvent.error(steps, "LLM 调用超时，已基于现有信息生成兜底摘要",
+                        traceMetadata));
                     break;
                 }
 
@@ -217,7 +231,7 @@ public class ReActEngine {
                     finalAnswer = finalAnswerOpt.get().trim();
                     memory.addStep(thought, null, null, "[Final Answer]", true, 0);
                     stopReason = "final_answer";
-                    emitEvent(sink, ReActEvent.content(steps, finalAnswer));
+                    emitEvent(sink, ReActEvent.content(steps, finalAnswer, traceMetadata));
                     log.info("[ReActEngine] 收到 Final Answer，停止。steps={}", steps);
                     break;
                 }
@@ -229,20 +243,20 @@ public class ReActEngine {
                     finalAnswer = thought; // 退化为用 Thought 作为答案
                     memory.addStep(thought, null, null, finalAnswer, true, 0);
                     stopReason = "no_action_parsed";
-                    emitEvent(sink, ReActEvent.content(steps, finalAnswer));
+                    emitEvent(sink, ReActEvent.content(steps, finalAnswer, traceMetadata));
                     break;
                 }
 
                 String toolName = action.toolName();
                 Map<String, Object> executionParams = mergeInitialAndActionParams(toolName, initialParams, action.params());
                 Map<String, Object> timelineParams = buildTimelineParams(executionParams);
-                emitEvent(sink, ReActEvent.thinking(steps, thought));
+                emitEvent(sink, ReActEvent.thinking(steps, thought, traceMetadata));
 
                 // 5. 工具可见性检查
                 if (!toolRegistry.isVisible(toolName)) {
                     String obs = "工具 '" + toolName + "' 对当前用户不可见或不存在。请只调用可见工具列表中的工具。";
                     memory.addStep(thought, toolName, timelineParams, obs, false, 0);
-                    emitEvent(sink, ReActEvent.error(steps, obs));
+                    emitEvent(sink, ReActEvent.error(steps, obs, traceMetadata));
                     log.warn("[ReActEngine] 调用不可见工具: {}", toolName);
                     continue;
                 }
@@ -255,7 +269,8 @@ public class ReActEngine {
                         + memory.formatSummary();
                     memory.addStep(thought, toolName, timelineParams,
                         "[重复动作，循环终止]", false, 0);
-                    emitEvent(sink, ReActEvent.error(steps, "检测到重复工具调用，已终止循环并基于现有结果作答"));
+                    emitEvent(sink, ReActEvent.error(steps, "检测到重复工具调用，已终止循环并基于现有结果作答",
+                        traceMetadata));
                     break;
                 }
 
@@ -263,10 +278,10 @@ public class ReActEngine {
                 long toolStartMs = System.currentTimeMillis();
                 String observation;
                 boolean toolSuccess;
-                Map<String, Object> riskMetadata = Map.of();
+                Map<String, Object> riskMetadata = Map.of("traceId", traceId);
                 try {
                     ToolRegistry.ToolMetadata meta = toolRegistry.resolve(toolName);
-                    riskMetadata = buildToolRiskMetadata(meta);
+                    riskMetadata = withTraceId(buildToolRiskMetadata(meta), traceId);
                     emitEvent(sink, ReActEvent.toolStart(steps, toolName, timelineParams, riskMetadata));
                     SafeToolExecutionRequest request = new SafeToolExecutionRequest(
                         meta.intentId(),
@@ -275,6 +290,7 @@ public class ReActEngine {
                         trustedString(executionParams, "token", ""),
                         trustedString(executionParams, "organizationId", UserPermissionContext.getCurrentOrgId()),
                         trustedString(executionParams, "conversationId", ""),
+                        traceId,
                         null,
                         SafeToolExecutionSource.REACT_ENGINE
                     );
@@ -285,8 +301,8 @@ public class ReActEngine {
                         toolSuccess = false;
                         memory.addStep(thought, toolName, timelineParams, observation, false, 0);
                         emitEvent(sink, ReActEvent.toolDone(steps, toolName, false, 0, riskMetadata));
-                        emitEvent(sink, ReActEvent.observation(steps, toolName, observation, false));
-                        emitEvent(sink, ReActEvent.error(steps, executionResult.answer()));
+                        emitEvent(sink, ReActEvent.observation(steps, toolName, observation, false, riskMetadata));
+                        emitEvent(sink, ReActEvent.error(steps, executionResult.answer(), riskMetadata));
                         recordHitlBlockMetric(toolName, executionResult.answer());
                         log.warn("[ReActEngine] SafeToolExecutor 阻止工具执行: tool={}, reason={}", toolName, executionResult.answer());
                         continue;
@@ -309,7 +325,7 @@ public class ReActEngine {
                     && rawObservation.length() > observation.length();
                 emitEvent(sink, ReActEvent.toolDone(steps, toolName, toolSuccess, toolCostMs, riskMetadata));
                 recordToolMetric(toolName, toolSuccess, toolCostMs);
-                emitEvent(sink, ReActEvent.observation(steps, toolName, observation, observationTruncated));
+                emitEvent(sink, ReActEvent.observation(steps, toolName, observation, observationTruncated, riskMetadata));
 
                 // 9. 记录记忆
                 memory.addStep(thought, toolName, timelineParams, observation, toolSuccess, toolCostMs);
@@ -357,7 +373,7 @@ public class ReActEngine {
         recordReActMetric(totalMs);
 
         if (!"final_answer".equals(stopReason) && finalAnswer != null && !finalAnswer.isBlank()) {
-            emitEvent(sink, ReActEvent.content(steps, finalAnswer));
+            emitEvent(sink, ReActEvent.content(steps, finalAnswer, traceMetadata));
         }
         return new ReActResult(success, finalAnswer, memory.steps(), totalMs, stopReason);
     }
@@ -486,6 +502,21 @@ public class ReActEngine {
         risk.put("operationType", meta.operationType().name());
         risk.put("requiresConfirmation", meta.requiresConfirmation());
         return risk;
+    }
+
+    private Map<String, Object> withTraceId(Map<String, Object> metadata, String traceId) {
+        Map<String, Object> traced = new LinkedHashMap<>();
+        if (metadata != null) {
+            traced.putAll(metadata);
+        }
+        if (traceId != null && !traceId.isBlank()) {
+            traced.put("traceId", traceId);
+        }
+        return traced;
+    }
+
+    private Map<String, Object> traceMetadata(String traceId) {
+        return withTraceId(Map.of(), traceId);
     }
 
     /**

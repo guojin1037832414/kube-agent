@@ -45,7 +45,7 @@ class ReActEngineMultiStepE2ETest {
     void runWithEvents_shouldCompleteTwoToolActionsThenFinalAnswer() {
         ScriptedChatModel chatModel = new ScriptedChatModel(List.of(
             "Thought: 先查询 Pod 基础状态。\nAction: {\"tool\":\"pod_status\",\"params\":{\"podName\":\"nginx-1\",\"namespace\":\"default\"}}",
-            "Thought: Pod 存在且重启，需要继续查询异常事件。\nAction: {\"tool\":\"event_query\",\"params\":{\"podName\":\"nginx-1\",\"namespace\":\"default\",\"reason\":\"BackOff\"}}",
+            "Thought: Pod 存在且重启，需要继续查询异常事件。\nAction: {\"tool\":\"event_query\",\"params\":{\"podName\":\"nginx-1\",\"namespace\":\"default\",\"reason\":\"BackOff\",\"traceId\":\"forged-action-trace\"}}",
             "Thought: 已拿到状态和事件，可以给出结论。\nFinal Answer: 现象：nginx-1 发生 CrashLoopBackOff。证据：restartCount=3，事件包含 BackOff。判断：应用进程启动后反复退出。建议：查看容器启动命令和应用日志。"
         ));
         RecordingTool podTool = new PodStatusRecordingTool(
@@ -74,10 +74,11 @@ class ReActEngineMultiStepE2ETest {
             new ReActPromptBuilder(registry)
         );
         List<ReActEvent> events = new ArrayList<>();
+        String traceId = "trc_react_e2e_trace_001";
 
         ReActResult result = engine.runWithEvents(
             "/react 诊断 default namespace 的 nginx-1 pod CrashLoopBackOff 原因",
-            Map.of("token", "test-token", "organizationId", "100002", "conversationId", "conv-1"),
+            Map.of("token", "test-token", "organizationId", "100002", "conversationId", "conv-1", "traceId", traceId),
             events::add
         );
 
@@ -93,23 +94,35 @@ class ReActEngineMultiStepE2ETest {
         assertFalse(podTool.lastParams().containsKey("token"), "token 只用于 SafeToolExecutor 绑定 ThreadLocal，不得透传给业务 Tool");
         assertEquals("100002", eventTool.lastParams().get("organizationId"), "orgId 必须由 SafeToolExecutor 作为可信上下文补齐");
         assertEquals("conv-1", eventTool.lastParams().get("conversationId"), "conversationId 必须由 SafeToolExecutor 作为可信上下文补齐");
+        assertFalse(eventTool.lastParams().containsKey("traceId"), "traceId 属于控制平面上下文，不得透传给业务 Tool");
         assertEquals("nginx-1", eventTool.lastParams().get("podName"));
         assertEquals("default", eventTool.lastParams().get("namespace"));
         assertFalse(result.steps().get(0).params().containsKey("token"), "ReAct 记忆不得暴露 token");
         assertFalse(result.steps().get(0).params().containsKey("organizationId"), "ReAct 记忆不得暴露租户控制字段");
+
+        assertFalse(result.steps().get(0).params().containsKey("traceId"), "ReAct 记忆不应把 traceId 当作业务参数保存");
 
         assertTrue(events.stream().anyMatch(e -> "tool_start".equals(e.type()) && "pod_status".equals(e.tool())));
         ReActEvent podStart = events.stream()
             .filter(e -> "tool_start".equals(e.type()) && "pod_status".equals(e.tool()))
             .findFirst()
             .orElseThrow();
+        assertEquals(traceId, podStart.metadata().get("traceId"), "tool_start 事件必须带同一 traceId");
         assertFalse(String.valueOf(podStart.metadata().get("params")).contains("test-token"),
             "ReAct tool_start 事件不得泄露 token");
         assertFalse(String.valueOf(podStart.metadata().get("params")).contains("organizationId"),
             "ReAct tool_start 事件不得泄露租户控制字段");
+        assertFalse(String.valueOf(podStart.metadata().get("params")).contains("traceId"),
+            "ReAct tool_start 展示参数不得把 traceId 当业务参数暴露");
         assertTrue(events.stream().anyMatch(e -> "tool_done".equals(e.type()) && "event_query".equals(e.tool())));
-        assertTrue(events.stream().anyMatch(e -> "observation".equals(e.type()) && e.content().contains("Back-off")));
-        assertTrue(events.stream().anyMatch(e -> "content".equals(e.type()) && e.content().contains("应用进程启动后反复退出")));
+        assertTrue(events.stream().anyMatch(e -> "tool_done".equals(e.type()) && traceId.equals(e.metadata().get("traceId"))),
+            "tool_done 事件必须带同一 traceId");
+        assertTrue(events.stream().anyMatch(e -> "observation".equals(e.type()) && e.content().contains("Back-off")
+                && traceId.equals(e.metadata().get("traceId"))),
+            "observation 事件必须带同一 traceId");
+        assertTrue(events.stream().anyMatch(e -> "content".equals(e.type()) && e.content().contains("应用进程启动后反复退出")
+                && traceId.equals(e.metadata().get("traceId"))),
+            "final content 事件必须带同一 traceId");
         assertFalse(events.stream().anyMatch(e -> "error".equals(e.type())), "成功路径不应产生 error 事件");
     }
 

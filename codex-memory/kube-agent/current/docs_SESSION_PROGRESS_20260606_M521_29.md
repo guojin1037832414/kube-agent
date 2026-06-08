@@ -6,7 +6,7 @@
 - Primary workspace recovery folder: `F:\gitProject\kube-agent\codex-memory\kube-agent\current`
 - Historical external memory folder: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.22-5, Orchestrator fallback safe execution closure.
+- Current latest wave: M5.23-1, Agent trace context kernel.
 - Phase update: HPC / Slurm / BCM and NIM are paused and moved to Phase 2 by user direction.
 - Phase 1 focus: deliver the top-tier Agent core through generic manager Agent foundations, safe read/query validation, non-HPC/NIM manager function coverage, Tool metadata quality, HITL/audit execution boundary, traceability, recovery, evaluation, teaching documentation, and vue-kube-manager workflow integration.
 - Phase boundary clarification: moving NIM / HPC / Slurm / BCM to Phase 2 postpones specialist domain plugins only; it does not reduce Phase 1 standards.
@@ -55,6 +55,21 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.23-1 Agent trace context kernel is implemented:
+  - Added `src/main/java/com/atlas/observability/AgentTraceContext.java` as the first trace runtime kernel.
+  - Trace context now supports service-generated `trc_` IDs, ThreadLocal + MDC binding, nested scope restoration, cleanup, and safe external trace candidate validation.
+  - `SafeToolExecutionRequest` and `SafeToolExecutionResult` now carry `traceId`; `SafeToolExecutor` binds trace scope and writes traceId into structured `toolResult` and Graph updates.
+  - `AtlasOrchestrator` emits an SSE `trace` event, propagates trace into supervisor Graph inputs, and also covers `/chat/graph`.
+  - `HITLController` restores traceId from checkpoint on confirm/clarify resume, binds it around async resume, emits a `trace` SSE event, and writes it back into Graph inputs.
+  - `ReActEngine` propagates traceId through execution requests and `thinking/tool_start/tool_done/observation/content/error` metadata while keeping traceId out of business Tool params and ReAct memory.
+  - `AtlasGraphConfig`, Graph Bridge `AtlasToolCallback`, and legacy core `AtlasToolCallback` pass traceId into `SafeToolExecutionRequest`.
+  - `ProtectedToolParameterFilter` treats `traceId`, `trace_id`, `traceparent`, and `tracestate` as protected control-plane fields.
+  - Added `AgentTraceContextTest` and `M523TracePropagationContractTest`; expanded `SafeToolExecutorTest` and `ReActEngineMultiStepE2ETest`.
+  - Verification passed:
+    - `mvn -q "-Dtest=AgentTraceContextTest,SafeToolExecutorTest,ReActEngineMultiStepE2ETest,M523TracePropagationContractTest,M513HitlFailClosedContractTest,AtlasOrchestratorJsonTest" test`
+  - No NIM/HPC/Slurm/BCM Phase 2 implementation was resumed and no new write path was opened.
+  - Next Phase 1 technical slice: connect traceId to kube-manager HTTP outlet and audit/timeline events, then build Agent eval and frontend replay contracts.
 
 - M5.22-5 Orchestrator fallback safe execution closure is implemented:
   - `src/main/java/com/atlas/orchestrator/AtlasOrchestrator.java` no longer directly calls `tool.execute(toolParams)` in the legacy IntentRouter fallback.

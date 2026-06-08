@@ -93,10 +93,32 @@ Current track:
 
 Recently completed:
 
-`M5.22-5 Orchestrator fallback safe execution closure`
+`M5.23-1 Agent trace context kernel`
 
 Latest checkpoint:
 
+- Date: 2026-06-08 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.23-1 implemented:
+  - Added `AgentTraceContext` as the first trace runtime kernel with ThreadLocal + MDC binding, safe external trace candidate validation, stable service-generated `trc_` IDs, and nested scope restoration.
+  - Extended `SafeToolExecutionRequest` / `SafeToolExecutionResult` so traceId travels through `SafeToolExecutor`, `toolResult`, and Graph updates.
+  - Propagated traceId through `AtlasOrchestrator`, `/chat/graph`, `HITLController` resume, `ReActEngine`, `AtlasGraphConfig`, Graph Bridge `AtlasToolCallback`, and legacy core `AtlasToolCallback`.
+  - ReAct timeline events now carry traceId metadata on thinking/tool_start/tool_done/observation/content/error.
+  - `ProtectedToolParameterFilter` now treats trace fields as protected control-plane data, preventing LLM/action params from passing traceId into business Tool params.
+  - Added trace-focused tests and source-level contracts.
+- Verification:
+  - `mvn -q "-Dtest=AgentTraceContextTest,SafeToolExecutorTest,ReActEngineMultiStepE2ETest,M523TracePropagationContractTest,M513HitlFailClosedContractTest,AtlasOrchestratorJsonTest" test`
+- Scope boundary:
+  - Phase 1 Agent Core observability hardening only.
+  - No NIM/HPC/Slurm/BCM Phase 2 implementation was resumed.
+  - No new real write/create/delete/state-changing kube-manager call was opened.
+- Security result:
+  - External `X-Trace-Id` and LLM/action `traceId` values cannot inject whitespace/control values into MDC or override business Tool execution params.
+  - HITL confirm/clarify resume now preserves checkpoint traceId and emits a `trace` SSE event.
+- Next technical follow-up:
+  - Connect traceId to kube-manager HTTP outlet, audit event model, OpenTelemetry span mapping, frontend replay contracts, and Agent eval reports.
+
+- Previous checkpoint:
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
 - M5.22-5 implemented:

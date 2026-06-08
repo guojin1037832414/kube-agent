@@ -11,7 +11,7 @@
 
 ## 当前可落地先进线
 
-本轮采用的第一批先进工程底座：
+已采用的第一批先进工程底座：
 
 - Spring Boot 3.5.x 稳定线；
 - Spring AI 1.1.7 补丁线；
@@ -25,6 +25,28 @@
 - Resilience4j 进入 HTTP 出口韧性治理底座；
 - Testcontainers 进入后续真实依赖集成测试底座；
 - GitHub Actions 后端质量门禁。
+
+M5.23-1 已把可观测能力从“依赖底座”推进到“运行时内核”：
+
+- `AgentTraceContext` 统一生成、绑定、恢复 traceId；
+- traceId 进入 MDC、SafeToolExecutor、Graph state、ReAct timeline、SSE trace event、HITL resume 和 ToolCallback；
+- 外部 trace 候选值经过长度/字符集/空白控制字符校验，避免日志和 MDC 注入；
+- traceId 被视为控制平面字段，不作为业务 Tool 参数透传。
+
+## 最新 Agent 标准的落地顺序
+
+以下技术代表 2026 年 Agent 工程的先进方向，但必须按可验证顺序接入：
+
+| 标准/技术 | 一期定位 | 当前落点 | 下一步 |
+|---|---|---|---|
+| OpenTelemetry / GenAI semantic conventions | 统一观测模型 | 已有 Micrometer Tracing + OTLP 依赖，M5.23 建立 traceId 内核 | 将 LLM、Tool、HTTP、HITL、audit 映射为 Span 与属性 |
+| MCP (Model Context Protocol) | 外部 Tool / Resource / Prompt 暴露协议 | 暂不直接开放生产写工具 | 先做只读 Tool manifest 与 schema adapter，写工具继续 HITL/HOLD |
+| A2A (Agent2Agent) | 多 Agent 互操作协议 | 当前多专家流程仍以内部角色和 Graph 编排为主 | 在执行边界、trace、audit 稳定后，评估 Agent Card / Task / streaming adapter |
+| OWASP LLM / Agentic AI 安全实践 | 红队和安全门禁 | 已有 HITL、protected params、fail-closed、direct execute contract | 扩展 eval harness：prompt injection、tool misuse、excessive agency、sensitive data |
+| Spring Boot 4 / Spring AI 2 | 下一代 Java Agent 栈 | 当前主线保持 Boot 3.5 + Spring AI 1.1.7 | 开兼容矩阵分支验证 Spring Framework 7、Tomcat 11、Spring AI Tool API |
+| Java 21 / 25 | 运行时升级目标 | Java 17 仍是当前可构建底座 | CI matrix + 依赖兼容后再考虑主线升级 |
+
+顶级 Agent 的“先进”不是堆满协议名，而是每个协议都能被安全边界、trace、审计、评测和恢复记忆承接。
 
 ## 官方版本依据
 
@@ -62,10 +84,10 @@ Spring Boot 4.0.x 官方系统要求是 Java 17+，但它会同时带来 Spring 
 
 ## 一期顶级 Agent Core 技术欠账
 
-- 统一执行内核：ReAct、Graph、ToolCallback、legacy fallback 必须全部通过 `SafeToolExecutor`。
+- 统一执行内核：ReAct、Graph、ToolCallback、legacy fallback 已全部通过 `SafeToolExecutor`；后续新增入口必须继续受契约测试约束。
 - HTTP 韧性：读请求可重试；写请求必须绑定 idempotency key / audit / HITL 后才能重试，默认不自动重试。
 - 连接治理：从简单 request factory 过渡到连接池或 WebClient，并暴露连接池指标。
-- OpenTelemetry：每次请求贯穿 intent、plan、tool、HTTP、HITL、audit、final answer 的 traceId。
+- OpenTelemetry：M5.23 已完成 traceId 内核；后续要把 intent、plan、tool、HTTP、HITL、audit、final answer 映射为 span/timeline/audit 统一证据链。
 - 审计持久化：敏感读、高风险写、HITL 阻断、Tool 异常都要有脱敏审计事件。
 - CI 门禁：SBOM、SCA、SpotBugs、覆盖率、secret scan、Agent eval 必须进入发布流程。
 - 安全主干：逐步引入 Spring Security `SecurityFilterChain`，把身份事实从 ThreadLocal 兼容层迁移到标准 `Authentication`。

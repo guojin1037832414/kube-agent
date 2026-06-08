@@ -1,6 +1,7 @@
 package com.atlas.graph.bridge;
 
 import com.atlas.auth.UserPermissionContext;
+import com.atlas.observability.AgentTraceContext;
 import com.atlas.tool.core.BaseTool;
 import com.atlas.tool.core.ToolInputSchemaBuilder;
 import com.atlas.tool.core.ToolParameterNormalizer;
@@ -110,6 +111,7 @@ public class AtlasToolCallback implements ToolCallback {
                 UserPermissionContext.CURRENT_TOKEN.get(),
                 UserPermissionContext.getCurrentOrgId(),
                 "",
+                AgentTraceContext.currentOrNew(""),
                 null,
                 SafeToolExecutionSource.TOOL_CALLBACK
             );

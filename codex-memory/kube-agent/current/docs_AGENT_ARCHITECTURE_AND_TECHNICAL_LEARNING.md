@@ -266,6 +266,28 @@ M5.22-5 收口 `AtlasOrchestrator` legacy fallback：
 
 当前执行边界状态：生产代码中唯一永久真实 `BaseTool.execute(...)` 位置是 `SafeToolExecutor`。
 
+### M5.23 Trace 与 Observability 内核
+
+M5.23-1 开始把“可观测性”从依赖清单推进为可测试的 Agent 运行时对象。第一步不是直接搭 Tempo / Collector / dashboard，而是先建立一条所有入口共享的 traceId 语义线：
+
+- `AgentTraceContext` 使用 ThreadLocal + MDC 绑定当前 Agent trace；
+- traceId 默认由服务端生成，格式为 `trc_` + 32 位十六进制；
+- 外部 `X-Trace-Id` / checkpoint trace 候选值必须通过长度、字符集和空白控制字符校验，非法值会被丢弃并重新生成；
+- `SafeToolExecutionRequest` / `SafeToolExecutionResult` 携带 traceId，`tool_result` 与 Graph updates 也继续透传；
+- `AtlasOrchestrator`、`/chat/graph`、`HITLController` resume、`ReActEngine`、Graph `tool_call` / `execute_node`、两个 `AtlasToolCallback` 都进入同一 trace 语义；
+- ReAct 的 `thinking/tool_start/tool_done/observation/content/error` 事件都能带 traceId metadata；
+- `ProtectedToolParameterFilter` 把 `traceId/trace_id/traceparent/tracestate` 视为控制平面字段，不允许它作为业务参数透传给 Tool。
+
+几个容易混淆的 ID 要分清：
+
+- `traceId`：一次 Agent 请求或恢复链路的观测主键，用来串起 SSE、日志、Tool、HITL、HTTP、审计和最终回答。
+- `spanId`：未来接入 OpenTelemetry 后，一次请求中的某个子步骤，如 LLM 调用、Tool 调用、HTTP 出口。
+- `auditId`：安全/合规事实的持久化编号，用来证明某个敏感读或高风险动作如何被允许、阻断或确认。
+- `conversationId`：产品会话 ID，用来管理用户对话，不等价于运行时 trace。
+- `toolCallId`：单次 Tool 调用编号，用来区分同一 trace 下的多次工具调用。
+
+学习重点：traceId 不是日志装饰，而是顶级 Agent 的证据链主键。没有统一 trace，就很难做前端回放、审计查询、红队复盘、SLA 诊断和多 Agent 协同调度。M5.23-1 的价值是先把这条线接进所有执行入口，后续再把它映射到 OpenTelemetry Span、审计表、HTTP header 和前端工作台。
+
 ### Java 后端技术栈审计
 
 2026-06-08 针对“后端 Java 是否仍是最先进主语言”做了技术栈审计，结论是：Java / Spring 继续作为一期主线是合理且先进的，但升级方式必须是兼容矩阵，而不是盲目追主版本。
