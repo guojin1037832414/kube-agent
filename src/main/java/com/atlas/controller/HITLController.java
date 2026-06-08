@@ -4,6 +4,8 @@ import com.alibaba.cloud.ai.graph.CompiledGraph;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.state.StateSnapshot;
+import com.atlas.auth.AgentPrincipal;
+import com.atlas.auth.AgentPrincipalResolver;
 import com.atlas.brain.BrainDecision;
 import com.atlas.auth.UserPermissionContext;
 import com.atlas.auth.async.AsyncContextHolder;
@@ -62,18 +64,21 @@ public class HITLController {
     private final StreamingEmitter streamingEmitter;
     private final TimedDecisionCache decisionCache;
     private final Executor asyncExecutor;
+    private final AgentPrincipalResolver principalResolver;
 
     public HITLController(
             @Qualifier("supervisorGraph") CompiledGraph compiledGraph,
             AtlasOrchestrator orchestrator,
             StreamingEmitter streamingEmitter,
             TimedDecisionCache decisionCache,
-            @Qualifier("atlasTaskExecutor") Executor asyncExecutor) {
+            @Qualifier("atlasTaskExecutor") Executor asyncExecutor,
+            AgentPrincipalResolver principalResolver) {
         this.compiledGraph = compiledGraph;
         this.orchestrator = orchestrator;
         this.streamingEmitter = streamingEmitter;
         this.decisionCache = decisionCache;
         this.asyncExecutor = asyncExecutor;
+        this.principalResolver = principalResolver;
     }
 
     /**
@@ -162,6 +167,17 @@ public class HITLController {
                                                 HitlConfirmation confirmation,
                                                 SseEmitter emitter) {
         CheckpointContext context = loadCheckpointContext(threadId);
+        Optional<AgentPrincipal> principal = principalResolver.current()
+            .filter(AgentPrincipal::isAuthenticated);
+        if (principal.isEmpty()
+            || context.userId().isBlank()
+            || !context.userId().equals(principal.get().username())) {
+            CompletableFuture.runAsync(
+                () -> streamingEmitter.error(emitter, "安全上下文不匹配：无法恢复其他用户的会话，请重新发起请求。"),
+                asyncExecutor
+            );
+            return;
+        }
         if (context.orgId().isBlank()) {
             CompletableFuture.runAsync(
                 () -> streamingEmitter.error(emitter, "安全上下文缺失：无法确定当前用户所属组织，请重新登录后再试。"),
@@ -187,6 +203,7 @@ public class HITLController {
             if (snapshotOpt.isPresent() && snapshotOpt.get().state() != null) {
                 OverAllState oldState = snapshotOpt.get().state();
                 String token = oldState.value("token").map(Object::toString).orElse("");
+                String userId = oldState.value("user_id").map(Object::toString).orElse("");
                 String orgId = oldState.value("orgId")
                     .or(() -> oldState.value("organizationId"))
                     .map(Object::toString)
@@ -196,12 +213,12 @@ public class HITLController {
                     .map(value -> AgentTraceContext.safeCandidateOrBlank(value))
                     .filter(value -> !value.isBlank())
                     .orElseGet(() -> AgentTraceContext.currentOrNew(""));
-                return new CheckpointContext(token, orgId, traceId);
+                return new CheckpointContext(token, userId, orgId, traceId);
             }
         } catch (Exception e) {
             log.warn("[HITL] checkpoint 安全上下文读取失败: {}", e.getMessage());
         }
-        return new CheckpointContext("", "", AgentTraceContext.currentOrNew(""));
+        return new CheckpointContext("", "", "", AgentTraceContext.currentOrNew(""));
     }
 
     /**
@@ -423,7 +440,7 @@ public class HITLController {
         return sb.toString();
     }
 
-    private record CheckpointContext(String token, String orgId, String traceId) {
+    private record CheckpointContext(String token, String userId, String orgId, String traceId) {
     }
 
     // ── 请求 DTO ────────────────────────────────────

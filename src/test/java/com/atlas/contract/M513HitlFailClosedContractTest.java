@@ -171,6 +171,9 @@ class M513HitlFailClosedContractTest {
         assertThat(source)
             .as("HITLController 必须创建服务端 HitlConfirmation，而不是信任前端参数")
             .contains("@Qualifier(\"supervisorGraph\") CompiledGraph compiledGraph")
+            .contains("AgentPrincipalResolver principalResolver")
+            .contains("context.userId().equals(principal.get().username())")
+            .contains("无法恢复其他用户的会话")
             .contains("HitlConfirmation.human(threadId, original.target())")
             .contains("inputs.put(\"hitl_confirmation\", confirmation)");
         assertThat(source)

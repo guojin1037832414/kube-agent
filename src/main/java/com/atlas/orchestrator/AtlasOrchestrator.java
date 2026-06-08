@@ -1,12 +1,16 @@
 package com.atlas.orchestrator;
 
+import com.atlas.auth.AgentPrincipal;
+import com.atlas.auth.AgentPrincipalResolver;
 import com.atlas.auth.UserPermissionContext;
 import com.atlas.auth.async.AsyncContextHolder;
+import com.atlas.dto.SessionData;
 import com.atlas.http.KubeManagerHttpClient;
 import com.atlas.intent.IntentRouter;
 import com.atlas.intent.core.IntentResult;
 import com.atlas.hitl.HitlGuard;
 import com.atlas.observability.AgentTraceContext;
+import com.atlas.store.ConversationStore;
 import com.atlas.store.SessionStore;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.tool.core.BaseTool;
@@ -16,6 +20,7 @@ import com.atlas.tool.execution.SafeToolExecutionResult;
 import com.atlas.tool.execution.SafeToolExecutionSource;
 import com.atlas.tool.execution.SafeToolExecutor;
 import com.atlas.orchestrator.polish.ToolResultPolishingService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
@@ -60,6 +66,7 @@ public class AtlasOrchestrator {
     private final StreamingEmitter streamingEmitter;
     private final ToolRegistry toolRegistry;
     private final UserPermissionContext userPermissionContext;
+    private final AgentPrincipalResolver principalResolver;
     private final Executor asyncExecutor;
     private final KubeManagerHttpClient kubeManagerClient;
     private final HitlGuard hitlGuard;
@@ -86,6 +93,7 @@ public class AtlasOrchestrator {
      * 会话存储 — 从 X-Session-Id 反查 JWT Token，驱动后端 API 调用权限。
      */
     private final SessionStore sessionStore;
+    private final ConversationStore conversationStore;
 
     /** 每用户最大并发连接数 */
     private static final int MAX_PER_USER = 3;
@@ -108,6 +116,7 @@ public class AtlasOrchestrator {
                              StreamingEmitter streamingEmitter,
                              ToolRegistry toolRegistry,
                              UserPermissionContext userPermissionContext,
+                             AgentPrincipalResolver principalResolver,
                              KubeManagerHttpClient kubeManagerClient,
                              HitlGuard hitlGuard,
                              SafeToolExecutor safeToolExecutor,
@@ -116,6 +125,7 @@ public class AtlasOrchestrator {
                              ToolResultPolishingService polishingService,
                              @Qualifier("atlasTaskExecutor") Executor asyncExecutor,
                              SessionStore sessionStore,
+                             ConversationStore conversationStore,
                              @Autowired(required = false)
                              @Qualifier("supervisorGraph")
                              com.alibaba.cloud.ai.graph.CompiledGraph supervisorGraph,
@@ -126,6 +136,7 @@ public class AtlasOrchestrator {
         this.streamingEmitter = streamingEmitter;
         this.toolRegistry = toolRegistry;
         this.userPermissionContext = userPermissionContext;
+        this.principalResolver = principalResolver;
         this.kubeManagerClient = kubeManagerClient;
         this.hitlGuard = hitlGuard;
         this.safeToolExecutor = safeToolExecutor;
@@ -134,6 +145,7 @@ public class AtlasOrchestrator {
         this.polishingService = polishingService;
         this.asyncExecutor = asyncExecutor;
         this.sessionStore = sessionStore;
+        this.conversationStore = conversationStore;
         this.supervisorGraph = supervisorGraph;
         this.compiledGraph = compiledGraph;
         log.info("[Orchestrator] 初始化完成 | SupervisorGraph: {} | AtlasGraph: {} | Polishing: {}",
@@ -156,47 +168,27 @@ public class AtlasOrchestrator {
      */
     @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter streamChat(@RequestBody ChatRequest request,
-                                  jakarta.servlet.http.HttpServletRequest httpReq) {
-        // ── M2.7 认证修复: 从 header 或 query param 提取 X-Session-Id，反查 JWT Token
-        String clientSessionId = httpReq.getHeader("X-Session-Id");
-        if (clientSessionId == null || clientSessionId.isBlank()) {
-            clientSessionId = httpReq.getParameter("sessionId");
+                                  HttpServletRequest httpReq) {
+        Optional<RuntimeIdentity> identityOpt = resolveRuntimeIdentity(httpReq);
+        if (identityOpt.isEmpty()) {
+            return failClosedEmitter("未找到可信用户身份，请重新登录后再试。");
+        }
+        RuntimeIdentity identity = identityOpt.get();
+
+        Optional<String> trustedConversationId = resolveTrustedConversationId(
+            request != null ? request.conversationId() : null,
+            identity.userId()
+        );
+        if (trustedConversationId.isEmpty()) {
+            return failClosedEmitter("会话不存在或不属于当前用户，请重新选择会话后再试。");
         }
 
-        String userId = "anonymous";
-        String sessionId = userId + "-" + System.currentTimeMillis();
-        String capturedToken = null;
-        String capturedOrgId = null;  // P3.1: 从 SessionData 直接取 orgId
-
-        if (clientSessionId != null && !clientSessionId.isBlank()) {
-            var sessionOpt = sessionStore.findById(clientSessionId);
-            if (sessionOpt.isPresent()) {
-                var sessionData = sessionOpt.get();
-                capturedToken = sessionData.token();
-                capturedOrgId = sessionData.organizationId();  // ← 直接取，不再桶式搜索
-                userId = sessionData.username() != null ? sessionData.username() : "anonymous";
-                // sessionId 保留内部追踪用途，仍用 clientSessionId 前缀加时间戳避免冲突
-                sessionId = clientSessionId + "-" + System.currentTimeMillis();
-                // 绑定 ThreadLocal（主线程），供异步透传使用
-                userPermissionContext.bind(capturedToken, capturedOrgId);  // ← 同时绑定 token+orgId
-                log.info("[Orchestrator] SSE 认证成功: user={}, orgId={}, sessionId={}, token={}...",
-                    userId, capturedOrgId, clientSessionId,
-                    capturedToken.length() > 8 ? capturedToken.substring(0, 8) : capturedToken);
-            } else {
-                log.warn("[Orchestrator] X-Session-Id 无效或已过期: {}", clientSessionId);
-            }
-        }
-
-        // 如果 SessionStore 未命中，回退到 AuthTokenFilter 可能已绑定的 Token
-        if (capturedToken == null || capturedToken.isBlank()) {
-            capturedToken = userPermissionContext.getCurrentToken();
-            if (capturedToken != null && !capturedToken.isBlank()) {
-                log.info("[Orchestrator] SSE 回退到 Authorization Bearer Token");
-            }
-        }
-        if (capturedToken == null || capturedToken.isBlank()) {
-            log.warn("[Orchestrator] 请求未携带有效 Token（匿名用户）");
-        }
+        String userId = identity.userId();
+        String sessionId = newRunId("run");
+        String capturedToken = identity.token();
+        String capturedOrgId = identity.orgId();
+        log.info("[Orchestrator] SSE 认证成功: user={}, orgId={}, runId={}, source={}",
+            userId, capturedOrgId, sessionId, identity.source());
 
         // 连接限流
         if (userConnections.getOrDefault(userId, 0) >= MAX_PER_USER) {
@@ -218,6 +210,7 @@ public class AtlasOrchestrator {
         final var finalSessionId = sessionId;
         final var finalToken = capturedToken;
         final var finalOrgId = capturedOrgId;  // ← P3.1 新增
+        final var finalConversationId = trustedConversationId.get();
         final var finalTraceId = AgentTraceContext.currentOrNew(httpReq.getHeader("X-Trace-Id"));
 
         Runnable asyncTask = () -> {
@@ -225,7 +218,8 @@ public class AtlasOrchestrator {
                 emit(emitter, "trace", Map.of("traceId", finalTraceId));
                 // Phase 1: Supervisor Graph 优先路由（AtlasBrain 决策 + 条件边）
                 if (supervisorGraph != null) {
-                    runSupervisorGraph(request, emitter, finalUserId, finalSessionId, finalToken, finalOrgId, finalTraceId);
+                    runSupervisorGraph(request, emitter, finalUserId, finalSessionId, finalToken, finalOrgId,
+                        finalConversationId, finalTraceId);
                     return;
                 }
 
@@ -281,7 +275,7 @@ public class AtlasOrchestrator {
                                 finalUserId,
                                 finalToken,
                                 orgId,
-                                finalSessionId,
+                                finalConversationId,
                                 finalTraceId,
                                 null,
                                 SafeToolExecutionSource.ORCHESTRATOR_FALLBACK
@@ -394,7 +388,8 @@ public class AtlasOrchestrator {
     // ═══════════════════════════════════════════════════════════
 
     @PostMapping(value = "/chat/graph", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter streamChatGraph(@RequestBody ChatRequest request) {
+    public SseEmitter streamChatGraph(@RequestBody ChatRequest request,
+                                      HttpServletRequest httpReq) {
         if (compiledGraph == null) {
             SseEmitter err = new SseEmitter(0L);
             CompletableFuture.runAsync(() -> {
@@ -408,11 +403,26 @@ public class AtlasOrchestrator {
             return err;
         }
 
-        String userId = request.userId() != null ? request.userId() : "anonymous";
-        String sessionId = userId + "-graph-" + System.currentTimeMillis();
-        String capturedToken = userPermissionContext.getCurrentToken();
-        String capturedOrgId = UserPermissionContext.getCurrentOrgId();
-        String traceId = AgentTraceContext.currentOrNew("");
+        Optional<RuntimeIdentity> identityOpt = resolveRuntimeIdentity(httpReq);
+        if (identityOpt.isEmpty()) {
+            return failClosedEmitter("未找到可信用户身份，请重新登录后再试。");
+        }
+        RuntimeIdentity identity = identityOpt.get();
+
+        Optional<String> trustedConversationId = resolveTrustedConversationId(
+            request != null ? request.conversationId() : null,
+            identity.userId()
+        );
+        if (trustedConversationId.isEmpty()) {
+            return failClosedEmitter("会话不存在或不属于当前用户，请重新选择会话后再试。");
+        }
+
+        String userId = identity.userId();
+        String sessionId = newRunId("graph");
+        String capturedToken = identity.token();
+        String capturedOrgId = identity.orgId();
+        String conversationId = trustedConversationId.get();
+        String traceId = AgentTraceContext.currentOrNew(httpReq.getHeader("X-Trace-Id"));
 
         // 连接限流
         if (userConnections.getOrDefault(userId, 0) >= MAX_PER_USER) {
@@ -435,7 +445,7 @@ public class AtlasOrchestrator {
                 Set<String> emittedStructuredClarifications = ConcurrentHashMap.newKeySet();
                 Map<String, Object> inputs = new java.util.HashMap<>();
                 inputs.put("input", Optional.ofNullable(request.userQuery()).orElse(""));
-                inputs.put("conversation_id", Optional.ofNullable(request.conversationId()).orElse(""));
+                inputs.put("conversation_id", conversationId);
                 inputs.put("user_id", userId);
                 inputs.put("token", Optional.ofNullable(capturedToken).orElse(""));
                 inputs.put("orgId", Optional.ofNullable(capturedOrgId).orElse(""));
@@ -551,7 +561,8 @@ public class AtlasOrchestrator {
      * 保持与 /chat/graph 相同的 SSE 事件约定。
      */
     private void runSupervisorGraph(ChatRequest request, SseEmitter emitter,
-                                    String userId, String sessionId, String token, String orgId, String traceId) {
+                                    String userId, String sessionId, String token, String orgId,
+                                    String conversationId, String traceId) {
         try {
             // ReAct 事件流会在执行过程中主动发送 content；这里记录是否已发送最终内容，
             // 防止 react_node 完成后再从 state 里重复推送同一份最终答案。
@@ -572,7 +583,7 @@ public class AtlasOrchestrator {
 
             Map<String, Object> inputs = new java.util.HashMap<>();
             inputs.put("input", Optional.ofNullable(request.userQuery()).orElse(""));
-            inputs.put("conversation_id", Optional.ofNullable(request.conversationId()).orElse(""));
+            inputs.put("conversation_id", conversationId);
             inputs.put("user_id", userId);
             inputs.put("token", Optional.ofNullable(token).orElse(""));
             inputs.put("orgId", Optional.ofNullable(orgId).orElse("")); // ← P3.1: 显式传入 orgId
@@ -842,6 +853,91 @@ public class AtlasOrchestrator {
         emit(emitter, "clarify", payload);
     }
 
+    private Optional<RuntimeIdentity> resolveRuntimeIdentity(HttpServletRequest request) {
+        Optional<AgentPrincipal> principalOpt = principalResolver.current()
+            .filter(AgentPrincipal::isAuthenticated);
+        if (principalOpt.isEmpty()) {
+            log.warn("[Orchestrator] Chat/SSE 请求缺少可信主体");
+            return Optional.empty();
+        }
+
+        AgentPrincipal principal = principalOpt.get();
+        String userId = principal.username();
+        String token = userPermissionContext.getCurrentToken();
+        String orgId = firstText(principal.organizationId(), UserPermissionContext.getCurrentOrgId());
+        String source = principal.source().name();
+
+        Optional<SessionData> sessionOpt = findSessionFromRequest(request)
+            .filter(session -> userId.equals(session.username()));
+        if (sessionOpt.isPresent()) {
+            SessionData session = sessionOpt.get();
+            token = firstText(session.token(), token);
+            orgId = firstText(session.organizationId(), orgId);
+            // 让当前请求主线程和后续异步捕获到同一个 token/orgId 原子快照。
+            userPermissionContext.bind(token, orgId);
+            source = source + "+SESSION_STORE";
+        }
+
+        if (isBlank(token) || isBlank(orgId)) {
+            log.warn("[Orchestrator] Chat/SSE 安全上下文不完整: user={}, tokenPresent={}, orgIdPresent={}",
+                userId, !isBlank(token), !isBlank(orgId));
+            return Optional.empty();
+        }
+        return Optional.of(new RuntimeIdentity(userId, token, orgId, source));
+    }
+
+    private Optional<SessionData> findSessionFromRequest(HttpServletRequest request) {
+        if (request == null || sessionStore == null) {
+            return Optional.empty();
+        }
+        String clientSessionId = request.getHeader("X-Session-Id");
+        if (isBlank(clientSessionId)) {
+            clientSessionId = request.getParameter("sessionId");
+        }
+        if (isBlank(clientSessionId)) {
+            return Optional.empty();
+        }
+        return sessionStore.findById(clientSessionId.trim());
+    }
+
+    private Optional<String> resolveTrustedConversationId(String candidate, String userId) {
+        if (isBlank(candidate)) {
+            return Optional.of("");
+        }
+        String conversationId = candidate.trim();
+        if (conversationStore == null) {
+            log.warn("[Orchestrator] ConversationStore 未注入，拒绝绑定 conversationId={}", conversationId);
+            return Optional.empty();
+        }
+        return conversationStore.findByUserAndId(userId, conversationId)
+            .map(conversation -> conversation.id());
+    }
+
+    private SseEmitter failClosedEmitter(String message) {
+        SseEmitter emitter = new SseEmitter(0L);
+        CompletableFuture.runAsync(
+            () -> streamingEmitter.error(emitter, message),
+            asyncExecutor
+        );
+        return emitter;
+    }
+
+    private String newRunId(String prefix) {
+        String safePrefix = !isBlank(prefix) ? prefix.trim() : "run";
+        return safePrefix + "-" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+    }
+
+    private String firstText(String first, String second) {
+        if (!isBlank(first)) {
+            return first.trim();
+        }
+        return !isBlank(second) ? second.trim() : "";
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
+
     private boolean isTruthy(Object value) {
         if (value instanceof Boolean b) {
             return b;
@@ -937,4 +1033,7 @@ public class AtlasOrchestrator {
         String conversationId,
         @com.fasterxml.jackson.annotation.JsonAlias("message") String userQuery,
         String userId) {}
+
+    private record RuntimeIdentity(String userId, String token, String orgId, String source) {
+    }
 }

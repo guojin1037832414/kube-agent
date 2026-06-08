@@ -109,6 +109,14 @@ M5.29-5 已把 conversation 元数据 owner 迁移到可信 principal：
 - `/api/agent/conversations` 与 `/api/agent/conversations/**` 已进入 `.authenticated()`；
 - chat/SSE 流式运行时仍作为独立 follow-up，因为那里还涉及 token/org/trace/SSE/Graph/ReAct 上下文传播。
 
+M5.29-6 已把 Chat/SSE 流式运行时迁移到可信 runtime identity：
+
+- `/api/agent/chat/stream`、`/api/agent/chat/graph`、`/api/agent/hitl/**` 已进入 `.authenticated()`；
+- `AtlasOrchestrator` 从 `AgentPrincipalResolver` + `SessionStore` 解析 user/token/org，从 `ConversationStore` 校验 conversation owner；
+- 请求体 `userId`、raw `X-Session-Id`、未校验 `conversationId` 不再决定运行时身份；
+- SSE/Graph/HITL 使用 `run-*` / `graph-*` 作为非敏感关联 ID，不复用 raw `ses_*`；
+- HITL resume 增加 checkpoint owner 校验，防止跨用户恢复执行。
+
 ## 最新 Agent 标准的落地顺序
 
 以下技术代表 2026 年 Agent 工程的先进方向，但必须按可验证顺序接入：

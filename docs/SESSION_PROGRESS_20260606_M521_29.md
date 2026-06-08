@@ -6,7 +6,7 @@
 - Primary workspace recovery folder: `F:\gitProject\kube-agent\codex-memory\kube-agent\current`
 - Historical external memory folder: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.29-5, principal-owned conversations.
+- Current latest wave: M5.29-6, Chat/SSE runtime identity migration.
 - Phase update: HPC / Slurm / BCM and NIM are paused and moved to Phase 2 by user direction.
 - Phase 1 focus: deliver the top-tier Agent core through generic manager Agent foundations, safe read/query validation, non-HPC/NIM manager function coverage, Tool metadata quality, HITL/audit execution boundary, traceability, recovery, evaluation, teaching documentation, and vue-kube-manager workflow integration.
 - Phase boundary clarification: moving NIM / HPC / Slurm / BCM to Phase 2 postpones specialist domain plugins only; it does not reduce Phase 1 standards.
@@ -55,6 +55,30 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.29-6 Chat/SSE runtime identity migration is implemented:
+  - `/api/agent/chat/stream`, `/api/agent/chat/graph`, and `/api/agent/hitl/**` now require Spring Security authentication.
+  - `AtlasOrchestrator` now resolves runtime owner from `AgentPrincipalResolver` and server-side `SessionStore` data, not from request body `userId`, raw `X-Session-Id`, or `anonymous`.
+  - `conversationId` is still allowed as a frontend-selected locator, but it must pass `ConversationStore.findByUserAndId(principal, conversationId)` before it can enter Graph/ReAct/SafeToolExecutor context.
+  - Missing principal, missing token/orgId, and cross-user `conversationId` fail closed before any Tool execution starts.
+  - SSE/Graph/HITL runtime ids are now generated as `run-*` / `graph-*`; raw `ses_*` login session ids are not reused as stream thread ids.
+  - `HITLController` confirm/clarify resume now verifies checkpoint `user_id` against the current trusted principal before resuming Graph execution.
+  - Added/extended tests:
+    - `AtlasOrchestratorRuntimeIdentityTest` for missing-principal rejection, trusted session token/org propagation, owner-checked conversation id, cross-user rejection, and non-leaking run ids.
+    - `AgentSecurityConfigWebMvcTest` / `AgentSecurityConfigContractTest` for authenticated Chat/SSE/HITL endpoint rules.
+    - `M513HitlFailClosedContractTest` for HITL checkpoint-owner protection.
+  - Verification passed:
+    - `mvn -q "-Dtest=AtlasOrchestratorRuntimeIdentityTest,AtlasOrchestratorJsonTest,AgentSecurityConfigContractTest,AgentSecurityConfigWebMvcTest,M513HitlFailClosedContractTest,M523TracePropagationContractTest" test`
+    - `mvn -q -DskipTests validate`
+  - Security result:
+    - `X-Session-Id`, `conversationId`, and SSE/HITL `threadId` are locators/correlation ids only; they do not decide runtime identity.
+    - Chat/SSE/Graph/ReAct/Tool fallback now consume a trusted runtime snapshot: principal username + server-side token + orgId + checked conversation id + traceId.
+  - Intentional migration boundary:
+    - Bearer precedence from M5.29-4 remains unchanged.
+    - Phase 2 specialist NIM/HPC/Slurm/BCM work remains paused.
+  - Next Phase 1 technical slices:
+    - migrate remaining `/api/agent/**` endpoint surfaces from compatibility `permitAll` to explicit authenticated/admin/method guards;
+    - continue durable audit, replay timeline DTO, RAG/Memory, read-only MCP schema adapter, Agent eval, and frontend runtime evidence UX.
 
 - M5.29-5 principal-owned conversations is implemented:
   - `ConversationController` now receives `AgentPrincipalResolver` and uses trusted principal username as the conversation owner.

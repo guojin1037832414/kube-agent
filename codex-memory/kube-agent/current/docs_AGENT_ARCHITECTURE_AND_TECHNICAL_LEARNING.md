@@ -96,6 +96,37 @@ Tool 层负责把成熟后端能力变成 Agent 可调用能力。一个高质�
 
 学习重点：Agent 的安全不是单个 if 判断，而是一条多层证据链。每层都假设上一层可能被提示词、参数或未来代码变更误导。
 
+### 4. M5.29 身份治理主线
+
+M5.29 把项目从历史 ThreadLocal / raw session id 兼容模式，推进到 Spring Security + 可信运行时身份快照。这里有三个必须分清的概念：
+
+| 概念 | 可以做什么 | 不能做什么 |
+|---|---|---|
+| 认证主体 `AgentPrincipal` | 表示“当前请求是谁”，由 `SecurityContext` 或 legacy permission snapshot 恢复 | 不能携带 raw token，也不能被前端请求体覆盖 |
+| 会话定位器 `X-Session-Id` | 查 `SessionStore`，恢复服务端 token/org/role/session data | 不能当 userId、owner、role、orgId 或授权事实 |
+| 运行关联 ID `run-*` / `graph-*` / `conversationId` | 关联 SSE、Graph、HITL、审计、前端会话和 trace | 不能证明资源归属；`conversationId` 使用前必须校验 owner |
+
+M5.29-4 已完成 `X-Session-Id -> SessionStore -> Authentication`。M5.29-5 已把 conversation metadata owner 迁移到 trusted principal。M5.29-6 则把 Chat/SSE/Graph/ReAct/HITL 的执行链收口到可信 runtime identity snapshot：
+
+```text
+HTTP request
+    |
+    |-- Authorization: Bearer ...        -> Bearer 优先恢复 SecurityContext
+    |-- X-Session-Id: ses_*              -> 无 Bearer 时查 SessionStore
+    v
+AgentPrincipalResolver
+    |
+    v
+RuntimeIdentity(user, token, orgId, checkedConversationId, traceId)
+    |
+    |-- AtlasOrchestrator / SSE
+    |-- Supervisor Graph / ReAct
+    |-- SafeToolExecutor
+    |-- HITL confirm / clarify resume
+```
+
+学习重点：顶级 Agent 不能把“可关联”误当成“可授权”。`conversationId`、`threadId`、`sessionId` 都是 locator/correlation id；真正能决定 owner 的，只能是服务端可信主体与服务端状态校验。
+
 ## 一期与二期范围
 
 2026-06-08 用户明确调整优先级：HPC / Slurm / BCM 与 NIM 相关能力先暂停，统一作为二期项目再继续添加和真实化。

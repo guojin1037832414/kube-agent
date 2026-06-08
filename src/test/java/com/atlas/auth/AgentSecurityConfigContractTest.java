@@ -35,11 +35,19 @@ class AgentSecurityConfigContractTest {
     }
 
     @Test
-    void shouldProtectAdminDiagnosticsAndActuatorWithoutLockingAllAgentApisYet() throws Exception {
+    void shouldProtectAdminDiagnosticsRuntimeSseAndActuatorWithoutLockingAllAgentApisYet() throws Exception {
         String source = Files.readString(SOURCE);
 
         assertThat(source).contains(".requestMatchers(\"/api/agent/observability/**\").hasAnyRole(\"ADMIN\", \"SYS_ADMIN\")");
-        assertThat(source).contains(".requestMatchers(\"/api/agent/memory/**\", \"/api/agent/mcp/**\", \"/api/agent/conversations\", \"/api/agent/conversations/**\").authenticated()");
+        assertThat(source)
+            .contains("\"/api/agent/chat/stream\"")
+            .contains("\"/api/agent/chat/graph\"")
+            .contains("\"/api/agent/hitl/**\"")
+            .contains("\"/api/agent/memory/**\"")
+            .contains("\"/api/agent/mcp/**\"")
+            .contains("\"/api/agent/conversations\"")
+            .contains("\"/api/agent/conversations/**\"")
+            .contains(").authenticated()");
         assertThat(source).contains(".requestMatchers(\"/actuator/health\", \"/actuator/info\").permitAll()");
         assertThat(source).contains(".requestMatchers(\"/actuator/**\").hasAnyRole(\"ADMIN\", \"SYS_ADMIN\")");
         assertThat(source).contains(".anyRequest().permitAll()");

@@ -7,6 +7,19 @@
 
 ---
 
+## 2026-06-09 M5.29-6 状态更新
+
+M5.29-6 已把 Chat/SSE/Graph/HITL 执行入口迁移到可信运行时身份主线：
+
+- `/api/agent/chat/stream`、`/api/agent/chat/graph`、`/api/agent/hitl/**` 已进入 Spring Security `.authenticated()`。
+- `X-Session-Id` 只作为 `SessionStore` 索引；无 Bearer 时可恢复服务端 `SessionData` 并桥接到 `Authentication`，但不能作为 userId/owner/role/orgId。
+- `AtlasOrchestrator` 使用 `AgentPrincipalResolver` 决定当前主体，并从服务端 session 补齐 token/orgId。
+- 请求体 `userId` 不再参与运行时身份决策；请求体 `conversationId` 只有通过 `ConversationStore.findByUserAndId(principal, conversationId)` 后才能进入 Graph/ReAct/SafeToolExecutor。
+- SSE/Graph/HITL 使用 `run-*` / `graph-*` 作为运行关联 ID，不复用 raw `ses_*` 登录会话 ID，降低 session locator 暴露面。
+- HITL confirm/clarify 恢复会读取 checkpoint `user_id` 并要求等于当前 trusted principal，避免其他登录用户凭 `threadId + confirmToken` 恢复别人的执行。
+
+学习结论：`X-Session-Id`、`conversationId`、`threadId` 都是 locator/correlation id。顶级 Agent 的授权事实必须来自服务端可信主体和服务端状态校验，而不是来自 LLM、前端请求体或可猜测/可复制的关联 ID。
+
 ## 一、现有安全架构速览
 
 ### 已具备的安全组件

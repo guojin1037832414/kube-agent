@@ -10,14 +10,17 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Set;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -124,6 +127,39 @@ class AgentSecurityConfigWebMvcTest {
             .andExpect(status().isOk());
     }
 
+    @Test
+    void chatStreamGraphAndHitlEndpointsRequireAuthenticatedPrincipal() throws Exception {
+        String body = "{\"message\":\"查看节点状态\"}";
+
+        mockMvc.perform(post("/api/agent/chat/stream")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/api/agent/chat/graph")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/api/agent/hitl/confirm")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"threadId\":\"run-1\",\"confirmToken\":\"token\"}"))
+            .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/api/agent/chat/stream")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer user-token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isOk());
+
+        String sessionId = sessionStore.createSession("session-token", "session-user", "100002", "user", Set.of());
+        mockMvc.perform(post("/api/agent/chat/graph")
+                .header("X-Session-Id", sessionId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isOk());
+    }
+
     @RestController
     public static class TestController {
 
@@ -165,6 +201,21 @@ class AgentSecurityConfigWebMvcTest {
         @GetMapping("/api/agent/conversations/{id}")
         String conversationDetail(@PathVariable String id) {
             return id;
+        }
+
+        @PostMapping("/api/agent/chat/stream")
+        String chatStream() {
+            return "stream";
+        }
+
+        @PostMapping("/api/agent/chat/graph")
+        String chatGraph() {
+            return "graph";
+        }
+
+        @PostMapping("/api/agent/hitl/confirm")
+        String hitlConfirm() {
+            return "hitl";
         }
     }
 

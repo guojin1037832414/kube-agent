@@ -93,30 +93,32 @@ Current track:
 
 Recently completed:
 
-`M5.29-5 principal-owned conversations`
+`M5.29-6 Chat/SSE runtime identity migration`
 
 Latest checkpoint:
 
 - Date: 2026-06-09 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
-- M5.29-5 implemented:
-  - `ConversationController` now uses `AgentPrincipalResolver` to resolve conversation owner from the server-side authenticated principal.
-  - Conversation create/list/detail/delete/title-update no longer use raw `X-Session-Id` or `anonymous` as an owner identity.
-  - `/api/agent/conversations` and `/api/agent/conversations/**` now require Spring Security authentication.
-  - Added `ConversationControllerTest` and extended security config tests for authenticated conversation endpoints and principal-owned metadata.
+- M5.29-6 implemented:
+  - Chat/SSE runtime identity now comes from `AgentPrincipalResolver` plus server-side `SessionStore` context, not from request body `userId`, raw `X-Session-Id`, or `anonymous`.
+  - `/api/agent/chat/stream`, `/api/agent/chat/graph`, and `/api/agent/hitl/**` now require Spring Security authentication.
+  - Runtime `conversationId` is accepted only after owner validation through `ConversationStore.findByUserAndId(principal, conversationId)`.
+  - Missing trusted principal, incomplete token/orgId, forged cross-user `conversationId`, and cross-user HITL checkpoint resume all fail closed.
+  - SSE/Graph runtime ids are now generated as non-sensitive `run-*` / `graph-*` ids rather than reusing raw `ses_*` login session ids.
+  - M5.29-5 remains the prior conversation metadata CRUD owner migration; M5.29-6 is the streaming/Graph/ReAct/HITL execution identity migration.
 - Verification:
-  - `mvn -q "-Dtest=ConversationControllerTest,AgentSecurityConfigContractTest,AgentSecurityConfigWebMvcTest,AuthTokenFilterSecurityContextTest,AgentPrincipalResolverTest" test`
+  - `mvn -q "-Dtest=AtlasOrchestratorRuntimeIdentityTest,AtlasOrchestratorJsonTest,AgentSecurityConfigContractTest,AgentSecurityConfigWebMvcTest,M513HitlFailClosedContractTest,M523TracePropagationContractTest" test`
+  - `mvn -q -DskipTests validate`
 - Scope boundary:
   - Phase 1 generic Agent Core security-mainline migration only.
-  - Chat/SSE streaming ownership remains a separate follow-up because stream execution also carries token/org/trace propagation semantics.
+  - Chat/SSE runtime identity is now complete for this migration slice; remaining work is broader endpoint/method authorization plus durable evidence/eval systems.
   - No NIM/HPC/Slurm/BCM Phase 2 implementation was resumed.
   - No real write/create/delete/state-changing kube-manager call was opened.
 - Security result:
-  - Conversation metadata owner now comes from trusted principal, while `conversationId` and `X-Session-Id` remain locators only.
-- Compatibility note:
-  - Historical in-memory conversations created under raw session-id owners may not appear under username-owned lists after this security migration. The current Caffeine store is volatile, so this is accepted; future persistent conversation storage must define explicit owner migration.
+  - `X-Session-Id`, `conversationId`, and stream `threadId` are now documented and implemented as locators/correlation ids only.
+  - Chat/SSE/Graph/ReAct/Tool fallback and HITL resume share a trusted runtime identity snapshot: principal username, token, orgId, checked conversation id, and traceId.
 - Next technical follow-up:
-  - Migrate chat/SSE runtime ownership to `AgentPrincipalResolver`, then continue method-level authorization, durable audit, replay timeline DTOs, RAG/Memory, read-only MCP schema adapter, and Agent eval.
+  - Move remaining `/api/agent/**` compatibility endpoints to explicit authenticated/admin/method guards, then continue durable audit, replay timeline DTOs, RAG/Memory, read-only MCP schema adapter, and Agent eval.
 
 - Previous checkpoint:
 - Date: 2026-06-09 Asia/Shanghai.

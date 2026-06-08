@@ -6,6 +6,24 @@
 
 ---
 
+## [M5.29-6] - Chat/SSE runtime identity migration
+
+**Delivery**: Migrated Chat/SSE runtime ownership to trusted principal + server-side session context, and moved `/api/agent/chat/stream`, `/api/agent/chat/graph`, and `/api/agent/hitl/**` behind Spring Security authentication.
+**Changes**
+- Added authenticated Spring Security matchers for Chat stream, experimental graph stream, and HITL resume endpoints.
+- Updated `AtlasOrchestrator` so runtime `userId`, kube-manager token, `organizationId`, and `conversationId` are resolved from `AgentPrincipalResolver`, `SessionStore`, and owner-checked `ConversationStore` instead of caller-supplied `userId` or raw `X-Session-Id`.
+- Added fail-closed Chat/SSE guards for missing trusted principal, incomplete token/org context, and forged cross-user `conversationId`.
+- Replaced raw `ses_*`-derived stream thread ids with generated `run-*` / `graph-*` ids so frontend/HITL/SSE correlation does not expose the login session id.
+- Hardened `HITLController` resume: checkpoint `user_id` must match the current trusted principal before confirm/clarify can resume Graph execution.
+- Added runtime identity tests covering missing principal rejection, principal-owned conversation propagation, cross-user conversation rejection, and non-leaking stream run ids.
+**Verification**
+- `mvn -q "-Dtest=AtlasOrchestratorRuntimeIdentityTest,AtlasOrchestratorJsonTest,AgentSecurityConfigContractTest,AgentSecurityConfigWebMvcTest,M513HitlFailClosedContractTest,M523TracePropagationContractTest" test` passed.
+- `mvn -q -DskipTests validate` passed.
+**Security**
+- `X-Session-Id`, `conversationId`, and stream `threadId` are locators/correlation ids only; they never decide runtime owner.
+- Chat/SSE execution now consumes a trusted runtime identity snapshot: principal username + server-side token + orgId + owner-checked conversation id + traceId.
+- Bearer precedence from M5.29-4 is preserved; session bridge remains the compatibility path for the frontend login flow.
+
 ## [M5.29-5] - Principal-owned conversations
 
 **Delivery**: Migrated Agent conversation metadata ownership from raw `X-Session-Id` strings to trusted `AgentPrincipalResolver` identities and moved `/api/agent/conversations` plus child resources behind Spring Security `authenticated()` rules.

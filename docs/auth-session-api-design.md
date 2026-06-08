@@ -16,7 +16,7 @@
 | **权限缓存** | `UserPermissionContext` 内置 `ConcurrentHashMap<String, UserPermission>`，支持 `onLogin/onLogout` |
 | **异步透传** | `AsyncContextHolder` + `DelegatingExecutor` 已解决 CompletableFuture 线程切换 Token 丢失问题 |
 | **HTTP 客户端** | `KubeManagerHttpClient` 已有 `doFallbackLogin()` 方法，会用 sysadmin 账号向 `POST /api/login` 发送 `application/x-www-form-urlencoded` |
-| **会话标识** | 当前流式接口 `sessionId = userId + "-" + System.currentTimeMillis()`，无持久化 |
+| **会话标识** | M5.29-6 起流式运行 ID 使用非敏感 `run-*` / `graph-*`，登录 `ses_*` 只作为 `SessionStore` 索引 |
 | **会话状态** | 仅 Caffeine `TimedDecisionCache` 存 HITL 决策，无 conversation 元数据存储 |
 
 ### 1.2 缺失清单
@@ -24,13 +24,13 @@
 1. **前端代理登录**：前端期望 `POST /api/agent/login`（JSON），但 kube-manager 只认 `POST /api/login`（form-urlencoded）
 2. **登出接口**：无 `/api/agent/logout` 端点，无法清理 `UserPermissionContext` 缓存
 3. **会话 CRUD**：无 conversation 列表、详情、删除接口，前端无法管理历史会话
-4. **会话绑定**：历史设计阶段 `X-Session-Id` 只做会话标识；M5.29-4 起它已可通过 `SessionStore` 桥接到 Spring Security `Authentication`，但 SSE/Conversation 的数据归属仍在兼容迁移阶段
+4. **会话绑定**：历史设计阶段 `X-Session-Id` 只做会话标识；M5.29-4 起它已可通过 `SessionStore` 桥接到 Spring Security `Authentication`；M5.29-5 已完成 conversation metadata owner 迁移；M5.29-6 已完成 Chat/SSE runtime identity 迁移
 
 ---
 
 ## 二、设计目标
 
-1. **零侵入现有流式接口**：`/api/agent/chat/stream` 和 `/api/agent/hitl/*` 逻辑不变
+1. **流式接口安全主线化**：`/api/agent/chat/stream`、`/api/agent/chat/graph` 和 `/api/agent/hitl/*` 必须消费服务端可信 runtime identity
 2. **最小化状态存储**：尽量避免引入 Redis / DB； conversation 元数据优先内存，可选 Caffeine TTL
 3. **Token 链路自闭环**：登录 → kube-manager 返回 JWT → kube-agent 缓存 → ThreadLocal 透传 → Tool 调用，全程无断点
 4. **安全合规**：密码不落地日志、Token 带 TTL、登出即失效、幂等保护
@@ -65,6 +65,8 @@
 ```
 
 > M5.29-4 更新：当前实现返回的是 `ses_*` sessionId，并保存到 `SessionStore`。后续请求若没有 `Authorization: Bearer`，`AuthTokenFilter` 会用 `X-Session-Id` 反查服务端 `SessionData`，再生成 Spring Security `Authentication`。如果请求显式带了 Bearer，则 Bearer 是本次请求身份权威；未知 Bearer 不自动降级到 SessionId。`X-Session-Id` 是服务端会话索引，不是用户或 LLM 可自声明的身份。
+>
+> M5.29-6 更新：Chat/SSE 运行时不再把 `X-Session-Id`、请求体 `userId` 或 `conversationId` 当作身份事实。`AtlasOrchestrator` 先通过 `AgentPrincipalResolver` 取得当前主体，再从 `SessionStore` 补齐 token/orgId，并用 `ConversationStore.findByUserAndId(...)` 校验 conversation owner。SSE/Graph/HITL 使用新生成的 `run-*` / `graph-*` 作为运行关联 ID，不复用 raw `ses_*` 登录会话 ID。
 
 ---
 
@@ -345,30 +347,26 @@ public class ConversationController {
 
 ## 六、X-Session-Id 透传机制
 
-### 6.1 现有问题
+### 6.1 历史问题
 
-当前 `AtlasOrchestrator.streamChat()` 中 `conversationId` 来自 `ChatRequest` body：
+历史版本的 `AtlasOrchestrator.streamChat()` 中 `conversationId` 来自 `ChatRequest` body，`userId` 也可能由前端传入：
 ```java
 public record ChatRequest(String conversationId, String userQuery, String userId) {}
 ```
 
-### 6.2 建议增强
+这种设计对早期 demo 足够，但对顶级 Agent 不够安全：请求体字段属于 caller-supplied input，不能决定资源 owner、运行时用户或审计 actor。
 
-1. **接收方式**：同时支持 body 字段和 `X-Session-Id` header，header 优先：
-   ```java
-   @PostMapping("/chat/stream")
-   public SseEmitter streamChat(
-       @RequestBody ChatRequest request,
-       @RequestHeader(value = "X-Session-Id", required = false) String sessionIdFromHeader
-   ) {
-       String conversationId = sessionIdFromHeader != null ? sessionIdFromHeader : request.conversationId();
-       // ...
-   }
-   ```
+### 6.2 M5.29-6 当前实现
 
-2. **会话激活**：流式请求开始时调用 `conversationStore.touch(conversationId)` 更新 `lastActiveAt`
+1. **身份来源**：`AgentPrincipalResolver` 解析当前可信主体，缺主体 fail-closed。
 
-3. **鉴权绑定**：可选在 `ConversationStore` 中校验 `conversationId` 是否属于当前 Token 对应的 `userId`，防止跨用户访问
+2. **会话恢复**：`X-Session-Id` 只用于 `SessionStore.findById(...)`，补齐 server-side token / orgId / role；Bearer 仍保持优先。
+
+3. **Conversation 校验**：请求体 `conversationId` 只是前端选择的业务会话 locator，进入 Graph/ReAct/SafeToolExecutor 前必须校验属于当前 principal。
+
+4. **运行 ID 脱敏**：SSE / Graph / HITL 使用 `run-*` 或 `graph-*`，不复用 raw `ses_*` 登录会话 ID。
+
+5. **HITL 恢复**：confirm / clarify 读取 checkpoint 的 `user_id`，必须等于当前 trusted principal，否则拒绝恢复。
 
 ---
 

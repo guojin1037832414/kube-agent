@@ -1,11 +1,13 @@
 package com.atlas.orchestrator;
 
+import com.atlas.auth.AgentPrincipalResolver;
 import com.atlas.auth.UserPermissionContext;
 import com.atlas.http.KubeManagerHttpClient;
 import com.atlas.hitl.HitlGuard;
 import com.atlas.intent.IntentRouter;
 import com.atlas.orchestrator.polish.ToolResultPolishingService;
 import com.atlas.react.ReActEventSinkRegistry;
+import com.atlas.store.ConversationStore;
 import com.atlas.store.SessionStore;
 import com.atlas.tool.core.ToolRegistry;
 import com.atlas.tool.execution.SafeToolExecutor;
@@ -35,6 +37,7 @@ class AtlasOrchestratorJsonTest {
             mock(StreamingEmitter.class),
             mock(ToolRegistry.class),
             mock(UserPermissionContext.class),
+            mock(AgentPrincipalResolver.class),
             mock(KubeManagerHttpClient.class),
             mock(HitlGuard.class),
             mock(SafeToolExecutor.class),
@@ -43,6 +46,7 @@ class AtlasOrchestratorJsonTest {
             mock(ToolResultPolishingService.class),
             Runnable::run,
             mock(SessionStore.class),
+            mock(ConversationStore.class),
             null,
             null
         );
@@ -75,6 +79,7 @@ class AtlasOrchestratorJsonTest {
             mock(StreamingEmitter.class),
             mock(ToolRegistry.class),
             mock(UserPermissionContext.class),
+            mock(AgentPrincipalResolver.class),
             mock(KubeManagerHttpClient.class),
             mock(HitlGuard.class),
             mock(SafeToolExecutor.class),
@@ -83,6 +88,7 @@ class AtlasOrchestratorJsonTest {
             mock(ToolResultPolishingService.class),
             Runnable::run,
             mock(SessionStore.class),
+            mock(ConversationStore.class),
             null,
             null
         );
