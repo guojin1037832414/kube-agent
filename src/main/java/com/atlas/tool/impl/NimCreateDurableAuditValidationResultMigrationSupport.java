@@ -439,7 +439,22 @@ final class NimCreateDurableAuditValidationResultMigrationSupport {
         return step;
     }
 
+    static Map<String, Object> validationResultContractFromMigrationReport(Map<String, Object> migrationReport) {
+        return validationResultContractForDigests(
+            text(migrationReport.get("sourceReceiptSchemaDigest")),
+            text(migrationReport.get("sourceValidationPlanDigest"))
+        );
+    }
+
     private static Map<String, Object> validationResultContract(Map<String, Object> validationGateReport) {
+        return validationResultContractForDigests(
+            text(validationGateReport.get("sourceReceiptSchemaDigest")),
+            text(validationGateReport.get("validationPlanDigest"))
+        );
+    }
+
+    private static Map<String, Object> validationResultContractForDigests(String sourceReceiptSchemaDigest,
+                                                                         String sourceValidationPlanDigest) {
         Map<String, Object> contract = new LinkedHashMap<>();
         contract.put("type", FUTURE_VALIDATION_RESULT);
         contract.put("producedBy", NimCreateDurableAuditReceiptValidationGateSupport.FUTURE_VALIDATOR);
@@ -448,8 +463,8 @@ final class NimCreateDurableAuditValidationResultMigrationSupport {
         contract.put("sideEffectAllowedNow", false);
         contract.put("currentValidationStatus", VALIDATION_NOT_RUN);
         contract.put("requiredPassStatus", "PASS");
-        contract.put("sourceReceiptSchemaDigest", text(validationGateReport.get("sourceReceiptSchemaDigest")));
-        contract.put("sourceValidationPlanDigest", text(validationGateReport.get("validationPlanDigest")));
+        contract.put("sourceReceiptSchemaDigest", sourceReceiptSchemaDigest);
+        contract.put("sourceValidationPlanDigest", sourceValidationPlanDigest);
         contract.put("mustBindAuditEventDigest", true);
         contract.put("mustBindStorageProbeReceiptDigest", true);
         contract.put("mustBindPreWriteDurableAckDigest", true);
@@ -476,7 +491,22 @@ final class NimCreateDurableAuditValidationResultMigrationSupport {
         return template;
     }
 
+    static Map<String, Object> releaseDecisionContractFromMigrationReport(Map<String, Object> migrationReport) {
+        return releaseDecisionContractForDigests(
+            text(migrationReport.get("sourceReceiptSchemaDigest")),
+            text(migrationReport.get("sourceValidationPlanDigest"))
+        );
+    }
+
     private static Map<String, Object> releaseDecisionContract(Map<String, Object> validationGateReport) {
+        return releaseDecisionContractForDigests(
+            text(validationGateReport.get("sourceReceiptSchemaDigest")),
+            text(validationGateReport.get("validationPlanDigest"))
+        );
+    }
+
+    private static Map<String, Object> releaseDecisionContractForDigests(String sourceReceiptSchemaDigest,
+                                                                        String sourceValidationPlanDigest) {
         Map<String, Object> contract = new LinkedHashMap<>();
         contract.put("type", FUTURE_RELEASE_DECISION);
         contract.put("dependsOn", FUTURE_VALIDATION_RESULT);
@@ -485,8 +515,8 @@ final class NimCreateDurableAuditValidationResultMigrationSupport {
         contract.put("sideEffectAllowedNow", false);
         contract.put("currentDecision", RELEASE_DENIED);
         contract.put("requiredAllowDecision", "ALLOW_WRITE_EXECUTION");
-        contract.put("sourceReceiptSchemaDigest", text(validationGateReport.get("sourceReceiptSchemaDigest")));
-        contract.put("sourceValidationPlanDigest", text(validationGateReport.get("validationPlanDigest")));
+        contract.put("sourceReceiptSchemaDigest", sourceReceiptSchemaDigest);
+        contract.put("sourceValidationPlanDigest", sourceValidationPlanDigest);
         contract.put("mustBindValidationResultDigest", true);
         contract.put("mustBindAuditEventDigest", true);
         contract.put("mustBindTrustedPrincipalDigest", true);

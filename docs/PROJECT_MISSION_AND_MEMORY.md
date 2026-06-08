@@ -91,10 +91,30 @@ Current track:
 
 Recently completed:
 
-`M5.21-131 NIM runtime binding maps closed`
+`M5.21-132 NIM release gate contract maps closed`
 
 Latest checkpoint:
 
+- Date: 2026-06-08 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- Teaching principle:
+  - This project is not only delivering software. It is also a teaching system for mastering Agent engineering.
+  - Maintain `docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md` as the long-lived architecture and technical-learning map.
+- M5.21-132 implemented:
+  - Hardened `NimCreateDurableAuditValidationResultMigrationSupport` so validation-result and release-decision contract maps have producer-owned canonical helpers.
+  - Hardened `NimCreateDurableAuditReleaseDecisionGateSupport` so it requires exact contract-map equality instead of partial field checks when consuming the migration plan.
+  - Added a digest-consistent forged migration-plan regression that appends fake nested contract keys, recomputes `migrationPlanDigest`, and still expects fail-closed release-gate rejection.
+  - Added `docs/M5_21_ONE_HUNDRED_THIRTY_SECOND_WAVE_NIM_RELEASE_GATE_CONTRACT_MAPS_CLOSED_AUDIT_20260608.md`.
+  - Updated the long-lived teaching map with the M5.21-132 lesson: producer-owned canonical maps prevent downstream consumers from hand-interpreting security JSON.
+  - Targeted verification passed:
+    - `git diff --check`
+    - `mvn -q "-Dtest=NimCreateDurableAuditValidationResultMigrationSupportTest,NimCreateDurableAuditReleaseDecisionGateSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateDurableAuditValidationResultMigrationSupportTest,NimCreateDurableAuditReleaseDecisionGateSupportTest,NimCreateStateMachineReleaseDecisionRequirementSupportTest,NimCreateDurableAuditCodeReleaseSwitchContractSupportTest" test`
+    - `mvn -q test`
+    - Full Maven note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - Security invariant: no real `8100`, no real NIM service HTTP call, no Authorization header sending, no durable audit write, no deployment POST, no runtime write behavior, no source guard installation, no state-machine release binding implementation, no durable executor release binding implementation, no validation result signer, no release decision signer, no code release switch implementation, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Multi-expert next slice: close `releaseDecisionContract` binding maps as consumed by `NimCreateDurableAuditCodeReleaseSwitchContractSupport`, especially `validationResultBinding`, `stateMachineBinding`, `durableExecutorBinding`, `allowPrerequisites`, `currentTemplate`, and `forbiddenShortcuts`.
+- Previous checkpoint:
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
 - Teaching principle:

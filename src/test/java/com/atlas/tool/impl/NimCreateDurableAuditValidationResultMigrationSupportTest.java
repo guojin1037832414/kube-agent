@@ -110,6 +110,11 @@ class NimCreateDurableAuditValidationResultMigrationSupportTest {
         @SuppressWarnings("unchecked")
         Map<String, Object> validationResult =
             (Map<String, Object>) plan.get("validationResultContract");
+        assertEquals(
+            NimCreateDurableAuditValidationResultMigrationSupport
+                .validationResultContractFromMigrationReport(report),
+            validationResult
+        );
         assertEquals(NimCreateDurableAuditValidationResultMigrationSupport.FUTURE_VALIDATION_RESULT,
             validationResult.get("type"));
         assertEquals(false, validationResult.get("instanceAllowedNow"));
@@ -133,6 +138,11 @@ class NimCreateDurableAuditValidationResultMigrationSupportTest {
         @SuppressWarnings("unchecked")
         Map<String, Object> releaseDecision =
             (Map<String, Object>) plan.get("releaseDecisionContract");
+        assertEquals(
+            NimCreateDurableAuditValidationResultMigrationSupport
+                .releaseDecisionContractFromMigrationReport(report),
+            releaseDecision
+        );
         assertEquals(NimCreateDurableAuditValidationResultMigrationSupport.FUTURE_RELEASE_DECISION,
             releaseDecision.get("type"));
         assertEquals(NimCreateDurableAuditValidationResultMigrationSupport.FUTURE_VALIDATION_RESULT,

@@ -335,6 +335,53 @@ class NimCreateDurableAuditReleaseDecisionGateSupportTest {
     }
 
     @Test
+    void releaseDecisionGate_shouldRejectDigestConsistentMigrationPlanContractMapExtensions() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+
+        for (MapMutation mutation : List.of(
+            new MapMutation(
+                "validationResultContract",
+                "fallbackToCallerValidationResultAllowed",
+                false
+            ),
+            new MapMutation(
+                "releaseDecisionContract",
+                "fallbackToCallerReleaseDecisionAllowed",
+                false
+            )
+        )) {
+            Map<String, Object> forgedMigrationReport = withDigestConsistentExtraMigrationPlanMapField(
+                migrationReport(audit, principal),
+                mutation.contractKey(),
+                mutation.fieldKey(),
+                mutation.forgedValue()
+            );
+
+            Map<String, Object> report = NimCreateDurableAuditReleaseDecisionGateSupport.plan(
+                new NimCreateDurableAuditReleaseDecisionGateSupport.DurableAuditReleaseDecisionGateInput(
+                    audit,
+                    principal,
+                    forgedMigrationReport
+                )
+            );
+
+            String scenario = mutation.contractKey() + "." + mutation.fieldKey();
+            assertEquals(NimCreateDurableAuditReleaseDecisionGateSupport.REJECTED_STATE,
+                report.get("gateState"), scenario);
+            assertEquals(false, report.get("inputAccepted"), scenario);
+            assertEquals(false, report.get("writeExecutionAllowed"), scenario);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> plan = (Map<String, Object>) report.get("releaseDecisionGatePlan");
+            assertTrue(plan.isEmpty(), scenario);
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+            assertHasBlocker(blockers,
+                "DURABLE_AUDIT_VALIDATION_RESULT_MIGRATION_REPORT_INVALID_FOR_RELEASE_GATE");
+        }
+    }
+
+    @Test
     void releaseDecisionGate_shouldRejectTrustedPrincipalMismatch() {
         Map<String, Object> audit = completeAuditContext();
         Map<String, Object> migrationPrincipal = trustedPrincipalSnapshot();
@@ -572,6 +619,23 @@ class NimCreateDurableAuditReleaseDecisionGateSupportTest {
         return forgedReport;
     }
 
+    private Map<String, Object> withDigestConsistentExtraMigrationPlanMapField(Map<String, Object> migrationReport,
+                                                                              String contractKey,
+                                                                              String fieldKey,
+                                                                              Object forgedValue) {
+        Map<String, Object> forgedReport = new LinkedHashMap<>(migrationReport);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> migrationPlan =
+            new LinkedHashMap<>((Map<String, Object>) forgedReport.get("migrationPlan"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> contract = new LinkedHashMap<>((Map<String, Object>) migrationPlan.get(contractKey));
+        contract.put(fieldKey, forgedValue);
+        migrationPlan.put(contractKey, contract);
+        forgedReport.put("migrationPlan", migrationPlan);
+        forgedReport.put("migrationPlanDigest", sha256(migrationPlan));
+        return forgedReport;
+    }
+
     private String sha256(Map<String, Object> value) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
@@ -620,6 +684,9 @@ class NimCreateDurableAuditReleaseDecisionGateSupportTest {
     }
 
     private record ListMutation(String contractKey, String listKey, String forgedValue) {
+    }
+
+    private record MapMutation(String contractKey, String fieldKey, Object forgedValue) {
     }
 
     private Map<String, Object> completeAuditContext() {

@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-131, NIM runtime binding maps closed.
+- Current latest wave: M5.21-132, NIM release gate contract maps closed.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -48,6 +48,23 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-132 NIM release gate contract maps closed is implemented:
+  - Hardened `src/main/java/com/atlas/tool/impl/NimCreateDurableAuditValidationResultMigrationSupport.java`.
+  - Hardened `src/main/java/com/atlas/tool/impl/NimCreateDurableAuditReleaseDecisionGateSupport.java`.
+  - Validation-result and release-decision contract maps are now producer-owned canonical helpers.
+  - Release decision gate validation now requires exact contract-map equality when consuming the migration plan.
+  - Added a digest-consistent forged migration-plan regression that appends fake nested contract keys, recomputes `migrationPlanDigest`, and still expects rejection.
+  - Added `docs/M5_21_ONE_HUNDRED_THIRTY_SECOND_WAVE_NIM_RELEASE_GATE_CONTRACT_MAPS_CLOSED_AUDIT_20260608.md`.
+  - Updated `docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md` with the M5.21-132 learning note.
+  - Targeted verification passed:
+    - `git diff --check`
+    - `mvn -q "-Dtest=NimCreateDurableAuditValidationResultMigrationSupportTest,NimCreateDurableAuditReleaseDecisionGateSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateDurableAuditValidationResultMigrationSupportTest,NimCreateDurableAuditReleaseDecisionGateSupportTest,NimCreateStateMachineReleaseDecisionRequirementSupportTest,NimCreateDurableAuditCodeReleaseSwitchContractSupportTest" test`
+    - `mvn -q test`
+    - Full Maven note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - No real `8100` access; no real NIM service HTTP call; no Authorization header sending; no durable audit write; no deployment POST; no runtime write behavior opened; no source guard installation; no state-machine release binding implementation; no durable executor release binding implementation; no validation result signer; no release decision signer; no code release switch implementation; no Elasticsearch; no `ISysLogService`; no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Multi-expert follow-up: next close `releaseDecisionContract` binding maps consumed by code switch, especially `validationResultBinding`, `stateMachineBinding`, `durableExecutorBinding`, `allowPrerequisites`, `currentTemplate`, and `forbiddenShortcuts`.
 
 - M5.21-131 NIM runtime binding maps closed is implemented:
   - Hardened `src/main/java/com/atlas/tool/impl/NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport.java`.

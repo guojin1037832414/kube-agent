@@ -333,60 +333,16 @@ final class NimCreateDurableAuditReleaseDecisionGateSupport {
 
     private static boolean validationResultContractValid(Map<String, Object> migrationReport,
                                                          Map<String, Object> contract) {
-        Map<String, Object> template = objectMap(contract.get("currentTemplate"));
-        return NimCreateDurableAuditValidationResultMigrationSupport.FUTURE_VALIDATION_RESULT.equals(
-                text(contract.get("type")))
-            && NimCreateDurableAuditReceiptValidationGateSupport.FUTURE_VALIDATOR.equals(
-                text(contract.get("producedBy")))
-            && Boolean.TRUE.equals(contract.get("futureOnly"))
-            && Boolean.FALSE.equals(contract.get("instanceAllowedNow"))
-            && Boolean.FALSE.equals(contract.get("sideEffectAllowedNow"))
-            && VALIDATION_NOT_RUN.equals(text(contract.get("currentValidationStatus")))
-            && "PASS".equals(text(contract.get("requiredPassStatus")))
-            && text(migrationReport.get("sourceReceiptSchemaDigest")).equals(
-                text(contract.get("sourceReceiptSchemaDigest")))
-            && text(migrationReport.get("sourceValidationPlanDigest")).equals(
-                text(contract.get("sourceValidationPlanDigest")))
-            && Boolean.TRUE.equals(contract.get("mustBindAuditEventDigest"))
-            && Boolean.TRUE.equals(contract.get("mustBindStorageProbeReceiptDigest"))
-            && Boolean.TRUE.equals(contract.get("mustBindPreWriteDurableAckDigest"))
-            && Boolean.TRUE.equals(contract.get("mustBindPostWriteDurableAckDigest"))
-            && Boolean.TRUE.equals(contract.get("mustBindDurableReceiptDigest"))
-            && Boolean.TRUE.equals(contract.get("mustBindTrustedPrincipalDigest"))
-            && Boolean.TRUE.equals(contract.get("mustBeServerIssued"))
-            && VALIDATION_NOT_RUN.equals(text(template.get("validationStatus")))
-            && Boolean.FALSE.equals(template.get("validationPassed"))
-            && Boolean.FALSE.equals(template.get("releaseEligible"))
-            && Boolean.FALSE.equals(template.get("writeExecutionAllowed"));
+        return contract.equals(
+            NimCreateDurableAuditValidationResultMigrationSupport
+                .validationResultContractFromMigrationReport(migrationReport));
     }
 
     private static boolean releaseDecisionContractValid(Map<String, Object> migrationReport,
                                                         Map<String, Object> contract) {
-        Map<String, Object> template = objectMap(contract.get("currentTemplate"));
-        return NimCreateDurableAuditValidationResultMigrationSupport.FUTURE_RELEASE_DECISION.equals(
-                text(contract.get("type")))
-            && NimCreateDurableAuditValidationResultMigrationSupport.FUTURE_VALIDATION_RESULT.equals(
-                text(contract.get("dependsOn")))
-            && Boolean.TRUE.equals(contract.get("futureOnly"))
-            && Boolean.FALSE.equals(contract.get("instanceAllowedNow"))
-            && Boolean.FALSE.equals(contract.get("sideEffectAllowedNow"))
-            && RELEASE_DENIED.equals(text(contract.get("currentDecision")))
-            && "ALLOW_WRITE_EXECUTION".equals(text(contract.get("requiredAllowDecision")))
-            && text(migrationReport.get("sourceReceiptSchemaDigest")).equals(
-                text(contract.get("sourceReceiptSchemaDigest")))
-            && text(migrationReport.get("sourceValidationPlanDigest")).equals(
-                text(contract.get("sourceValidationPlanDigest")))
-            && Boolean.TRUE.equals(contract.get("mustBindValidationResultDigest"))
-            && Boolean.TRUE.equals(contract.get("mustBindAuditEventDigest"))
-            && Boolean.TRUE.equals(contract.get("mustBindTrustedPrincipalDigest"))
-            && Boolean.TRUE.equals(contract.get("mustBindCodeReleaseSwitch"))
-            && Boolean.TRUE.equals(contract.get("mustBeServerIssued"))
-            && RELEASE_DENIED.equals(text(template.get("decision")))
-            && VALIDATION_NOT_RUN.equals(text(template.get("validationStatus")))
-            && Boolean.FALSE.equals(template.get("releaseEligible"))
-            && Boolean.FALSE.equals(template.get("writeExecutionAllowed"))
-            && Boolean.FALSE.equals(template.get("releaseCredentialIssued"))
-            && Boolean.FALSE.equals(template.get("fallbackToLegacyAuditReceiptFlagAllowed"));
+        return contract.equals(
+            NimCreateDurableAuditValidationResultMigrationSupport
+                .releaseDecisionContractFromMigrationReport(migrationReport));
     }
 
     private static boolean legacyCompatibilityPolicyValid(Map<String, Object> policy) {

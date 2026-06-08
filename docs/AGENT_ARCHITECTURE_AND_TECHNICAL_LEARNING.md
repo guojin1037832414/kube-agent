@@ -215,7 +215,21 @@ NIM 链路明确禁止真实 Authorization、token、password、secret、NGC/NIM
 
 学习重点：对于长期 Agent 项目，文档不是附属物。文档是架构记忆、教学材料和恢复机制的一部分。
 
-## M5.21-131 最新学习笔记
+## M5.21-132 最新学习笔记
+
+本轮关闭的是 release decision gate 消费 migration plan 时的两个上游 contract map:
+- `migrationPlan.validationResultContract`
+- `migrationPlan.releaseDecisionContract`
+
+关键收获:
+- validation result / release decision contract 是 release gate 的上游协议对象, 不是普通说明字段。
+- 如果 release gate 只逐字段检查已知字段, 调用方可以追加新的 future authority key, 重新计算 `migrationPlanDigest`, 让旧校验误以为合同仍然有效。
+- `NimCreateDurableAuditValidationResultMigrationSupport` 现在提供 producer-owned canonical helper, `NimCreateDurableAuditReleaseDecisionGateSupport` 只接受这些 helper 的 exact equality。
+- 本轮新增 digest-consistent forgery: 给 `validationResultContract` / `releaseDecisionContract` 追加 fake fallback key, 重算 digest 后仍要求 release gate fail closed。
+
+学习总结: 顶级 Agent 的安全协议要避免 "consumer 重新理解 producer 的 JSON"。更稳的做法是让 producer 拥有 canonical shape, consumer 复用 producer helper 做 exact validation。这样 schema 扩展必须经过生产者代码、测试和文档, 不会悄悄变成下游授权语义。
+
+## M5.21-131 学习笔记
 
 本轮关闭的是 runtime binding contract 的两个运行时绑定 map：
 
