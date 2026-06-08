@@ -1,0 +1,58 @@
+﻿{
+    "project":  "kube-agent",
+    "wave":  "M5.21-132",
+    "title":  "NIM release gate contract maps closed",
+    "generatedAt":  "2026-06-08 Asia/Shanghai",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "head":  "b4c48838695ebe8110bbeb7b516b01f17a02e54a",
+    "verification":  [
+                         "git diff --check",
+                         "mvn -q \"-Dtest=NimCreateDurableAuditValidationResultMigrationSupportTest,NimCreateDurableAuditReleaseDecisionGateSupportTest\" test",
+                         "mvn -q \"-Dtest=NimCreateDurableAuditValidationResultMigrationSupportTest,NimCreateDurableAuditReleaseDecisionGateSupportTest,NimCreateStateMachineReleaseDecisionRequirementSupportTest,NimCreateDurableAuditCodeReleaseSwitchContractSupportTest\" test",
+                         "mvn -q test"
+                     ],
+    "securityInvariant":  "nim_create remains HOLD/mock-first; no real 8100, NIM HTTP call, Authorization header sending, durable audit write, deployment POST, validation result signer, release decision signer, code switch implementation, Elasticsearch, ISysLogService, or sys_log write was added.",
+    "nextPriority":  "Close releaseDecisionContract binding maps as consumed by NimCreateDurableAuditCodeReleaseSwitchContractSupport: validationResultBinding, stateMachineBinding, durableExecutorBinding, allowPrerequisites, currentTemplate, and forbiddenShortcuts.",
+    "files":  [
+                  {
+                      "file":  "CHANGELOG.md",
+                      "sha256":  "C33BE5322D83520D84F30A06F26D587415BDEB943F9312B242015539A76DD16E",
+                      "length":  239517
+                  },
+                  {
+                      "file":  "RECOVERY_STATUS.md",
+                      "sha256":  "19F9BEF39067AA09022C02BA021F3273E3629E78D749A2DD2772B2E0699CD9EB",
+                      "length":  1846
+                  },
+                  {
+                      "file":  "docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "F048094973B7BFE48487E67E821321A8DBC2A235CC1F81F0E9ECBAC4398DF2AA",
+                      "length":  19393
+                  },
+                  {
+                      "file":  "docs_M5_21_WAVE_INDEX_20260606.md",
+                      "sha256":  "6A4FD3FAF7BF0FBE8B8E1061A8D23DD6C879C86511D6D232C0C514D88039FADB",
+                      "length":  21583
+                  },
+                  {
+                      "file":  "docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "0B60969678F7DE8F05D65B1AF3647598405E7140FC7E0FF80469278CBCE86601",
+                      "length":  250854
+                  },
+                  {
+                      "file":  "docs_SESSION_PROGRESS_20260606_M521_29.md",
+                      "sha256":  "CBB121600DAF3B4AF43544ADA016073E275D5B5EB020038FC57F55936A93DC04",
+                      "length":  252994
+                  },
+                  {
+                      "file":  "docs_v3.1_DEVELOPMENT_GUIDE.md",
+                      "sha256":  "387AADB85E3B44CF7F3361F2CDE9BD077A48DE4DAD26416A9CFD2FD33BBCDC54",
+                      "length":  74224
+                  },
+                  {
+                      "file":  "docs_M5_21_ONE_HUNDRED_THIRTY_SECOND_WAVE_NIM_RELEASE_GATE_CONTRACT_MAPS_CLOSED_AUDIT_20260608.md",
+                      "sha256":  "133DC9E7194C4835CB3205348E058566A2A6E3D6A3DE90ABD054F62DB8F2F8A5",
+                      "length":  3559
+                  }
+              ]
+}

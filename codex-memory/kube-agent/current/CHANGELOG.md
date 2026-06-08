@@ -6,6 +6,23 @@
 
 ---
 
+## [M5.21-132] - NIM release gate contract maps closed
+
+**Delivery**: Closed release gate consumption of validation-result and release-decision contract maps from the migration plan.
+**Changes**
+- `NimCreateDurableAuditValidationResultMigrationSupport` now exposes producer-owned canonical helpers for `validationResultContract` and `releaseDecisionContract`.
+- `NimCreateDurableAuditReleaseDecisionGateSupport` now requires exact equality with those producer helpers instead of partial field checks.
+- Added digest-consistent forged migration-plan regressions that append fake nested contract keys, recompute `migrationPlanDigest`, and still expect fail-closed release-gate rejection.
+**Verification**
+- `git diff --check` passed.
+- Targeted validation-result migration and release decision gate tests passed.
+- Targeted migration, release gate, state-machine release requirement, and code switch contract tests passed.
+- Full `mvn -q test` passed; full Maven degraded to L1 embedding mode after local `model.onnx` download timeout but exited 0.
+**Security**
+- This is release gate proof-schema hardening only; it does not create real validation results, real release decisions, real release credentials, real audit writes, real deployment POSTs, or real runtime writes.
+- No real `8100`, real NIM service HTTP call, Authorization header sending, durable audit write, deployment POST, validation result signer, release decision signer, code release switch implementation, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-131] - NIM runtime binding maps closed
 
 **Delivery**: Closed runtime binding map shapes between runtime binding and runtime source guard.

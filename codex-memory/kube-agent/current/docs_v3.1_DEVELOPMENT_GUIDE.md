@@ -691,6 +691,13 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Extra future authority-shaped runtime binding keys are rejected even when `runtimeBindingContractDigest` is recomputed.
 - Learning distinction: runtime binding maps are release-adjacent protocol maps. A source guard should trust only the producer-owned exact map, not a digest-consistent superset.
 
+### M5.21-132 release gate contract maps closed note
+
+- Validation-result migration generation now exposes producer-owned canonical maps for `validationResultContract` and `releaseDecisionContract`.
+- Release decision gate validation requires exact contract-map equality instead of partial field checks when consuming `migrationPlan`.
+- Extra future authority-shaped contract keys are rejected even when `migrationPlanDigest` is recomputed.
+- Learning distinction: downstream gates should not hand-interpret upstream security JSON. Producer-owned canonical maps keep schema evolution visible, reviewed, and testable.
+
 ### Architecture and technical learning map note
 
 - Maintain `docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md` as the long-lived architecture and technical-learning map.
