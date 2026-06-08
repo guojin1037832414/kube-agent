@@ -2102,6 +2102,30 @@
 
 ## Latest M5.21-121 Progress
 
+## Latest M5.21-122 Progress
+
+- Date: 2026-06-08 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- Recovery home: `codex-memory/kube-agent/current`.
+- M5.21-122 implemented:
+  - `NimCreateDurableAuditWriterInterfaceSpecSupport` now owns closed helper lists for `failureContract.failureStatuses` and `testDoubleRules.forbiddenSuccessClaims`.
+  - `NimCreateDurableAuditReceiptSchemaSupport` now requires exact equality for both lists.
+  - Tests forge digest-consistent interface spec reports by appending fake future failure/test-double values and recomputing `interfaceSpecDigest`; typed receipt schema still rejects them.
+  - Added `docs/M5_21_ONE_HUNDRED_TWENTY_SECOND_WAVE_NIM_WRITER_INTERFACE_FAILURE_TEST_DOUBLE_LISTS_CLOSED_AUDIT_20260608.md`.
+- Verification passed so far:
+  - `git diff --check`
+  - `mvn -q "-Dtest=NimCreateDurableAuditWriterInterfaceSpecSupportTest,NimCreateDurableAuditReceiptSchemaSupportTest" test`
+  - `mvn -q test`
+  - Full Maven note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+- HOLD:
+  - No real `8100` access.
+  - No real NIM service HTTP call.
+  - No Authorization header sending.
+  - No durable audit write, Elasticsearch write, `ISysLogService`, or `sys_log` write.
+  - No deployment `POST /api/{orgId}/deployment`.
+  - No state-machine release binding, durable executor release binding, validation result signer, release decision signer, or code release switch implementation.
+  - `nim_create` remains HOLD/mock-first.
+
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
 - Recovery home: `codex-memory/kube-agent/current`.

@@ -620,3 +620,10 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Typed receipt schema validation requires exact equality for both upstream interface spec lists.
 - Extra future request/response proof fields are rejected even when `interfaceSpecDigest` is recomputed.
 - Learning distinction: downstream consumers must validate the full upstream proof protocol they depend on. Reading only the currently interesting fields lets unreviewed future proof slots become latent authority.
+
+### M5.21-122 writer interface failure/test-double lists closed note
+
+- Durable audit writer interface spec generation now exposes source-owned closed lists for failure statuses and test-double forbidden success claims.
+- Typed receipt schema validation requires exact equality for both lists.
+- Extra future failure or test-double claim values are rejected even when `interfaceSpecDigest` is recomputed.
+- Learning distinction: failure vocabularies and mock-success blockers look like strings, but in a write-release path they become protocol authority. Treat them as reviewed source-owned contracts.

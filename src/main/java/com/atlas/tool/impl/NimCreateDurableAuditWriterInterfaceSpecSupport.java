@@ -55,6 +55,30 @@ final class NimCreateDurableAuditWriterInterfaceSpecSupport {
         );
     }
 
+    static List<String> failureStatuses() {
+        return List.of(
+            "IMPLEMENTATION_HOLD",
+            "STORAGE_PROBE_NOT_IMPLEMENTED",
+            "STORAGE_UNAVAILABLE",
+            "STORAGE_PROBE_TIMEOUT",
+            "PRE_WRITE_DURABLE_ACK_MISSING",
+            "POST_WRITE_DURABLE_ACK_MISSING",
+            "AUDIT_EVENT_DIGEST_MISMATCH",
+            "SECRET_MATERIAL_REJECTED"
+        );
+    }
+
+    static List<String> testDoubleForbiddenSuccessClaims() {
+        return List.of(
+            "storageAvailable=true",
+            "preWritePersisted=true",
+            "postWritePersisted=true",
+            "receiptStatus=DURABLE_RECORDED",
+            "storageMode=DURABLE_AUDIT_LOG",
+            "realStorageTouched=true"
+        );
+    }
+
     static Map<String, Object> plan(DurableAuditWriterInterfaceSpecInput input) {
         DurableAuditWriterInterfaceSpecInput safeInput = input == null
             ? DurableAuditWriterInterfaceSpecInput.empty()
@@ -497,16 +521,7 @@ final class NimCreateDurableAuditWriterInterfaceSpecSupport {
         contract.put("fallbackToMockReceiptAllowed", false);
         contract.put("fallbackToBoundaryPlanAllowed", false);
         contract.put("fallbackToCandidateStorageReportAllowed", false);
-        contract.put("failureStatuses", List.of(
-            "IMPLEMENTATION_HOLD",
-            "STORAGE_PROBE_NOT_IMPLEMENTED",
-            "STORAGE_UNAVAILABLE",
-            "STORAGE_PROBE_TIMEOUT",
-            "PRE_WRITE_DURABLE_ACK_MISSING",
-            "POST_WRITE_DURABLE_ACK_MISSING",
-            "AUDIT_EVENT_DIGEST_MISMATCH",
-            "SECRET_MATERIAL_REJECTED"
-        ));
+        contract.put("failureStatuses", failureStatuses());
         return contract;
     }
 
@@ -521,14 +536,7 @@ final class NimCreateDurableAuditWriterInterfaceSpecSupport {
         rules.put("mustKeepPreWritePersistedFalse", true);
         rules.put("mustKeepPostWritePersistedFalse", true);
         rules.put("mustKeepDurableReceiptNotIssued", true);
-        rules.put("forbiddenSuccessClaims", List.of(
-            "storageAvailable=true",
-            "preWritePersisted=true",
-            "postWritePersisted=true",
-            "receiptStatus=DURABLE_RECORDED",
-            "storageMode=DURABLE_AUDIT_LOG",
-            "realStorageTouched=true"
-        ));
+        rules.put("forbiddenSuccessClaims", testDoubleForbiddenSuccessClaims());
         return rules;
     }
 

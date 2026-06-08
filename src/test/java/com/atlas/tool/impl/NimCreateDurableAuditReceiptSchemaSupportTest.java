@@ -260,6 +260,39 @@ class NimCreateDurableAuditReceiptSchemaSupportTest {
     }
 
     @Test
+    void receiptSchema_shouldRejectDigestConsistentInterfaceSpecExtraFailureOrTestDoubleLists() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+
+        for (String contractKey : List.of("failureContract", "testDoubleRules")) {
+            Map<String, Object> forgedInterfaceSpecReport = withDigestConsistentExtraInterfaceSpecListField(
+                interfaceSpecReport(audit, principal),
+                contractKey,
+                contractKey.equals("failureContract") ? "failureStatuses" : "forbiddenSuccessClaims",
+                contractKey.equals("failureContract") ? "FUTURE_SIGNER_NOT_READY" : "releaseEligible=true"
+            );
+
+            Map<String, Object> report = NimCreateDurableAuditReceiptSchemaSupport.plan(
+                new NimCreateDurableAuditReceiptSchemaSupport.DurableAuditReceiptSchemaInput(
+                    audit,
+                    principal,
+                    forgedInterfaceSpecReport
+                )
+            );
+
+            assertEquals(NimCreateDurableAuditReceiptSchemaSupport.REJECTED_STATE,
+                report.get("schemaState"), "contractKey=" + contractKey);
+            assertEquals(false, report.get("inputAccepted"), "contractKey=" + contractKey);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> schema = (Map<String, Object>) report.get("typedSchema");
+            assertTrue(schema.isEmpty(), "contractKey=" + contractKey);
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+            assertHasBlocker(blockers, "DURABLE_AUDIT_WRITER_INTERFACE_SPEC_REPORT_INVALID_FOR_RECEIPT_SCHEMA");
+        }
+    }
+
+    @Test
     void receiptSchema_shouldRejectEvenEmptyCallerSuppliedTypedAckInstance() {
         Map<String, Object> audit = completeAuditContext();
         Map<String, Object> principal = trustedPrincipalSnapshot();
@@ -329,6 +362,21 @@ class NimCreateDurableAuditReceiptSchemaSupportTest {
     private Map<String, Object> withDigestConsistentExtraInterfaceSpecRequiredField(Map<String, Object> interfaceSpecReport,
                                                                                    String contractKey,
                                                                                    String forgedField) {
+        String listKey = contractKey.equals("requestContract")
+            ? "requiredFields"
+            : "requiredFutureSuccessFields";
+        return withDigestConsistentExtraInterfaceSpecListField(
+            interfaceSpecReport,
+            contractKey,
+            listKey,
+            forgedField
+        );
+    }
+
+    private Map<String, Object> withDigestConsistentExtraInterfaceSpecListField(Map<String, Object> interfaceSpecReport,
+                                                                               String contractKey,
+                                                                               String listKey,
+                                                                               String forgedField) {
         Map<String, Object> forgedReport = new LinkedHashMap<>(interfaceSpecReport);
         @SuppressWarnings("unchecked")
         Map<String, Object> interfaceSpec = new LinkedHashMap<>(
@@ -336,9 +384,6 @@ class NimCreateDurableAuditReceiptSchemaSupportTest {
         );
         @SuppressWarnings("unchecked")
         Map<String, Object> contract = new LinkedHashMap<>((Map<String, Object>) interfaceSpec.get(contractKey));
-        String listKey = contractKey.equals("requestContract")
-            ? "requiredFields"
-            : "requiredFutureSuccessFields";
         @SuppressWarnings("unchecked")
         List<String> fields = new ArrayList<>((List<String>) contract.get(listKey));
         fields.add(forgedField);

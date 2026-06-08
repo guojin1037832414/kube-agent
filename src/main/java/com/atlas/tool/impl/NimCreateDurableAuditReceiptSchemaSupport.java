@@ -381,11 +381,7 @@ final class NimCreateDurableAuditReceiptSchemaSupport {
             && Boolean.FALSE.equals(failureContract.get("fallbackToMockReceiptAllowed"))
             && Boolean.FALSE.equals(failureContract.get("fallbackToBoundaryPlanAllowed"))
             && Boolean.FALSE.equals(failureContract.get("fallbackToCandidateStorageReportAllowed"))
-            && statuses.contains("IMPLEMENTATION_HOLD")
-            && statuses.contains("STORAGE_UNAVAILABLE")
-            && statuses.contains("PRE_WRITE_DURABLE_ACK_MISSING")
-            && statuses.contains("POST_WRITE_DURABLE_ACK_MISSING")
-            && statuses.contains("AUDIT_EVENT_DIGEST_MISMATCH");
+            && statuses.equals(NimCreateDurableAuditWriterInterfaceSpecSupport.failureStatuses());
     }
 
     private static boolean testDoubleRulesValid(Map<String, Object> interfaceSpecReport,
@@ -401,11 +397,9 @@ final class NimCreateDurableAuditReceiptSchemaSupport {
             && Boolean.TRUE.equals(testDoubleRules.get("mustKeepPreWritePersistedFalse"))
             && Boolean.TRUE.equals(testDoubleRules.get("mustKeepPostWritePersistedFalse"))
             && Boolean.TRUE.equals(testDoubleRules.get("mustKeepDurableReceiptNotIssued"))
-            && forbiddenSuccessClaims.contains("storageAvailable=true")
-            && forbiddenSuccessClaims.contains("preWritePersisted=true")
-            && forbiddenSuccessClaims.contains("postWritePersisted=true")
-            && forbiddenSuccessClaims.contains("receiptStatus=DURABLE_RECORDED")
-            && forbiddenSuccessClaims.contains("storageMode=DURABLE_AUDIT_LOG");
+            && forbiddenSuccessClaims.equals(
+                NimCreateDurableAuditWriterInterfaceSpecSupport.testDoubleForbiddenSuccessClaims()
+            );
     }
 
     private static Map<String, Object> typedSchema(Map<String, Object> auditContext,
