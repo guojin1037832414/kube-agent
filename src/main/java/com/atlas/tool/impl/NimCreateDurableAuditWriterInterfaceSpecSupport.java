@@ -34,6 +34,27 @@ final class NimCreateDurableAuditWriterInterfaceSpecSupport {
     private NimCreateDurableAuditWriterInterfaceSpecSupport() {
     }
 
+    static List<String> requestRequiredFields() {
+        return List.of(
+            "auditContext",
+            "trustedPrincipalSnapshot",
+            "storageAvailabilityProbeRequest",
+            "preWriteRecordTemplate",
+            "postWriteRecordTemplate",
+            "writeAttemptReference",
+            "sanitizedWriteResultSummary"
+        );
+    }
+
+    static List<String> responseRequiredFutureSuccessFields() {
+        return List.of(
+            "storageProbeReceipt",
+            "preWriteDurableAck",
+            "postWriteDurableAck",
+            "durableReceipt"
+        );
+    }
+
     static Map<String, Object> plan(DurableAuditWriterInterfaceSpecInput input) {
         DurableAuditWriterInterfaceSpecInput safeInput = input == null
             ? DurableAuditWriterInterfaceSpecInput.empty()
@@ -343,15 +364,7 @@ final class NimCreateDurableAuditWriterInterfaceSpecSupport {
         contract.put("pathTemplate", PATH_TEMPLATE);
         contract.put("sourceAuditEventDigest", digestFor(auditContext));
         contract.put("sourceBoundaryPlanDigest", text(boundaryReport.get("boundaryPlanDigest")));
-        contract.put("requiredFields", List.of(
-            "auditContext",
-            "trustedPrincipalSnapshot",
-            "storageAvailabilityProbeRequest",
-            "preWriteRecordTemplate",
-            "postWriteRecordTemplate",
-            "writeAttemptReference",
-            "sanitizedWriteResultSummary"
-        ));
+        contract.put("requiredFields", requestRequiredFields());
         contract.put("forbiddenFields", List.of(
             "Authorization",
             "token",
@@ -416,12 +429,7 @@ final class NimCreateDurableAuditWriterInterfaceSpecSupport {
         contract.put("currentImplementationStatus", HOLD_STATE);
         contract.put("successAllowedNow", false);
         contract.put("durableReceiptAllowedNow", false);
-        contract.put("requiredFutureSuccessFields", List.of(
-            "storageProbeReceipt",
-            "preWriteDurableAck",
-            "postWriteDurableAck",
-            "durableReceipt"
-        ));
+        contract.put("requiredFutureSuccessFields", responseRequiredFutureSuccessFields());
         contract.put("currentResponseTemplate", currentResponseTemplate());
         return contract;
     }

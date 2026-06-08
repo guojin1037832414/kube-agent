@@ -2,9 +2,15 @@ package com.atlas.tool.impl;
 
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import static java.util.Map.entry;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -222,6 +228,38 @@ class NimCreateDurableAuditReceiptSchemaSupportTest {
     }
 
     @Test
+    void receiptSchema_shouldRejectDigestConsistentInterfaceSpecExtraRequiredLists() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+
+        for (String contractKey : List.of("requestContract", "responseContract")) {
+            Map<String, Object> forgedInterfaceSpecReport = withDigestConsistentExtraInterfaceSpecRequiredField(
+                interfaceSpecReport(audit, principal),
+                contractKey,
+                contractKey.equals("requestContract") ? "futureCallerProofEnvelope" : "futureReceiptSignerEvidence"
+            );
+
+            Map<String, Object> report = NimCreateDurableAuditReceiptSchemaSupport.plan(
+                new NimCreateDurableAuditReceiptSchemaSupport.DurableAuditReceiptSchemaInput(
+                    audit,
+                    principal,
+                    forgedInterfaceSpecReport
+                )
+            );
+
+            assertEquals(NimCreateDurableAuditReceiptSchemaSupport.REJECTED_STATE,
+                report.get("schemaState"), "contractKey=" + contractKey);
+            assertEquals(false, report.get("inputAccepted"), "contractKey=" + contractKey);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> schema = (Map<String, Object>) report.get("typedSchema");
+            assertTrue(schema.isEmpty(), "contractKey=" + contractKey);
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+            assertHasBlocker(blockers, "DURABLE_AUDIT_WRITER_INTERFACE_SPEC_REPORT_INVALID_FOR_RECEIPT_SCHEMA");
+        }
+    }
+
+    @Test
     void receiptSchema_shouldRejectEvenEmptyCallerSuppliedTypedAckInstance() {
         Map<String, Object> audit = completeAuditContext();
         Map<String, Object> principal = trustedPrincipalSnapshot();
@@ -286,6 +324,76 @@ class NimCreateDurableAuditReceiptSchemaSupportTest {
                 boundaryReport(audit, principal)
             )
         );
+    }
+
+    private Map<String, Object> withDigestConsistentExtraInterfaceSpecRequiredField(Map<String, Object> interfaceSpecReport,
+                                                                                   String contractKey,
+                                                                                   String forgedField) {
+        Map<String, Object> forgedReport = new LinkedHashMap<>(interfaceSpecReport);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> interfaceSpec = new LinkedHashMap<>(
+            (Map<String, Object>) forgedReport.get("interfaceSpec")
+        );
+        @SuppressWarnings("unchecked")
+        Map<String, Object> contract = new LinkedHashMap<>((Map<String, Object>) interfaceSpec.get(contractKey));
+        String listKey = contractKey.equals("requestContract")
+            ? "requiredFields"
+            : "requiredFutureSuccessFields";
+        @SuppressWarnings("unchecked")
+        List<String> fields = new ArrayList<>((List<String>) contract.get(listKey));
+        fields.add(forgedField);
+        contract.put(listKey, fields);
+        interfaceSpec.put(contractKey, contract);
+        forgedReport.put("interfaceSpec", interfaceSpec);
+        forgedReport.put("interfaceSpecDigest", sha256(interfaceSpec));
+        return forgedReport;
+    }
+
+    private String sha256(Map<String, Object> value) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(canonical(value).getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IllegalStateException(ex);
+        }
+    }
+
+    private String canonical(Object value) {
+        if (value == null) {
+            return "null";
+        }
+        if (value instanceof Map<?, ?> map) {
+            Map<String, Object> sorted = new TreeMap<>();
+            map.forEach((key, item) -> sorted.put(String.valueOf(key), item));
+            StringBuilder builder = new StringBuilder("{");
+            boolean first = true;
+            for (Map.Entry<String, Object> entry : sorted.entrySet()) {
+                if (!first) {
+                    builder.append(",");
+                }
+                first = false;
+                builder.append(escape(entry.getKey())).append("=").append(canonical(entry.getValue()));
+            }
+            return builder.append("}").toString();
+        }
+        if (value instanceof List<?> list) {
+            StringBuilder builder = new StringBuilder("[");
+            for (int i = 0; i < list.size(); i++) {
+                if (i > 0) {
+                    builder.append(",");
+                }
+                builder.append(canonical(list.get(i)));
+            }
+            return builder.append("]").toString();
+        }
+        return escape(value.toString());
+    }
+
+    private String escape(String value) {
+        return value.replace("\\", "\\\\")
+            .replace("\n", "\\n")
+            .replace("\r", "\\r")
+            .replace("\t", "\\t");
     }
 
     private Map<String, Object> boundaryReport(Map<String, Object> audit,
