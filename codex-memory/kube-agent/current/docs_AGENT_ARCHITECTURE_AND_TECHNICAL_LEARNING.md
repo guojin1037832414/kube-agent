@@ -215,6 +215,23 @@ NIM 链路明确禁止真实 Authorization、token、password、secret、NGC/NIM
 
 学习重点：对于长期 Agent 项目，文档不是附属物。文档是架构记忆、教学材料和恢复机制的一部分。
 
+## M5.21-127 最新学习笔记
+
+本轮关闭的是 state-machine release requirement 自己输出的两类词表：
+
+- `stateMachineRequirementPlan.failureContract.failureStatuses`
+- `stateMachineRequirementPlan.forbiddenShortcuts`
+
+关键收获：
+
+- 有些协议词表即使暂时还没有真实生产下游消费，也应该先由 producer 的生产代码拥有。
+- `stateMachineRequirementPlan` 是未来状态机接入 release decision gate report 的桥。它现在仍然 `IMPLEMENTATION_HOLD`，但它的 failure vocabulary 和 shortcut vocabulary 已经接近未来 `writePermitted` 判断。
+- 如果这些词表只是测试里零散 `contains(...)`，未来新增下游 consumer 时很容易复制出局部校验，导致协议漂移。
+- 把词表提升成 package-private helper 后，后续 state-machine 或 durable executor consumer 可以直接 exact equality，而不是重新手写字符串。
+- 本轮也把 `releaseDecisionGateReportAcceptedRequiredCompanionSignals` 改成精确断言，避免 compatibility-only 信号被偷偷扩展成误导性 release 信号。
+
+学习总结：顶级 Agent 的安全不是等真实写路径上线后才补。越接近 release path 的 HOLD contract，越应该提前把协议词汇、失败状态和禁止捷径沉淀成 source-owned closed lists。这样未来接入真实状态机时，新增授权语义必须通过代码评审、测试和文档，而不是悄悄混进 JSON。
+
 ## M5.21-126 最新学习笔记
 
 本轮关闭了 M5.21-59 release decision gate 输出给 state-machine requirement 的两类词表：

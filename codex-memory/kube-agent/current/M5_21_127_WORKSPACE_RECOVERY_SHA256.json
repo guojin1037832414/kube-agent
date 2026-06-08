@@ -1,0 +1,59 @@
+﻿{
+    "project":  "kube-agent",
+    "wave":  "M5.21-127",
+    "title":  "NIM state-machine requirement failure/shortcut lists closed",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "head":  "f1b48e65143168c6367b1cd7ff0c6d93e1ee7757",
+    "recoveryHome":  "codex-memory/kube-agent/current",
+    "pushed":  true,
+    "generatedAt":  "2026-06-08T16:30:01.4902977+08:00",
+    "teachingMap":  "docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+    "nextPriority":  "Close codeReleaseSwitchContract.failureContract and codeReleaseSwitchContract.forbiddenShortcuts exact validation in NimCreateStateMachineSupport and NimCreateDurableWriteExecutorSupport.",
+    "files":  [
+                  {
+                      "source":  "CHANGELOG.md",
+                      "savedAs":  "CHANGELOG.md",
+                      "sha256":  "30CCA16993D45032D7D0DD32962D49355EDCFF8AB66BFCCC20697DC07970CDE8"
+                  },
+                  {
+                      "source":  "docs\\INDEX.md",
+                      "savedAs":  "docs_INDEX.md",
+                      "sha256":  "D37839DE71FCB099F78EBE970D76026BA8141AC790E5753493185D49CFBE87A7"
+                  },
+                  {
+                      "source":  "docs\\AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "savedAs":  "docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "600B3CCFC8702509760E296B6C10CB32BB2CB0994A5F77A3452DF7F9614D309B"
+                  },
+                  {
+                      "source":  "docs\\M5_21_WAVE_INDEX_20260606.md",
+                      "savedAs":  "docs_M5_21_WAVE_INDEX_20260606.md",
+                      "sha256":  "326B625B3087543DDF91A04A234506412DDDCE85B881CF741EDE04D4CE97EDE8"
+                  },
+                  {
+                      "source":  "docs\\PROJECT_MISSION_AND_MEMORY.md",
+                      "savedAs":  "docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "28C8DC1EDC6FFD854DD031609E23705870C9188CC984BDDCB85F70C3126AB36E"
+                  },
+                  {
+                      "source":  "docs\\SESSION_PROGRESS_20260606_M521_29.md",
+                      "savedAs":  "docs_SESSION_PROGRESS_20260606_M521_29.md",
+                      "sha256":  "F263443834B85FBB728E6A0D0D05B9369A16006FB882981F8979E45FB74745AF"
+                  },
+                  {
+                      "source":  "docs\\v3.1\\DEVELOPMENT_GUIDE.md",
+                      "savedAs":  "docs_v3.1_DEVELOPMENT_GUIDE.md",
+                      "sha256":  "A41C21C494BB3736937AF7D18DCECDFCF5BF4743466282163B905AD6C7879B03"
+                  },
+                  {
+                      "source":  "docs\\M5_21_ONE_HUNDRED_TWENTY_SEVENTH_WAVE_NIM_STATE_MACHINE_REQUIREMENT_FAILURE_SHORTCUT_LISTS_CLOSED_AUDIT_20260608.md",
+                      "savedAs":  "docs_M5_21_ONE_HUNDRED_TWENTY_SEVENTH_WAVE_NIM_STATE_MACHINE_REQUIREMENT_FAILURE_SHORTCUT_LISTS_CLOSED_AUDIT_20260608.md",
+                      "sha256":  "3307AD4674B46609CCA42DD48011912BAEAD8B15C4E03D13DCF55118DEB5F431"
+                  },
+                  {
+                      "source":  "codex-memory\\kube-agent\\current\\RECOVERY_STATUS.md",
+                      "savedAs":  "RECOVERY_STATUS.md",
+                      "sha256":  "A5B0D699912A04A1EB3C5E95EEC175970800C6EAEC769E7974D4ECDCE0F09D7A"
+                  }
+              ]
+}

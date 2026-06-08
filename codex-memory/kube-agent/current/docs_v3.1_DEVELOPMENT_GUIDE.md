@@ -656,6 +656,13 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Extra future failure or shortcut values are rejected even when `releaseDecisionGatePlanDigest` is recomputed.
 - Learning distinction: release-proof protocol version skew should fail closed. Strict producer/consumer coupling is safer than accepting unreviewed authority-shaped vocabulary near the write-release boundary.
 
+### M5.21-127 state-machine requirement failure/shortcut lists closed note
+
+- State-machine release decision requirement generation now exposes source-owned closed lists for its own failure statuses and forbidden shortcuts.
+- The positive requirement-plan regression requires exact equality for those lists and for `releaseDecisionGateReportAcceptedRequiredCompanionSignals`.
+- No downstream release authority is added; this prepares future state-machine or durable-executor consumers to validate the same source-owned vocabulary when they start consuming `stateMachineRequirementPlan`.
+- Learning distinction: producer-side closed lists are valuable before downstream consumption exists. They keep future release-proof protocol vocabulary from starting life as private inline strings.
+
 ### Architecture and technical learning map note
 
 - Maintain `docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md` as the long-lived architecture and technical-learning map.
