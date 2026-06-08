@@ -1,0 +1,47 @@
+﻿{
+    "project":  "kube-agent",
+    "wave":  "M5.21-123",
+    "title":  "NIM receipt schema failure/test-double lists closed",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "head":  "8c1b44d602fc5b5ff92f0104b5c696128fcd9bee",
+    "recoveryHome":  "codex-memory/kube-agent/current",
+    "pushed":  true,
+    "generatedAt":  "2026-06-08T14:53:00+08:00",
+    "files":  [
+                  {
+                      "source":  "CHANGELOG.md",
+                      "savedAs":  "CHANGELOG.md",
+                      "sha256":  "EF16B2270A5F580B7F118A398508426993A0CC8790C19AA8CF487DF4B5A76B36"
+                  },
+                  {
+                      "source":  "docs\\M5_21_WAVE_INDEX_20260606.md",
+                      "savedAs":  "docs_M5_21_WAVE_INDEX_20260606.md",
+                      "sha256":  "358D0474A6E5A8852FC64DEAA1FC34AB0C5356B3EBDB9E46C2F9A1C21F4F4996"
+                  },
+                  {
+                      "source":  "docs\\PROJECT_MISSION_AND_MEMORY.md",
+                      "savedAs":  "docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "B34F6A41916A5DB09BAFB9ED4307B06186419C2C7AE46EAE2C0202523B1A06AA"
+                  },
+                  {
+                      "source":  "docs\\SESSION_PROGRESS_20260606_M521_29.md",
+                      "savedAs":  "docs_SESSION_PROGRESS_20260606_M521_29.md",
+                      "sha256":  "45C38B08B551F8726C55FA14B5280787DC00BB2724FE91962F8C7FA52E636488"
+                  },
+                  {
+                      "source":  "docs\\v3.1\\DEVELOPMENT_GUIDE.md",
+                      "savedAs":  "docs_v3.1_DEVELOPMENT_GUIDE.md",
+                      "sha256":  "E5F84FD5A14154C0F56AD3219E0DC98FBBE62B16B2E42B2A50E1C5C109268109"
+                  },
+                  {
+                      "source":  "docs\\M5_21_ONE_HUNDRED_TWENTY_THIRD_WAVE_NIM_RECEIPT_SCHEMA_FAILURE_TEST_DOUBLE_LISTS_CLOSED_AUDIT_20260608.md",
+                      "savedAs":  "docs_M5_21_ONE_HUNDRED_TWENTY_THIRD_WAVE_NIM_RECEIPT_SCHEMA_FAILURE_TEST_DOUBLE_LISTS_CLOSED_AUDIT_20260608.md",
+                      "sha256":  "DB9366EAB389618EC1844C81082823890C16ABDBE2C54AF869CE3FD151A4EF4D"
+                  },
+                  {
+                      "source":  "codex-memory\\kube-agent\\current\\RECOVERY_STATUS.md",
+                      "savedAs":  "RECOVERY_STATUS.md",
+                      "sha256":  "7637BA187FCFF681AE8062B50B1C7700C4211468E85FA3EF51656138A73B0780"
+                  }
+              ]
+}

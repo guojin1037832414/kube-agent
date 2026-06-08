@@ -2104,6 +2104,30 @@
 
 ## Latest M5.21-122 Progress
 
+## Latest M5.21-123 Progress
+
+- Date: 2026-06-08 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- Recovery home: `codex-memory/kube-agent/current`.
+- M5.21-123 implemented:
+  - `NimCreateDurableAuditReceiptSchemaSupport` now owns closed helper lists for receipt-schema-owned failure statuses, test-double forbidden return types, and forbidden success claims.
+  - `NimCreateDurableAuditReceiptValidationGateSupport` now requires exact equality for `typedSchema.failureContract.failureStatuses`, `typedSchema.testDoubleRules.mustNotReturnTypeInstances`, and `typedSchema.testDoubleRules.forbiddenSuccessClaims`.
+  - Tests forge digest-consistent typed schema reports by appending fake future status/type/claim values and recomputing `schemaDigest`; validation gate still rejects them.
+  - Added `docs/M5_21_ONE_HUNDRED_TWENTY_THIRD_WAVE_NIM_RECEIPT_SCHEMA_FAILURE_TEST_DOUBLE_LISTS_CLOSED_AUDIT_20260608.md`.
+- Verification passed:
+  - `git diff --check`
+  - `mvn -q "-Dtest=NimCreateDurableAuditReceiptSchemaSupportTest,NimCreateDurableAuditReceiptValidationGateSupportTest" test`
+  - `mvn -q test`
+  - Full Maven note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+- HOLD:
+  - No real `8100` access.
+  - No real NIM service HTTP call.
+  - No Authorization header sending.
+  - No durable audit write, Elasticsearch write, `ISysLogService`, or `sys_log` write.
+  - No deployment `POST /api/{orgId}/deployment`.
+  - No state-machine release binding, durable executor release binding, validation result signer, release decision signer, or code release switch implementation.
+  - `nim_create` remains HOLD/mock-first.
+
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
 - Recovery home: `codex-memory/kube-agent/current`.
