@@ -2,9 +2,11 @@
     "project":  "kube-agent",
     "wave":  "M5.27-1",
     "title":  "audit telemetry Observation publisher",
-    "generatedAt":  "2026-06-09T01:10:29+08:00",
+    "generatedAt":  "2026-06-09T01:11:30+08:00",
     "branch":  "codex/m521-29-top-agent-mission",
     "implementationCommit":  "d42342b feat(M5.27): publish audit telemetry observations",
+    "recoveryCommit":  "bbee4b6 docs(M5.27): record recovery checkpoint",
+    "pushed":  "yes, origin/codex/m521-29-top-agent-mission",
     "files":  [
                   {
                       "path":  "CHANGELOG.md",
@@ -73,8 +75,8 @@
                   },
                   {
                       "path":  "codex-memory/kube-agent/current/RECOVERY_STATUS.md",
-                      "sha256":  "e598e62b40da8076684cf175ccfa29645ac62666e13b2b7e7ee407738d0e047e",
-                      "bytes":  9673
+                      "sha256":  "fdd9d2287d22252ce50e8fb96a668d98253bd5ea44cc2a9103aaf48d01600ec4",
+                      "bytes":  9748
                   }
               ]
 }
