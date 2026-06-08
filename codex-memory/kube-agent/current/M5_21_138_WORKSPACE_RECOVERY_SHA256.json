@@ -1,0 +1,51 @@
+﻿{
+    "project":  "kube-agent",
+    "wave":  "M5.21-138",
+    "title":  "NIM validation result migration plan maps closed",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "gitHead":  "9d3829036d9fe867c32fad29d84a662f79d44391",
+    "recoveryHome":  "F:\\gitProject\\kube-agent\\codex-memory\\kube-agent\\current",
+    "generatedAt":  "2026-06-08 Asia/Shanghai",
+    "files":  [
+                  {
+                      "file":  "RECOVERY_STATUS.md",
+                      "sha256":  "0fbbc86f833c9a46adabed84c787a81a5ae9f62bfafa94cbf1a252ef85c26d85",
+                      "length":  2086
+                  },
+                  {
+                      "file":  "CHANGELOG.md",
+                      "sha256":  "f00d04224e4680dbdb4e58a7d9a9e32b66700612fd51e152c77b82ab9dd8d300",
+                      "length":  249925
+                  },
+                  {
+                      "file":  "docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "d301db4f6286a58dcdcf4ce1dbea3da9c679cdd3da9d0e4b06b9ce5eab1b7031",
+                      "length":  29707
+                  },
+                  {
+                      "file":  "docs_M5_21_WAVE_INDEX_20260606.md",
+                      "sha256":  "d4679297217251c353b852c01f94651f5e7ce22ade1b232f24342c5b8b8a4f9e",
+                      "length":  22555
+                  },
+                  {
+                      "file":  "docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "396a11a7c170cd7455e992353693598b9c84a9b8ee6b891237ee67bc7a8177ca",
+                      "length":  268127
+                  },
+                  {
+                      "file":  "docs_SESSION_PROGRESS_20260606_M521_29.md",
+                      "sha256":  "8a6629f395ada01e88d5bc9964e7e6ff8b386098fe38421e1126fe5fbe69d523",
+                      "length":  270511
+                  },
+                  {
+                      "file":  "docs_v3.1_DEVELOPMENT_GUIDE.md",
+                      "sha256":  "5ca37b02781afa8b5b55559717740c6800b1cf510ed9f0dc1f3ad294670c2c9c",
+                      "length":  79449
+                  },
+                  {
+                      "file":  "docs_M5_21_ONE_HUNDRED_THIRTY_EIGHTH_WAVE_NIM_VALIDATION_RESULT_MIGRATION_PLAN_MAPS_CLOSED_AUDIT_20260608.md",
+                      "sha256":  "db7a9e08f77d4c9ab4ce33baf55c65809e59324f077cad97239eb2ad34a05de7",
+                      "length":  6163
+                  }
+              ]
+}

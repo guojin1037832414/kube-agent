@@ -215,7 +215,32 @@ NIM 链路明确禁止真实 Authorization、token、password、secret、NGC/NIM
 
 学习重点：对于长期 Agent 项目，文档不是附属物。文档是架构记忆、教学材料和恢复机制的一部分。
 
-## M5.21-137 最新学习笔记
+## M5.21-138 最新学习笔记
+
+本轮关闭的是 `NimCreateDurableAuditValidationResultMigrationSupport` 输出、并被 validation-result probe-binding migration 消费的完整 `migrationPlan`：
+
+- 顶层 migration plan 字段
+- `trustedIdentityBinding`
+- `migrationSequence`
+- `validationResultContract`
+- `validationResultContract.currentTemplate`
+- `releaseDecisionContract`
+- `releaseDecisionContract.currentTemplate`
+- `legacyCompatibilityPolicy`
+- `releaseCredentialRules`
+- `failureContract`
+- `forbiddenShortcuts`
+
+关键收获：
+- `migrationPlanDigest` 只能证明 migration plan 对象自洽，不能证明新增 key 已经被评审为合法 migration 语义。
+- `migrationPlan` 不是 release credential，但它会定义未来 validation result 与 release decision 的协议语法，所以仍然是 release-adjacent proof object。
+- `NimCreateDurableAuditValidationResultMigrationSupport` 现在提供 `migrationPlanFromReport(...)` 作为 producer-owned canonical proof object。
+- `NimCreateDurableAuditValidationResultProbeBindingMigrationSupport` 现在只接受完整 canonical migration plan exact equality，同时保留 report 顶层 HOLD、未执行 false 状态、digest、blockedBy、cross-binding、secret/forged-claim 等前置门。
+- 本轮新增 digest-consistent forgery：篡改顶层 key、identity map、migration sequence、validation result contract、release decision contract、template、legacy policy、release credential rules、failure contract 和 forbidden shortcuts，重算 `migrationPlanDigest` 后仍要求 fail closed。
+
+学习总结：顶级 Agent 不能把“下游读懂了几个已知字段”当成协议安全。越是未来会影响 validation result / release decision 的 proof map，越要让生产者拥有完整 canonical shape，让消费者只接受 exact equality。这样 schema 扩展必须经过源代码、测试、文档和审查，而不是依靠 digest 自洽悄悄进入 release path。
+
+## M5.21-137 学习笔记
 
 本轮关闭的是 `NimCreateDurableAuditStorageProbeResultSupport` 输出、并被 receipt-validation probe-result binding 消费的完整 `probeResultContract`：
 - 顶层 storage probe result contract 字段
