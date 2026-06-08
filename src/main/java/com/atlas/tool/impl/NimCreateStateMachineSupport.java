@@ -869,6 +869,8 @@ final class NimCreateStateMachineSupport {
         Map<String, Object> template = objectMap(contract.get("currentTemplate"));
         Map<String, Object> prerequisites = objectMap(contract.get("openPrerequisites"));
         Map<String, Object> failure = objectMap(contract.get("failureContract"));
+        List<String> failureStatuses = stringList(failure.get("failureStatuses"));
+        List<String> forbiddenShortcuts = stringList(contract.get("forbiddenShortcuts"));
         boolean contractValid = NimCreateDurableAuditCodeReleaseSwitchContractSupport.SWITCH_CONTRACT_NAME.equals(
                 text(report.get("durableAuditCodeReleaseSwitchContract")))
             && NimCreateDurableAuditCodeReleaseSwitchContractSupport.EXECUTION_MODE.equals(
@@ -932,7 +934,11 @@ final class NimCreateStateMachineSupport {
             && Boolean.FALSE.equals(failure.get("fallbackToRuntimeFlagAllowed"))
             && Boolean.FALSE.equals(failure.get("fallbackToReleaseDecisionContractAllowed"))
             && Boolean.FALSE.equals(failure.get("fallbackToStateMachineBooleanAllowed"))
-            && Boolean.FALSE.equals(failure.get("fallbackToExecutorSuccessAllowed"));
+            && Boolean.FALSE.equals(failure.get("fallbackToExecutorSuccessAllowed"))
+            && failureStatuses.equals(
+                NimCreateDurableAuditCodeReleaseSwitchContractSupport.codeReleaseSwitchFailureStatuses())
+            && forbiddenShortcuts.equals(
+                NimCreateDurableAuditCodeReleaseSwitchContractSupport.codeReleaseSwitchForbiddenShortcuts());
 
         if (!contractValid) {
             blockers.add(blocker(

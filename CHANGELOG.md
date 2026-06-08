@@ -6,6 +6,23 @@
 
 ---
 
+## [M5.21-128] - NIM code switch failure/shortcut lists closed
+
+**Delivery**: Closed code release switch failure and forbidden-shortcut proof vocabulary across both current downstream consumers.
+**Changes**
+- `NimCreateDurableAuditCodeReleaseSwitchContractSupport` now owns source-controlled helper lists for `codeReleaseSwitchContract.failureContract.failureStatuses` and `codeReleaseSwitchContract.forbiddenShortcuts`.
+- `NimCreateStateMachineSupport` now requires both code-switch-owned lists to exactly match those helpers.
+- `NimCreateDurableWriteExecutorSupport` now applies the same exact checks at the durable executor boundary.
+- Added digest-consistent forged list regressions that append future failure/shortcut values, recompute `codeReleaseSwitchContractDigest`, and still expect fail-closed rejection.
+**Verification**
+- Targeted code switch contract, state-machine, and durable executor tests passed.
+- `git diff --check` passed.
+- Full `mvn -q test` passed; full Maven degraded to L1 embedding mode after local `model.onnx` download timeout but exited 0.
+**Security**
+- This is code release switch proof-vocabulary hardening only; it does not open runtime writes, real audit writes, real readiness polling, or a real code release switch.
+- No real `8100`, real NIM service HTTP call, Authorization header sending, durable audit write, deployment POST, state-machine release binding implementation, durable executor release binding implementation, validation result signer, release decision signer, code release switch implementation, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-127] - NIM state-machine requirement failure/shortcut lists closed
 
 **Delivery**: Closed the state-machine release requirement plan's own failure and forbidden-shortcut vocabulary before future downstream state-machine binding consumes it.

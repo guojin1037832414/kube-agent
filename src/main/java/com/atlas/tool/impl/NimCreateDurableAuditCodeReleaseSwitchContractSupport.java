@@ -39,6 +39,30 @@ final class NimCreateDurableAuditCodeReleaseSwitchContractSupport {
     private NimCreateDurableAuditCodeReleaseSwitchContractSupport() {
     }
 
+    static List<String> codeReleaseSwitchFailureStatuses() {
+        return List.of(
+            "CODE_RELEASE_SWITCH_NOT_IMPLEMENTED",
+            "CALLER_SWITCH_EVIDENCE_REJECTED",
+            "ENVIRONMENT_VARIABLE_OVERRIDE_REJECTED",
+            "RUNTIME_FLAG_FALLBACK_REJECTED",
+            "RELEASE_DECISION_CONTRACT_NOT_AUTHORITY",
+            "STATE_MACHINE_BOOLEAN_NOT_AUTHORITY",
+            "DURABLE_EXECUTOR_SUCCESS_NOT_AUTHORITY",
+            "SECRET_MATERIAL_REJECTED"
+        );
+    }
+
+    static List<String> codeReleaseSwitchForbiddenShortcuts() {
+        return List.of(
+            "treating M5.21-71 release decision contract as an open code switch",
+            "accepting caller-supplied codeReleaseSwitch or runtime flag",
+            "accepting environment variable override as release approval",
+            "opening writePermitted before code review and test evidence digests exist",
+            "allowing durable executor write success to backfill code switch evidence",
+            "treating code release switch as implied by validation result or release decision"
+        );
+    }
+
     static Map<String, Object> plan(CodeReleaseSwitchContractInput input) {
         CodeReleaseSwitchContractInput safeInput = input == null
             ? CodeReleaseSwitchContractInput.empty()
@@ -642,18 +666,12 @@ final class NimCreateDurableAuditCodeReleaseSwitchContractSupport {
         failure.put("fallbackToReleaseDecisionContractAllowed", false);
         failure.put("fallbackToStateMachineBooleanAllowed", false);
         failure.put("fallbackToExecutorSuccessAllowed", false);
+        failure.put("failureStatuses", codeReleaseSwitchFailureStatuses());
         return failure;
     }
 
     private static List<String> forbiddenShortcuts() {
-        return List.of(
-            "treating M5.21-71 release decision contract as an open code switch",
-            "accepting caller-supplied codeReleaseSwitch or runtime flag",
-            "accepting environment variable override as release approval",
-            "opening writePermitted before code review and test evidence digests exist",
-            "allowing durable executor write success to backfill code switch evidence",
-            "treating code release switch as implied by validation result or release decision"
-        );
+        return codeReleaseSwitchForbiddenShortcuts();
     }
 
     private static boolean hasOnlyExpectedReleaseDecisionHold(Object rawBlockers) {

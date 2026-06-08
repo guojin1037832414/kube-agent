@@ -426,6 +426,8 @@ final class NimCreateDurableWriteExecutorSupport {
         Map<String, Object> prerequisites = objectMap(contract.get("openPrerequisites"));
         Map<String, Object> failure = objectMap(contract.get("failureContract"));
         List<String> fields = stringList(contract.get("requiredFutureEvidenceDigestFields"));
+        List<String> failureStatuses = stringList(failure.get("failureStatuses"));
+        List<String> forbiddenShortcuts = stringList(contract.get("forbiddenShortcuts"));
         boolean valid = NimCreateDurableAuditCodeReleaseSwitchContractSupport.SWITCH_CONTRACT_NAME.equals(
                 text(report.get("durableAuditCodeReleaseSwitchContract")))
             && NimCreateDurableAuditCodeReleaseSwitchContractSupport.EXECUTION_MODE.equals(
@@ -464,6 +466,10 @@ final class NimCreateDurableWriteExecutorSupport {
             && Boolean.TRUE.equals(failure.get("failClosed"))
             && Boolean.FALSE.equals(failure.get("fallbackToStateMachineBooleanAllowed"))
             && Boolean.FALSE.equals(failure.get("fallbackToExecutorSuccessAllowed"))
+            && failureStatuses.equals(
+                NimCreateDurableAuditCodeReleaseSwitchContractSupport.codeReleaseSwitchFailureStatuses())
+            && forbiddenShortcuts.equals(
+                NimCreateDurableAuditCodeReleaseSwitchContractSupport.codeReleaseSwitchForbiddenShortcuts())
             && hasText(handoffReport.get("handoffDigest"))
             && hasText(requestSpecReport.get("requestSpecDigest"));
 

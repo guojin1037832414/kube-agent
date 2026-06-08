@@ -302,6 +302,53 @@ class NimCreateDurableWriteExecutorSupportTest {
     }
 
     @Test
+    void executorShell_shouldRejectDigestConsistentCodeSwitchExtraFailureOrShortcutLists() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> receipt = durableAuditReceipt(audit);
+        Map<String, Object> bodyReport = writeBodyReport(audit, receipt);
+        Map<String, Object> requestSpecReport = writeRequestSpecReport(audit, receipt, bodyReport);
+        Map<String, Object> handoffReport = writeExecutionHandoffReport(audit, receipt, bodyReport, requestSpecReport);
+        Map<String, Object> sourceGuardReport = codeReleaseSwitchRuntimeSourceGuardReport(audit);
+
+        for (Map<String, String> mutation : List.of(
+            Map.of(
+                "contractKey", "failureContract",
+                "listKey", "failureStatuses",
+                "forgedValue", "FUTURE_DURABLE_EXECUTOR_SIGNED_OFF"
+            ),
+            Map.of(
+                "contractKey", "",
+                "listKey", "forbiddenShortcuts",
+                "forgedValue", "treating codeReleaseSwitchContractDigest as durable executor release"
+            )
+        )) {
+            Map<String, Object> codeSwitchReport = withDigestConsistentCodeSwitchExtraListField(
+                codeReleaseSwitchContractReport(audit),
+                mutation
+            );
+
+            Map<String, Object> report = NimCreateDurableWriteExecutorSupport.prepare(
+                new NimCreateDurableWriteExecutorSupport.WriteExecutionInput(
+                    handoffReport,
+                    requestSpecReport,
+                    codeSwitchReport,
+                    sourceGuardReport
+                )
+            );
+
+            assertEquals(NimCreateDurableWriteExecutorSupport.REJECTED_STATE,
+                report.get("executionState"), mutation.toString());
+            assertEquals(false, report.get("inputAccepted"), mutation.toString());
+            assertEquals(false, report.get("writeAttempted"), mutation.toString());
+            assertEquals(false, report.get("writeExecuted"), mutation.toString());
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+            assertHasBlocker(blockers,
+                "CODE_RELEASE_SWITCH_CONTRACT_REPORT_NOT_TRUSTED_FOR_DURABLE_EXECUTOR");
+        }
+    }
+
+    @Test
     void executorShell_shouldRejectForgedOpenCodeReleaseSwitchClaims() {
         Map<String, Object> audit = completeAuditContext();
         Map<String, Object> receipt = durableAuditReceipt(audit);
@@ -1223,6 +1270,39 @@ class NimCreateDurableWriteExecutorSupportTest {
         );
         requiredFields.add("forgedCodeSwitchFutureEvidenceDigest");
         contract.put("requiredFutureEvidenceDigestFields", requiredFields);
+        forgedReport.put("codeReleaseSwitchContract", contract);
+        forgedReport.put("codeReleaseSwitchContractDigest", sha256(contract));
+        return forgedReport;
+    }
+
+    private Map<String, Object> withDigestConsistentCodeSwitchExtraListField(
+        Map<String, Object> codeSwitchReport,
+        Map<String, String> mutation
+    ) {
+        Map<String, Object> forgedReport = new LinkedHashMap<>(codeSwitchReport);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> contract = new LinkedHashMap<>(
+            (Map<String, Object>) forgedReport.get("codeReleaseSwitchContract")
+        );
+        String contractKey = mutation.get("contractKey").toString();
+        String listKey = mutation.get("listKey").toString();
+        String forgedValue = mutation.get("forgedValue").toString();
+        if (contractKey.isBlank()) {
+            @SuppressWarnings("unchecked")
+            List<String> list = new java.util.ArrayList<>((List<String>) contract.get(listKey));
+            list.add(forgedValue);
+            contract.put(listKey, list);
+        } else {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> nested = new LinkedHashMap<>(
+                (Map<String, Object>) contract.get(contractKey)
+            );
+            @SuppressWarnings("unchecked")
+            List<String> list = new java.util.ArrayList<>((List<String>) nested.get(listKey));
+            list.add(forgedValue);
+            nested.put(listKey, list);
+            contract.put(contractKey, nested);
+        }
         forgedReport.put("codeReleaseSwitchContract", contract);
         forgedReport.put("codeReleaseSwitchContractDigest", sha256(contract));
         return forgedReport;

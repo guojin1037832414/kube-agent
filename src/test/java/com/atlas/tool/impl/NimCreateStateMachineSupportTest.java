@@ -776,6 +776,65 @@ class NimCreateStateMachineSupportTest {
     }
 
     @Test
+    void stateMachine_shouldRejectDigestConsistentCodeSwitchExtraFailureOrShortcutLists() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> receipt = completeAuditReceipt();
+        Map<String, Object> bodyReport = completeWriteBodyRebuildReport(audit, receipt);
+        Map<String, Object> requestSpecReport = completeWriteRequestSpecReport(audit, receipt, bodyReport);
+        Map<String, Object> handoffReport = completeWriteExecutionHandoffReport(audit, receipt, bodyReport, requestSpecReport);
+        Map<String, Object> sourceGuardReport = completeCodeReleaseSwitchRuntimeSourceGuardReport(audit);
+        Map<String, Object> executorReport = completeDurableWriteExecutorReport(
+            handoffReport,
+            requestSpecReport,
+            completeCodeReleaseSwitchContractReport(audit),
+            sourceGuardReport
+        );
+
+        for (Map<String, String> mutation : List.of(
+            Map.of(
+                "contractKey", "failureContract",
+                "listKey", "failureStatuses",
+                "forgedValue", "FUTURE_CODE_SWITCH_UI_APPROVED"
+            ),
+            Map.of(
+                "contractKey", "",
+                "listKey", "forbiddenShortcuts",
+                "forgedValue", "treating codeReleaseSwitchContractDigest as write permission"
+            )
+        )) {
+            Map<String, Object> codeSwitchReport = withDigestConsistentCodeSwitchExtraListField(
+                completeCodeReleaseSwitchContractReport(audit),
+                mutation
+            );
+
+            Map<String, Object> guard = NimCreateStateMachineSupport.evaluate(new NimCreateStateMachineSupport.ReadinessRequest(
+                Map.of("name", "nim-forged-code-switch-lists"),
+                openGate(),
+                completePreview(),
+                HitlConfirmation.human("thread-1", "nim_create"),
+                audit,
+                receipt,
+                bodyReport,
+                requestSpecReport,
+                handoffReport,
+                codeSwitchReport,
+                sourceGuardReport,
+                executorReport,
+                completeReadinessPlan(),
+                completeReadinessExecutionReport(),
+                NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
+                true
+            ));
+
+            assertEquals("HELD", guard.get("state"), mutation.toString());
+            assertEquals(false, guard.get("writePermitted"), mutation.toString());
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> blockers = (List<Map<String, Object>>) guard.get("blockedBy");
+            assertHasBlocker(blockers, "CODE_RELEASE_SWITCH_CONTRACT_REPORT_CONTRACT_INVALID");
+        }
+    }
+
+    @Test
     void stateMachine_shouldRejectForgedOpenCodeReleaseSwitchClaims() {
         Map<String, Object> audit = completeAuditContext();
         Map<String, Object> receipt = completeAuditReceipt();
@@ -1598,6 +1657,39 @@ class NimCreateStateMachineSupportTest {
         );
         requiredFields.add("forgedCodeSwitchFutureEvidenceDigest");
         contract.put("requiredFutureEvidenceDigestFields", requiredFields);
+        forgedReport.put("codeReleaseSwitchContract", contract);
+        forgedReport.put("codeReleaseSwitchContractDigest", sha256(contract));
+        return forgedReport;
+    }
+
+    private Map<String, Object> withDigestConsistentCodeSwitchExtraListField(
+        Map<String, Object> codeSwitchReport,
+        Map<String, String> mutation
+    ) {
+        Map<String, Object> forgedReport = new java.util.LinkedHashMap<>(codeSwitchReport);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> contract = new java.util.LinkedHashMap<>(
+            (Map<String, Object>) forgedReport.get("codeReleaseSwitchContract")
+        );
+        String contractKey = mutation.get("contractKey").toString();
+        String listKey = mutation.get("listKey").toString();
+        String forgedValue = mutation.get("forgedValue").toString();
+        if (contractKey.isBlank()) {
+            @SuppressWarnings("unchecked")
+            List<String> list = new java.util.ArrayList<>((List<String>) contract.get(listKey));
+            list.add(forgedValue);
+            contract.put(listKey, list);
+        } else {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> nested = new java.util.LinkedHashMap<>(
+                (Map<String, Object>) contract.get(contractKey)
+            );
+            @SuppressWarnings("unchecked")
+            List<String> list = new java.util.ArrayList<>((List<String>) nested.get(listKey));
+            list.add(forgedValue);
+            nested.put(listKey, list);
+            contract.put(contractKey, nested);
+        }
         forgedReport.put("codeReleaseSwitchContract", contract);
         forgedReport.put("codeReleaseSwitchContractDigest", sha256(contract));
         return forgedReport;

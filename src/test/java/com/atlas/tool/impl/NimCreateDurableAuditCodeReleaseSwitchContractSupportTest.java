@@ -202,6 +202,15 @@ class NimCreateDurableAuditCodeReleaseSwitchContractSupportTest {
         assertEquals(false, failure.get("fallbackToReleaseDecisionContractAllowed"));
         assertEquals(false, failure.get("fallbackToStateMachineBooleanAllowed"));
         assertEquals(false, failure.get("fallbackToExecutorSuccessAllowed"));
+        @SuppressWarnings("unchecked")
+        List<String> failureStatuses = (List<String>) failure.get("failureStatuses");
+        assertEquals(NimCreateDurableAuditCodeReleaseSwitchContractSupport.codeReleaseSwitchFailureStatuses(),
+            failureStatuses);
+
+        @SuppressWarnings("unchecked")
+        List<String> forbiddenShortcuts = (List<String>) contract.get("forbiddenShortcuts");
+        assertEquals(NimCreateDurableAuditCodeReleaseSwitchContractSupport.codeReleaseSwitchForbiddenShortcuts(),
+            forbiddenShortcuts);
 
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
