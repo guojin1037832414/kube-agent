@@ -6,7 +6,7 @@
 - Primary workspace recovery folder: `F:\gitProject\kube-agent\codex-memory\kube-agent\current`
 - Historical external memory folder: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.25-1, trace-aware agent audit evidence kernel.
+- Current latest wave: M5.26-1, audit telemetry projection contract.
 - Phase update: HPC / Slurm / BCM and NIM are paused and moved to Phase 2 by user direction.
 - Phase 1 focus: deliver the top-tier Agent core through generic manager Agent foundations, safe read/query validation, non-HPC/NIM manager function coverage, Tool metadata quality, HITL/audit execution boundary, traceability, recovery, evaluation, teaching documentation, and vue-kube-manager workflow integration.
 - Phase boundary clarification: moving NIM / HPC / Slurm / BCM to Phase 2 postpones specialist domain plugins only; it does not reduce Phase 1 standards.
@@ -55,6 +55,21 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.26-1 audit telemetry projection contract is implemented:
+  - Added `src/main/java/com/atlas/audit/AgentAuditTelemetryProjection.java`.
+  - Added `src/main/java/com/atlas/audit/AgentAuditTelemetryProjector.java`.
+  - `InMemoryAgentAuditRecorder` now includes a redacted `telemetry` projection in each recent audit summary.
+  - Stable attributes use `atlas.agent.*` and include auditId, traceId, intent/tool metadata, source, method, operation type, outcome, execution flags, reason length, parameter count, endpoint count, and explicit privacy flags.
+  - OTel / GenAI-style attributes are isolated under `experimentalOtelAttributes`, including `gen_ai.operation.name`, `gen_ai.tool.name`, `gen_ai.tool.call.id`, `http.request.method`, `otel.status_code`, and `error.type`.
+  - The projection does not expose raw `userId`, `organizationId`, `conversationId`, endpoint strings, raw reason text, or parameter values.
+  - Added `src/test/java/com/atlas/audit/AgentAuditTelemetryProjectorTest.java`.
+  - Verification passed:
+    - `mvn -q "-Dtest=AgentAuditTelemetryProjectorTest,AgentAuditRecorderTest,SafeToolExecutorTest,ObservabilityControllerTest" test`
+    - `git diff --check`
+  - Test log note: `ThrowingTool` stack traces and failing diagnostic recorder warnings are intentional exception-path tests; Maven exited successfully.
+  - No NIM/HPC/Slurm/BCM Phase 2 implementation was resumed and no real write/create/delete/state-changing kube-manager call was opened.
+  - Next Phase 1 technical slice: turn `AgentAuditTelemetryProjection` into real Micrometer Observation / OpenTelemetry span events, then define frontend replay timeline DTOs and durable audit storage.
 
 - M5.25-1 trace-aware Agent audit evidence kernel is implemented:
   - Added `src/main/java/com/atlas/audit/AgentAuditEvent.java`, `AgentAuditOutcome.java`, `AgentAuditRecorder.java`, `AgentAuditEventFactory.java`, `AgentAuditSnapshotProvider.java`, and `InMemoryAgentAuditRecorder.java`.

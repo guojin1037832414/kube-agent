@@ -102,7 +102,7 @@ class AgentAuditRecorderTest {
         assertThat(recorder.recentEvents()).extracting(AgentAuditEvent::conversationId)
             .containsExactly("conv-sensitive");
         assertThat(snapshotText)
-            .contains("aud_sensitive", "trc_sensitive", "reasonSummary", "parameterSummary", "namespace", "<protected>")
+            .contains("aud_sensitive", "trc_sensitive", "reasonSummary", "parameterSummary", "telemetry", "namespace", "<protected>")
             .doesNotContain("conv-sensitive", "user-sensitive", "org-sensitive", "token", "secret-token-value");
     }
 

@@ -103,6 +103,7 @@ public class InMemoryAgentAuditRecorder implements AgentAuditRecorder, AgentAudi
         summary.put("success", event.success());
         summary.put("parameterSummary", diagnosticParameterSummary(event.parameterSummary()));
         summary.put("reasonSummary", reasonSummary(event.reason()));
+        summary.put("telemetry", AgentAuditTelemetryProjector.project(event).toDiagnosticMap());
         return summary;
     }
 

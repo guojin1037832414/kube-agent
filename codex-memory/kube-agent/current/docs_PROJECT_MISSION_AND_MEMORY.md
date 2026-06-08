@@ -93,10 +93,32 @@ Current track:
 
 Recently completed:
 
-`M5.25-1 trace-aware agent audit evidence kernel`
+`M5.26-1 audit telemetry projection contract`
 
 Latest checkpoint:
 
+- Date: 2026-06-09 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.26-1 implemented:
+  - Added `AgentAuditTelemetryProjection` and `AgentAuditTelemetryProjector`.
+  - `AgentAuditEvent` now has a stable projection path for OpenTelemetry span/event mapping, frontend replay, Agent eval reports, and future durable audit.
+  - Stable attributes use the project-owned `atlas.agent.*` namespace.
+  - OTel / GenAI-style attributes live under `experimentalOtelAttributes`, keeping evolving external semantic conventions out of the durable internal contract.
+  - `InMemoryAgentAuditRecorder` includes the telemetry projection in admin-only diagnostic audit summaries.
+  - The telemetry projection intentionally excludes raw principal fields, raw conversationId, raw reason text, endpoint strings, and parameter values.
+- Verification:
+  - `mvn -q "-Dtest=AgentAuditTelemetryProjectorTest,AgentAuditRecorderTest,SafeToolExecutorTest,ObservabilityControllerTest" test`
+  - `git diff --check`
+- Scope boundary:
+  - Phase 1 generic Agent Core observability/audit hardening only.
+  - No NIM/HPC/Slurm/BCM Phase 2 implementation was resumed.
+  - No new real write/create/delete/state-changing kube-manager call was opened.
+- Security result:
+  - Admin diagnostics can now show how each audit event maps to future telemetry/replay without leaking raw sensitive evidence.
+- Next technical follow-up:
+  - Convert the projection into real Micrometer Observation / OpenTelemetry span events, then define frontend replay timeline DTOs and durable audit storage.
+
+- Previous checkpoint:
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
 - M5.25-1 implemented:

@@ -1,0 +1,299 @@
+﻿{
+    "project":  "kube-agent",
+    "wave":  "M5.26-1",
+    "generatedAt":  "2026-06-08T16:34:22.4863901Z",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "recoveryHome":  "codex-memory/kube-agent/current",
+    "entries":  [
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\CHANGELOG.md",
+                        "sha256":  "cbe534662f49c85ca89d3f5fb57a431aa2403d2dd6cef61f0648d2d7e7e87a92",
+                        "bytes":  266022
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                        "sha256":  "4fbe06fd58eb2b778454694eabd64593decd3c0f73a1dfd7f6cadee4b8444479",
+                        "bytes":  53515
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\docs_INDEX.md",
+                        "sha256":  "d37839de71fcb099f78ebe970d76026ba8141ac790e5753493185d49cfbe87a7",
+                        "bytes":  9886
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\docs_M5_21_ONE_HUNDRED_THIRTIETH_WAVE_NIM_CODE_SWITCH_BINDING_MAPS_CLOSED_AUDIT_20260608.md",
+                        "sha256":  "f6808a97b520eedd4fe1725f31f6fabfb4edc4c4a113e8491fd4ac0db70263f3",
+                        "bytes":  4046
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\docs_M5_21_ONE_HUNDRED_THIRTY_EIGHTH_WAVE_NIM_VALIDATION_RESULT_MIGRATION_PLAN_MAPS_CLOSED_AUDIT_20260608.md",
+                        "sha256":  "db7a9e08f77d4c9ab4ce33baf55c65809e59324f077cad97239eb2ad34a05de7",
+                        "bytes":  6163
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\docs_M5_21_ONE_HUNDRED_THIRTY_FIFTH_WAVE_NIM_PROBE_BINDING_PLAN_MAPS_CLOSED_AUDIT_20260608.md",
+                        "sha256":  "9fafad8d7047050ab84ffcab18752d7334cca6b3d3157fbd78208786c480dbff",
+                        "bytes":  4922
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\docs_M5_21_ONE_HUNDRED_THIRTY_FIRST_WAVE_NIM_RUNTIME_BINDING_MAPS_CLOSED_AUDIT_20260608.md",
+                        "sha256":  "9d2eb596922fdf3bb91645f4c379ba5b8ed03dcdb16fb3d40ef5b681391f62ba",
+                        "bytes":  3891
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\docs_M5_21_ONE_HUNDRED_THIRTY_FOURTH_WAVE_NIM_VALIDATION_RESULT_CONTRACT_MAPS_CLOSED_AUDIT_20260608.md",
+                        "sha256":  "b40a99e2aa24f224edc55f3fd4ab4124ae632080ba05ba6d87ef392166480839",
+                        "bytes":  4790
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\docs_M5_21_ONE_HUNDRED_THIRTY_NINTH_WAVE_NIM_ENHANCED_MIGRATION_PLAN_MAPS_CLOSED_AUDIT_20260608.md",
+                        "sha256":  "c122adaa851da7868e6e16d8ae63a414839dec08d9f6fd686d255e53520870be",
+                        "bytes":  5620
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\docs_M5_21_ONE_HUNDRED_THIRTY_SECOND_WAVE_NIM_RELEASE_GATE_CONTRACT_MAPS_CLOSED_AUDIT_20260608.md",
+                        "sha256":  "133dc9e7194c4835cb3205348e058566a2a6e3d6a3de90abd054f62db8f2f8a5",
+                        "bytes":  3559
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\docs_M5_21_ONE_HUNDRED_THIRTY_SEVENTH_WAVE_NIM_STORAGE_PROBE_RESULT_CONTRACT_MAPS_CLOSED_AUDIT_20260608.md",
+                        "sha256":  "a1d3f1bb3afb43f1c3c5d7e7f08116ed7c555ad31acaee5ab304cc9c7fb91956",
+                        "bytes":  5896
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\docs_M5_21_ONE_HUNDRED_THIRTY_SIXTH_WAVE_NIM_VALIDATION_PLAN_MAPS_CLOSED_AUDIT_20260608.md",
+                        "sha256":  "49975ac3c8e797d34f63c35660e08836bbf92b76aba96498d7fc65f242c83512",
+                        "bytes":  5396
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\docs_M5_21_ONE_HUNDRED_THIRTY_THIRD_WAVE_NIM_RELEASE_DECISION_CONTRACT_MAPS_CLOSED_AUDIT_20260608.md",
+                        "sha256":  "d959026b9c1ee06a5d9c1d77fb3283183d0d2f28a256082c46633a2075c508d3",
+                        "bytes":  4598
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\docs_M5_21_ONE_HUNDRED_TWENTIETH_WAVE_NIM_RECEIPT_SCHEMA_REQUIRED_FIELDS_CLOSED_LIST_AUDIT_20260608.md",
+                        "sha256":  "e2cb617ca47e59a9b4a3c3dc4b85c6abe500228fd2e0ec1207b9516040ea31d1",
+                        "bytes":  4611
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\docs_M5_21_ONE_HUNDRED_TWENTY_EIGHTH_WAVE_NIM_CODE_SWITCH_FAILURE_SHORTCUT_LISTS_CLOSED_AUDIT_20260608.md",
+                        "sha256":  "cbeb25ee531213e22066692b7d6b61e30ef889b267ad3f1be476289530881b00",
+                        "bytes":  5090
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\docs_M5_21_ONE_HUNDRED_TWENTY_FIFTH_WAVE_NIM_VALIDATION_RESULT_MIGRATION_FAILURE_SHORTCUT_LISTS_CLOSED_AUDIT_20260608.md",
+                        "sha256":  "2d5411322b0bf35e770dc9fe355fae6db2df77e5d46d5bd070a61c34767f7519",
+                        "bytes":  4981
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\docs_M5_21_ONE_HUNDRED_TWENTY_FIRST_WAVE_NIM_WRITER_INTERFACE_SPEC_REQUIRED_LISTS_CLOSED_AUDIT_20260608.md",
+                        "sha256":  "8452e5537cadee1e40076d798af667dc08641e0751e9553666f2399ef8023860",
+                        "bytes":  4761
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\docs_M5_21_ONE_HUNDRED_TWENTY_FOURTH_WAVE_NIM_VALIDATION_GATE_FAILURE_SHORTCUT_LISTS_CLOSED_AUDIT_20260608.md",
+                        "sha256":  "93932d238de2b2069c1bb49389880ee79430ed7565cf60dc8db3189146fb4c0b",
+                        "bytes":  4404
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\docs_M5_21_ONE_HUNDRED_TWENTY_NINTH_WAVE_NIM_CODE_SWITCH_TEMPLATE_PREREQUISITES_CLOSED_AUDIT_20260608.md",
+                        "sha256":  "145a6f1fc4f25416c012c2168df56cf20b3aa7bcacde26a42ce1b29180958575",
+                        "bytes":  5483
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\docs_M5_21_ONE_HUNDRED_TWENTY_SECOND_WAVE_NIM_WRITER_INTERFACE_FAILURE_TEST_DOUBLE_LISTS_CLOSED_AUDIT_20260608.md",
+                        "sha256":  "ff93483cf27f2f4b1fcbc5248fa5d9d3f3adaf8f43e00471daaefc4fd160f595",
+                        "bytes":  4262
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\docs_M5_21_ONE_HUNDRED_TWENTY_SEVENTH_WAVE_NIM_STATE_MACHINE_REQUIREMENT_FAILURE_SHORTCUT_LISTS_CLOSED_AUDIT_20260608.md",
+                        "sha256":  "3307ad4674b46609cca42dd48011912baead8b15c4e03d13dcf55118deb5f431",
+                        "bytes":  4769
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\docs_M5_21_ONE_HUNDRED_TWENTY_SIXTH_WAVE_NIM_RELEASE_DECISION_GATE_FAILURE_SHORTCUT_LISTS_CLOSED_AUDIT_20260608.md",
+                        "sha256":  "6a7a41ec745fe3a68c115862d28ec9e127bc613e45c507d45ce7be8aa8164066",
+                        "bytes":  4800
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\docs_M5_21_ONE_HUNDRED_TWENTY_THIRD_WAVE_NIM_RECEIPT_SCHEMA_FAILURE_TEST_DOUBLE_LISTS_CLOSED_AUDIT_20260608.md",
+                        "sha256":  "db9366eab389618ec1844c81082823890c16abdbe2c54af869ce3fd151a4ef4d",
+                        "bytes":  4600
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\docs_M5_21_WAVE_INDEX_20260606.md",
+                        "sha256":  "3d9f8b4120fc91745e73794ffc026ff5d2f4df8b3d8a15bec4a5048651bf530b",
+                        "bytes":  22714
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\docs_PROJECT_MISSION_AND_MEMORY.md",
+                        "sha256":  "5f7579fe45a0ffe4f3c8852154d0d81c62ea62dd670445d664220ff3939dd83d",
+                        "bytes":  289366
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\docs_SESSION_PROGRESS_20260606_M521_29.md",
+                        "sha256":  "426ede3292095d5d7d1189dfd4e522b6fc1234e2035111121a218e65865a6159",
+                        "bytes":  289428
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\docs_tech-stack_BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                        "sha256":  "b5ae5ac09c39e3269971d55bc7249f31208d073747c784015d35ec4dd9bd0140",
+                        "bytes":  11700
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\docs_tech-stack_BACKEND_JAVA_TECH_STACK_AUDIT_20260608.md",
+                        "sha256":  "0407812eb4da3a9adbc46860306d0067302ae06da6d16d2dd49fb50688925aaf",
+                        "bytes":  7591
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\docs_v3.1_DEVELOPMENT_GUIDE.md",
+                        "sha256":  "b731f98854b7913e63195cf2f9981f98c3ffb96346c507ce4f7e5bc009f227f4",
+                        "bytes":  81325
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\M5_21_120_WORKSPACE_RECOVERY_SHA256.json",
+                        "sha256":  "c0c401e80cc953d2396156c53a64ac16fc218acf8649fb09a48e3a9c3f4f2787",
+                        "bytes":  2664
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\M5_21_121_WORKSPACE_RECOVERY_SHA256.json",
+                        "sha256":  "4cede53ef092073c53b481c403f2df1420fce1702d30b1f4463abf317a37baf0",
+                        "bytes":  2540
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\M5_21_122_WORKSPACE_RECOVERY_SHA256.json",
+                        "sha256":  "358a03493521eeab69df9a7d2a272c57da56b26f8f627bcd835d76fc9f8d8242",
+                        "bytes":  2560
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\M5_21_123_WORKSPACE_RECOVERY_SHA256.json",
+                        "sha256":  "bd30aad071b9b41ef790d7ac849593477d2e06c7fbc8cdede1b84ddf0f51858a",
+                        "bytes":  2552
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\M5_21_124_WORKSPACE_RECOVERY_SHA256.json",
+                        "sha256":  "bd5b2b4688009a497af361384c76692502e16fbc84178c2da5849f2f99213aa9",
+                        "bytes":  3190
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\M5_21_125_WORKSPACE_RECOVERY_SHA256.json",
+                        "sha256":  "6e2f7abd67fb16f708e5cc8d0b078c2b5f17ad4425c1ea48698e2c1708cb224b",
+                        "bytes":  3224
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\M5_21_126_WORKSPACE_RECOVERY_SHA256.json",
+                        "sha256":  "8fd6ab33bc904eb1db745b63b6be96ee7f4bdc2e84871b22c132a0e12226c8fd",
+                        "bytes":  3214
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\M5_21_127_WORKSPACE_RECOVERY_SHA256.json",
+                        "sha256":  "77bf53415edcc649e896d243d7e13d1cbed1c97a61c856721998286e4970bb6d",
+                        "bytes":  3443
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\M5_21_128_WORKSPACE_RECOVERY_SHA256.json",
+                        "sha256":  "1d4c6a843029eaa1c3fe9626a1c9d17de7d017c4a2d7fc6aa0e0be730b0528f5",
+                        "bytes":  3421
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\M5_21_129_WORKSPACE_RECOVERY_SHA256.json",
+                        "sha256":  "3b2c9ed7d8618017e7954699a19bf25406075b08ab8771f691f46489c6886c05",
+                        "bytes":  3218
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\M5_21_130_WORKSPACE_RECOVERY_SHA256.json",
+                        "sha256":  "c0e146a6831d9aa16841fd5f814a75e62064c10b4ce9271c5ae32c48f5fc54d4",
+                        "bytes":  3223
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\M5_21_131_WORKSPACE_RECOVERY_SHA256.json",
+                        "sha256":  "9893574b4b53eb228c64929c6982370dc3ff95d2d614f93f0a43fd92f06c7297",
+                        "bytes":  3411
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\M5_21_132_WORKSPACE_RECOVERY_SHA256.json",
+                        "sha256":  "b2df445e58681322e7199a551d415b176f2ca7e5cd6e3e7fcbefcd04b60f548f",
+                        "bytes":  3543
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\M5_21_133_WORKSPACE_RECOVERY_SHA256.json",
+                        "sha256":  "549ac9f4f9b98a7f8f043ea499b96c8b0d5126d460f57526c703b08ff61b7d6a",
+                        "bytes":  3784
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\M5_21_134_WORKSPACE_RECOVERY_SHA256.json",
+                        "sha256":  "4ab005b213cf44d8b072230e1cfa5a4bc51e69cffb2ebfb8f8dadbd3aaa92e79",
+                        "bytes":  2497
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\M5_21_135_WORKSPACE_RECOVERY_SHA256.json",
+                        "sha256":  "762cdcb5833a321da93a58a6c13316ec8fa2b3655903641823ddf8e5e45576ca",
+                        "bytes":  2480
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\M5_21_136_WORKSPACE_RECOVERY_SHA256.json",
+                        "sha256":  "2580b083e1b51ec5415b2f5bbda6251dfbdfa4893bdc2634296dfee8dd43c2a5",
+                        "bytes":  2474
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\M5_21_137_WORKSPACE_RECOVERY_SHA256.json",
+                        "sha256":  "21fabe038ace903c2e832902936079fa5e3499f968cbb11c252630717c3058ff",
+                        "bytes":  2504
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\M5_21_138_WORKSPACE_RECOVERY_SHA256.json",
+                        "sha256":  "913a594526440bb0aa5f76658b364108ce2b332d168a1b61c7e252433d822d4f",
+                        "bytes":  2509
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\M5_21_139_WORKSPACE_RECOVERY_SHA256.json",
+                        "sha256":  "8781a231d1b3c552f02e63dde5c511adeb065c4a1ab7d5c23cdcf917c9ad7ee7",
+                        "bytes":  2633
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\M5_22_1_WORKSPACE_RECOVERY_SHA256.json",
+                        "sha256":  "608437fa33288caf0140426b62a6bff55aff37c934ea5503f26f4dcc40b0e90e",
+                        "bytes":  2452
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\M5_22_2_WORKSPACE_RECOVERY_SHA256.json",
+                        "sha256":  "6cfee141704dba95283044bd26325d44b8ff56ef20174638735d6f046bc28c90",
+                        "bytes":  2449
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\M5_22_3_WORKSPACE_RECOVERY_SHA256.json",
+                        "sha256":  "439e8eca0171a86978f12bbf518c824d23208c3344452220bb69f115670515e2",
+                        "bytes":  4983
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\M5_22_4_WORKSPACE_RECOVERY_SHA256.json",
+                        "sha256":  "04dd6549f9cdd0bcdd1a55034a44cf289ee96a502ee1580f6a0bccba1c57a74e",
+                        "bytes":  3481
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\M5_22_5_WORKSPACE_RECOVERY_SHA256.json",
+                        "sha256":  "76c759b54717b6e6bea65ff00a038f53d1acb47114e60981a07cc05096c6634a",
+                        "bytes":  3742
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\M5_23_1_WORKSPACE_RECOVERY_SHA256.json",
+                        "sha256":  "fa25aebfa413c2b13bc70eb059655b4eb708894a92e15b1823faa5a839db7c60",
+                        "bytes":  7730
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\M5_24_1_WORKSPACE_RECOVERY_SHA256.json",
+                        "sha256":  "fc52b6b6b76005858180751e74a89ff0c2c163cce604cffe846051173b0b0168",
+                        "bytes":  5536
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\M5_25_1_WORKSPACE_RECOVERY_SHA256.json",
+                        "sha256":  "846b3fe924a48d7555804b6b7b2ecf5ebbf3f816a28121d1fd1a4055bfa43cba",
+                        "bytes":  19118
+                    },
+                    {
+                        "path":  "codex-memory\\kube-agent\\current\\RECOVERY_STATUS.md",
+                        "sha256":  "5653b808e4edff644ce45b2a9dd02e4cef9fb7f02df79f34b9512724194a4ff5",
+                        "bytes":  8131
+                    }
+                ]
+}

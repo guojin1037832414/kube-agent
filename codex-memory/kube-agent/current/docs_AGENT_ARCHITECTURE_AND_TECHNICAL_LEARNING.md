@@ -334,6 +334,23 @@ AgentTraceContext
 
 学习重点：审计不是“写一行日志”。顶级 Agent 的审计要回答四个问题：谁在什么 trace 下、以什么 Tool 风险元数据、因为什么原因被允许/阻断、是否真的调用了外部能力。M5.25-1 先让这些问题在统一执行边界上都有结构化答案；后续再把这些答案接入 OpenTelemetry span、前端时间线、持久化表和 Agent eval 报告。
 
+### M5.26 审计遥测投影契约
+
+M5.26-1 把 M5.25 的审计事件再推进一步：从“能记录审计事实”变成“能稳定投影到观测和回放系统”。
+
+新增的 `AgentAuditTelemetryProjector` 做两件事：
+
+- 生成稳定内部属性：`atlas.agent.audit.id`、`atlas.agent.trace.id`、`atlas.agent.intent.id`、`atlas.agent.tool.name`、`atlas.agent.operation.type`、`atlas.agent.audit.outcome`、`atlas.agent.tool.executed`、`atlas.agent.tool.success`、参数数量、reason 长度和隐私标记等。
+- 生成实验兼容属性：`gen_ai.operation.name`、`gen_ai.tool.name`、`gen_ai.tool.call.id`、`http.request.method`、`otel.status_code`、`error.type` 等，后续接 OpenTelemetry span/event 时可以直接复用。
+
+为什么要分成两层：
+
+- `atlas.agent.*` 是项目自己的稳定教学/工程契约，前端回放、durable audit、Agent eval 都可以长期依赖。
+- `experimentalOtelAttributes` 用来吸收 OpenTelemetry GenAI semantic conventions 的最新变化。该规范仍在演进，不能直接把实验字段名固化成数据库主契约。
+- 投影层默认脱敏：不包含原始 `userId`、`organizationId`、`conversationId`、完整 reason、endpoint 字符串或参数值，只暴露计数、长度、枚举和 ID。
+
+学习重点：先进观测不是“接上一个 dashboard”这么简单。顶级 Agent 要先把事件语义稳定下来，再映射到外部标准。这样当 OTel / GenAI / A2A / MCP 规范变化时，我们只改 adapter，不改 Agent 的核心证据模型。
+
 ### 最新技术引入原则
 
 你要求一期就打造顶级 Agent，所以“最新技术”会全部进入一期路线，但分成两层：

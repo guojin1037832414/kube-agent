@@ -6,6 +6,22 @@
 
 ---
 
+## [M5.26-1] - Audit telemetry projection contract
+
+**Delivery**: Added the first stable telemetry projection contract for Agent audit events, preparing a safe bridge to OpenTelemetry spans/events, frontend replay, Agent eval reports, and future durable audit storage.
+**Changes**
+- Added `AgentAuditTelemetryProjection` and `AgentAuditTelemetryProjector`.
+- Mapped `AgentAuditEvent` to stable internal attributes under `atlas.agent.*`, including auditId, traceId, intent/tool metadata, source, operation type, outcome, execution flags, reason length, parameter count, endpoint count, and explicit privacy flags.
+- Added a separate `experimentalOtelAttributes` map for current OTel/GenAI-style fields such as `gen_ai.operation.name`, `gen_ai.tool.name`, `gen_ai.tool.call.id`, `http.request.method`, `otel.status_code`, and `error.type`.
+- Included the telemetry projection in redacted admin observability audit summaries.
+- Kept raw principal, conversation, reason text, endpoint strings, and parameter values out of the telemetry projection.
+**Verification**
+- `mvn -q "-Dtest=AgentAuditTelemetryProjectorTest,AgentAuditRecorderTest,SafeToolExecutorTest,ObservabilityControllerTest" test` passed.
+- `git diff --check` passed.
+**Security**
+- No real write/create/delete/state-changing kube-manager call was opened.
+- OTel/GenAI semantic conventions are treated as an evolving compatibility layer; the durable/internal contract remains `atlas.agent.*`.
+
 ## [M5.25-1] - Trace-aware agent audit evidence kernel
 
 **Delivery**: Added the first generic Phase 1 Agent audit evidence kernel and wired it into the single safe Tool execution boundary.
