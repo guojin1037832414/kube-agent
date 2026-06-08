@@ -351,6 +351,20 @@ M5.26-1 把 M5.25 的审计事件再推进一步：从“能记录审计事实�
 
 学习重点：先进观测不是“接上一个 dashboard”这么简单。顶级 Agent 要先把事件语义稳定下来，再映射到外部标准。这样当 OTel / GenAI / A2A / MCP 规范变化时，我们只改 adapter，不改 Agent 的核心证据模型。
 
+### M5.27 审计遥测 Observation 发布
+
+M5.27-1 把 M5.26 的脱敏投影接入 Micrometer Observation。也就是说，审计事件现在不只是能被 admin snapshot 看到，还能进入 Spring Boot / Micrometer / OpenTelemetry 的标准观测链路。
+
+新增的 `AgentAuditTelemetryPublisher` 有三个关键约束：
+
+- 只消费 `AgentAuditTelemetryProjection`，不直接导出原始 `AgentAuditEvent`。这样 raw principal、conversation、reason、endpoint 字符串和参数值不会因为接入 APM 被意外带出去。
+- Observation 名称固定为 `atlas.agent.audit`，事件名称固定为 `atlas.agent.audit.recorded`，为后续 trace 查询、dashboard、告警和前端回放提供稳定锚点。
+- 低基数字段和高基数字段分开：Tool 名、intent、source、method、operation、outcome、执行/成功布尔值和隐私标记可以进入低基数标签；`auditId`、`traceId`、时间、计数等易爆炸字段只进入高基数字段。
+
+`InMemoryAgentAuditRecorder` 现在会在写入内存诊断快照之后调用 publisher，但 publisher 异常会被吞掉。原因是当前 recorder 仍是诊断链路：审计事实已经记录，APM 后端不可用不能反过来改变 Tool 的业务结果。未来真正高风险写操作则不同，它需要 durable audit pre-write gate，那个边界必须 fail closed。
+
+学习重点：OpenTelemetry 的难点不是“能不能发出去”，而是“什么可以成为指标标签”。顶级 Agent 需要既能追踪每次 Tool 行为，又不能把用户、会话、trace、endpoint、reason 或参数值扩散成高风险观测数据。M5.27-1 让观测链路前进了一步，同时保留了隐私和基数治理。
+
 ### 最新技术引入原则
 
 你要求一期就打造顶级 Agent，所以“最新技术”会全部进入一期路线，但分成两层：

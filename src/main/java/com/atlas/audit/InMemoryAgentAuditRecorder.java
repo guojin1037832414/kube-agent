@@ -1,5 +1,6 @@
 package com.atlas.audit;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayDeque;
@@ -29,6 +30,16 @@ public class InMemoryAgentAuditRecorder implements AgentAuditRecorder, AgentAudi
     private final AtomicLong totalEvents = new AtomicLong();
     private final AtomicLong blockedEvents = new AtomicLong();
     private final AtomicLong errorEvents = new AtomicLong();
+    private final AgentAuditTelemetryPublisher telemetryPublisher;
+
+    public InMemoryAgentAuditRecorder() {
+        this(null);
+    }
+
+    @Autowired
+    public InMemoryAgentAuditRecorder(AgentAuditTelemetryPublisher telemetryPublisher) {
+        this.telemetryPublisher = telemetryPublisher;
+    }
 
     @Override
     public void record(AgentAuditEvent event) {
@@ -48,6 +59,7 @@ public class InMemoryAgentAuditRecorder implements AgentAuditRecorder, AgentAudi
                 recentEvents.removeLast();
             }
         }
+        publishTelemetry(event);
     }
 
     public List<AgentAuditEvent> recentEvents() {
@@ -164,5 +176,16 @@ public class InMemoryAgentAuditRecorder implements AgentAuditRecorder, AgentAudi
             "present", true,
             "length", reason.length()
         );
+    }
+
+    private void publishTelemetry(AgentAuditEvent event) {
+        if (telemetryPublisher == null) {
+            return;
+        }
+        try {
+            telemetryPublisher.publish(event);
+        } catch (RuntimeException ignored) {
+            // 诊断链路必须非致命：审计记录已经进入内存快照，Observation 发布失败不能改写 Tool 执行结果。
+        }
     }
 }

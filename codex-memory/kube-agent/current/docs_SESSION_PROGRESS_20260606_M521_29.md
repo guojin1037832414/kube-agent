@@ -6,7 +6,7 @@
 - Primary workspace recovery folder: `F:\gitProject\kube-agent\codex-memory\kube-agent\current`
 - Historical external memory folder: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.26-1, audit telemetry projection contract.
+- Current latest wave: M5.27-1, audit telemetry Observation publisher.
 - Phase update: HPC / Slurm / BCM and NIM are paused and moved to Phase 2 by user direction.
 - Phase 1 focus: deliver the top-tier Agent core through generic manager Agent foundations, safe read/query validation, non-HPC/NIM manager function coverage, Tool metadata quality, HITL/audit execution boundary, traceability, recovery, evaluation, teaching documentation, and vue-kube-manager workflow integration.
 - Phase boundary clarification: moving NIM / HPC / Slurm / BCM to Phase 2 postpones specialist domain plugins only; it does not reduce Phase 1 standards.
@@ -55,6 +55,26 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.27-1 audit telemetry Observation publisher is implemented:
+  - Added `src/main/java/com/atlas/audit/AgentAuditTelemetryPublisher.java`.
+  - Micrometer Observation name is `atlas.agent.audit`.
+  - Observation event name is `atlas.agent.audit.recorded`.
+  - `InMemoryAgentAuditRecorder` now receives an optional telemetry publisher through Spring constructor injection while keeping the old no-arg constructor for compatibility tests.
+  - The recorder publishes telemetry after the audit event is stored in the in-memory diagnostic snapshot.
+  - Publisher failures are swallowed on this diagnostic path, so an APM/OTel backend problem cannot mutate Tool execution or audit snapshot behavior.
+  - The publisher consumes `AgentAuditTelemetryProjection`, not raw `AgentAuditEvent`, preserving the M5.26 redaction boundary.
+  - Low-cardinality Observation key values are limited to bounded fields; high-cardinality values such as auditId, traceId, event time and counts stay out of metric tags.
+  - Added `src/test/java/com/atlas/audit/AgentAuditTelemetryPublisherTest.java`.
+  - Verification passed:
+    - `mvn -q "-Dtest=AgentAuditTelemetryPublisherTest,AgentAuditTelemetryProjectorTest,AgentAuditRecorderTest,SafeToolExecutorTest,ObservabilityControllerTest" test`
+    - `git diff --check`
+  - Test log note: `ThrowingTool` stack traces and failing diagnostic recorder warnings are intentional exception-path tests; Maven exited successfully.
+  - No NIM/HPC/Slurm/BCM Phase 2 implementation was resumed and no real write/create/delete/state-changing kube-manager call was opened.
+  - Next Phase 1 technical slices:
+    - frontend replay timeline DTOs for request, intent, plan, Tool, HTTP outlet, HITL, audit, and final answer;
+    - durable audit storage with admin-only query, redaction, retention, and pre-write fail-closed gate for high-risk actions;
+    - Agent eval reports and real Resilience4j HTTP outlet governance.
 
 - M5.26-1 audit telemetry projection contract is implemented:
   - Added `src/main/java/com/atlas/audit/AgentAuditTelemetryProjection.java`.

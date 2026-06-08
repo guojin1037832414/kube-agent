@@ -1,0 +1,79 @@
+﻿{
+    "project":  "kube-agent",
+    "wave":  "M5.27-1",
+    "title":  "audit telemetry Observation publisher",
+    "generatedAt":  "2026-06-09T01:08:39+08:00",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "files":  [
+                  {
+                      "path":  "CHANGELOG.md",
+                      "sha256":  "5f100b6e0fc418384b9f08e73213f74176b07cb505e79259b776e2f5cf70a8fe",
+                      "bytes":  267644
+                  },
+                  {
+                      "path":  "docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "9d013d09445552f3dabdec77faf121514d9fd8bacc197cd2c333ec8712a2390e",
+                      "bytes":  55226
+                  },
+                  {
+                      "path":  "docs/PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "190f0f5eb7f0fffe5913b90e9d0337711d7e7355bcb7550a45c3fe04bc4d458c",
+                      "bytes":  291273
+                  },
+                  {
+                      "path":  "docs/SESSION_PROGRESS_20260606_M521_29.md",
+                      "sha256":  "7bc7cab5edfa7248e8895aef7504771471de1e5c585505b51b347d98c998745c",
+                      "bytes":  291359
+                  },
+                  {
+                      "path":  "docs/tech-stack/BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "78811a8865b266773cfada1c48f4599151c083a5966392c0bd797245399c99a2",
+                      "bytes":  14296
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/audit/AgentAuditTelemetryPublisher.java",
+                      "sha256":  "e92f7c5282cbdc48d87c7285ea6fe4b6610f7bacaa69e9b0086f9c1c230cf5c3",
+                      "bytes":  3423
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/audit/InMemoryAgentAuditRecorder.java",
+                      "sha256":  "04543b36e80a190278e0909d4954182bc31b7e3d2f35713b2dcfc3287938ada7",
+                      "bytes":  7268
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/audit/AgentAuditTelemetryPublisherTest.java",
+                      "sha256":  "0a926f110f7e2e2e3079b12cb95321c729384ffe4f0d85437536334d8a5804ed",
+                      "bytes":  6043
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/CHANGELOG.md",
+                      "sha256":  "5f100b6e0fc418384b9f08e73213f74176b07cb505e79259b776e2f5cf70a8fe",
+                      "bytes":  267644
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "9d013d09445552f3dabdec77faf121514d9fd8bacc197cd2c333ec8712a2390e",
+                      "bytes":  55226
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "190f0f5eb7f0fffe5913b90e9d0337711d7e7355bcb7550a45c3fe04bc4d458c",
+                      "bytes":  291273
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_SESSION_PROGRESS_20260606_M521_29.md",
+                      "sha256":  "7bc7cab5edfa7248e8895aef7504771471de1e5c585505b51b347d98c998745c",
+                      "bytes":  291359
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "78811a8865b266773cfada1c48f4599151c083a5966392c0bd797245399c99a2",
+                      "bytes":  14296
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/RECOVERY_STATUS.md",
+                      "sha256":  "dd99d66e897abec66cfdb99bad087e89c515091ff0cc3af8683bbce6a61a921d",
+                      "bytes":  9627
+                  }
+              ]
+}

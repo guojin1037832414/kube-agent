@@ -6,6 +6,23 @@
 
 ---
 
+## [M5.27-1] - Audit telemetry Observation publisher
+
+**Delivery**: Connected the redacted Agent audit telemetry projection to Micrometer Observation so Phase 1 Agent audit evidence can flow into the Spring Boot / OpenTelemetry observability path without exposing raw sensitive data.
+**Changes**
+- Added `AgentAuditTelemetryPublisher` with Observation name `atlas.agent.audit` and event name `atlas.agent.audit.recorded`.
+- Wired `InMemoryAgentAuditRecorder` to publish telemetry after each in-memory audit record while keeping publisher failures non-fatal for Tool execution and diagnostic audit snapshots.
+- Split bounded attributes into low-cardinality key values and volatile identifiers/counters/timestamps into high-cardinality key values.
+- Published only from `AgentAuditTelemetryProjection`; raw `AgentAuditEvent` principal, conversation, reason, endpoint strings, and parameter values are not exported.
+- Added constructor-injection coverage so Spring prefers the telemetry-aware recorder constructor while legacy no-arg tests remain valid.
+**Verification**
+- `mvn -q "-Dtest=AgentAuditTelemetryPublisherTest,AgentAuditTelemetryProjectorTest,AgentAuditRecorderTest,SafeToolExecutorTest,ObservabilityControllerTest" test` passed.
+- `git diff --check` passed.
+**Security**
+- No real write/create/delete/state-changing kube-manager call was opened.
+- Observation publishing is diagnostic/telemetry only; future high-risk writes still require a durable pre-write fail-closed audit gate before execution.
+- OTel/GenAI attributes remain compatibility fields; the durable project contract stays under `atlas.agent.*`.
+
 ## [M5.26-1] - Audit telemetry projection contract
 
 **Delivery**: Added the first stable telemetry projection contract for Agent audit events, preparing a safe bridge to OpenTelemetry spans/events, frontend replay, Agent eval reports, and future durable audit storage.

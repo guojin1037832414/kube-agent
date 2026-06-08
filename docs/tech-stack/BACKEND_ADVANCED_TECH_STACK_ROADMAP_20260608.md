@@ -58,13 +58,21 @@ M5.26-1 已把审计事件推进到遥测投影层：
 - admin 观测快照的 recent audit summary 现在携带 telemetry projection；
 - 投影层不携带 raw principal、raw reason、endpoint 字符串或参数值。
 
+M5.27-1 已把审计遥测投影推进到 Micrometer Observation 发布层：
+
+- 新增 `AgentAuditTelemetryPublisher`，Observation 名称为 `atlas.agent.audit`，事件名称为 `atlas.agent.audit.recorded`；
+- `InMemoryAgentAuditRecorder` 在写入内存诊断快照后发布 Observation，发布失败不影响 Tool 执行结果或 audit snapshot；
+- low-cardinality 标签只包含 bounded enum/boolean/名称类字段，高波动的 `auditId`、`traceId`、时间和计数进入 high-cardinality key values；
+- publisher 只消费 M5.26 的脱敏投影，不导出 raw principal、conversation、reason、endpoint 或参数值；
+- 当前仍是诊断/观测链路，后续高风险写路径必须增加 durable audit pre-write fail-closed gate。
+
 ## 最新 Agent 标准的落地顺序
 
 以下技术代表 2026 年 Agent 工程的先进方向，但必须按可验证顺序接入：
 
 | 标准/技术 | 一期定位 | 当前落点 | 下一步 |
 |---|---|---|---|
-| OpenTelemetry / GenAI semantic conventions | 统一观测模型 | 已有 Micrometer Tracing + OTLP 依赖，M5.23 建立 traceId 内核，M5.24 接入 HTTP outlet，M5.25 接入审计事件模型，M5.26 建立审计 telemetry projection；GenAI semconv 当前仍按实验/发展中标准对待 | 将 LLM、Tool、HTTP、HITL、audit 映射为 Span 与属性，并保留属性名兼容层 |
+| OpenTelemetry / GenAI semantic conventions | 统一观测模型 | 已有 Micrometer Tracing + OTLP 依赖，M5.23 建立 traceId 内核，M5.24 接入 HTTP outlet，M5.25 接入审计事件模型，M5.26 建立审计 telemetry projection，M5.27 发布审计 Observation；GenAI semconv 当前仍按实验/发展中标准对待 | 将 LLM、Tool、HTTP、HITL、audit 映射为同一 trace 下的 span/timeline，并保留属性名兼容层 |
 | MCP (Model Context Protocol) | 外部 Tool / Resource / Prompt 暴露协议 | 暂不直接开放生产写工具；MCP 规范继续快速演进，最新规范要通过 manifest/schema adapter 消化 | 先做只读 Tool manifest 与 schema adapter，写工具继续 HITL/HOLD，调用层必须走 SafeToolExecutor |
 | A2A (Agent2Agent) | 多 Agent 互操作协议 | 当前多专家流程仍以内部角色和 Graph 编排为主；A2A 作为 Phase 1 互操作实验轨，不替代安全执行边界 | 在执行边界、trace、audit 稳定后，评估 Agent Card / Task / streaming adapter |
 | OWASP LLM / Agentic AI 安全实践 | 红队和安全门禁 | 已有 HITL、protected params、fail-closed、direct execute contract | 扩展 eval harness：prompt injection、tool misuse、excessive agency、sensitive data |
@@ -75,13 +83,13 @@ M5.26-1 已把审计事件推进到遥测投影层：
 
 ## 官方版本依据
 
-2026-06-08 核对官方文档后的事实基线：
+2026-06-09 复核官方文档后的事实基线：
 
 - Spring Boot 官方文档当前稳定线同时包含 `4.0.6` 和 `3.5.14`；`4.0.6` 需要 Java 17+，并要求 Spring Framework 7.0.7+。
 - Spring AI 官方文档当前稳定线是 `1.1.7`，`2.0.0-RC1` 仍在 Preview 区域。
 - Oracle Java SE 路线图将 Java SE 17、21、25 都列为 LTS，其中 Java 25 GA 于 2025-09，Premier Support 到 2030-09。
 - MCP 官方规范持续迭代，2025-11-25 规范已明确 Tool list/call、structured output、annotations 等能力；本项目仍只把它作为受控外部 Tool 发现与调用协议接入，不能绕过权限、HITL、审计和 SafeToolExecutor。
-- OpenTelemetry GenAI 语义约定对 Agent/LLM/Tool 很关键，但仍要按可变标准处理，先以内部字段映射和兼容层落地，避免直接把预览属性名固化成无法迁移的数据库契约。
+- OpenTelemetry GenAI 语义约定对 Agent/LLM/Tool 很关键，但官方状态仍是 Development，并且要求现有 instrumentation 不要默认切到最新实验约定；本项目继续先以内部字段映射和兼容层落地，避免直接把发展中属性名固化成无法迁移的数据库契约。
 
 因此，本项目主线当前采用 `Spring Boot 3.5.14 + Spring AI 1.1.7 + Java 17` 作为可验证稳定底座；`Spring Boot 4 + Spring AI 2 + Java 21/25` 进入兼容性矩阵和试验分支。
 
@@ -117,7 +125,7 @@ Spring Boot 4.0.x 官方系统要求是 Java 17+，但它会同时带来 Spring 
 - HTTP 证据链：M5.24 已完成基础 trace header 传播，M5.25 已形成 auditId/traceId 事件内核；后续要补 idempotency key、tenant evidence、baggage 与真实 OpenTelemetry client span。
 - HTTP 韧性：读请求可重试；写请求必须绑定 idempotency key / audit / HITL 后才能重试，默认不自动重试。
 - 连接治理：从简单 request factory 过渡到连接池或 WebClient，并暴露连接池指标。
-- OpenTelemetry：M5.23/M5.24/M5.25/M5.26 已完成 traceId 内核、HTTP 出口传播、审计事件模型和审计 telemetry projection；后续要把 intent、plan、tool、HTTP、HITL、audit、final answer 映射为 span/timeline/audit 统一证据链。
+- OpenTelemetry：M5.23/M5.24/M5.25/M5.26/M5.27 已完成 traceId 内核、HTTP 出口传播、审计事件模型、审计 telemetry projection 和审计 Observation 发布；后续要把 intent、plan、tool、HTTP、HITL、audit、final answer 映射为 span/timeline/audit 统一证据链。
 - 审计持久化：M5.25 已完成内存诊断 recorder；下一步要把敏感读、高风险写、HITL 阻断、Tool 异常接入可查询、可保留、可权限控制的脱敏持久化审计存储。
 - CI 门禁：SBOM、SCA、SpotBugs、覆盖率、secret scan、Agent eval 必须进入发布流程。
 - 安全主干：逐步引入 Spring Security `SecurityFilterChain`，把身份事实从 ThreadLocal 兼容层迁移到标准 `Authentication`。
@@ -135,6 +143,35 @@ Spring Boot 4.0.x 官方系统要求是 Java 17+，但它会同时带来 Spring 
 | P1 | Spring Security 主线化 | 可信身份从 ThreadLocal 兼容层迁移到标准 `Authentication/SecurityContext` |
 | P1 | Testcontainers 真实集成测试 | 覆盖 kube-manager HTTP contract、鉴权失败、trace header、重试/熔断边界 |
 | P2 | Java 21/25 与 Spring Boot 4 / Spring AI 2 兼容矩阵 | 先在 CI matrix 或试验分支验证，不破坏当前可恢复主线 |
+
+## 2026-06-09 最新多专家复核
+
+Archimedes 复核后的结论与当前路线一致：一期主线不应该把“全部最先进技术”理解成一次性升级所有主版本，而是把能形成闭环的先进能力落到主线，把生态迁移和实验协议放入兼容矩阵。
+
+主线继续推进：
+
+- Spring Security 主线化；
+- Resilience4j 真正治理 kube-manager HTTP outlet；
+- Micrometer / OpenTelemetry 把 request、intent、plan、LLM、Tool、HTTP、HITL、audit、final answer 串成同一条 trace/timeline；
+- durable audit 替换当前 in-memory diagnostic recorder；
+- 最小 RAG：Spring AI VectorStore + kube-manager API / 运维 runbook 文档摄取 + 引用证据；
+- persistent Memory：摘要记忆持久化、租户隔离、脱敏和可删除；
+- MCP 先做 read-only manifest / schema adapter，未来 `tools/list` / `tools/call` 仍必须经过 `SafeToolExecutor`。
+
+继续放入兼容矩阵：
+
+- Java 21 / 25、Spring Boot 4、Spring Framework 7、Spring AI 2；
+- OTel GenAI development 字段直接固化为数据库契约；
+- 完整外部 MCP Server / broker / tool market；
+- A2A / Agent Card / 跨 Agent 互操作；
+- GraphRAG、知识图谱、reranker、多向量库并行；
+- virtual threads / structured concurrency 压测分支；
+- NIM / HPC / Slurm / BCM 专项插件继续作为二期。
+
+下一两个里程碑建议：
+
+- M5.28：Security + Resilience + durable audit + CI hard gate，把“可以安全执行和可追责”继续做硬。
+- M5.29：RAG + persistent Memory + read-only MCP + Agent eval，把“会学习、会引用证据、会被评测”接入一期顶级 Agent Core。
 
 学习重点：顶级 Agent 的技术先进性最终体现在“闭环能力”：能安全执行、能解释原因、能追踪证据、能评测回归、能恢复现场。框架版本只是入口，工程闭环才是主体。
 

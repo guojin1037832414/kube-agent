@@ -93,10 +93,33 @@ Current track:
 
 Recently completed:
 
-`M5.26-1 audit telemetry projection contract`
+`M5.27-1 audit telemetry Observation publisher`
 
 Latest checkpoint:
 
+- Date: 2026-06-09 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.27-1 implemented:
+  - Added `AgentAuditTelemetryPublisher`.
+  - Micrometer Observation name is `atlas.agent.audit`; Observation event name is `atlas.agent.audit.recorded`.
+  - `InMemoryAgentAuditRecorder` now publishes the redacted M5.26 telemetry projection after an audit event is stored in the in-memory diagnostic snapshot.
+  - Low-cardinality Observation key values are limited to bounded fields such as tool, intent, source, method, operation, outcome, executed/success booleans, privacy flags, and selected compatibility OTel/GenAI fields.
+  - High-cardinality fields such as auditId, traceId, event time, reason length, parameter count, and endpoint count do not become metric tags.
+  - Publisher failure is non-fatal for this diagnostic path; telemetry backend outage does not mutate Tool execution or audit snapshot behavior.
+- Verification:
+  - `mvn -q "-Dtest=AgentAuditTelemetryPublisherTest,AgentAuditTelemetryProjectorTest,AgentAuditRecorderTest,SafeToolExecutorTest,ObservabilityControllerTest" test`
+  - `git diff --check`
+- Scope boundary:
+  - Phase 1 generic Agent Core observability/audit hardening only.
+  - No NIM/HPC/Slurm/BCM Phase 2 implementation was resumed.
+  - No new real write/create/delete/state-changing kube-manager call was opened.
+- Security result:
+  - Audit telemetry now enters Micrometer/OTel-compatible observation flow without exposing raw principal, conversation, reason, endpoint strings, or parameter values.
+  - Future high-risk writes still require durable pre-write audit gating before any state-changing call can be released.
+- Next technical follow-up:
+  - Define frontend replay timeline DTOs, durable audit storage with access control and retention, Agent eval reports, and full request/intent/plan/LLM/tool/HTTP/HITL/final-answer span mapping.
+
+- Previous checkpoint:
 - Date: 2026-06-09 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
 - M5.26-1 implemented:
