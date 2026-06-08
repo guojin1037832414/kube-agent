@@ -6,6 +6,26 @@
 
 ---
 
+## [M5.28-1] - kube-manager HTTP resilience policy
+
+**Delivery**: Moved kube-manager business HTTP resilience from Spring Retry annotations into an explicit Resilience4j policy with a safer READ/WRITE split.
+**Changes**
+- Added `KubeManagerHttpResiliencePolicy`.
+- Routed `KubeManagerHttpClient#get(...)` through the Resilience4j read policy: Retry + CircuitBreaker + Bulkhead.
+- Routed POST/PATCH/PUT/DELETE business calls through write policy: CircuitBreaker + Bulkhead only, no automatic retry.
+- Removed `HttpRetryConfig` and the old Spring Retry annotations from the business HTTP outlet.
+- Removed the unused `spring-retry` dependency from the Maven build.
+- Added regression tests proving GET retries a transient network failure while POST does not retry before idempotency, HITL, and durable audit evidence exist.
+- Refreshed the backend Java technology audit: Java/Spring remains the right Phase 1 control-plane stack; Spring Security, durable audit, hard quality gates, OTel timeline, RAG/Memory, Agent eval, and read-only MCP schema adapter are the next mainline gaps.
+**Verification**
+- `mvn -q -DskipTests validate` passed.
+- `mvn -q "-Dtest=KubeManagerHttpResiliencePolicyTest,KubeManagerHttpClientUrlContractTest,KubeManagerHttpClientTracePropagationTest,KubeManagerHttpClientTokenFallbackSecurityTest,KubeManagerHttpClientResolveOrgIdSecurityTest" test` passed.
+- `mvn -q test` passed.
+- `git diff --check` passed.
+**Security**
+- No real write/create/delete/state-changing kube-manager call was opened.
+- WRITE no-auto-retry remains the safe default until idempotency key, durable audit, HITL, and release evidence are available.
+
 ## [M5.27-1] - Audit telemetry Observation publisher
 
 **Delivery**: Connected the redacted Agent audit telemetry projection to Micrometer Observation so Phase 1 Agent audit evidence can flow into the Spring Boot / OpenTelemetry observability path without exposing raw sensitive data.

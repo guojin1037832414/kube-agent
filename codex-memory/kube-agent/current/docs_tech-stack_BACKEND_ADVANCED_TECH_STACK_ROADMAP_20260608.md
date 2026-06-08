@@ -66,6 +66,14 @@ M5.27-1 已把审计遥测投影推进到 Micrometer Observation 发布层：
 - publisher 只消费 M5.26 的脱敏投影，不导出 raw principal、conversation、reason、endpoint 或参数值；
 - 当前仍是诊断/观测链路，后续高风险写路径必须增加 durable audit pre-write fail-closed gate。
 
+M5.28-1 已把 Resilience4j 推进到 kube-manager 业务 HTTP 出口：
+
+- 新增 `KubeManagerHttpResiliencePolicy`，让韧性语义成为显式代码边界，而不是散在方法注解上；
+- GET 走 read policy：Retry + CircuitBreaker + Bulkhead；
+- POST/PATCH/PUT/DELETE 走 write policy：CircuitBreaker + Bulkhead，不自动重试；
+- 移除旧 `HttpRetryConfig` 和 Spring Retry 注解路径，避免写操作被统一方法注解误重试；
+- 写请求重试继续 HOLD，直到 idempotency key、durable audit、HITL 和 release evidence 全部具备。
+
 ## 最新 Agent 标准的落地顺序
 
 以下技术代表 2026 年 Agent 工程的先进方向，但必须按可验证顺序接入：
@@ -123,7 +131,7 @@ Spring Boot 4.0.x 官方系统要求是 Java 17+，但它会同时带来 Spring 
 
 - 统一执行内核：ReAct、Graph、ToolCallback、legacy fallback 已全部通过 `SafeToolExecutor`；后续新增入口必须继续受契约测试约束。
 - HTTP 证据链：M5.24 已完成基础 trace header 传播，M5.25 已形成 auditId/traceId 事件内核；后续要补 idempotency key、tenant evidence、baggage 与真实 OpenTelemetry client span。
-- HTTP 韧性：读请求可重试；写请求必须绑定 idempotency key / audit / HITL 后才能重试，默认不自动重试。
+- HTTP 韧性：M5.28 已把 GET 接入 Resilience4j read retry/circuit/bulkhead；写请求接入 circuit/bulkhead 但默认不自动重试，后续必须绑定 idempotency key / audit / HITL 后才能考虑受控重试。
 - 连接治理：从简单 request factory 过渡到连接池或 WebClient，并暴露连接池指标。
 - OpenTelemetry：M5.23/M5.24/M5.25/M5.26/M5.27 已完成 traceId 内核、HTTP 出口传播、审计事件模型、审计 telemetry projection 和审计 Observation 发布；后续要把 intent、plan、tool、HTTP、HITL、audit、final answer 映射为 span/timeline/audit 统一证据链。
 - 审计持久化：M5.25 已完成内存诊断 recorder；下一步要把敏感读、高风险写、HITL 阻断、Tool 异常接入可查询、可保留、可权限控制的脱敏持久化审计存储。
@@ -134,9 +142,11 @@ Spring Boot 4.0.x 官方系统要求是 Java 17+，但它会同时带来 Spring 
 
 2026-06-08 多专家审计结论：当前 Java / Spring 技术选型足够先进，短板不在“再堆新框架”，而在把已有先进底座真正接入 Agent 执行闭环。
 
+2026-06-09 生产运维复核进一步补充：当前最需要进入主线的是 Spring Security 标准入口、durable audit、硬质量门禁、Resilience4j retry predicate、OTel span/timeline、RAG/Memory、Agent eval 和 read-only MCP schema adapter。Java 21/25、Spring Boot 4、Spring AI 2、A2A、完整 MCP broker、GraphRAG 和 virtual threads 继续走兼容矩阵，不直接压到可恢复主线。
+
 | 优先级 | 技术任务 | 验收口径 |
 |---|---|---|
-| P0 | Resilience4j 真正治理 kube-manager HTTP outlet | READ 可重试/熔断/限并发；WRITE 默认不自动重试，除非具备 HITL + audit + idempotency key |
+| P0 | Resilience4j 真正治理 kube-manager HTTP outlet | M5.28 已完成 READ retry/circuit/bulkhead 与 WRITE no-auto-retry 第一层；下一步补 idempotency key、metrics 和高风险写 release 条件 |
 | P0 | CI 从报告生成升级为硬门禁 | SpotBugs/SCA/secret scan/coverage/Agent eval 失败能阻断合并或发布 |
 | P0 | `SafeToolExecutor` 唯一真实执行边界持续守护 | 新增 Graph/ReAct/ToolCallback/插件入口不能直调 `BaseTool.execute(...)` |
 | P1 | Micrometer + OpenTelemetry span 化 | request、intent、plan、LLM、tool、HTTP、HITL、audit、final answer 能在同一 trace 下回放 |

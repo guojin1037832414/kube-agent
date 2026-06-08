@@ -387,6 +387,39 @@ M5.27-1 把 M5.26 的脱敏投影接入 Micrometer Observation。也就是说，
 
 学习重点：顶级 Agent 的“先进”不是版本号最大，而是每个技术选择都能被测试、观测、审计、回滚和教学解释。对控制面 Agent 来说，统一执行边界、trace/audit/eval、HTTP 韧性和发布门禁，比换语言更接近真正的先进性。
 
+### M5.28 kube-manager HTTP 出口韧性治理
+
+M5.28-1 把 HTTP 韧性从“依赖和配置已经存在”推进到真实业务出口。之前 `KubeManagerHttpClient` 使用 Spring Retry 注解，问题是 GET、POST、PATCH、PUT、DELETE 都可能因为网络异常自动重试。对读请求这通常是好事；对写请求则很危险，因为后端可能已经创建、删除或修改了资源，只是响应丢了。
+
+本轮新增 `KubeManagerHttpResiliencePolicy`，并明确分成两条路径：
+
+- READ：`Retry + CircuitBreaker + Bulkhead`。GET 是幂等读，遇到临时网络故障可以自动重试，减少 Agent 因短暂抖动而失败。
+- WRITE：`CircuitBreaker + Bulkhead`，但不自动重试。POST/PATCH/PUT/DELETE 在没有 idempotency key、durable audit、HITL 和 release evidence 前，不能被框架悄悄执行多次。
+
+为什么不用 Spring Retry 注解：
+
+- 注解挂在方法上时，很容易让所有 HTTP 方法共享同一种重试语义。
+- 控制面 Agent 的写操作需要“证据足够才允许重试”，而不是“异常了就再试一次”。
+- Resilience4j 的显式 policy 更适合表达 read/write 分层，也更容易接入指标、熔断状态和后续发布门禁。
+
+学习重点：生产级韧性不等于“所有失败都重试”。顶级 Agent 的韧性必须理解操作语义：读请求追求可用性，写请求优先防止副作用放大。后续只有当写请求绑定 idempotency key、durable audit receipt、HITL confirmation 和 release evidence 后，才能为特定写路径设计受控重试。
+
+### 2026-06-09 Java 后端技术栈审计学习笔记
+
+本轮复核回答了一个很关键的问题：后端继续以 Java 作为主语言是否足够先进？
+
+结论是：Java/Spring 不是短板，反而是当前 Agent Core 的优势。`kube-agent` 的核心不是“聊天脚本”，而是 Kubernetes / kube-manager 控制面：它要处理用户身份、租户、权限、HITL、Tool 风险、审计、trace、HTTP 出口、质量门禁和长期演进。对这类系统，Java/Spring 的类型系统、测试生态、Actuator/Micrometer、Spring Security、Resilience4j、Maven/SBOM 和企业级维护能力非常适合做主线。
+
+但“Java 适合”不代表“已经顶级”。当前真正要补的是闭环：
+
+- 标准安全入口：用 Spring Security `SecurityFilterChain` / `Authentication` 承担全局鉴权，`UserPermissionContext` ThreadLocal 逐步退成兼容桥。
+- 持久审计：`InMemoryAgentAuditRecorder` 只适合诊断，未来必须有 append-only durable audit、脱敏查询、保留策略和高风险写 pre-write fail-closed gate。
+- 硬质量门禁：SpotBugs、SBOM、coverage、secret scan 和 Agent eval 不能只生成报告，要能阻断发布。
+- 评测与记忆：RAG / persistent Memory / Agent eval 要有租户隔离、引用证据、脱敏、可删除和回归报告。
+- 协议互操作：MCP 先做 read-only schema adapter；A2A、完整 MCP broker、GraphRAG、virtual threads、Boot 4、Spring AI 2、Java 21/25 先进但要先走兼容矩阵。
+
+学习重点：顶级 Agent 的先进性不是“哪个语言看起来更 AI”，而是主控制面能不能证明每次执行安全、可追踪、可审计、可评测、可恢复。框架版本是入口，工程闭环才是主体。
+
 ### Fail-Closed
 
 当证据缺失、来源不可信、格式不完整、digest 不匹配、词表扩展未审查时，系统必须拒绝，而不是降级为“试试看”。

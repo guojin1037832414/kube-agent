@@ -53,6 +53,28 @@ Spring AI 的 Tool Calling、ChatClient、模型抽象非常适合接入大模�
 - Java 25：LTS 候选验证；
 - Java 26：只作为 Boot 4 支持范围内的前瞻验证，不作为一期主线。
 
+## 2026-06-09 复核结论
+
+M5.28-1 完成后，后端主语言审计结论进一步明确：`Java + Spring` 不是当前项目的短板，反而是一期顶级 Agent Core 最合适的控制面主线。真正需要追赶“顶级 Agent”标准的是安全身份、持久审计、硬质量门禁、评测闭环、RAG/Memory 和跨协议互操作的工程化程度。
+
+当前已经属于先进主线的部分：
+
+- `Spring Boot 3.5.14 + Spring AI 1.1.7 + Java 17` 作为可构建、可测试、可恢复的稳定底座；
+- `SafeToolExecutor` 作为唯一真实 Tool 执行边界；
+- `Resilience4j 2.3.0` 已接入 kube-manager 业务 HTTP 出口，读请求 retry/circuit/bulkhead，写请求 no-auto-retry；
+- `Micrometer Observation + OpenTelemetry OTLP` 已进入审计 telemetry 链路；
+- `CycloneDX SBOM`、`JaCoCo`、`SpotBugs`、`ArchUnit`、`Testcontainers` 已进入工程底座；
+- Spring AI / Spring AI Alibaba 被用于模型、ToolCallback 和 Graph/Agent 编排接入，但不承担最终安全授权。
+
+仍需要升级的部分：
+
+- 生产入口仍缺标准 Spring Security `SecurityFilterChain` / `Authentication` 主线，当前 `AuthTokenFilter` 只在存在 Bearer Token 时绑定上下文，不能替代全局鉴权策略；
+- 审计仍是 `InMemoryAgentAuditRecorder` 诊断实现，`durableRetention=false`，不能替代可查询、可保留、可权限控制的持久审计；
+- SpotBugs / SBOM / coverage / secret scan / Agent eval 还没有全部变成失败即阻断的硬门禁；
+- Resilience4j read retry 还应继续细分异常和状态码：网络异常、超时、429、502、503、504 可考虑重试，400、401、403、404 不应重试；
+- OpenTelemetry 还需要把 request、intent、plan、LLM、Tool、HTTP、HITL、audit、final answer 映射为同一 trace 下的 span/timeline；
+- RAG / persistent Memory / Agent eval / read-only MCP schema adapter 还需要进入一期主线，A2A 和完整 MCP broker 进入兼容矩阵。
+
 ## P0 改进清单
 
 1. 继续收口所有真实 Tool 执行入口到 `SafeToolExecutor`。
@@ -64,9 +86,9 @@ Spring AI 的 Tool Calling、ChatClient、模型抽象非常适合接入大模�
    - 下一步：把同一 traceId 传播到 kube-manager HTTP outlet、审计事件、OpenTelemetry span、前端工作台回放和 eval 报告。
    - 前端工作台必须能按 trace 回放关键证据，而不是只展示最终文本。
 
-3. 把 Resilience4j 真正接入 kube-manager HTTP 出口。
-   - READ 可配置 retry/time limiter/circuit breaker。
-   - 写操作默认不自动重试，除非具备 idempotency key、HITL、审计和回滚语义。
+3. 继续深化 kube-manager HTTP 出口韧性治理。
+   - 已完成：M5.28-1 将 GET 接入 Resilience4j read retry/circuit/bulkhead，并将 POST/PATCH/PUT/DELETE 接入 write circuit/bulkhead 且不自动重试。
+   - 下一步：补充 retry predicate / status predicate，确保 400/401/403/404 等确定性失败不会被重试，429/502/503/504 和网络抖动才进入受控读重试。
 
 4. 建立审计事件模型。
    - 敏感读、高风险写、HITL 阻断、Tool 异常、权限拒绝都应有脱敏审计事件。
@@ -74,10 +96,19 @@ Spring AI 的 Tool Calling、ChatClient、模型抽象非常适合接入大模�
 
 5. 质量门禁从“生成报告”升级到“阻断发布”。
    - SpotBugs/SBOM/coverage/secret scan/Agent eval 不只产物归档，还要形成发布门槛。
+   - 当前 `spotbugs-maven-plugin` 仍配置 `failOnError=false`，这适合早期收敛报告，但不适合作为最终发布门禁。
+
+6. 标准安全入口主线化。
+   - 引入 Spring Security `SecurityFilterChain`，保护 `/api/**`、`/api/agent/observability/**`、`/actuator/**` 等入口。
+   - `AuthTokenFilter` 可以保留为兼容桥，但生产鉴权、角色和端点策略应由 Spring Security 承担。
+
+7. 持久审计主线化。
+   - `InMemoryAgentAuditRecorder` 继续作为诊断快照；高风险写、敏感读、HITL 阻断、权限拒绝和 Tool 异常必须进入 append-only durable audit。
+   - 持久审计需要 admin-only 查询、脱敏、保留策略、traceId/auditId 索引和高风险写 pre-write fail-closed gate。
 
 ## P1 改进清单
 
-1. Spring Security 主线化。
+1. Spring Security 身份事实迁移。
    - 逐步把 `UserPermissionContext` ThreadLocal 兼容层迁移到 `SecurityContext` / `Authentication`。
    - ThreadLocal 可保留为 legacy bridge，但权限事实不能长期散落。
 
@@ -100,6 +131,14 @@ Spring AI 的 Tool Calling、ChatClient、模型抽象非常适合接入大模�
 6. Agent eval 套件。
    - 覆盖意图识别、Tool 选择、参数抽取、多步 ReAct、中文口语、模糊资源名、安全红队和 must-block。
 
+7. RAG 和 persistent Memory。
+   - 使用 Spring AI VectorStore 或兼容抽象，先摄取 kube-manager API、vue-kube-manager 工作流和运维 runbook。
+   - Memory 必须带租户隔离、脱敏、可删除和引用证据，不做“无限记忆”的黑盒堆积。
+
+8. read-only MCP schema adapter。
+   - 先暴露只读 manifest/schema，写工具继续 HITL/HOLD。
+   - 未来 `tools/list` / `tools/call` 也必须经过 `SafeToolExecutor`、trace、audit 和权限边界。
+
 ## P2 改进清单
 
 1. GraalVM Native Image 评估。
@@ -116,6 +155,10 @@ Spring AI 的 Tool Calling、ChatClient、模型抽象非常适合接入大模�
 4. eBPF / OpenTelemetry Collector / Tempo / Loki / Prometheus 全链路栈。
    - 适合部署阶段，不应阻塞当前 Agent Core 的直接执行边界收口。
 
+5. A2A / Agent Card / 完整外部 MCP broker。
+   - 这些属于顶级 Agent 互操作方向，但必须在本项目已有执行边界、trace、audit、eval 稳定后接入。
+   - 互操作协议不能绕过本地权限、HITL、审计和租户边界。
+
 ## 需要避免的过度设计
 
 - 不要把核心执行控制面拆成多个语言运行时，除非有非常明确的收益和隔离机制。
@@ -126,4 +169,6 @@ Spring AI 的 Tool Calling、ChatClient、模型抽象非常适合接入大模�
 
 ## 审计判断
 
-后端 Java 主语言不是短板，短板在于统一安全执行、trace/audit/eval、HTTP outlet 和质量门禁还没有完全主线化。M5.22 的正确优先级不是重写语言栈，而是把所有执行入口、观测链路和发布门禁收敛成一个可证明的 Agent Core。
+后端 Java 主语言不是短板，短板在于标准安全入口、持久审计、trace/audit/eval、HTTP outlet 细粒度治理、RAG/Memory 和质量硬门禁还没有完全主线化。下一阶段不应重写语言栈，而应把这些能力收敛成一个可证明、可回放、可评测、可恢复的 Agent Core。
+
+学习重点：顶级 Agent 的“先进”不是把所有最新主版本一次性塞进主线，而是让最新能力被安全边界、审计证据、测试门禁和恢复记忆托住。Java/Spring 负责稳定控制面，兼容矩阵负责拥抱未来。

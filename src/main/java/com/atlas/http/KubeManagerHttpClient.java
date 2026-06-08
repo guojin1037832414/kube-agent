@@ -7,16 +7,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
-import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.Recover;
-import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -64,6 +61,7 @@ public class KubeManagerHttpClient {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final UserPermissionContext userPermissionContext;
+    private final KubeManagerHttpResiliencePolicy resiliencePolicy;
     private RestClient restClient;
 
     // ===== 配置项（从 application.yml 注入） =====
@@ -89,7 +87,16 @@ public class KubeManagerHttpClient {
     private static final long TOKEN_TTL_MS=25 * 60 * 1000; // 25分钟
 
     public KubeManagerHttpClient(UserPermissionContext userPermissionContext) {
+        this(userPermissionContext, KubeManagerHttpResiliencePolicy.disabled());
+    }
+
+    @Autowired
+    public KubeManagerHttpClient(UserPermissionContext userPermissionContext,
+                                 KubeManagerHttpResiliencePolicy resiliencePolicy) {
         this.userPermissionContext = userPermissionContext;
+        this.resiliencePolicy = resiliencePolicy != null
+            ? resiliencePolicy
+            : KubeManagerHttpResiliencePolicy.disabled();
     }
 
     /**
@@ -127,17 +134,12 @@ public class KubeManagerHttpClient {
      * @param queryParams 查询参数 Map
      * @return JSON 解析后的 Map
      */
-    @Retryable(
-        retryFor = {ResourceAccessException.class},
-        maxAttempts = 3,
-        backoff = @Backoff(delay = 500, multiplier = 2)
-    )
     public Map<String, Object> get(String path, Map<String, Object> queryParams) {
         String token = resolveUserTokenRequired("GET", path);
 
         log.debug("[HTTP GET] {} 参数={}, tokenSource=user_threadlocal", path, queryParams);
 
-        String responseBody = restClient.get()
+        String responseBody = resiliencePolicy.executeRead(() -> restClient.get()
             .uri(builder -> {
                 builder.path(path);
                 if (queryParams != null) {
@@ -159,7 +161,8 @@ public class KubeManagerHttpClient {
                     res.getStatusCode().value(), res.getStatusCode().toString(),
                     res.getHeaders(), body.getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8);
             })
-            .body(String.class);
+            .body(String.class)
+        );
 
         return parseJson(responseBody);
     }
@@ -182,17 +185,12 @@ public class KubeManagerHttpClient {
      * @param body 请求体 Map（会被序列化为 JSON）
      * @return JSON 解析后的 Map
      */
-    @Retryable(
-        retryFor = {ResourceAccessException.class},
-        maxAttempts = 3,
-        backoff = @Backoff(delay = 500, multiplier = 2)
-    )
     public Map<String, Object> post(String path, Map<String, Object> body) {
         String token = resolveUserTokenRequired("POST", path);
 
         log.debug("[HTTP POST] {} body={}, tokenSource=user_threadlocal", path, body);
 
-        String responseBody = restClient.post()
+        String responseBody = resiliencePolicy.executeWrite(() -> restClient.post()
             .uri(path)
             .headers(headers -> applyUserAndTraceHeaders(headers, token))
             .body(body)
@@ -205,7 +203,8 @@ public class KubeManagerHttpClient {
                     res.getStatusCode().value(), res.getStatusCode().toString(),
                     res.getHeaders(), raw.getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8);
             })
-            .body(String.class);
+            .body(String.class)
+        );
 
         return parseJson(responseBody);
     }
@@ -216,17 +215,12 @@ public class KubeManagerHttpClient {
      * <p>kube-manager 的缩放等变更接口使用 PATCH。这里与 POST/DELETE 一样必须携带
      * 当前用户真实 Token，避免 Agent 在缺少用户上下文时替用户修改线上资源。</p>
      */
-    @Retryable(
-        retryFor = {ResourceAccessException.class},
-        maxAttempts = 3,
-        backoff = @Backoff(delay = 500, multiplier = 2)
-    )
     public Map<String, Object> patch(String path, Map<String, Object> body) {
         String token = resolveUserTokenRequired("PATCH", path);
 
         log.debug("[HTTP PATCH] {} body={}, tokenSource=user_threadlocal", path, body);
 
-        String responseBody = restClient.patch()
+        String responseBody = resiliencePolicy.executeWrite(() -> restClient.patch()
             .uri(path)
             .headers(headers -> applyUserAndTraceHeaders(headers, token))
             .body(body)
@@ -239,7 +233,8 @@ public class KubeManagerHttpClient {
                     res.getStatusCode().value(), res.getStatusCode().toString(),
                     res.getHeaders(), raw.getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8);
             })
-            .body(String.class);
+            .body(String.class)
+        );
 
         return parseJson(responseBody);
     }
@@ -250,17 +245,12 @@ public class KubeManagerHttpClient {
      * <p>Helm install 等成熟 kube-manager 接口使用 path variable + query + body 的组合。
      * 这里集中封装 URI 构造，避免 Tool 自己拼接查询串导致 chart 名称、版本号等参数转义不一致。</p>
      */
-    @Retryable(
-        retryFor = {ResourceAccessException.class},
-        maxAttempts = 3,
-        backoff = @Backoff(delay = 500, multiplier = 2)
-    )
     public Map<String, Object> post(String path, Map<String, Object> queryParams, Map<String, Object> body) {
         String token = resolveUserTokenRequired("POST", path);
 
         log.debug("[HTTP POST] {} query={}, body={}, tokenSource=user_threadlocal", path, queryParams, body);
 
-        String responseBody = restClient.post()
+        String responseBody = resiliencePolicy.executeWrite(() -> restClient.post()
             .uri(builder -> {
                 builder.path(path);
                 if (queryParams != null) {
@@ -283,7 +273,8 @@ public class KubeManagerHttpClient {
                     res.getStatusCode().value(), res.getStatusCode().toString(),
                     res.getHeaders(), raw.getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8);
             })
-            .body(String.class);
+            .body(String.class)
+        );
 
         return parseJson(responseBody);
     }
@@ -300,17 +291,12 @@ public class KubeManagerHttpClient {
      * <p><b>M5.8 安全收口：</b>删除类请求风险最高，必须绑定真实用户 Token；
      * 如果当前线程没有可信用户上下文，立即拒绝，禁止使用 sysadmin fallback token。</p>
      */
-    @Retryable(
-        retryFor = {ResourceAccessException.class},
-        maxAttempts = 3,
-        backoff = @Backoff(delay = 500, multiplier = 2)
-    )
     public Map<String, Object> put(String path, Map<String, Object> body) {
         String token = resolveUserTokenRequired("PUT", path);
 
         log.debug("[HTTP PUT] {} body={}, tokenSource=user_threadlocal", path, body);
 
-        String responseBody = restClient.put()
+        String responseBody = resiliencePolicy.executeWrite(() -> restClient.put()
             .uri(path)
             .headers(headers -> applyUserAndTraceHeaders(headers, token))
             .body(body)
@@ -323,7 +309,8 @@ public class KubeManagerHttpClient {
                     res.getStatusCode().value(), res.getStatusCode().toString(),
                     res.getHeaders(), raw.getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8);
             })
-            .body(String.class);
+            .body(String.class)
+        );
 
         return parseJson(responseBody);
     }
@@ -334,17 +321,12 @@ public class KubeManagerHttpClient {
      * <p>Helm upgrade 的成熟接口把 chart 放在 query 中，把升级参数放在 body 中。
      * 该重载让 Tool 只表达业务字段，不直接拼接 URL 查询串。</p>
      */
-    @Retryable(
-        retryFor = {ResourceAccessException.class},
-        maxAttempts = 3,
-        backoff = @Backoff(delay = 500, multiplier = 2)
-    )
     public Map<String, Object> put(String path, Map<String, Object> queryParams, Map<String, Object> body) {
         String token = resolveUserTokenRequired("PUT", path);
 
         log.debug("[HTTP PUT] {} query={}, body={}, tokenSource=user_threadlocal", path, queryParams, body);
 
-        String responseBody = restClient.put()
+        String responseBody = resiliencePolicy.executeWrite(() -> restClient.put()
             .uri(builder -> {
                 builder.path(path);
                 if (queryParams != null) {
@@ -367,21 +349,17 @@ public class KubeManagerHttpClient {
                     res.getStatusCode().value(), res.getStatusCode().toString(),
                     res.getHeaders(), raw.getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8);
             })
-            .body(String.class);
+            .body(String.class)
+        );
 
         return parseJson(responseBody);
     }
 
-    @Retryable(
-        retryFor = {ResourceAccessException.class},
-        maxAttempts = 3,
-        backoff = @Backoff(delay = 500, multiplier = 2)
-    )
     public Map<String, Object> delete(String path, Map<String, Object> queryParams) {
         String token = resolveUserTokenRequired("DELETE", path);
         log.debug("[HTTP DELETE] {} 参数={}, tokenSource=user_threadlocal", path, queryParams);
 
-        String responseBody = restClient.delete()
+        String responseBody = resiliencePolicy.executeWrite(() -> restClient.delete()
             .uri(builder -> {
                 builder.path(path);
                 if (queryParams != null) {
@@ -402,7 +380,8 @@ public class KubeManagerHttpClient {
                     res.getStatusCode().toString(), res.getHeaders(),
                     raw.getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8);
             })
-            .body(String.class);
+            .body(String.class)
+        );
 
         return parseJson(responseBody);
     }
@@ -737,22 +716,6 @@ public class KubeManagerHttpClient {
             fallback.put("parseError", e.getMessage());
             return fallback;
         }
-    }
-
-    /**
-     * 重试耗尽后的恢复方法 — 返回结构化错误给 LLM。
-     * <p>签名使用 Exception（而非 ResourceAccessException）以兼容降级登录失败等更广泛的异常。</p>
-     */
-    @Recover
-    public Map<String, Object> recover(Exception e, String path, Map<String, Object> params) {
-        log.error("[HTTP] 重试耗尽，无法访问 {}: {}", path, e.getMessage());
-        Map<String, Object> error = new LinkedHashMap<>();
-        error.put("success", false);
-        error.put("errorType", "NETWORK_ERROR");
-        error.put("message", "后端服务暂时不可用，请稍后重试");
-        error.put("path", path);
-        error.put("detail", e.getMessage());
-        return error;
     }
 
     /**

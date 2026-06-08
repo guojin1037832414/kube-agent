@@ -6,7 +6,7 @@
 - Primary workspace recovery folder: `F:\gitProject\kube-agent\codex-memory\kube-agent\current`
 - Historical external memory folder: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.27-1, audit telemetry Observation publisher.
+- Current latest wave: M5.28-1, kube-manager HTTP resilience policy.
 - Phase update: HPC / Slurm / BCM and NIM are paused and moved to Phase 2 by user direction.
 - Phase 1 focus: deliver the top-tier Agent core through generic manager Agent foundations, safe read/query validation, non-HPC/NIM manager function coverage, Tool metadata quality, HITL/audit execution boundary, traceability, recovery, evaluation, teaching documentation, and vue-kube-manager workflow integration.
 - Phase boundary clarification: moving NIM / HPC / Slurm / BCM to Phase 2 postpones specialist domain plugins only; it does not reduce Phase 1 standards.
@@ -55,6 +55,32 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.28-1 kube-manager HTTP resilience policy is implemented:
+  - Added `src/main/java/com/atlas/http/KubeManagerHttpResiliencePolicy.java`.
+  - Deleted old `src/main/java/com/atlas/http/HttpRetryConfig.java`.
+  - Removed `spring-retry` from `pom.xml`.
+  - `KubeManagerHttpClient#get(...)` now executes through Resilience4j read policy: Retry + CircuitBreaker + Bulkhead.
+  - `KubeManagerHttpClient` POST/PATCH/PUT/DELETE execute through write policy: CircuitBreaker + Bulkhead only, no automatic retry.
+  - Added `src/test/java/com/atlas/http/KubeManagerHttpResiliencePolicyTest.java`.
+  - Added `src/test/java/com/atlas/http/TestResilienceFactory.java`.
+  - Verification passed:
+    - `mvn -q -DskipTests validate`
+    - `mvn -q "-Dtest=KubeManagerHttpResiliencePolicyTest,KubeManagerHttpClientUrlContractTest,KubeManagerHttpClientTracePropagationTest,KubeManagerHttpClientTokenFallbackSecurityTest,KubeManagerHttpClientResolveOrgIdSecurityTest" test`
+    - `mvn -q test`
+    - `git diff --check`
+    - Direct execution scan still found only `SafeToolExecutor` as the permanent real `BaseTool.execute(...)` boundary.
+    - Spring Retry scan found no business HTTP Spring Retry annotations/config/dependency; only `AuthController` login bootstrap still uses direct `RestClient.post`.
+  - No NIM/HPC/Slurm/BCM Phase 2 implementation was resumed and no real write/create/delete/state-changing kube-manager call was opened.
+  - Java backend technology audit refresh:
+    - Java/Spring remains the right main control-plane stack for a top-tier Agent Core.
+    - Current gaps are Spring Security mainline adoption, durable audit, hard quality gates, OTel span/timeline completion, fine-grained retry predicates, RAG/persistent Memory, Agent eval, and read-only MCP schema adapter.
+    - Java 21/25, Spring Boot 4, Spring AI 2, A2A, full MCP broker, GraphRAG, and virtual threads stay in compatibility-matrix work until tests prove them safe for the recoverable mainline.
+  - Next Phase 1 technical slices:
+    - idempotency key design for future controlled writes;
+    - Resilience4j metrics in observability;
+    - durable audit storage and frontend replay timeline DTOs;
+    - Spring Security identity migration.
 
 - M5.27-1 audit telemetry Observation publisher is implemented:
   - Added `src/main/java/com/atlas/audit/AgentAuditTelemetryPublisher.java`.

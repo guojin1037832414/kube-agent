@@ -93,10 +93,42 @@ Current track:
 
 Recently completed:
 
-`M5.27-1 audit telemetry Observation publisher`
+`M5.28-1 kube-manager HTTP resilience policy`
 
 Latest checkpoint:
 
+- Date: 2026-06-09 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.28-1 implemented:
+  - Added `KubeManagerHttpResiliencePolicy`.
+  - `KubeManagerHttpClient#get(...)` now uses Resilience4j read policy: Retry + CircuitBreaker + Bulkhead.
+  - POST/PATCH/PUT/DELETE now use write policy: CircuitBreaker + Bulkhead only, no automatic retry.
+  - Removed old Spring Retry annotation path from the business HTTP outlet.
+  - Removed `HttpRetryConfig`.
+  - Removed unused `spring-retry` dependency from `pom.xml`.
+  - Added `KubeManagerHttpResiliencePolicyTest` and `TestResilienceFactory`.
+- Verification:
+  - `mvn -q -DskipTests validate`
+  - `mvn -q "-Dtest=KubeManagerHttpResiliencePolicyTest,KubeManagerHttpClientUrlContractTest,KubeManagerHttpClientTracePropagationTest,KubeManagerHttpClientTokenFallbackSecurityTest,KubeManagerHttpClientResolveOrgIdSecurityTest" test`
+  - `mvn -q test`
+  - `git diff --check`
+  - Direct execution scan still found only `SafeToolExecutor` as the permanent real `BaseTool.execute(...)` boundary.
+  - Spring Retry scan found no business HTTP Spring Retry annotations/config/dependency; only `AuthController` login bootstrap still uses direct `RestClient.post`.
+- Scope boundary:
+  - Phase 1 generic Agent Core HTTP outlet hardening only.
+  - No NIM/HPC/Slurm/BCM Phase 2 implementation was resumed.
+  - No new real write/create/delete/state-changing kube-manager call was opened.
+- Security result:
+  - READ can tolerate transient network failure.
+  - WRITE no-auto-retry remains enforced until idempotency key, durable audit, HITL, and release evidence exist.
+- Next technical follow-up:
+  - Add idempotency key design for future controlled writes, expose Resilience4j metrics in observability, and continue Spring Security / durable audit / frontend replay DTO work.
+- Technology audit refresh:
+  - Java/Spring remains the right main control-plane stack for a top-tier Agent Core.
+  - Current gaps are Spring Security mainline adoption, durable audit, hard quality gates, OTel span/timeline completion, fine-grained retry predicates, RAG/persistent Memory, Agent eval, and read-only MCP schema adapter.
+  - Java 21/25, Spring Boot 4, Spring AI 2, A2A, full MCP broker, GraphRAG, and virtual threads stay in compatibility-matrix work until tests prove them safe for the recoverable mainline.
+
+- Previous checkpoint:
 - Date: 2026-06-09 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
 - M5.27-1 implemented:

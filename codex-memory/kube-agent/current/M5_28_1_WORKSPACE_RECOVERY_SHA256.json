@@ -1,0 +1,99 @@
+﻿{
+    "project":  "kube-agent",
+    "wave":  "M5.28-1",
+    "title":  "kube-manager HTTP resilience policy and Java stack audit refresh",
+    "generatedAt":  "2026-06-09T01:45:48+08:00",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "files":  [
+                  {
+                      "path":  "pom.xml",
+                      "sha256":  "040e6d9ef748d82aef32d67ce30b931bc6b249286ff3dbed76c90f9620fc0f4f",
+                      "bytes":  14185
+                  },
+                  {
+                      "path":  "CHANGELOG.md",
+                      "sha256":  "ef3ba7fa42d7b004d18278f80324c1c99765a94841ec779f8a6d27669a0689d9",
+                      "bytes":  269291
+                  },
+                  {
+                      "path":  "docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "6fd84c75ffa5d12edec8f83b8799491a29b94267fc4e2897a419a9fdf4571b9f",
+                      "bytes":  58552
+                  },
+                  {
+                      "path":  "docs/PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "ff1214cb66848e52ae8dc468ed28039a45081e0e2d2eb289cd770d01ae9324b1",
+                      "bytes":  293634
+                  },
+                  {
+                      "path":  "docs/SESSION_PROGRESS_20260606_M521_29.md",
+                      "sha256":  "10292892df8e8368a2b9a8a55ce84a5a557923bbad3bd5e0f74ebb83fe5b7bf4",
+                      "bytes":  293569
+                  },
+                  {
+                      "path":  "docs/tech-stack/BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "8a3a28ca62bdaa65b2c5032dc27444b2a645621615a4a7524b5ffbd9232d2a32",
+                      "bytes":  15415
+                  },
+                  {
+                      "path":  "docs/tech-stack/BACKEND_JAVA_TECH_STACK_AUDIT_20260608.md",
+                      "sha256":  "b1db761129dcc3716f3be8f5fe24d8a9bced1bf0e62cda375c97baa3cce16eba",
+                      "bytes":  11563
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/http/KubeManagerHttpClient.java",
+                      "sha256":  "4d65bb6f3af4406b42a76acb2a063a595bf85c816103502170485301e265b226",
+                      "bytes":  35084
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/http/KubeManagerHttpResiliencePolicy.java",
+                      "sha256":  "f4cb5603beefefae6f0b9e9ce748b2b163ed0ffc4e0234539029bcede6716bfb",
+                      "bytes":  3022
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/http/KubeManagerHttpResiliencePolicyTest.java",
+                      "sha256":  "cfbc7c853c51b5b731707a5d8b1205ea48bfaedb9b90d34479353f0a6f7db5a3",
+                      "bytes":  6511
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/http/TestResilienceFactory.java",
+                      "sha256":  "8441f7417d3fdcc39add2b95429ad96b46a5c48f248809503aac64427c1231ca",
+                      "bytes":  1568
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/CHANGELOG.md",
+                      "sha256":  "ef3ba7fa42d7b004d18278f80324c1c99765a94841ec779f8a6d27669a0689d9",
+                      "bytes":  269291
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "6fd84c75ffa5d12edec8f83b8799491a29b94267fc4e2897a419a9fdf4571b9f",
+                      "bytes":  58552
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "ff1214cb66848e52ae8dc468ed28039a45081e0e2d2eb289cd770d01ae9324b1",
+                      "bytes":  293634
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_SESSION_PROGRESS_20260606_M521_29.md",
+                      "sha256":  "10292892df8e8368a2b9a8a55ce84a5a557923bbad3bd5e0f74ebb83fe5b7bf4",
+                      "bytes":  293569
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "8a3a28ca62bdaa65b2c5032dc27444b2a645621615a4a7524b5ffbd9232d2a32",
+                      "bytes":  15415
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_JAVA_TECH_STACK_AUDIT_20260608.md",
+                      "sha256":  "b1db761129dcc3716f3be8f5fe24d8a9bced1bf0e62cda375c97baa3cce16eba",
+                      "bytes":  11563
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/RECOVERY_STATUS.md",
+                      "sha256":  "0ce0b9a6c69eaf75ad4599a56ffc12a0443c2697532a8d61bb593a4e7d99dd4b",
+                      "bytes":  11109
+                  }
+              ]
+}
