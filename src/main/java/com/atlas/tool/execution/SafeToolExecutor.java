@@ -1,5 +1,9 @@
 package com.atlas.tool.execution;
 
+import com.atlas.audit.AgentAuditEvent;
+import com.atlas.audit.AgentAuditEventFactory;
+import com.atlas.audit.AgentAuditOutcome;
+import com.atlas.audit.AgentAuditRecorder;
 import com.atlas.auth.UserPermissionContext;
 import com.atlas.hitl.HitlGuard;
 import com.atlas.observability.AgentTraceContext;
@@ -8,6 +12,10 @@ import com.atlas.tool.core.ProtectedToolParameterFilter;
 import com.atlas.tool.core.ToolParameterNormalizer;
 import com.atlas.tool.core.ToolParameterSpec;
 import com.atlas.tool.core.ToolRegistry;
+import com.atlas.tool.core.ToolRegistry.ToolMetadata;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
@@ -41,13 +49,22 @@ import java.util.stream.Collectors;
 @Component
 public class SafeToolExecutor {
 
+    private static final Logger log = LoggerFactory.getLogger(SafeToolExecutor.class);
+
     private final ToolRegistry toolRegistry;
     private final HitlGuard hitlGuard;
     private final ToolParameterNormalizer toolParameterNormalizer;
+    private final AgentAuditRecorder auditRecorder;
 
     public SafeToolExecutor(ToolRegistry toolRegistry, HitlGuard hitlGuard) {
+        this(toolRegistry, hitlGuard, AgentAuditRecorder.noop());
+    }
+
+    @Autowired
+    public SafeToolExecutor(ToolRegistry toolRegistry, HitlGuard hitlGuard, AgentAuditRecorder auditRecorder) {
         this.toolRegistry = toolRegistry;
         this.hitlGuard = hitlGuard;
+        this.auditRecorder = auditRecorder != null ? auditRecorder : AgentAuditRecorder.noop();
         this.toolParameterNormalizer = new ToolParameterNormalizer(toolRegistry);
     }
 
@@ -71,17 +88,25 @@ public class SafeToolExecutor {
 
     private SafeToolExecutionResult executeIntentWithTrace(SafeToolExecutionRequest request, String traceId) {
         if (request == null) {
-            return SafeToolExecutionResult.notExecuted("[无执行请求] SafeToolExecutor 未收到有效请求", traceId);
+            SafeToolExecutionResult result = SafeToolExecutionResult.notExecuted(
+                "[无执行请求] SafeToolExecutor 未收到有效请求", traceId);
+            recordAudit(null, null, traceId, "", AgentAuditOutcome.BLOCKED, false, false, result.answer());
+            return result;
         }
         String intentId = request.intentId();
         if (intentId == null || intentId.isBlank()) {
-            return SafeToolExecutionResult.notExecuted("[无目标意图] 未指定要执行的 Tool 意图", traceId);
+            SafeToolExecutionResult result = SafeToolExecutionResult.notExecuted(
+                "[无目标意图] 未指定要执行的 Tool 意图", traceId);
+            recordAudit(request, null, traceId, resolveTrustedOrgId(request.orgId()), AgentAuditOutcome.BLOCKED, false, false, result.answer());
+            return result;
         }
 
         String orgId = resolveTrustedOrgId(request.orgId());
         if (orgId == null || orgId.isBlank()) {
-            return SafeToolExecutionResult.notExecuted(
+            SafeToolExecutionResult result = SafeToolExecutionResult.notExecuted(
                 "❌ 安全上下文缺失：无法确定当前用户所属组织，请重新登录后再试。", traceId);
+            recordAudit(request, null, traceId, "", AgentAuditOutcome.BLOCKED, false, false, result.answer());
+            return result;
         }
 
         String previousToken = UserPermissionContext.CURRENT_TOKEN.get();
@@ -90,19 +115,26 @@ public class SafeToolExecutor {
         try {
             Optional<BaseTool> toolOpt = toolRegistry.findByIntentId(intentId);
             if (toolOpt.isEmpty()) {
-                return SafeToolExecutionResult.notExecuted(
+                SafeToolExecutionResult result = SafeToolExecutionResult.notExecuted(
                     "⚠️ 意图 '" + intentId + "' 已识别，暂无对应 Tool 实现。", traceId);
+                recordAudit(request, null, traceId, orgId, AgentAuditOutcome.BLOCKED, false, false, result.answer());
+                return result;
             }
 
+            ToolMetadata metadata = resolveMetadata(intentId, toolOpt.get());
             if (!toolRegistry.canExecuteIntent(intentId)) {
-                return SafeToolExecutionResult.notExecuted(
+                SafeToolExecutionResult result = SafeToolExecutionResult.notExecuted(
                     "❌ 权限不足：无权执行 '" + intentId + "'", traceId);
+                recordAudit(request, metadata, traceId, orgId, AgentAuditOutcome.BLOCKED, false, false, result.answer());
+                return result;
             }
 
             HitlGuard.Decision hitlDecision = hitlGuard.verifyByIntentId(
                 toolRegistry, intentId, request.confirmation());
             if (!hitlDecision.allowed()) {
-                return SafeToolExecutionResult.notExecuted(hitlDecision.message(), traceId);
+                SafeToolExecutionResult result = SafeToolExecutionResult.notExecuted(hitlDecision.message(), traceId);
+                recordAudit(request, metadata, traceId, orgId, AgentAuditOutcome.BLOCKED, false, false, result.answer());
+                return result;
             }
 
             BaseTool tool = toolOpt.get();
@@ -110,7 +142,9 @@ public class SafeToolExecutor {
             try {
                 toolParams = buildTrustedToolParams(request, orgId, tool);
             } catch (IllegalStateException ex) {
-                return SafeToolExecutionResult.notExecuted("❌ " + ex.getMessage(), traceId);
+                SafeToolExecutionResult result = SafeToolExecutionResult.notExecuted("❌ " + ex.getMessage(), traceId);
+                recordAudit(request, metadata, traceId, orgId, AgentAuditOutcome.BLOCKED, false, false, result.answer());
+                return result;
             }
             try {
                 Map<String, Object> rawResult = tool.execute(toolParams);
@@ -120,14 +154,58 @@ public class SafeToolExecutor {
                 if ("TOOL_EXECUTION_ERROR".equals(String.valueOf(errorCode))) {
                     String message = rawResult.get("message") != null
                         ? rawResult.get("message").toString() : "Tool 执行异常";
-                    return SafeToolExecutionResult.notExecuted("❌ Tool 执行异常: " + message, traceId);
+                    SafeToolExecutionResult result = SafeToolExecutionResult.notExecuted("❌ Tool 执行异常: " + message, traceId);
+                    recordAudit(request, metadata, traceId, orgId, AgentAuditOutcome.ERROR, true, false, result.answer());
+                    return result;
                 }
-                return toExecutionResult(intentId, rawResult, traceId);
+                SafeToolExecutionResult result = toExecutionResult(intentId, rawResult, traceId);
+                AgentAuditOutcome outcome = result.success()
+                    ? AgentAuditOutcome.SUCCESS
+                    : AgentAuditOutcome.BUSINESS_FAILURE;
+                recordAudit(request, metadata, traceId, orgId, outcome, true, result.success(), result.answer());
+                return result;
             } catch (Exception ex) {
-                return SafeToolExecutionResult.notExecuted("❌ Tool 执行异常: " + ex.getMessage(), traceId);
+                SafeToolExecutionResult result = SafeToolExecutionResult.notExecuted("❌ Tool 执行异常: " + ex.getMessage(), traceId);
+                recordAudit(request, metadata, traceId, orgId, AgentAuditOutcome.ERROR, false, false, result.answer());
+                return result;
             }
         } finally {
             restoreThreadLocalContext(previousToken, previousOrgId);
+        }
+    }
+
+    private ToolMetadata resolveMetadata(String intentId, BaseTool tool) {
+        ToolMetadata systemMetadata = toolRegistry.listAllMetadataForSystemAudit().stream()
+            .filter(meta -> intentId.equals(meta.intentId()) || tool.getToolName().equals(meta.name()))
+            .findFirst()
+            .orElse(null);
+        if (systemMetadata != null) {
+            return systemMetadata;
+        }
+        try {
+            return toolRegistry.resolveByIntentId(intentId).orElseGet(() -> toolRegistry.resolve(tool.getToolName()));
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private void recordAudit(SafeToolExecutionRequest request,
+                             ToolMetadata metadata,
+                             String traceId,
+                             String orgId,
+                             AgentAuditOutcome outcome,
+                             boolean executed,
+                             boolean success,
+                             String reason) {
+        try {
+            AgentAuditEvent event = AgentAuditEventFactory.fromExecution(
+                request, metadata, traceId, orgId, outcome, executed, success, reason);
+            auditRecorder.record(event);
+        } catch (RuntimeException ex) {
+            // 当前 M5.25 recorder 是诊断型证据内核，不能因记录失败篡改真实 Tool 执行结果。
+            // 后续持久化审计若要成为写操作前置门禁，应在 Tool 调用前单独 fail-closed。
+            log.warn("[AgentAudit] 诊断审计记录失败: traceId={}, intentId={}",
+                traceId, request != null ? request.intentId() : "", ex);
         }
     }
 

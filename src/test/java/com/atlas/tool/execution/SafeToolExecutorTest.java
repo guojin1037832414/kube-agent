@@ -1,10 +1,15 @@
 package com.atlas.tool.execution;
 
+import com.atlas.audit.AgentAuditEvent;
+import com.atlas.audit.AgentAuditOutcome;
+import com.atlas.audit.AgentAuditRecorder;
+import com.atlas.audit.InMemoryAgentAuditRecorder;
 import com.atlas.auth.UserPermissionContext;
 import com.atlas.hitl.HitlConfirmation;
 import com.atlas.hitl.HitlGuard;
 import com.atlas.observability.AgentTraceContext;
 import com.atlas.tool.annotation.AtlasToolMapping;
+import com.atlas.tool.annotation.ToolPermission;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.tool.core.BaseTool;
 import com.atlas.tool.core.ToolParameterSpec;
@@ -193,6 +198,219 @@ class SafeToolExecutorTest {
             "执行完成后 token ThreadLocal 必须恢复为执行前快照");
         assertEquals(previousOrgId, UserPermissionContext.getCurrentOrgId(),
             "执行完成后 orgId ThreadLocal 必须恢复为执行前快照");
+    }
+
+    @Test
+    void executeIntent_shouldRecordTraceAwareAuditEventForSuccessfulToolCall() {
+        RecordingReadTool readTool = new RecordingReadTool();
+        InMemoryAgentAuditRecorder auditRecorder = new InMemoryAgentAuditRecorder();
+        SafeToolExecutor executor = newExecutor(auditRecorder, readTool);
+
+        SafeToolExecutionResult result = executor.executeIntent(new SafeToolExecutionRequest(
+            "test.read",
+            Map.of("keyword", "gpu", "token", "forged-token"),
+            "user-A",
+            "token-A",
+            "100002",
+            "conv-audit-success",
+            "trc_audit_success",
+            null,
+            SafeToolExecutionSource.REACT_ENGINE
+        ));
+
+        assertTrue(result.executed(), "普通 READ Tool 应执行成功");
+        List<AgentAuditEvent> events = auditRecorder.recentEvents();
+        assertEquals(1, events.size(), "每次 Tool 执行应产生一条审计事件");
+        AgentAuditEvent event = events.get(0);
+        assertTrue(event.auditId().matches("aud_[0-9a-f]{32}"), "审计事件必须有稳定 aud_ 前缀 ID");
+        assertEquals("trc_audit_success", event.traceId(), "审计事件必须绑定 Agent traceId");
+        assertEquals("conv-audit-success", event.conversationId());
+        assertEquals("user-A", event.userId());
+        assertEquals("100002", event.organizationId());
+        assertEquals("test.read", event.intentId());
+        assertEquals("test_read_tool", event.toolName());
+        assertEquals(SafeToolExecutionSource.REACT_ENGINE, event.source());
+        assertEquals("GET", event.httpMethod());
+        assertEquals(List.of("/api/test/read"), event.apiEndpoints());
+        assertEquals(AgentAuditOutcome.SUCCESS, event.outcome());
+        assertTrue(event.executed());
+        assertTrue(event.success());
+        assertParameterSummaryContains(event.parameterSummary(), "keyword", false, "string");
+        assertParameterSummaryContains(event.parameterSummary(), "token", true, "string");
+        assertFalse(event.parameterSummary().toString().contains("forged-token"),
+            "审计参数摘要不得保存 token 等真实参数值");
+    }
+
+    @Test
+    void executeIntent_shouldRecordBlockedAuditEventBeforeHighRiskToolExecution() {
+        RecordingDeleteTool deleteTool = new RecordingDeleteTool();
+        InMemoryAgentAuditRecorder auditRecorder = new InMemoryAgentAuditRecorder();
+        SafeToolExecutor executor = newExecutor(auditRecorder, deleteTool);
+
+        SafeToolExecutionResult result = executor.executeIntent(new SafeToolExecutionRequest(
+            "test.delete",
+            Map.of("name", "danger"),
+            "user-A",
+            "token-A",
+            "100002",
+            "conv-audit-blocked",
+            "trc_audit_blocked",
+            null,
+            SafeToolExecutionSource.GRAPH_TOOL_CALL
+        ));
+
+        assertFalse(result.executed(), "高风险 Tool 缺少 HITL 时必须阻断");
+        assertNull(deleteTool.lastParams, "阻断时不得调用真实 Tool");
+        List<AgentAuditEvent> events = auditRecorder.recentEvents();
+        assertEquals(1, events.size(), "HITL 阻断也必须产生审计事件");
+        AgentAuditEvent event = events.get(0);
+        assertEquals("trc_audit_blocked", event.traceId());
+        assertEquals("test.delete", event.intentId());
+        assertEquals("test_delete_tool", event.toolName());
+        assertEquals("DELETE", event.httpMethod());
+        assertEquals(AgentAuditOutcome.BLOCKED, event.outcome());
+        assertFalse(event.executed());
+        assertFalse(event.success());
+        assertTrue(event.requiresConfirmation(), "审计事件必须记录 Tool 风险元数据");
+        assertTrue(event.reason().contains(HitlGuard.HITL_REQUIRED_CODE)
+                || event.reason().contains("高风险操作"),
+            "审计事件应记录阻断原因");
+    }
+
+    @Test
+    void executeIntent_shouldRecordRiskMetadataWhenPermissionDeniedBeforeToolExecution() {
+        AdminDeleteTool deleteTool = new AdminDeleteTool();
+        InMemoryAgentAuditRecorder auditRecorder = new InMemoryAgentAuditRecorder();
+        SafeToolExecutor executor = newExecutor(auditRecorder, deleteTool);
+
+        SafeToolExecutionResult result = executor.executeIntent(new SafeToolExecutionRequest(
+            "test.admin.delete",
+            Map.of("name", "admin-only-resource"),
+            "user-A",
+            "token-A",
+            "100002",
+            "conv-audit-permission-denied",
+            "trc_audit_permission_denied",
+            null,
+            SafeToolExecutionSource.GRAPH_TOOL_CALL
+        ));
+
+        assertFalse(result.executed(), "权限不足必须在真实 Tool 调用前阻断");
+        assertNull(deleteTool.lastParams, "权限阻断不得调用真实 Tool");
+        AgentAuditEvent event = auditRecorder.recentEvents().get(0);
+        assertEquals(AgentAuditOutcome.BLOCKED, event.outcome());
+        assertEquals("test.admin.delete", event.intentId());
+        assertEquals("test_admin_delete_tool", event.toolName());
+        assertEquals("DELETE", event.httpMethod());
+        assertEquals(List.of("/api/test/admin-delete"), event.apiEndpoints());
+        assertTrue(event.requiresConfirmation(), "权限阻断审计也应保留高风险 Tool 元数据");
+        assertFalse(event.executed());
+    }
+
+    @Test
+    void executeIntent_shouldRecordBusinessFailureAuditEventForToolFailureResult() {
+        ClarificationFailureTool failureTool = new ClarificationFailureTool();
+        InMemoryAgentAuditRecorder auditRecorder = new InMemoryAgentAuditRecorder();
+        SafeToolExecutor executor = newExecutor(auditRecorder, failureTool);
+
+        SafeToolExecutionResult result = executor.executeIntent(new SafeToolExecutionRequest(
+            "test.clarify.failure",
+            Map.of("keyword", "gpu"),
+            "user-A",
+            "token-A",
+            "100002",
+            "conv-business-failure",
+            "trc_business_failure",
+            null,
+            SafeToolExecutionSource.GRAPH_TOOL_CALL
+        ));
+
+        assertTrue(result.executed(), "业务失败代表 Tool 已执行并返回结构化失败结果");
+        assertFalse(result.success(), "测试 Tool 应返回业务失败");
+        AgentAuditEvent event = auditRecorder.recentEvents().get(0);
+        assertEquals(AgentAuditOutcome.BUSINESS_FAILURE, event.outcome());
+        assertTrue(event.executed());
+        assertFalse(event.success());
+        assertEquals("test.clarify.failure", event.intentId());
+        assertEquals("trc_business_failure", event.traceId());
+    }
+
+    @Test
+    void executeIntent_shouldRecordAuditEventForMalformedRequests() {
+        InMemoryAgentAuditRecorder auditRecorder = new InMemoryAgentAuditRecorder();
+        SafeToolExecutor executor = newExecutor(auditRecorder, new RecordingReadTool());
+
+        SafeToolExecutionResult nullRequestResult = executor.executeIntent(null);
+        SafeToolExecutionResult blankIntentResult = executor.executeIntent(new SafeToolExecutionRequest(
+            " ",
+            Map.of("keyword", "gpu"),
+            "user-A",
+            "token-A",
+            "100002",
+            "conv-blank-intent",
+            "trc_blank_intent",
+            null,
+            SafeToolExecutionSource.GRAPH_TOOL_CALL
+        ));
+
+        assertFalse(nullRequestResult.executed());
+        assertFalse(blankIntentResult.executed());
+        List<AgentAuditEvent> events = auditRecorder.recentEvents();
+        assertEquals(2, events.size(), "malformed 执行请求也必须有 BLOCKED 审计");
+        assertEquals(AgentAuditOutcome.BLOCKED, events.get(0).outcome());
+        assertEquals("trc_blank_intent", events.get(0).traceId());
+        assertEquals(AgentAuditOutcome.BLOCKED, events.get(1).outcome());
+        assertFalse(events.get(1).executed());
+    }
+
+    @Test
+    void executeIntent_shouldRecordToolExecutionErrorAsInvokedButFailed() {
+        ThrowingTool throwingTool = new ThrowingTool();
+        InMemoryAgentAuditRecorder auditRecorder = new InMemoryAgentAuditRecorder();
+        SafeToolExecutor executor = newExecutor(auditRecorder, throwingTool);
+
+        SafeToolExecutionResult result = executor.executeIntent(new SafeToolExecutionRequest(
+            "test.throwing",
+            Map.of("keyword", "gpu"),
+            "user-A",
+            "token-A",
+            "100002",
+            "conv-tool-error",
+            "trc_tool_error",
+            null,
+            SafeToolExecutionSource.GRAPH_TOOL_CALL
+        ));
+
+        assertFalse(result.executed(), "对外仍保持 notExecuted/fail-closed 兼容语义");
+        AgentAuditEvent event = auditRecorder.recentEvents().get(0);
+        assertEquals(AgentAuditOutcome.ERROR, event.outcome());
+        assertTrue(event.executed(), "审计语义必须表达 Tool 已被调用，只是执行异常");
+        assertFalse(event.success());
+    }
+
+    @Test
+    void executeIntent_shouldNotConvertSuccessfulToolResultWhenDiagnosticAuditRecorderFails() {
+        RecordingReadTool readTool = new RecordingReadTool();
+        AgentAuditRecorder failingRecorder = event -> {
+            throw new IllegalStateException("audit recorder unavailable");
+        };
+        SafeToolExecutor executor = newExecutor(failingRecorder, readTool);
+
+        SafeToolExecutionResult result = executor.executeIntent(new SafeToolExecutionRequest(
+            "test.read",
+            Map.of("keyword", "gpu"),
+            "user-A",
+            "token-A",
+            "100002",
+            "conv-audit-recorder-failure",
+            "trc_audit_recorder_failure",
+            null,
+            SafeToolExecutionSource.GRAPH_TOOL_CALL
+        ));
+
+        assertTrue(result.executed(), "M5.25 诊断审计 recorder 失败不应把已成功 Tool 调用伪装成未执行");
+        assertTrue(result.success(), "读 Tool 成功结果应保持原样");
+        assertNotNull(readTool.lastParams, "真实 Tool 已经执行，审计诊断失败不能回滚事实");
     }
 
     @Test
@@ -564,9 +782,27 @@ class SafeToolExecutorTest {
     }
 
     private SafeToolExecutor newExecutor(BaseTool... tools) {
+        return newExecutor(com.atlas.audit.AgentAuditRecorder.noop(), tools);
+    }
+
+    private SafeToolExecutor newExecutor(com.atlas.audit.AgentAuditRecorder auditRecorder, BaseTool... tools) {
         ToolRegistry registry = new ToolRegistry(List.of(tools), new UserPermissionContext());
         registry.init();
-        return new SafeToolExecutor(registry, new HitlGuard());
+        return new SafeToolExecutor(registry, new HitlGuard(), auditRecorder);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void assertParameterSummaryContains(Map<String, Object> summary,
+                                                String key,
+                                                boolean protectedField,
+                                                String type) {
+        List<Map<String, Object>> keys = (List<Map<String, Object>>) summary.get("keys");
+        Map<String, Object> item = keys.stream()
+            .filter(entry -> key.equals(entry.get("name")))
+            .findFirst()
+            .orElseThrow(() -> new AssertionError("参数摘要缺少 key: " + key));
+        assertEquals(protectedField, item.get("protected"));
+        assertEquals(type, item.get("type"));
     }
 
     private Map<String, Object> forgedControlParams() {
@@ -738,6 +974,39 @@ class SafeToolExecutorTest {
         protected AtlasToolResult doExecute(Map<String, Object> params) {
             lastParams = Map.copyOf(params);
             return AtlasToolResult.ok("删除成功", Map.of("deleted", true));
+        }
+    }
+
+    /**
+     * 测试用管理员专属删除 Tool。
+     */
+    @AtlasToolMapping(
+        name = "test_admin_delete_tool",
+        intentId = "test.admin.delete",
+        agent = "deploy",
+        description = "测试管理员删除工具",
+        httpMethod = "DELETE",
+        apiEndpoints = {"/api/test/admin-delete"},
+        operationType = AtlasToolMapping.OperationType.DELETE,
+        requiresConfirmation = true
+    )
+    @ToolPermission(ToolPermission.Policy.ADMIN_ONLY)
+    private static class AdminDeleteTool extends BaseTool {
+        private Map<String, Object> lastParams;
+
+        private AdminDeleteTool() {
+            super("test_admin_delete_tool", "测试管理员删除工具");
+        }
+
+        @Override
+        protected Set<String> getRequiredParams() {
+            return Set.of();
+        }
+
+        @Override
+        protected AtlasToolResult doExecute(Map<String, Object> params) {
+            lastParams = Map.copyOf(params);
+            return AtlasToolResult.ok("管理员删除成功", Map.of("deleted", true));
         }
     }
 

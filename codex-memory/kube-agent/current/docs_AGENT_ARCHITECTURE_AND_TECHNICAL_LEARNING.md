@@ -299,6 +299,50 @@ M5.24-1 把这条证据链继续接到 kube-manager HTTP 出口：
 
 学习重点：OpenTelemetry 不是从 dashboard 开始的，而是从每个出口都能带同一个证据主键开始的。M5.24-1 让 Agent 内部 trace 能进入成熟 kube-manager 后端，后续才能把 LLM、Tool、HTTP、HITL、audit 和前端回放映射成同一条时间线。
 
+### M5.25 Trace-Aware 审计证据内核
+
+M5.25-1 开始把 trace 证据链接到通用 Agent 审计模型。它不是 NIM 二期 durable audit 链路的继续开发，而是一期通用 Agent Core 的审计内核第一步：
+
+- `AgentAuditEvent` 定义统一审计事件：`auditId`、`occurredAt`、`traceId`、`conversationId`、`userId`、`organizationId`、`intentId`、`toolName`、执行来源、HTTP 风险元数据、HITL 要求、执行结果和参数摘要；
+- `AgentAuditOutcome` 建立统一结果词表：`SUCCESS`、`BUSINESS_FAILURE`、`BLOCKED`、`ERROR`；
+- `AgentAuditRecorder` 是接口先行，当前使用 `InMemoryAgentAuditRecorder` 做诊断和测试，后续可以替换成数据库、安全日志、Kafka 或 OpenTelemetry event；
+- `SafeToolExecutor` 在所有真实 Tool 执行路径上记录审计事件：缺少租户、未知 Tool、权限不足、HITL 阻断、Plan schema 失败、Tool 异常、业务失败和业务成功；
+- 权限不足时仍从系统审计视角提取 Tool 风险元数据，这样阻断事件能记录 `DELETE`、endpoint、`requiresConfirmation=true` 等事实，但不会把不可见 Tool 暴露给用户 Prompt；
+- `ObservabilityController` 的 `/api/agent/observability/snapshot` 需要服务端管理员身份，只返回脱敏诊断摘要，不返回原始 `userId`、`organizationId`、`conversationId`、完整 reason 或受保护参数名/值；
+- 审计诊断快照带 `schemaVersion=agent-audit-snapshot.v1`、`generatedAt` 和 `replayCapabilities`，明确当前只支持最近事件诊断回放，不承诺 durable retention，也不包含原始身份、原因或参数值。
+
+当前事件链可以这样理解：
+
+```text
+AgentTraceContext
+    -> SafeToolExecutionRequest.traceId
+    -> SafeToolExecutor decision / Tool execution
+    -> AgentAuditEvent(auditId, traceId, tool metadata, outcome)
+    -> InMemoryAgentAuditRecorder diagnostic snapshot
+    -> future OpenTelemetry span / durable audit / frontend replay
+```
+
+几个设计边界必须记住：
+
+- M5.25 的 in-memory recorder 是诊断证据内核，不是最终合规持久化。它用于证明审计语义和执行边界已经打通。
+- 诊断 recorder 失败不能把一个已经成功的只读 Tool 伪装成未执行；否则审计系统反而会篡改事实。当前做法是记录 warn，并保持执行结果不变。
+- BaseTool 已经被调用但包装成 `TOOL_EXECUTION_ERROR` 时，对外仍返回 fail-closed 兼容结果；审计事件必须写 `ERROR + executed=true + success=false`，避免取证时把“已尝试调用”误写成“未调用”。
+- 高风险写操作未来不能沿用“诊断 recorder 失败也继续”的语义。写操作需要独立的 durable audit pre-write gate：持久化审计不可用时应在 Tool 调用前 fail-closed。
+- 参数审计只记录 key、类型、是否受保护、是否 present、数量和截断标记，不记录真实参数值。
+- HTTP 诊断摘要进一步隐藏受保护参数名，避免 `token`、`password`、`secret` 等敏感信号通过 observability endpoint 被过度暴露。
+- 快照里的 `replayCapabilities` 是教学上很重要的边界声明：顶级 Agent 不只是“能展示数据”，还要告诉前端、测试和运维这些数据能否用于回放、是否有原始证据、是否可长期保留。
+
+学习重点：审计不是“写一行日志”。顶级 Agent 的审计要回答四个问题：谁在什么 trace 下、以什么 Tool 风险元数据、因为什么原因被允许/阻断、是否真的调用了外部能力。M5.25-1 先让这些问题在统一执行边界上都有结构化答案；后续再把这些答案接入 OpenTelemetry span、前端时间线、持久化表和 Agent eval 报告。
+
+### 最新技术引入原则
+
+你要求一期就打造顶级 Agent，所以“最新技术”会全部进入一期路线，但分成两层：
+
+- 稳定主线：直接进入可构建、可测试、可提交的生产内核，例如 `SafeToolExecutor`、trace/audit、Resilience4j、Micrometer、OpenTelemetry OTLP、SBOM、质量门禁、MCP 安全 manifest、评测集和前端回放契约。
+- 实验矩阵：进入兼容验证和试验分支，例如 Java 21/25、Spring Boot 4、Spring AI 2、OpenTelemetry GenAI semantic conventions、MCP 新规范完整调用层、A2A 多 Agent 互操作协议。
+
+这样做不是降低标准，而是顶级 Agent 的工程纪律：稳定主线负责真实交付，实验矩阵负责吸收最新技术并证明它们不会破坏安全、观测、评测和恢复能力。
+
 ### Java 后端技术栈审计
 
 2026-06-08 针对“后端 Java 是否仍是最先进主语言”做了技术栈审计，结论是：Java / Spring 继续作为一期主线是合理且先进的，但升级方式必须是兼容矩阵，而不是盲目追主版本。

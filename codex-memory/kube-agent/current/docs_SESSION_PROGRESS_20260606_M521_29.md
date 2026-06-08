@@ -6,7 +6,7 @@
 - Primary workspace recovery folder: `F:\gitProject\kube-agent\codex-memory\kube-agent\current`
 - Historical external memory folder: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.24-1, kube-manager HTTP outlet trace propagation.
+- Current latest wave: M5.25-1, trace-aware agent audit evidence kernel.
 - Phase update: HPC / Slurm / BCM and NIM are paused and moved to Phase 2 by user direction.
 - Phase 1 focus: deliver the top-tier Agent core through generic manager Agent foundations, safe read/query validation, non-HPC/NIM manager function coverage, Tool metadata quality, HITL/audit execution boundary, traceability, recovery, evaluation, teaching documentation, and vue-kube-manager workflow integration.
 - Phase boundary clarification: moving NIM / HPC / Slurm / BCM to Phase 2 postpones specialist domain plugins only; it does not reduce Phase 1 standards.
@@ -55,6 +55,43 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.25-1 trace-aware Agent audit evidence kernel is implemented:
+  - Added `src/main/java/com/atlas/audit/AgentAuditEvent.java`, `AgentAuditOutcome.java`, `AgentAuditRecorder.java`, `AgentAuditEventFactory.java`, `AgentAuditSnapshotProvider.java`, and `InMemoryAgentAuditRecorder.java`.
+  - `SafeToolExecutor` now emits audit events for all important execution decisions:
+    - missing trusted org
+    - unknown Tool
+    - permission denial
+    - HITL block
+    - Plan/schema failure
+    - Tool execution error
+    - Tool exception
+    - business failure after Tool execution
+    - success
+    - malformed request / blank intent
+  - Audit events are trace-aware and bind `auditId`, `traceId`, conversation/user/org context, Tool metadata, execution source, HTTP method/endpoints, operation type, HITL requirement, outcome, executed/success flags, reason, and parameter summary.
+  - Parameter summaries do not store parameter values; protected fields such as token/password/audit/release/write-control are marked as protected.
+  - `ObservabilityController` now returns both `metrics` and a redacted `audit` diagnostic snapshot for admin users only.
+  - Diagnostic snapshot hides raw user/org/conversation identifiers, raw reason text, protected parameter names, and parameter values while preserving counts, outcomes, traceId, auditId, risk metadata, and parameter types.
+  - Diagnostic snapshot includes `schemaVersion=agent-audit-snapshot.v1`, `generatedAt`, and `replayCapabilities`, making the current replay/storage limits explicit for future frontend and OpenTelemetry work.
+  - Tool-level execution errors keep outward fail-closed compatibility but audit as `ERROR + executed=true + success=false`.
+  - Added `src/test/java/com/atlas/audit/AgentAuditRecorderTest.java`, `src/test/java/com/atlas/observability/ObservabilityControllerTest.java`, and extended `SafeToolExecutorTest`.
+  - Verification passed:
+    - `mvn -q "-Dtest=AgentAuditRecorderTest,SafeToolExecutorTest" test`
+    - `mvn -q "-Dtest=AgentAuditRecorderTest,SafeToolExecutorTest,ObservabilityControllerTest" test`
+    - `mvn -q "-Dtest=AgentAuditRecorderTest,SafeToolExecutorTest,ObservabilityControllerTest,AgentMetricsServiceTest,RuleMatcherTest" test`
+    - `mvn -q -DskipTests validate`
+    - `mvn -q test`
+    - `git diff --check`
+    - Direct execution scan: only `src/main/java/com/atlas/tool/execution/SafeToolExecutor.java` contains the permanent real `tool.execute(toolParams)` boundary.
+  - Test log note: `ThrowingTool` stack traces and failing diagnostic recorder warnings are intentional exception-path tests; Maven exited successfully.
+  - Full test note: local `model.onnx` download timed out and Atlas degraded embedding L1 as expected; Maven still exited 0.
+  - Latest technology strategy:
+    - All advanced Phase 1 technologies remain in scope for a top-tier Agent.
+    - Stable mainline absorbs verified execution, trace/audit, MCP safe manifest, OTel OTLP, resilience, CI gates, evals, and frontend replay contracts.
+    - Compatibility matrix absorbs Java 21/25, Spring Boot 4, Spring AI 2, evolving MCP call protocol, OpenTelemetry GenAI semantic conventions, and A2A adapters.
+  - No NIM/HPC/Slurm/BCM Phase 2 implementation was resumed and no real write/create/delete/state-changing kube-manager call was opened.
+  - Next Phase 1 technical slice: map audit events to OpenTelemetry span/event attributes, frontend replay, Agent eval reports, and durable audit storage with access control.
 
 - M5.24-1 kube-manager HTTP outlet trace propagation is implemented:
   - `src/main/java/com/atlas/observability/AgentTraceContext.java` now supports converting internal `trc_ + 32hex` trace IDs into W3C `traceparent`.
@@ -2634,13 +2671,14 @@
 
 ## Next Step
 
-Continue NIM orchestration only through safe slices:
-- design the real dedicated NIM durable audit writer boundary and test double from the M5.21-52 plan,
-- implement the real storage availability probe executor inside the dedicated writer boundary before any real pre-write record can be accepted,
-- design the reviewed real durable write executor boundary around a controlled kube-manager HTTP boundary, write-before/write-after audit, idempotency persistence, POST response validation, and post-write readiness triggering,
-- later wire `NimTrustedPolicyProviderSupport` to real backend license/user/org readers only after mock-first contracts are complete,
-- keep `nim_create` HOLD until trusted policy, durable audit writer, durable write executor, readiness aftercare, and release switch all pass review,
-- or pick another mature GET area with clean backend/frontend evidence.
+Continue Phase 1 generic manager Agent Core. Recommended order:
+
+- Map `AgentAuditEvent` to OpenTelemetry span/event attributes with a compatibility layer because GenAI semantic conventions are still evolving.
+- Define frontend replay contracts for trace/audit timelines: request, intent, plan, Tool, HTTP outlet, HITL, audit, final answer.
+- Design durable audit storage with admin-only read access, redaction, retention policy, and fail-closed pre-write gate for high-risk actions.
+- Add Agent eval reports for intent routing, Tool selection, parameter extraction, multi-step ReAct, Chinese vague requests, prompt injection, tool misuse, and must-block cases.
+- Apply Resilience4j to kube-manager HTTP outlet with READ retry/circuit/limit policy and WRITE no-auto-retry unless idempotency + HITL + audit are present.
+- Keep NIM / HPC / Slurm / BCM as Phase 2 specialist plugins unless the user explicitly reopens them.
 
 ## Recovery Reminder
 

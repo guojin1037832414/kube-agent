@@ -6,6 +6,28 @@
 
 ---
 
+## [M5.25-1] - Trace-aware agent audit evidence kernel
+
+**Delivery**: Added the first generic Phase 1 Agent audit evidence kernel and wired it into the single safe Tool execution boundary.
+**Changes**
+- Added `com.atlas.audit` with `AgentAuditEvent`, `AgentAuditOutcome`, `AgentAuditRecorder`, `AgentAuditEventFactory`, `AgentAuditSnapshotProvider`, and `InMemoryAgentAuditRecorder`.
+- Extended `SafeToolExecutor` so missing org, unknown Tool, permission denial, HITL block, schema failure, Tool exception, business failure, and success all produce trace-bound audit events.
+- Audit events bind `auditId`, `traceId`, `conversationId`, user/org context, intent/tool metadata, source, HTTP method, endpoints, operation type, HITL requirement, outcome, execution flags, reason, and parameter summaries.
+- Parameter summaries record key/type/protected/present/count/truncated only; they do not persist parameter values such as token/password/secret material.
+- `ObservabilityController` now returns both metrics and a redacted audit diagnostic snapshot; raw recent events remain internal to the recorder.
+- The audit diagnostic snapshot now carries `schemaVersion`, `generatedAt`, and `replayCapabilities` so frontend replay, OTel span mapping, and future durable audit storage have a stable contract.
+- Protected the observability snapshot with an admin-only guard backed by server-side `UserPermissionContext`.
+- Added audit recorder, ObservabilityController, and SafeToolExecutor contract tests for success, HITL block, permission denial metadata, malformed request auditing, Tool execution error semantics, recorder failure tolerance, parameter redaction, counters, diagnostic snapshot redaction, and admin-only access.
+**Verification**
+- `mvn -q "-Dtest=AgentAuditRecorderTest,SafeToolExecutorTest" test` passed.
+- `mvn -q "-Dtest=AgentAuditRecorderTest,SafeToolExecutorTest,ObservabilityControllerTest" test` passed.
+- `mvn -q "-Dtest=AgentAuditRecorderTest,SafeToolExecutorTest,ObservabilityControllerTest,M4Px4ToolExecuteEntrypointContractTest" test` passed.
+- `mvn -q test` passed.
+**Security**
+- No real write/create/delete/state-changing kube-manager call was opened.
+- The M5.25 recorder is diagnostic/in-memory only; future durable audit gating for high-risk writes must be implemented as a separate fail-closed pre-write boundary.
+- Diagnostic `/api/agent/observability/snapshot` is admin-only and does not expose raw userId, organizationId, conversationId, raw reason text, or protected parameter names/values.
+
 ## [M5.24-1] - kube-manager HTTP outlet trace propagation
 
 **Delivery**: Connected the M5.23 Agent trace kernel to the shared kube-manager HTTP outlet.

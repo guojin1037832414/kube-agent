@@ -1,12 +1,16 @@
 package com.atlas.observability;
 
+import com.atlas.audit.AgentAuditSnapshotProvider;
+import com.atlas.auth.UserPermissionContext;
 import com.atlas.dto.ApiResponse;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Agent 可观测性控制器 — M5.20 最小诊断入口。
@@ -22,14 +26,32 @@ import java.util.Map;
 public class ObservabilityController {
 
     private final AgentMetricsService metricsService;
+    private final AgentAuditSnapshotProvider auditSnapshotProvider;
+    private final UserPermissionContext userPermissionContext;
 
-    public ObservabilityController(AgentMetricsService metricsService) {
+    public ObservabilityController(AgentMetricsService metricsService,
+                                   AgentAuditSnapshotProvider auditSnapshotProvider,
+                                   UserPermissionContext userPermissionContext) {
         this.metricsService = metricsService;
+        this.auditSnapshotProvider = auditSnapshotProvider;
+        this.userPermissionContext = userPermissionContext;
     }
 
     /** 查询 Agent 指标快照。 */
     @GetMapping("/snapshot")
     public ResponseEntity<ApiResponse<Map<String, Object>>> snapshot() {
-        return ResponseEntity.ok(ApiResponse.ok(metricsService.snapshot()));
+        Optional<UserPermissionContext.UserPermission> currentUser = userPermissionContext.current();
+        if (currentUser.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.fail("未登录或会话已过期"));
+        }
+        if (!currentUser.get().isAdmin()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.fail("仅管理员可查看 Agent 观测与审计诊断快照"));
+        }
+        return ResponseEntity.ok(ApiResponse.ok(Map.of(
+            "metrics", metricsService.snapshot(),
+            "audit", auditSnapshotProvider.snapshot()
+        )));
     }
 }

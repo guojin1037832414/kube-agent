@@ -93,10 +93,59 @@ Current track:
 
 Recently completed:
 
-`M5.24-1 kube-manager HTTP outlet trace propagation`
+`M5.25-1 trace-aware agent audit evidence kernel`
 
 Latest checkpoint:
 
+- Date: 2026-06-08 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.25-1 implemented:
+  - Added `src/main/java/com/atlas/audit` as the first generic Phase 1 audit evidence package:
+    - `AgentAuditEvent`
+    - `AgentAuditOutcome`
+    - `AgentAuditRecorder`
+    - `AgentAuditEventFactory`
+    - `AgentAuditSnapshotProvider`
+    - `InMemoryAgentAuditRecorder`
+  - `SafeToolExecutor` now records trace-aware audit events for:
+    - missing trusted organization context
+    - unknown Tool
+    - permission denial
+    - HITL block
+    - Plan/schema validation failure
+    - BaseTool `TOOL_EXECUTION_ERROR`
+    - unexpected Tool exception
+    - business failure after Tool execution
+    - business success
+    - malformed request / blank intent
+  - Audit events bind `auditId`, `traceId`, `conversationId`, `userId`, `organizationId`, `intentId`, `toolName`, `source`, `httpMethod`, `apiEndpoints`, `operationType`, `requiresConfirmation`, `outcome`, `executed`, `success`, `reason`, and parameter summary.
+  - Parameter summaries record only key/type/protected/present/count/truncated, never parameter values.
+  - Permission-denied audit can still keep Tool risk metadata from system-audit metadata without exposing invisible Tools to user prompts.
+  - `ObservabilityController` now returns `metrics` and a redacted `audit` diagnostic snapshot only for server-side admin users.
+  - Audit diagnostic snapshots now include `schemaVersion=agent-audit-snapshot.v1`, `generatedAt`, and `replayCapabilities` so frontend replay, OTel mapping, and future durable audit can share a stable minimal contract.
+  - The diagnostic snapshot hides raw `userId`, `organizationId`, `conversationId`, raw reason text, and protected parameter names/values.
+  - Tool-level execution errors keep outward fail-closed compatibility but audit as `ERROR + executed=true + success=false`, because the Tool boundary was actually invoked.
+  - Added `AgentAuditRecorderTest`, `ObservabilityControllerTest`, and extended `SafeToolExecutorTest` for audit success, HITL block, permission-denied metadata, malformed request audit, Tool execution error semantics, recorder failure tolerance, admin-only snapshot access, and diagnostic redaction.
+- Verification:
+  - `mvn -q "-Dtest=AgentAuditRecorderTest,SafeToolExecutorTest" test`
+  - `mvn -q "-Dtest=AgentAuditRecorderTest,SafeToolExecutorTest,ObservabilityControllerTest" test`
+- Scope boundary:
+  - Phase 1 generic Agent Core audit hardening only.
+  - No NIM/HPC/Slurm/BCM Phase 2 implementation was resumed.
+  - No new real write/create/delete/state-changing kube-manager call was opened.
+  - Current recorder is in-memory diagnostic evidence, not the final durable audit store.
+- Security result:
+  - Every SafeToolExecutor decision can now be correlated with traceId and auditId.
+  - Diagnostic observability exposes useful counters/recent summaries without leaking raw tenant/user/session/reason or secret-bearing parameter values.
+- Latest technology strategy:
+  - Introduce all advanced Phase 1 Agent technologies through two lanes:
+    - stable mainline for verified execution, trace/audit, MCP safe manifest, OTel OTLP, resilience, CI gates, evals, and frontend replay contracts;
+    - compatibility matrix for Java 21/25, Spring Boot 4, Spring AI 2, evolving MCP call protocol, OpenTelemetry GenAI semantic conventions, and A2A adapters.
+  - This keeps Phase 1 top-tier without forcing preview or ecosystem-breaking versions into the only recoverable branch.
+- Next technical follow-up:
+  - Map audit events to OpenTelemetry span/event attributes, frontend replay contracts, Agent eval reports, and a durable audit storage design with access control.
+
+- Previous checkpoint:
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
 - M5.24-1 implemented:
