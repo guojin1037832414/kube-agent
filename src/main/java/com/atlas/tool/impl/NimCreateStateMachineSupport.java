@@ -1075,6 +1075,9 @@ final class NimCreateStateMachineSupport {
             && matrix.equals(contractMatrix)
             && planningSources.equals(contractPlanningSources)
             && dangerousFields.equals(contractDangerousFields)
+            && NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport.closedSourceGuardMatrixValid(
+                matrix,
+                text(report.get("sourceRuntimeBindingContractDigest")))
             && Boolean.TRUE.equals(acceptanceRules.get("failClosed"))
             && Integer.valueOf(0).equals(acceptanceRules.get("currentReleaseSourceCount"))
             && Boolean.FALSE.equals(acceptanceRules.get("contractReportAcceptedForRelease"))

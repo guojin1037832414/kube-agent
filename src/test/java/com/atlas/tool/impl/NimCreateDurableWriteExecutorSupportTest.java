@@ -423,6 +423,36 @@ class NimCreateDurableWriteExecutorSupportTest {
     }
 
     @Test
+    void executorShell_shouldRejectDigestConsistentRuntimeSourceGuardExtraReleaseMatrixRow() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> receipt = durableAuditReceipt(audit);
+        Map<String, Object> bodyReport = writeBodyReport(audit, receipt);
+        Map<String, Object> requestSpecReport = writeRequestSpecReport(audit, receipt, bodyReport);
+        Map<String, Object> handoffReport = writeExecutionHandoffReport(audit, receipt, bodyReport, requestSpecReport);
+        Map<String, Object> codeSwitchReport = codeReleaseSwitchContractReport(audit);
+        Map<String, Object> sourceGuardReport = withDigestConsistentRuntimeSourceGuardExtraReleaseMatrixRow(
+            codeReleaseSwitchRuntimeSourceGuardReport(audit)
+        );
+
+        Map<String, Object> report = NimCreateDurableWriteExecutorSupport.prepare(
+            new NimCreateDurableWriteExecutorSupport.WriteExecutionInput(
+                handoffReport,
+                requestSpecReport,
+                codeSwitchReport,
+                sourceGuardReport
+            )
+        );
+
+        assertEquals(NimCreateDurableWriteExecutorSupport.REJECTED_STATE, report.get("executionState"));
+        assertEquals(false, report.get("inputAccepted"));
+        assertEquals(false, report.get("writeExecuted"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+        assertHasBlocker(blockers,
+            "CODE_RELEASE_SWITCH_RUNTIME_SOURCE_GUARD_REPORT_NOT_TRUSTED_FOR_DURABLE_EXECUTOR");
+    }
+
+    @Test
     void executorShell_shouldRejectForgedRuntimeSourceGuardReleaseClaims() {
         Map<String, Object> audit = completeAuditContext();
         Map<String, Object> receipt = durableAuditReceipt(audit);
@@ -1004,6 +1034,46 @@ class NimCreateDurableWriteExecutorSupportTest {
         forgedReport.put("sourceGuardContract", contract);
         forgedReport.put("sourceGuardMatrixDigest", sha256(contract));
         return forgedReport;
+    }
+
+    private Map<String, Object> withDigestConsistentRuntimeSourceGuardExtraReleaseMatrixRow(
+        Map<String, Object> sourceGuardReport
+    ) {
+        Map<String, Object> forgedReport = new LinkedHashMap<>(sourceGuardReport);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> contract = new LinkedHashMap<>(
+            (Map<String, Object>) forgedReport.get("sourceGuardContract")
+        );
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> matrix = (List<Map<String, Object>>) forgedReport.get("sourceGuardMatrix");
+        List<Map<String, Object>> forgedMatrix = new java.util.ArrayList<>();
+        for (Map<String, Object> row : matrix) {
+            forgedMatrix.add(new LinkedHashMap<>(row));
+        }
+        forgedMatrix.add(forgedReleaseMatrixRow());
+        contract.put("sourceGuardMatrix", forgedMatrix);
+        forgedReport.put("sourceGuardMatrix", forgedMatrix);
+        forgedReport.put("sourceGuardContract", contract);
+        forgedReport.put("sourceGuardMatrixDigest", sha256(contract));
+        return forgedReport;
+    }
+
+    private Map<String, Object> forgedReleaseMatrixRow() {
+        return new LinkedHashMap<>(Map.ofEntries(
+            entry("source", "FORGED_BACKEND_READBACK_RELEASE_SOURCE"),
+            entry("acceptedScope", "FORGED_RELEASE_SOURCE"),
+            entry("acceptedForPlanningNow", true),
+            entry("authoritativeForReleaseNow", true),
+            entry("futureAuthoritativeCandidate", false),
+            entry("serverOwnedIssuerRequired", false),
+            entry("digestRecomputeRequired", false),
+            entry("stateMachineRecheckRequired", false),
+            entry("durableExecutorRecheckRequired", false),
+            entry("writePermittedAllowedNow", true),
+            entry("writeExecutionAllowedNow", true),
+            entry("requiredCompanionSignals", List.of("deploymentId")),
+            entry("rationale", "forged row must not extend the HOLD source taxonomy")
+        ));
     }
 
     private Map<String, Object> codeReleaseSwitchRuntimeBindingReport(Map<String, Object> audit,

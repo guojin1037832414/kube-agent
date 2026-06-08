@@ -541,3 +541,11 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Top-level and nested `sourceRuntimeBindingContractDigest`, `sourceCodeReleaseSwitchContractDigest`, `sourceAuditEventDigest`, and `trustedPrincipalDigest` must match before the source guard is accepted as HOLD evidence.
 - The regressions mutate nested matrix rows or nested source digests and recompute `sourceGuardMatrixDigest`; both downstream consumers still reject the forged reports.
 - Learning distinction: a digest over a nested contract proves that nested object was recomputed. It does not prove the top-level mirror fields seen by downstream gates tell the same story; mirror binding closes that semantic gap.
+
+### M5.21-111 runtime source guard closed matrix taxonomy note
+
+- `NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport` now owns a shared closed-matrix validator for the M5.21-75 source guard taxonomy.
+- State-machine and durable-executor validators require the matrix to exactly match the authoritative row set for the trusted runtime binding digest.
+- Extra rows are rejected even when top-level and nested matrices match and `sourceGuardMatrixDigest` is recomputed.
+- Every accepted row remains fail-closed: no current release authority, no current write permission, no current write execution, and both downstream rechecks required.
+- Learning distinction: a source taxonomy is not an extensible caller-provided list. New source families require reviewed code, tests, docs, and release governance, not a digest-consistent JSON append.

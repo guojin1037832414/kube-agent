@@ -274,6 +274,44 @@ final class NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport {
         return List.copyOf(matrix);
     }
 
+    static boolean closedSourceGuardMatrixValid(List<Map<String, Object>> matrix,
+                                                String runtimeBindingContractDigest) {
+        if (matrix.isEmpty() || !hasText(runtimeBindingContractDigest)) {
+            return false;
+        }
+        Map<String, Object> runtimeBindingDigestReport = Map.of(
+            "runtimeBindingContractDigest",
+            text(runtimeBindingContractDigest)
+        );
+        List<Map<String, Object>> expected = sourceGuardMatrix(runtimeBindingDigestReport);
+        if (!matrix.equals(expected)) {
+            return false;
+        }
+        for (Map<String, Object> row : matrix) {
+            if (!sourceGuardRowClosed(row) || hasForgedRuntimeSourceClaim(row)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean sourceGuardRowClosed(Map<String, Object> row) {
+        boolean futureAuthoritativeCandidate = Boolean.TRUE.equals(row.get("futureAuthoritativeCandidate"));
+        boolean acceptedForPlanningNow = Boolean.TRUE.equals(row.get("acceptedForPlanningNow"));
+        return Boolean.FALSE.equals(row.get("authoritativeForReleaseNow"))
+            && Boolean.FALSE.equals(row.get("writePermittedAllowedNow"))
+            && Boolean.FALSE.equals(row.get("writeExecutionAllowedNow"))
+            && Boolean.TRUE.equals(row.get("stateMachineRecheckRequired"))
+            && Boolean.TRUE.equals(row.get("durableExecutorRecheckRequired"))
+            && Boolean.valueOf(futureAuthoritativeCandidate).equals(row.get("serverOwnedIssuerRequired"))
+            && Boolean.valueOf(futureAuthoritativeCandidate || acceptedForPlanningNow).equals(
+                row.get("digestRecomputeRequired"))
+            && hasText(row.get("source"))
+            && hasText(row.get("acceptedScope"))
+            && row.get("requiredCompanionSignals") instanceof List<?>
+            && hasText(row.get("rationale"));
+    }
+
     private static Map<String, Object> sourceRow(String source,
                                                  String scope,
                                                  boolean acceptedForPlanningNow,

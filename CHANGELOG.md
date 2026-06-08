@@ -6,6 +6,18 @@
 
 ---
 
+## [M5.21-111] - NIM runtime source guard closed matrix taxonomy contract
+
+**Delivery**: Hardened runtime source guard matrix validation so digest-consistent reports cannot extend the HOLD matrix with extra current-release authority rows.
+**Changes**
+- `NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport` now exposes a shared closed source-guard matrix validator backed by the authoritative M5.21-75 matrix shape.
+- `NimCreateStateMachineSupport` and `NimCreateDurableWriteExecutorSupport` now require source guard matrices to match the exact closed taxonomy for the trusted runtime binding digest.
+- Added digest-consistent forged source guard regressions that append an extra release-capable matrix row, recompute `sourceGuardMatrixDigest`, and still expect state-machine / durable-executor rejection.
+**Security**
+- This is source-governance taxonomy hardening only; it does not open runtime writes or a real code release switch.
+- No real `8100`, real NIM service HTTP call, Authorization header sending, durable audit write, deployment POST, state-machine release binding implementation, durable executor release binding implementation, validation result signer, release decision signer, code release switch implementation, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-110] - NIM runtime source guard matrix digest binding contract
 
 **Delivery**: Hardened downstream runtime source guard validation so top-level source guard mirrors, nested source guard contracts, matrix rows, and source digest fields must remain bound to the same trusted runtime source evidence.

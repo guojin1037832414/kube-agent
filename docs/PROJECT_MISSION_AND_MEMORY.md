@@ -82,12 +82,25 @@ Current track:
 
 Recently completed:
 
-`M5.21-110 NIM runtime source guard matrix digest binding contract`
+`M5.21-111 NIM runtime source guard closed matrix taxonomy contract`
 
 Latest checkpoint:
 
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-111 implemented:
+  - Hardened `NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport` with shared `closedSourceGuardMatrixValid(...)` validation.
+  - `NimCreateStateMachineSupport` and `NimCreateDurableWriteExecutorSupport` now require source guard matrices to exactly match the authoritative M5.21-75 closed taxonomy for the trusted runtime binding digest.
+  - Added digest-consistent forged source guard regressions that append an extra release-capable matrix row, recompute `sourceGuardMatrixDigest`, and still expect rejection.
+  - Added `docs/M5_21_ONE_HUNDRED_ELEVENTH_WAVE_NIM_RUNTIME_SOURCE_GUARD_CLOSED_MATRIX_TAXONOMY_CONTRACT_AUDIT_20260608.md`.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimCreateStateMachineSupportTest#stateMachine_shouldRejectDigestConsistentRuntimeSourceGuardExtraReleaseMatrixRow" test`
+    - `mvn -q "-Dtest=NimCreateDurableWriteExecutorSupportTest#executorShell_shouldRejectDigestConsistentRuntimeSourceGuardExtraReleaseMatrixRow" test`
+    - `mvn -q "-Dtest=NimCreateStateMachineSupportTest,NimCreateDurableWriteExecutorSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupportTest,NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupportTest,NimCreateDurableAuditCodeReleaseSwitchContractSupportTest" test`
+  - Security invariant: no real `8100`, no real NIM service HTTP call, no Authorization header sending, no durable audit write, no deployment POST, no runtime write behavior, no state-machine release binding implementation, no durable executor release binding implementation, no validation result signer, no release decision signer, no code release switch implementation, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Recommended next slice: continue closed-shape validation for nested source guard contract maps, or continue release-binding proof design without opening writes.
+- Previous checkpoint:
 - M5.21-110 implemented:
   - Hardened `NimCreateStateMachineSupport` and `NimCreateDurableWriteExecutorSupport` so downstream source guard validation binds top-level mirror fields to the nested `sourceGuardContract`.
   - `sourceGuardMatrix` must equal `sourceGuardContract.sourceGuardMatrix`.
