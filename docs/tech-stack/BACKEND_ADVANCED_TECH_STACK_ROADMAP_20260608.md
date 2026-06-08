@@ -383,3 +383,14 @@ M5.35-1 implements the next eval roadmap item: named suites are now discoverable
 - The catalog and run contracts state `redactedOnly=true`, `deterministic=true`, `llmUsed=false`, `externalCalls=false`, `toolExecution=false`, and `kubeManagerCalls=false`.
 
 Technology judgment: this is the right way to introduce advanced Agent eval into the Java/Spring mainline. It makes evaluation a typed, testable control-plane object without introducing a second LLM evaluator, a real kube-manager call, or a Tool execution path. The next advanced steps are CI JSON export, persisted golden/red-team trace sets, Vue replay/eval workbench integration, and release workflow wiring.
+
+## M5.36-1 Update - Compact CI Gate Artifact
+
+M5.36-1 delivers the first machine-readable CI/release gate artifact for named eval suites:
+
+- `POST /api/agent/observability/eval/suites/{suiteId}/gate` returns `AgentEvalSuiteGateArtifact`.
+- The artifact includes stable pass/fail fields, score fields, case coverage fields, warning/failure counters, trace anchors, gate policy, and privacy proof.
+- It intentionally excludes embedded per-trace reports and replay timelines.
+- The existing `/run` endpoint remains the richer human/admin diagnostic path.
+
+Technology judgment: CI should consume compact contracts, not frontend-sized diagnostic payloads. This keeps release workflows fast and auditable while preserving the ability to drill down by trace id when a gate fails. The next advanced steps are persisted golden/red-team trace sets, CI job wiring, Vue replay/eval workbench integration, and signed release decision metadata.

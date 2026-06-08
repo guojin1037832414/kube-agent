@@ -193,6 +193,21 @@ public class ObservabilityController {
                 .body(ApiResponse.fail("未知的 Agent eval suite: " + suiteId)));
     }
 
+    /** Produce a compact CI/release-gate artifact without embedded replay or per-trace reports. */
+    @PostMapping("/eval/suites/{suiteId}/gate")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentEvalSuiteGateArtifact>> evalSuiteGate(@PathVariable String suiteId,
+                                                                                 @RequestBody(required = false) AgentEvalSuiteRequest request) {
+        ResponseEntity<ApiResponse<AgentEvalSuiteGateArtifact>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return evalSuiteCatalogService.gate(suiteId, request)
+            .map(response -> ResponseEntity.ok(ApiResponse.ok(response)))
+            .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.fail("未知的 Agent eval suite: " + suiteId)));
+    }
+
     private <T> ResponseEntity<ApiResponse<T>> requireAdmin() {
         Optional<AgentPrincipal> currentUser = principalResolver.current();
         if (currentUser.isEmpty() || !currentUser.get().isAuthenticated()) {

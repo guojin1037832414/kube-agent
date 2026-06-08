@@ -1,0 +1,73 @@
+{
+  "schemaVersion": "kube-agent-recovery-sha256.v1",
+  "generatedAt": "2026-06-08T23:26:01.0005480Z",
+  "milestone": "M5.36-1",
+  "title": "Agent eval CI gate artifact",
+  "branch": "codex/m521-29-top-agent-mission",
+  "files": [
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "47afe7bcfe3fc57953edd99b0b57744a56ba407125398acf35201518a7e9b3e7"
+    },
+    {
+      "path": "docs/PROJECT_MISSION_AND_MEMORY.md",
+      "sha256": "debbffa25e8956643d6885ca9303cd20855f423396d03bc7fb9149b1adc398c1"
+    },
+    {
+      "path": "docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+      "sha256": "cd20bab71d536a8db91202e0aa0425e45cfdcfb8265e9e981dedde441bce5241"
+    },
+    {
+      "path": "docs/tech-stack/BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+      "sha256": "686629ff60565b7169201e79b13c3900628fba96bab19769762f11a557c8f78d"
+    },
+    {
+      "path": "src/main/java/com/atlas/observability/AgentEvalSuiteGateArtifact.java",
+      "sha256": "513aff46c59e4219af73aa17ef4ac83ed60bb6c704d8427355b46d1c4aa07311"
+    },
+    {
+      "path": "src/main/java/com/atlas/observability/AgentEvalSuiteCatalogService.java",
+      "sha256": "a0299b060954458d63012fa5c54635ecd2cf10b908b48204b7aca2b8bd9e1a29"
+    },
+    {
+      "path": "src/main/java/com/atlas/observability/ObservabilityController.java",
+      "sha256": "9e995ee9b8cc4c6a442041ca5ff484ce9515166e40d5689610ade3335cd90afb"
+    },
+    {
+      "path": "src/test/java/com/atlas/observability/AgentEvalSuiteCatalogServiceTest.java",
+      "sha256": "cc907d58145f05aafa8a75e1b9db6a62448ca1d61f0a0f12903d91ac8c2be426"
+    },
+    {
+      "path": "src/test/java/com/atlas/observability/ObservabilityControllerTest.java",
+      "sha256": "90b8f405322cb4ba31003ba0b3bba2fca433db7325abffa223ee7f38f526db70"
+    },
+    {
+      "path": "src/test/java/com/atlas/observability/ObservabilityControllerSecurityContractTest.java",
+      "sha256": "b371c67dfceda155d818fb7cbf918f10de91e42bd27c2f2045f99097fea9226b"
+    },
+    {
+      "path": "src/test/java/com/atlas/auth/AgentSecurityConfigWebMvcTest.java",
+      "sha256": "95fb80f45a5fbc00de352d80f8d712e8c930f81c54e8ac7b207a661fa04ecaa9"
+    },
+    {
+      "path": "codex-memory/kube-agent/current/CHANGELOG.md",
+      "sha256": "47afe7bcfe3fc57953edd99b0b57744a56ba407125398acf35201518a7e9b3e7"
+    },
+    {
+      "path": "codex-memory/kube-agent/current/docs_PROJECT_MISSION_AND_MEMORY.md",
+      "sha256": "debbffa25e8956643d6885ca9303cd20855f423396d03bc7fb9149b1adc398c1"
+    },
+    {
+      "path": "codex-memory/kube-agent/current/docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+      "sha256": "cd20bab71d536a8db91202e0aa0425e45cfdcfb8265e9e981dedde441bce5241"
+    },
+    {
+      "path": "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+      "sha256": "686629ff60565b7169201e79b13c3900628fba96bab19769762f11a557c8f78d"
+    },
+    {
+      "path": "codex-memory/kube-agent/current/RECOVERY_STATUS.md",
+      "sha256": "bdfb95753b46c26a32374f0ced715c8ef40b18df6141af2cf7f091350d671d72"
+    }
+  ]
+}

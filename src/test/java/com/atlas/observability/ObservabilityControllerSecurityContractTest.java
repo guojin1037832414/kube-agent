@@ -40,6 +40,7 @@ class ObservabilityControllerSecurityContractTest {
         assertThat(source).contains("@PostMapping(\"/eval/suite\")");
         assertThat(source).contains("@GetMapping(\"/eval/suites\")");
         assertThat(source).contains("@PostMapping(\"/eval/suites/{suiteId}/run\")");
+        assertThat(source).contains("@PostMapping(\"/eval/suites/{suiteId}/gate\")");
         assertThat(source).contains("public ResponseEntity<ApiResponse<Map<String, Object>>> auditIndex()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentAuditQueryResponse>> auditByAuditId(@PathVariable String auditId)");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentAuditQueryResponse>> auditByTraceId(@PathVariable String traceId,");
@@ -48,7 +49,8 @@ class ObservabilityControllerSecurityContractTest {
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentEvalSuiteResponse>> evalSuite(@RequestBody(required = false) AgentEvalSuiteRequest request)");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentEvalSuiteCatalogResponse>> evalSuites()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentEvalSuiteRunResponse>> runEvalSuite(@PathVariable String suiteId,");
+        assertThat(source).contains("public ResponseEntity<ApiResponse<AgentEvalSuiteGateArtifact>> evalSuiteGate(@PathVariable String suiteId,");
         assertThat(source.split("@PreAuthorize\\(\"hasAnyRole\\('ADMIN', 'SYS_ADMIN'\\)\"\\)", -1).length - 1)
-            .isGreaterThanOrEqualTo(9);
+            .isGreaterThanOrEqualTo(10);
     }
 }

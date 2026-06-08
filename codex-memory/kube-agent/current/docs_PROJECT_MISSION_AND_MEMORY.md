@@ -10,7 +10,32 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.35-1
+## Latest Phase 1 Core Memory - M5.36-1
+
+M5.36-1 turns named eval suites into compact machine-readable CI / release gate artifacts.
+
+Delivered:
+
+- Added `AgentEvalSuiteGateArtifact`.
+- Added `AgentEvalSuiteCatalogService#gate(...)`.
+- Added admin-only `POST /api/agent/observability/eval/suites/{suiteId}/gate`.
+- The gate artifact contains suite identity, verdict, required and observed scores, case counts, warning/failure counts, failed/warning/skipped trace anchors, policy metadata, and privacy proof.
+- The artifact intentionally does not embed per-trace reports or replay timelines, so CI logs and release metadata stay compact.
+
+Security boundary:
+
+- The gate artifact remains admin-only, deterministic, redacted-only, non-executing, `llmUsed=false`, `externalCalls=false`, `toolExecution=false`, and `kubeManagerCalls=false`.
+- It does not call LLMs, kube-manager, external services, or Tools.
+- It preserves trace ids only as evidence anchors for later admin drill-down through replay/eval endpoints.
+- NIM / HPC / Slurm / BCM remain Phase 2 paused scope.
+
+Learning point: CI should not consume a giant human debugging object. A top-tier Agent separates human diagnostics from machine gates: full replay/eval reports are for admin drill-down, while compact gate artifacts are for automated pass/fail decisions, audit trails, and release workflow integration.
+
+Latest verified command:
+
+- `mvn -q "-Dtest=AgentEvalSuiteCatalogServiceTest,AgentEvalReportServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+## Previous Phase 1 Core Memory - M5.35-1
 
 M5.35-1 turns eval suites from an ad-hoc traceIds API into a named, discoverable catalog that CI, frontend workbench, and multi-expert review can share.
 

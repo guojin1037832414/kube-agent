@@ -587,4 +587,82 @@ class ObservabilityControllerTest {
             .contains("aud_eval_named_suite", "trc_eval_named_suite", "<protected>")
             .doesNotContain("conv-sensitive", "user-sensitive", "org-sensitive", "secret-token-value", "/api/org-sensitive");
     }
+
+    @Test
+    void evalSuiteGate_shouldRequireAdminUserAndRejectUnknownSuite() {
+        AgentEvalSuiteRequest request = new AgentEvalSuiteRequest(java.util.List.of("trc_missing"), 10, 80, true);
+        ResponseEntity<ApiResponse<AgentEvalSuiteGateArtifact>> anonymous =
+            controller.evalSuiteGate("release-gate-strict", request);
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentEvalSuiteGateArtifact>> missing =
+            controller.evalSuiteGate("missing-suite", request);
+
+        assertThat(missing.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(missing.getBody()).isNotNull();
+        assertThat(missing.getBody().isSuccess()).isFalse();
+    }
+
+    @Test
+    void evalSuiteGate_shouldReturnCompactRedactedCiArtifact() {
+        auditRecorder.record(new com.atlas.audit.AgentAuditEvent(
+            "aud_eval_gate",
+            java.time.Instant.parse("2026-06-09T00:00:00Z"),
+            "trc_eval_gate",
+            "conv-sensitive",
+            "user-sensitive",
+            "org-sensitive",
+            "intent",
+            "tool",
+            com.atlas.tool.execution.SafeToolExecutionSource.REACT_ENGINE,
+            "GET",
+            java.util.List.of("/api/org-sensitive/pod?token=secret-token-value"),
+            com.atlas.tool.annotation.AtlasToolMapping.OperationType.READ,
+            false,
+            com.atlas.audit.AgentAuditOutcome.SUCCESS,
+            true,
+            true,
+            "ok token=secret-token-value",
+            java.util.Map.of("count", 1, "keys", java.util.List.of(java.util.Map.of(
+                "name", "token",
+                "protected", true,
+                "type", "string",
+                "present", true
+            )))
+        ));
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentEvalSuiteGateArtifact>> response = controller.evalSuiteGate(
+            "release-gate-strict",
+            new AgentEvalSuiteRequest(java.util.List.of("trc_eval_gate"), null, null, null)
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        AgentEvalSuiteGateArtifact artifact = response.getBody().getData();
+        assertThat(artifact.schemaVersion()).isEqualTo("agent-eval-suite-gate.v1");
+        assertThat(artifact.suiteId()).isEqualTo("release-gate-strict");
+        assertThat(artifact.pass()).isTrue();
+        assertThat(artifact.requiredMinimumScore()).isEqualTo(90);
+        assertThat(artifact.gatePolicy())
+            .containsEntry("artifactOnly", true)
+            .containsEntry("embeddedReports", false)
+            .containsEntry("embeddedReplay", false);
+        assertThat(artifact.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("llmUsed", false)
+            .containsEntry("externalCalls", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("kubeManagerCalls", false);
+        String bodyText = artifact.toString();
+        assertThat(bodyText)
+            .contains("trc_eval_gate")
+            .doesNotContain("conv-sensitive", "user-sensitive", "org-sensitive", "secret-token-value", "/api/org-sensitive")
+            .doesNotContain("reports=", "replay=");
+    }
 }

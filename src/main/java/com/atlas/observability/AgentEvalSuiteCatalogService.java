@@ -40,6 +40,11 @@ public class AgentEvalSuiteCatalogService {
             .map(definition -> run(definition, request));
     }
 
+    public Optional<AgentEvalSuiteGateArtifact> gate(String suiteId, AgentEvalSuiteRequest request) {
+        return run(suiteId, request)
+            .map(AgentEvalSuiteGateArtifact::from);
+    }
+
     private AgentEvalSuiteRunResponse run(AgentEvalSuiteDefinition definition, AgentEvalSuiteRequest request) {
         AgentEvalSuiteRequest safeRequest = request != null
             ? request

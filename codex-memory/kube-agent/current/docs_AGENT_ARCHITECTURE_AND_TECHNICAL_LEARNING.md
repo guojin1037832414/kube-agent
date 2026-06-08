@@ -205,6 +205,35 @@ AgentEvalReportService.evaluateSuite(...)
 
 学习重点：命名 eval suite 是 Agent 工程从“手工调试”走向“产品化质量门禁”的标志。真正先进的 eval 不是让另一个 LLM 做主观打分，而是把证据、规则、默认策略、失败语义和隐私边界全部变成可测试、可恢复、可教学的后端契约。
 
+## 2026-06-09 M5.36-1 Eval CI Gate Artifact
+
+M5.36-1 把命名 suite 再推进一步：从“可发现、可运行”升级为“可被 CI / release workflow 直接消费”。这一步新增的是 compact gate artifact，而不是另一个完整诊断报告。
+
+```text
+CI / Release Workflow
+    |
+    | POST /api/agent/observability/eval/suites/{suiteId}/gate
+    | { traceIds, limit?, minimumScore?, failOnWarnings? }
+    v
+AgentEvalSuiteCatalogService.gate(...)
+    |
+    |-- run named suite through deterministic evaluateSuite(...)
+    |-- compact summary only
+    |-- no embedded reports
+    |-- no embedded replay
+    v
+AgentEvalSuiteGateArtifact
+```
+
+关键设计：
+- `AgentEvalSuiteRunResponse` 适合管理员和前端工作台下钻，里面可以带完整 suite report。
+- `AgentEvalSuiteGateArtifact` 适合 CI / release gate，只包含 verdict、分数、case 数、失败/警告 trace 锚点、policy 和 privacy proof。
+- gate artifact 明确标记 `artifactOnly=true`、`embeddedReports=false`、`embeddedReplay=false`。
+- 自动化流程如果失败，只拿 traceId 再去调用 admin-only replay/eval 接口下钻，而不是把完整诊断对象塞进 CI 日志。
+- 安全边界继续保持 `redactedOnly=true`、`deterministic=true`、`llmUsed=false`、`externalCalls=false`、`toolExecution=false`、`kubeManagerCalls=false`。
+
+学习重点：顶级 Agent 的 eval 要区分“人看的诊断对象”和“机器消费的门禁对象”。前者追求可解释和可下钻，后者追求稳定、紧凑、可归档、可阻断发布。把这两类对象拆开，是把 Agent eval 从演示能力推向工程质量门禁的关键一步。
+
 ## 项目定位
 
 `kube-agent` 不只是把 `kube-manager` / `vue-kube-manager` 的功能包成一个 Agent。它的目标是建设一个顶级 Kubernetes / Cloud / HPC Agent，并且把建设过程本身变成可学习、可复盘、可继续演进的教材。

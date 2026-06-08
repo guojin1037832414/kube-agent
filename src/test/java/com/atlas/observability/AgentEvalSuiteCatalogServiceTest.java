@@ -87,6 +87,47 @@ class AgentEvalSuiteCatalogServiceTest {
             .containsEntry("kubeManagerCalls", false);
     }
 
+    @Test
+    void gate_shouldReturnCompactCiArtifactWithoutEmbeddedReportsOrReplay() {
+        InMemoryAgentAuditRecorder recorder = new InMemoryAgentAuditRecorder();
+        recorder.record(event("aud_gate", "trc_gate", AtlasToolMapping.OperationType.READ));
+        AgentEvalSuiteCatalogService service = service(recorder);
+
+        AgentEvalSuiteGateArtifact artifact = service.gate(
+            "release-gate-strict",
+            new AgentEvalSuiteRequest(List.of("trc_gate"), null, null, null)
+        ).orElseThrow();
+
+        assertThat(artifact.schemaVersion()).isEqualTo("agent-eval-suite-gate.v1");
+        assertThat(artifact.suiteId()).isEqualTo("release-gate-strict");
+        assertThat(artifact.gateVerdict()).isEqualTo("PASS");
+        assertThat(artifact.pass()).isTrue();
+        assertThat(artifact.requiredMinimumScore()).isEqualTo(90);
+        assertThat(artifact.observedMinimumScore()).isEqualTo(100);
+        assertThat(artifact.observedAverageScore()).isEqualTo(100.0);
+        assertThat(artifact.requestedCases()).isEqualTo(1);
+        assertThat(artifact.evaluatedCases()).isEqualTo(1);
+        assertThat(artifact.traceIds()).containsExactly("trc_gate");
+        assertThat(artifact.failedTraceIds()).isEmpty();
+        assertThat(artifact.warningTraceIds()).isEmpty();
+        assertThat(artifact.gatePolicy())
+            .containsEntry("artifactOnly", true)
+            .containsEntry("embeddedReports", false)
+            .containsEntry("embeddedReplay", false)
+            .containsEntry("suiteId", "release-gate-strict");
+        assertThat(artifact.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("deterministic", true)
+            .containsEntry("llmUsed", false)
+            .containsEntry("externalCalls", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("kubeManagerCalls", false);
+        assertThat(artifact.toString())
+            .contains("trc_gate")
+            .doesNotContain("conv-sensitive", "user-sensitive", "org-sensitive", "secret-token-value", "/api/org-sensitive")
+            .doesNotContain("reports=", "replay=");
+    }
+
     private AgentEvalSuiteCatalogService service(InMemoryAgentAuditRecorder recorder) {
         AgentEvalReportService evalReportService = new AgentEvalReportService(new AgentReplayTimelineService(recorder));
         return new AgentEvalSuiteCatalogService(evalReportService);

@@ -6,6 +6,22 @@
 
 ---
 
+## [M5.36-1] - Agent eval CI gate artifact
+
+**Delivery**: Added a compact machine-readable named eval suite gate artifact for CI and release workflow consumers.
+**Changes**
+- Added `AgentEvalSuiteGateArtifact`.
+- Added `AgentEvalSuiteCatalogService#gate(...)`.
+- Added admin-only `POST /api/agent/observability/eval/suites/{suiteId}/gate`.
+- The gate artifact exposes suite id/title, verdict, required and observed scores, case counts, warning/failure counts, failed/warning/skipped trace anchors, policy metadata, and privacy proof.
+- The artifact intentionally omits embedded per-trace reports and replay timelines; humans can drill down through existing admin replay/eval endpoints when needed.
+**Verification**
+- `mvn -q "-Dtest=AgentEvalSuiteCatalogServiceTest,AgentEvalReportServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed.
+**Security**
+- The gate endpoint is protected by observability admin URL rules plus method-level `@PreAuthorize`.
+- The artifact remains deterministic, redacted-only, non-executing, `llmUsed=false`, `externalCalls=false`, `toolExecution=false`, and `kubeManagerCalls=false`.
+- This slice adds no kube-manager write/create/delete/state-changing behavior and does not reopen NIM/HPC/Slurm/BCM scope.
+
 ## [M5.35-1] - Named Agent eval suite catalog
 
 **Delivery**: Added discoverable named Agent eval suites and a named run entrypoint for future CI and frontend eval workbench integration.
