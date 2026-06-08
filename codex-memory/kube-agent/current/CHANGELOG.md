@@ -6,6 +6,22 @@
 
 ---
 
+## [M5.21-122] - NIM writer interface failure/test-double lists closed
+
+**Delivery**: Hardened durable audit writer interface spec failure and test-double proof-list validation.
+**Changes**
+- `NimCreateDurableAuditWriterInterfaceSpecSupport` now owns source-controlled helper lists for `failureContract.failureStatuses` and `testDoubleRules.forbiddenSuccessClaims`.
+- `NimCreateDurableAuditReceiptSchemaSupport` now requires both lists to exactly match those helpers before typed receipt schema planning can proceed.
+- Added a digest-consistent forged interface spec regression that appends future failure/test-double values, recomputes `interfaceSpecDigest`, and still expects rejection.
+**Verification**
+- `git diff --check` passed.
+- Targeted durable writer interface spec and receipt schema tests passed.
+- Full `mvn -q test` passed; full Maven degraded to L1 embedding mode after local `model.onnx` download timeout but exited 0.
+**Security**
+- This is interface spec failure/test-double proof-list hardening only; it does not open runtime writes, real audit writes, real readiness polling, or a real code release switch.
+- No real `8100`, real NIM service HTTP call, Authorization header sending, durable audit write, deployment POST, state-machine release binding implementation, durable executor release binding implementation, validation result signer, release decision signer, code release switch implementation, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-121] - NIM writer interface spec required lists closed
 
 **Delivery**: Hardened durable audit writer interface spec request/response proof-list validation.

@@ -1,0 +1,47 @@
+﻿{
+    "project":  "kube-agent",
+    "wave":  "M5.21-122",
+    "title":  "NIM writer interface failure/test-double lists closed",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "head":  "52bdcaab7bbdfbbe449f4288d6f0ecd5b77d7c39",
+    "recoveryHome":  "codex-memory/kube-agent/current",
+    "pushed":  true,
+    "generatedAt":  "2026-06-08T14:43:00+08:00",
+    "files":  [
+                  {
+                      "source":  "CHANGELOG.md",
+                      "savedAs":  "CHANGELOG.md",
+                      "sha256":  "2AA919D0176B5B23067E2871D923F9CAE031BE663D27C57AA5D045527FE42F13"
+                  },
+                  {
+                      "source":  "docs\\M5_21_WAVE_INDEX_20260606.md",
+                      "savedAs":  "docs_M5_21_WAVE_INDEX_20260606.md",
+                      "sha256":  "5FF53AB44D33E49AD08BEC39A478343D8AB53EA6AFBF7558E5BD53D80E4A885F"
+                  },
+                  {
+                      "source":  "docs\\PROJECT_MISSION_AND_MEMORY.md",
+                      "savedAs":  "docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "14D0465AB6624AEAFE59BDD4F6175BEEB005AF2CBB64055F7C36A1C4CB55B03B"
+                  },
+                  {
+                      "source":  "docs\\SESSION_PROGRESS_20260606_M521_29.md",
+                      "savedAs":  "docs_SESSION_PROGRESS_20260606_M521_29.md",
+                      "sha256":  "014032E819E068912F2D9ABD7D3DC4B242F4F73680D0460091CEE17F6EF97A44"
+                  },
+                  {
+                      "source":  "docs\\v3.1\\DEVELOPMENT_GUIDE.md",
+                      "savedAs":  "docs_v3.1_DEVELOPMENT_GUIDE.md",
+                      "sha256":  "A430133CDF4E8988DBD4D6DBFECEDF015E0594A5B6EB1B17FFD590035BAEFD7B"
+                  },
+                  {
+                      "source":  "docs\\M5_21_ONE_HUNDRED_TWENTY_SECOND_WAVE_NIM_WRITER_INTERFACE_FAILURE_TEST_DOUBLE_LISTS_CLOSED_AUDIT_20260608.md",
+                      "savedAs":  "docs_M5_21_ONE_HUNDRED_TWENTY_SECOND_WAVE_NIM_WRITER_INTERFACE_FAILURE_TEST_DOUBLE_LISTS_CLOSED_AUDIT_20260608.md",
+                      "sha256":  "FF93483CF27F2F4B1FCBC5248FA5D9D3F3ADAF8F43E00471DAAEFC4FD160F595"
+                  },
+                  {
+                      "source":  "codex-memory\\kube-agent\\current\\RECOVERY_STATUS.md",
+                      "savedAs":  "RECOVERY_STATUS.md",
+                      "sha256":  "26E4519EC44988BE524C39DA54218620D354ADDCCC7CB0C633EDD7378A7FFA11"
+                  }
+              ]
+}

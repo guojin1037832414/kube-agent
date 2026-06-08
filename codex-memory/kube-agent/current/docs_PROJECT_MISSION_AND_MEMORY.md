@@ -91,12 +91,26 @@ Current track:
 
 Recently completed:
 
-`M5.21-121 NIM writer interface spec required lists closed`
+`M5.21-122 NIM writer interface failure/test-double lists closed`
 
 Latest checkpoint:
 
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-122 implemented:
+  - Hardened `NimCreateDurableAuditWriterInterfaceSpecSupport` so `failureContract.failureStatuses` and `testDoubleRules.forbiddenSuccessClaims` are source-owned helper lists.
+  - Hardened `NimCreateDurableAuditReceiptSchemaSupport` so typed receipt schema planning rejects digest-consistent interface spec reports with extra failure status or test-double forbidden-claim values.
+  - Added a regression that appends fake future values, recomputes `interfaceSpecDigest`, and still expects `DURABLE_AUDIT_WRITER_INTERFACE_SPEC_REPORT_INVALID_FOR_RECEIPT_SCHEMA`.
+  - Added `docs/M5_21_ONE_HUNDRED_TWENTY_SECOND_WAVE_NIM_WRITER_INTERFACE_FAILURE_TEST_DOUBLE_LISTS_CLOSED_AUDIT_20260608.md`.
+  - Targeted verification passed:
+    - `git diff --check`
+    - `mvn -q "-Dtest=NimCreateDurableAuditWriterInterfaceSpecSupportTest,NimCreateDurableAuditReceiptSchemaSupportTest" test`
+  - Final verification passed:
+    - `mvn -q test`
+    - Full Maven note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - Security invariant: no real `8100`, no real NIM service HTTP call, no Authorization header sending, no durable audit write, no deployment POST, no runtime write behavior, no state-machine release binding implementation, no durable executor release binding implementation, no validation result signer, no release decision signer, no code release switch implementation, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Recommended next slice: continue to receipt-schema-owned failure/test-double proof lists, or consider exact operation-method row validation if future side-effect method names become release criteria.
+- Previous checkpoint:
 - M5.21-121 implemented:
   - Hardened `NimCreateDurableAuditWriterInterfaceSpecSupport` so upstream `requestContract.requiredFields` and `responseContract.requiredFutureSuccessFields` are source-owned helper lists.
   - Hardened `NimCreateDurableAuditReceiptSchemaSupport` so typed receipt schema planning rejects digest-consistent interface spec reports with extra request/response proof slots.
