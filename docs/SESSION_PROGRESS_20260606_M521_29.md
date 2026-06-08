@@ -2232,6 +2232,33 @@
 - Teaching principle:
   - The project is also a teaching system for mastering Agent engineering.
   - Maintain `docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md` as the long-lived architecture and technical-learning map.
+- M5.21-133 implemented:
+  - `NimCreateDurableAuditReleaseDecisionContractSupport` now emits `sourceOrganizationId`, `sourceUserId`, and `sourceUsername` and exposes `releaseDecisionContractFromReport(...)` as the canonical producer-owned whole-contract helper.
+  - `NimCreateDurableAuditCodeReleaseSwitchContractSupport` now validates `releaseDecisionContract` with source digest/identity checks plus exact whole-contract equality, replacing partial nested map interpretation.
+  - Tests forge digest-consistent contract drift across top-level fields, `validationResultBinding`, `stateMachineBinding`, `durableExecutorBinding`, `allowPrerequisites`, `currentTemplate`, `failureContract`, `forbiddenShortcuts`, and future evidence fields; code switch still rejects them.
+  - Added `docs/M5_21_ONE_HUNDRED_THIRTY_THIRD_WAVE_NIM_RELEASE_DECISION_CONTRACT_MAPS_CLOSED_AUDIT_20260608.md`.
+  - Updated `docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md` with the lesson: hash self-consistency is not semantic authority.
+- Verification passed:
+  - `git diff --check`
+  - `mvn -q "-Dtest=NimCreateDurableAuditReleaseDecisionContractSupportTest,NimCreateDurableAuditCodeReleaseSwitchContractSupportTest" test`
+  - `mvn -q "-Dtest=NimCreateDurableAuditReleaseDecisionContractSupportTest,NimCreateDurableAuditCodeReleaseSwitchContractSupportTest,NimCreateStateMachineSupportTest,NimCreateDurableWriteExecutorSupportTest,NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupportTest" test`
+  - `mvn -q test`
+  - Full Maven note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+- HOLD:
+  - No real `8100` access.
+  - No real NIM service HTTP call.
+  - No Authorization header sending.
+  - No durable audit write, Elasticsearch write, `ISysLogService`, or `sys_log` write.
+  - No deployment `POST /api/{orgId}/deployment`.
+  - No state-machine release binding, durable executor release binding, validation result signer, release decision signer, code release switch implementation, or runtime write behavior.
+  - `nim_create` remains HOLD/mock-first.
+
+- Date: 2026-06-08 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- Recovery home: `codex-memory/kube-agent/current`.
+- Teaching principle:
+  - The project is also a teaching system for mastering Agent engineering.
+  - Maintain `docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md` as the long-lived architecture and technical-learning map.
 - M5.21-124 implemented:
   - `NimCreateDurableAuditReceiptValidationGateSupport` now owns closed helper lists for validation gate failure statuses and forbidden shortcuts.
   - `NimCreateDurableAuditValidationResultMigrationSupport` now requires exact equality for `validationPlan.failureContract.failureStatuses` and `validationPlan.forbiddenShortcuts`.

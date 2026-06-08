@@ -7,11 +7,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.function.Consumer;
 
 import static java.util.Map.entry;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -293,23 +295,110 @@ class NimCreateDurableAuditCodeReleaseSwitchContractSupportTest {
                 releaseDecisionContractReport(audit, principal)
             );
 
-        Map<String, Object> report = NimCreateDurableAuditCodeReleaseSwitchContractSupport.plan(
-            new NimCreateDurableAuditCodeReleaseSwitchContractSupport.CodeReleaseSwitchContractInput(
-                audit,
-                principal,
-                releaseDecisionReport,
-                Map.of()
-            )
+        assertRejectsDigestConsistentReleaseDecisionContractDrift(audit, principal, releaseDecisionReport);
+    }
+
+    @Test
+    void codeReleaseSwitch_shouldRejectDigestConsistentReleaseDecisionContractTopLevelExtraKey() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+        Map<String, Object> releaseDecisionReport = withDigestConsistentReleaseDecisionContractMutation(
+            releaseDecisionContractReport(audit, principal),
+            contract -> contract.put("futureShortcutAccepted", false)
         );
 
-        assertEquals(NimCreateDurableAuditCodeReleaseSwitchContractSupport.REJECTED_STATE,
-            report.get("switchState"));
-        assertEquals(false, report.get("inputAccepted"));
-        assertSwitchStatesRemainFalse(report);
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
-        assertHasBlocker(blockers,
-            "DURABLE_AUDIT_RELEASE_DECISION_CONTRACT_REPORT_INVALID_FOR_CODE_SWITCH");
+        assertRejectsDigestConsistentReleaseDecisionContractDrift(audit, principal, releaseDecisionReport);
+    }
+
+    @Test
+    void codeReleaseSwitch_shouldRejectDigestConsistentReleaseDecisionValidationResultBindingExtraKey() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+        Map<String, Object> releaseDecisionReport = withDigestConsistentReleaseDecisionContractMutation(
+            releaseDecisionContractReport(audit, principal),
+            contract -> objectMap(contract.get("validationResultBinding"))
+                .put("callerValidationResultCanSatisfyRelease", false)
+        );
+
+        assertRejectsDigestConsistentReleaseDecisionContractDrift(audit, principal, releaseDecisionReport);
+    }
+
+    @Test
+    void codeReleaseSwitch_shouldRejectDigestConsistentReleaseDecisionStateMachineBindingExtraKey() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+        Map<String, Object> releaseDecisionReport = withDigestConsistentReleaseDecisionContractMutation(
+            releaseDecisionContractReport(audit, principal),
+            contract -> objectMap(contract.get("stateMachineBinding"))
+                .put("fallbackToStateMachineAcceptedBooleanAllowed", false)
+        );
+
+        assertRejectsDigestConsistentReleaseDecisionContractDrift(audit, principal, releaseDecisionReport);
+    }
+
+    @Test
+    void codeReleaseSwitch_shouldRejectDigestConsistentReleaseDecisionDurableExecutorBindingExtraKey() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+        Map<String, Object> releaseDecisionReport = withDigestConsistentReleaseDecisionContractMutation(
+            releaseDecisionContractReport(audit, principal),
+            contract -> objectMap(contract.get("durableExecutorBinding"))
+                .put("executorSuccessCanBackfillReleaseEvidence", false)
+        );
+
+        assertRejectsDigestConsistentReleaseDecisionContractDrift(audit, principal, releaseDecisionReport);
+    }
+
+    @Test
+    void codeReleaseSwitch_shouldRejectDigestConsistentReleaseDecisionAllowPrerequisitesValueDrift() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+        Map<String, Object> releaseDecisionReport = withDigestConsistentReleaseDecisionContractMutation(
+            releaseDecisionContractReport(audit, principal),
+            contract -> objectMap(contract.get("allowPrerequisites"))
+                .put("currentContractSatisfiesPrerequisites", true)
+        );
+
+        assertRejectsDigestConsistentReleaseDecisionContractDrift(audit, principal, releaseDecisionReport);
+    }
+
+    @Test
+    void codeReleaseSwitch_shouldRejectDigestConsistentReleaseDecisionCurrentTemplateExtraKey() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+        Map<String, Object> releaseDecisionReport = withDigestConsistentReleaseDecisionContractMutation(
+            releaseDecisionContractReport(audit, principal),
+            contract -> objectMap(contract.get("currentTemplate"))
+                .put("writePermissionPreview", false)
+        );
+
+        assertRejectsDigestConsistentReleaseDecisionContractDrift(audit, principal, releaseDecisionReport);
+    }
+
+    @Test
+    void codeReleaseSwitch_shouldRejectDigestConsistentReleaseDecisionFailureContractExtraKey() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+        Map<String, Object> releaseDecisionReport = withDigestConsistentReleaseDecisionContractMutation(
+            releaseDecisionContractReport(audit, principal),
+            contract -> objectMap(contract.get("failureContract"))
+                .put("fallbackToDigestConsistentContractAllowed", false)
+        );
+
+        assertRejectsDigestConsistentReleaseDecisionContractDrift(audit, principal, releaseDecisionReport);
+    }
+
+    @Test
+    void codeReleaseSwitch_shouldRejectDigestConsistentReleaseDecisionForbiddenShortcutsListDrift() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+        Map<String, Object> releaseDecisionReport = withDigestConsistentReleaseDecisionContractMutation(
+            releaseDecisionContractReport(audit, principal),
+            contract -> objectList(contract.get("forbiddenShortcuts"))
+                .add("allowing code switch to accept release decision contract digest without exact binding maps")
+        );
+
+        assertRejectsDigestConsistentReleaseDecisionContractDrift(audit, principal, releaseDecisionReport);
     }
 
     @Test
@@ -483,20 +572,75 @@ class NimCreateDurableAuditCodeReleaseSwitchContractSupportTest {
     private Map<String, Object> withDigestConsistentReleaseDecisionExtraFutureEvidenceField(
         Map<String, Object> releaseDecisionReport
     ) {
+        return withDigestConsistentReleaseDecisionContractMutation(
+            releaseDecisionReport,
+            contract -> objectList(contract.get("requiredFutureEvidenceDigestFields"))
+                .add("forgedValidationEvidenceDigest")
+        );
+    }
+
+    private Map<String, Object> withDigestConsistentReleaseDecisionContractMutation(
+        Map<String, Object> releaseDecisionReport,
+        Consumer<Map<String, Object>> mutator
+    ) {
         Map<String, Object> forgedReport = new LinkedHashMap<>(releaseDecisionReport);
-        @SuppressWarnings("unchecked")
-        Map<String, Object> contract = new LinkedHashMap<>(
-            (Map<String, Object>) forgedReport.get("releaseDecisionContract")
-        );
-        @SuppressWarnings("unchecked")
-        List<String> requiredFields = new java.util.ArrayList<>(
-            (List<String>) contract.get("requiredFutureEvidenceDigestFields")
-        );
-        requiredFields.add("forgedReleaseDecisionFutureEvidenceDigest");
-        contract.put("requiredFutureEvidenceDigestFields", requiredFields);
+        Map<String, Object> contract = objectMap(deepMutableCopy(forgedReport.get("releaseDecisionContract")));
+        mutator.accept(contract);
         forgedReport.put("releaseDecisionContract", contract);
         forgedReport.put("releaseDecisionContractDigest", digestFor(contract));
         return forgedReport;
+    }
+
+    private void assertRejectsDigestConsistentReleaseDecisionContractDrift(Map<String, Object> audit,
+                                                                          Map<String, Object> principal,
+                                                                          Map<String, Object> releaseDecisionReport) {
+        Map<String, Object> report = NimCreateDurableAuditCodeReleaseSwitchContractSupport.plan(
+            new NimCreateDurableAuditCodeReleaseSwitchContractSupport.CodeReleaseSwitchContractInput(
+                audit,
+                principal,
+                releaseDecisionReport,
+                Map.of()
+            )
+        );
+
+        assertEquals(NimCreateDurableAuditCodeReleaseSwitchContractSupport.REJECTED_STATE,
+            report.get("switchState"));
+        assertEquals(false, report.get("inputAccepted"));
+        assertEquals(false, report.get("codeReleaseSwitchContractPrepared"));
+        assertSwitchStatesRemainFalse(report);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> contract = (Map<String, Object>) report.get("codeReleaseSwitchContract");
+        assertTrue(contract.isEmpty());
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+        assertHasBlocker(blockers,
+            "DURABLE_AUDIT_RELEASE_DECISION_CONTRACT_REPORT_INVALID_FOR_CODE_SWITCH");
+    }
+
+    private Object deepMutableCopy(Object value) {
+        if (value instanceof Map<?, ?> map) {
+            Map<String, Object> copy = new LinkedHashMap<>();
+            map.forEach((key, item) -> copy.put(String.valueOf(key), deepMutableCopy(item)));
+            return copy;
+        }
+        if (value instanceof List<?> list) {
+            List<Object> copy = new ArrayList<>();
+            for (Object item : list) {
+                copy.add(deepMutableCopy(item));
+            }
+            return copy;
+        }
+        return value;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> objectMap(Object value) {
+        return (Map<String, Object>) value;
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Object> objectList(Object value) {
+        return (List<Object>) value;
     }
 
     private Map<String, Object> validationResultContractReport(Map<String, Object> audit,

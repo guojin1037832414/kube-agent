@@ -415,121 +415,16 @@ final class NimCreateDurableAuditCodeReleaseSwitchContractSupport {
                                                         Map<String, Object> principal,
                                                         Map<String, Object> report,
                                                         Map<String, Object> contract) {
-        Map<String, Object> identity = objectMap(contract.get("trustedIdentityBinding"));
-        Map<String, Object> validationBinding = objectMap(contract.get("validationResultBinding"));
-        Map<String, Object> stateMachineBinding = objectMap(contract.get("stateMachineBinding"));
-        Map<String, Object> durableExecutorBinding = objectMap(contract.get("durableExecutorBinding"));
-        Map<String, Object> template = objectMap(contract.get("currentTemplate"));
-        Map<String, Object> prerequisites = objectMap(contract.get("allowPrerequisites"));
-        Map<String, Object> failure = objectMap(contract.get("failureContract"));
-        List<String> requiredFields = stringList(contract.get("requiredFutureEvidenceDigestFields"));
         return !contract.isEmpty()
-            && "SERVER_ISSUED_DURABLE_AUDIT_RELEASE_DECISION_REQUIRED".equals(
-                text(contract.get("contractBoundary")))
-            && NimCreateDurableAuditValidationResultMigrationSupport.FUTURE_RELEASE_DECISION.equals(
-                text(contract.get("type")))
-            && NimCreateDurableAuditValidationResultMigrationSupport.FUTURE_VALIDATION_RESULT.equals(
-                text(contract.get("dependsOn")))
-            && Boolean.TRUE.equals(contract.get("futureOnly"))
-            && Boolean.FALSE.equals(contract.get("instanceAllowedNow"))
-            && RELEASE_DENIED.equals(text(contract.get("currentDecision")))
-            && "ALLOW_WRITE_EXECUTION".equals(text(contract.get("requiredAllowDecision")))
-            && Boolean.TRUE.equals(contract.get("serverIssuedRequired"))
-            && Boolean.FALSE.equals(contract.get("callerProvidedReleaseDecisionAllowed"))
-            && text(report.get("sourceValidationResultContractDigest")).equals(
-                text(contract.get("sourceValidationResultContractDigest")))
-            && sourceDigestFieldsMatch(report, contract)
             && digestFor(auditContext).equals(text(contract.get("sourceAuditEventDigest")))
             && digestFor(principal).equals(text(contract.get("trustedPrincipalDigest")))
-            && NimCreateAuditWriterSupport.DIGEST_ALGORITHM.equals(text(contract.get("digestAlgorithm")))
-            && text(auditContext.get("organizationId")).equals(text(identity.get("organizationId")))
-            && text(auditContext.get("userId")).equals(text(identity.get("userId")))
-            && text(principal.get("username")).equals(text(identity.get("username")))
-            && "SERVER_SESSION_CONTEXT".equals(text(identity.get("source")))
-            && Boolean.TRUE.equals(identity.get("protectedFromCallerParams"))
-            && validationBindingValid(report, validationBinding)
-            && stateMachineBindingValid(stateMachineBinding)
-            && durableExecutorBindingValid(durableExecutorBinding)
-            && requiredFields.equals(requiredReleaseDecisionEvidenceFields())
-            && RELEASE_DENIED.equals(text(template.get("decision")))
-            && VALIDATION_NOT_RUN.equals(text(template.get("validationStatus")))
-            && Boolean.FALSE.equals(template.get("validationResultDigestVerified"))
-            && Boolean.FALSE.equals(template.get("validationResultContractDigestVerified"))
-            && Boolean.FALSE.equals(template.get("releaseDecisionDigestVerified"))
-            && Boolean.FALSE.equals(template.get("trustedPrincipalValidated"))
-            && Boolean.FALSE.equals(template.get("codeReleaseSwitchVerified"))
-            && Boolean.FALSE.equals(template.get("stateMachineReleaseBound"))
-            && Boolean.FALSE.equals(template.get("durableExecutorReleaseBound"))
-            && Boolean.FALSE.equals(template.get("releaseEligible"))
-            && Boolean.FALSE.equals(template.get("writePermitted"))
-            && Boolean.FALSE.equals(template.get("writeExecutionAllowed"))
-            && Boolean.FALSE.equals(template.get("realHttpExecutionAllowed"))
-            && Boolean.TRUE.equals(prerequisites.get("codeReleaseSwitchRequired"))
-            && Boolean.FALSE.equals(prerequisites.get("currentContractSatisfiesPrerequisites"))
-            && Boolean.TRUE.equals(failure.get("failClosed"))
-            && Boolean.FALSE.equals(failure.get("fallbackToValidationResultContractAllowed"))
-            && Boolean.FALSE.equals(failure.get("fallbackToCallerReleaseDecisionAllowed"))
-            && Boolean.FALSE.equals(failure.get("fallbackToLegacyAuditReceiptFlagAllowed"))
-            && Boolean.FALSE.equals(failure.get("fallbackToStateMachineAcceptedBooleanAllowed"))
-            && Boolean.FALSE.equals(failure.get("fallbackToExecutorSuccessAllowed"));
-    }
-
-    private static boolean validationBindingValid(Map<String, Object> report, Map<String, Object> binding) {
-        return text(report.get("sourceValidationResultContractDigest")).equals(
-                text(binding.get("sourceValidationResultContractDigest")))
-            && sourceDigestFieldsMatch(report, binding)
-            && text(report.get("trustedPrincipalDigest")).equals(text(binding.get("trustedPrincipalDigest")))
-            && Boolean.TRUE.equals(binding.get("futureValidationResultDigestRequired"))
-            && Boolean.TRUE.equals(binding.get("mustBindValidationResultContractDigest"))
-            && Boolean.TRUE.equals(binding.get("mustBindServerIssuedValidationResultDigest"))
-            && Boolean.TRUE.equals(binding.get("mustBindValidationPassStatus"))
-            && Boolean.TRUE.equals(binding.get("mustBindAllTypedReceiptAckDigests"))
-            && Boolean.TRUE.equals(binding.get("mustBindTrustedPrincipalDigest"))
-            && Boolean.TRUE.equals(binding.get("mustBindAuditEventDigest"))
-            && Boolean.FALSE.equals(binding.get("callerValidationResultAllowed"));
-    }
-
-    private static boolean stateMachineBindingValid(Map<String, Object> binding) {
-        return NimCreateDurableAuditReleaseDecisionGateSupport.FUTURE_STATE_MACHINE_GATE.equals(
-                text(binding.get("futureStateMachineGate")))
-            && Boolean.TRUE.equals(binding.get("futureReleaseDecisionDigestRequired"))
-            && Boolean.TRUE.equals(binding.get("futureValidationResultDigestRequired"))
-            && Boolean.TRUE.equals(binding.get("futureCodeReleaseSwitchRequired"))
-            && Boolean.FALSE.equals(binding.get("fallbackToAuditReceiptReleaseEligibleAllowed"))
-            && Boolean.FALSE.equals(binding.get("fallbackToValidationResultContractAllowed"))
-            && Boolean.FALSE.equals(binding.get("writePermittedCanBeTrueNow"));
-    }
-
-    private static boolean durableExecutorBindingValid(Map<String, Object> binding) {
-        return NimCreateDurableAuditReleaseDecisionGateSupport.FUTURE_DURABLE_EXECUTOR_GATE.equals(
-                text(binding.get("futureDurableExecutorGate")))
-            && Boolean.TRUE.equals(binding.get("futureReleaseDecisionDigestRequired"))
-            && Boolean.TRUE.equals(binding.get("futureValidationResultDigestRequired"))
-            && Boolean.TRUE.equals(binding.get("futureBodyDigestRequired"))
-            && Boolean.TRUE.equals(binding.get("futureRequestSpecDigestRequired"))
-            && Boolean.TRUE.equals(binding.get("futureHandoffDigestRequired"))
-            && Boolean.TRUE.equals(binding.get("futureAuditReceiptIdRequired"))
-            && Boolean.TRUE.equals(binding.get("futureServerDerivedIdempotencyKeyRequired"))
-            && Boolean.TRUE.equals(binding.get("mustRecheckImmediatelyBeforePost"))
-            && Boolean.FALSE.equals(binding.get("fallbackToHandoffOnlyAllowed"))
-            && Boolean.FALSE.equals(binding.get("fallbackToRequestSpecOnlyAllowed"))
-            && Boolean.FALSE.equals(binding.get("writeExecutionAllowedNow"));
-    }
-
-    private static List<String> requiredReleaseDecisionEvidenceFields() {
-        return List.of(
-            "validationResultContractDigest",
-            "validationResultDigest",
-            "releaseDecisionDigest",
-            "codeReleaseSwitchDigest",
-            "bodyDigest",
-            "requestSpecDigest",
-            "handoffDigest",
-            "auditReceiptId",
-            "sourceAuditEventDigest",
-            "trustedPrincipalDigest",
-            "serverDerivedIdempotencyKey"
-        );
+            && text(auditContext.get("organizationId")).equals(text(report.get("sourceOrganizationId")))
+            && text(auditContext.get("userId")).equals(text(report.get("sourceUserId")))
+            && text(principal.get("username")).equals(text(report.get("sourceUsername")))
+            && sourceDigestFieldsMatch(report, contract)
+            && contract.equals(
+                NimCreateDurableAuditReleaseDecisionContractSupport
+                    .releaseDecisionContractFromReport(report));
     }
 
     private static boolean sourceDigestFieldsAreHex(Map<String, Object> report) {
@@ -917,17 +812,6 @@ final class NimCreateDurableAuditCodeReleaseSwitchContractSupport {
             if (!map.isEmpty()) {
                 items.add(map);
             }
-        }
-        return items;
-    }
-
-    private static List<String> stringList(Object value) {
-        if (!(value instanceof List<?> list)) {
-            return List.of();
-        }
-        List<String> items = new ArrayList<>();
-        for (Object item : list) {
-            items.add(text(item));
         }
         return items;
     }

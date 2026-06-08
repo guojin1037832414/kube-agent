@@ -115,6 +115,9 @@ final class NimCreateDurableAuditReleaseDecisionContractSupport {
         result.put("realStorageTouched", false);
         result.put("validationStatus", VALIDATION_NOT_RUN);
         result.put("releaseDecision", RELEASE_DENIED);
+        result.put("sourceOrganizationId", text(auditContext.get("organizationId")));
+        result.put("sourceUserId", text(auditContext.get("userId")));
+        result.put("sourceUsername", text(principal.get("username")));
         result.put("sourceAuditEventDigest", digestFor(auditContext));
         result.put("trustedPrincipalDigest", digestFor(principal));
         result.put("sourceValidationResultContractDigest",
@@ -419,6 +422,38 @@ final class NimCreateDurableAuditReleaseDecisionContractSupport {
     private static Map<String, Object> releaseDecisionContract(Map<String, Object> auditContext,
                                                                Map<String, Object> principal,
                                                                Map<String, Object> validationResultReport) {
+        return releaseDecisionContractForDigests(
+            text(validationResultReport.get("validationResultContractDigest")),
+            validationResultReport,
+            digestFor(auditContext),
+            digestFor(principal),
+            text(auditContext.get("organizationId")),
+            text(auditContext.get("userId")),
+            text(principal.get("username"))
+        );
+    }
+
+    static Map<String, Object> releaseDecisionContractFromReport(Map<String, Object> releaseDecisionReport) {
+        return releaseDecisionContractForDigests(
+            text(releaseDecisionReport.get("sourceValidationResultContractDigest")),
+            releaseDecisionReport,
+            text(releaseDecisionReport.get("sourceAuditEventDigest")),
+            text(releaseDecisionReport.get("trustedPrincipalDigest")),
+            text(releaseDecisionReport.get("sourceOrganizationId")),
+            text(releaseDecisionReport.get("sourceUserId")),
+            text(releaseDecisionReport.get("sourceUsername"))
+        );
+    }
+
+    private static Map<String, Object> releaseDecisionContractForDigests(
+        String sourceValidationResultContractDigest,
+        Map<String, Object> sourceDigests,
+        String sourceAuditEventDigest,
+        String trustedPrincipalDigest,
+        String organizationId,
+        String userId,
+        String username
+    ) {
         Map<String, Object> contract = new LinkedHashMap<>();
         contract.put("contractBoundary", "SERVER_ISSUED_DURABLE_AUDIT_RELEASE_DECISION_REQUIRED");
         contract.put("type", NimCreateDurableAuditValidationResultMigrationSupport.FUTURE_RELEASE_DECISION);
@@ -429,20 +464,23 @@ final class NimCreateDurableAuditReleaseDecisionContractSupport {
         contract.put("requiredAllowDecision", "ALLOW_WRITE_EXECUTION");
         contract.put("serverIssuedRequired", true);
         contract.put("callerProvidedReleaseDecisionAllowed", false);
-        contract.put("sourceValidationResultContractDigest",
-            text(validationResultReport.get("validationResultContractDigest")));
-        putSourceDigests(contract, validationResultReport);
-        contract.put("sourceAuditEventDigest", digestFor(auditContext));
-        contract.put("trustedPrincipalDigest", digestFor(principal));
+        contract.put("sourceValidationResultContractDigest", sourceValidationResultContractDigest);
+        putSourceDigests(contract, sourceDigests);
+        contract.put("sourceAuditEventDigest", sourceAuditEventDigest);
+        contract.put("trustedPrincipalDigest", trustedPrincipalDigest);
         contract.put("digestAlgorithm", NimCreateAuditWriterSupport.DIGEST_ALGORITHM);
         contract.put("trustedIdentityBinding", Map.of(
-            "organizationId", text(auditContext.get("organizationId")),
-            "userId", text(auditContext.get("userId")),
-            "username", text(principal.get("username")),
+            "organizationId", organizationId,
+            "userId", userId,
+            "username", username,
             "source", "SERVER_SESSION_CONTEXT",
             "protectedFromCallerParams", true
         ));
-        contract.put("validationResultBinding", validationResultBinding(validationResultReport));
+        contract.put("validationResultBinding", validationResultBindingForDigests(
+            sourceValidationResultContractDigest,
+            sourceDigests,
+            trustedPrincipalDigest
+        ));
         contract.put("stateMachineBinding", stateMachineBinding());
         contract.put("durableExecutorBinding", durableExecutorBinding());
         contract.put("requiredFutureEvidenceDigestFields", requiredFutureReleaseDecisionDigestFields());
@@ -471,12 +509,15 @@ final class NimCreateDurableAuditReleaseDecisionContractSupport {
         }
     }
 
-    private static Map<String, Object> validationResultBinding(Map<String, Object> validationResultReport) {
+    private static Map<String, Object> validationResultBindingForDigests(
+        String sourceValidationResultContractDigest,
+        Map<String, Object> sourceDigests,
+        String trustedPrincipalDigest
+    ) {
         Map<String, Object> binding = new LinkedHashMap<>();
-        binding.put("sourceValidationResultContractDigest",
-            text(validationResultReport.get("validationResultContractDigest")));
-        putSourceDigests(binding, validationResultReport);
-        binding.put("trustedPrincipalDigest", text(validationResultReport.get("trustedPrincipalDigest")));
+        binding.put("sourceValidationResultContractDigest", sourceValidationResultContractDigest);
+        putSourceDigests(binding, sourceDigests);
+        binding.put("trustedPrincipalDigest", trustedPrincipalDigest);
         binding.put("futureValidationResultDigestRequired", true);
         binding.put("mustBindValidationResultContractDigest", true);
         binding.put("mustBindServerIssuedValidationResultDigest", true);
