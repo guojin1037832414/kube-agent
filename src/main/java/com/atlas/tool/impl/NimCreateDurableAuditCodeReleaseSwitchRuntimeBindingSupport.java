@@ -403,7 +403,7 @@ final class NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport {
             && releaseDecisionBindingValid(report, releaseDecisionBinding)
             && stateMachineBindingValid(report, stateMachineBinding)
             && durableExecutorBindingValid(durableExecutorBinding)
-            && requiredFields.containsAll(requiredSwitchEvidenceFields())
+            && requiredFields.equals(requiredSwitchEvidenceFields())
             && SWITCH_LOCKED.equals(text(template.get("switchState")))
             && Boolean.FALSE.equals(template.get("codeReleaseSwitchDigestVerified"))
             && Boolean.FALSE.equals(template.get("stateMachineReleaseBound"))
@@ -511,6 +511,8 @@ final class NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport {
             "requestSpecDigest",
             "handoffDigest",
             "auditReceiptId",
+            "sourceAuditEventDigest",
+            "trustedPrincipalDigest",
             "serverDerivedIdempotencyKey"
         );
     }

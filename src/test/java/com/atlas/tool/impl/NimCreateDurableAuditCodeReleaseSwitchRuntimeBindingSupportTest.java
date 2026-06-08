@@ -278,6 +278,35 @@ class NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupportTest {
     }
 
     @Test
+    void runtimeBinding_shouldRejectDigestConsistentSwitchContractExtraFutureEvidenceField() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+        Map<String, Object> switchReport = withDigestConsistentSwitchContractExtraFutureEvidenceField(
+            codeReleaseSwitchContractReport(audit, principal)
+        );
+
+        Map<String, Object> report = NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport.plan(
+            new NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport
+                .CodeReleaseSwitchRuntimeBindingInput(
+                audit,
+                principal,
+                switchReport,
+                Map.of(),
+                Map.of()
+            )
+        );
+
+        assertEquals(NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport.REJECTED_STATE,
+            report.get("bindingState"));
+        assertEquals(false, report.get("inputAccepted"));
+        assertRuntimeStatesRemainFalse(report);
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+        assertHasBlocker(blockers,
+            "CODE_RELEASE_SWITCH_CONTRACT_REPORT_INVALID_FOR_RUNTIME_BINDING");
+    }
+
+    @Test
     void runtimeBinding_shouldRejectForgedRuntimeReleaseEvidence() {
         Map<String, Object> audit = completeAuditContext();
         Map<String, Object> principal = trustedPrincipalSnapshot();
@@ -464,6 +493,25 @@ class NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupportTest {
         );
         releaseDecisionBinding.put("sourceReleaseDecisionContractDigest", releaseDecisionContractDigest);
         contract.put("releaseDecisionBinding", releaseDecisionBinding);
+        forgedReport.put("codeReleaseSwitchContract", contract);
+        forgedReport.put("codeReleaseSwitchContractDigest", digestFor(contract));
+        return forgedReport;
+    }
+
+    private Map<String, Object> withDigestConsistentSwitchContractExtraFutureEvidenceField(
+        Map<String, Object> switchReport
+    ) {
+        Map<String, Object> forgedReport = new LinkedHashMap<>(switchReport);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> contract = new LinkedHashMap<>(
+            (Map<String, Object>) forgedReport.get("codeReleaseSwitchContract")
+        );
+        @SuppressWarnings("unchecked")
+        List<String> requiredFields = new java.util.ArrayList<>(
+            (List<String>) contract.get("requiredFutureEvidenceDigestFields")
+        );
+        requiredFields.add("forgedSwitchFutureEvidenceDigest");
+        contract.put("requiredFutureEvidenceDigestFields", requiredFields);
         forgedReport.put("codeReleaseSwitchContract", contract);
         forgedReport.put("codeReleaseSwitchContractDigest", digestFor(contract));
         return forgedReport;

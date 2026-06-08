@@ -569,3 +569,10 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Runtime source guard validation now requires M5.21-73 `requiredFutureRuntimeEvidenceDigestFields` to exactly match the source-owned runtime evidence list.
 - Extra future evidence field names are rejected even when `runtimeBindingContractDigest` is recomputed.
 - Learning distinction: future release proof slots are part of the safety protocol. They cannot be expanded by caller JSON just because a digest was recomputed.
+
+### M5.21-115 switch contract required fields closed list note
+
+- Runtime binding validation now requires M5.21-72 `codeReleaseSwitchContract.requiredFutureEvidenceDigestFields` to exactly match the source-owned switch evidence list.
+- The runtime binding consumer list now includes the producer-owned `sourceAuditEventDigest` and `trustedPrincipalDigest` fields before applying exact equality.
+- Extra future switch evidence field names are rejected even when `codeReleaseSwitchContractDigest` is recomputed.
+- Learning distinction: producer and consumer proof taxonomies must evolve together. A digest-consistent contract with extra future slots is still unsafe unless reviewed code owns those slots.
