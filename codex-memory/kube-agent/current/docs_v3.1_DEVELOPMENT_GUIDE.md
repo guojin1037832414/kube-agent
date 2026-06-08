@@ -613,3 +613,10 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - New project memory and recovery files should be written to `codex-memory/kube-agent/current` inside the workspace.
 - The previous `H:\codex重要文件\kube-agent` folder remains useful as historical backup, but it is no longer the primary write target.
 - Learning distinction: recovery memory is part of Agent engineering. Keeping it inside the workspace makes continuation reproducible without relying on external writable roots or approval popups.
+
+### M5.21-121 writer interface spec required lists closed note
+
+- Durable audit writer interface spec generation now exposes source-owned closed lists for request required fields and response future success fields.
+- Typed receipt schema validation requires exact equality for both upstream interface spec lists.
+- Extra future request/response proof fields are rejected even when `interfaceSpecDigest` is recomputed.
+- Learning distinction: downstream consumers must validate the full upstream proof protocol they depend on. Reading only the currently interesting fields lets unreviewed future proof slots become latent authority.

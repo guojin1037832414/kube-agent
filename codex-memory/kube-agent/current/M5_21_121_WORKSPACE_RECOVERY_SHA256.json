@@ -1,0 +1,47 @@
+﻿{
+    "project":  "kube-agent",
+    "wave":  "M5.21-121",
+    "title":  "NIM writer interface spec required lists closed",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "head":  "f0e9942693e28869b2ac8e3939b28fbd8b36cf06",
+    "recoveryHome":  "codex-memory/kube-agent/current",
+    "pushed":  true,
+    "generatedAt":  "2026-06-08T14:35:00+08:00",
+    "files":  [
+                  {
+                      "source":  "CHANGELOG.md",
+                      "savedAs":  "CHANGELOG.md",
+                      "sha256":  "46102CBD18F95067C77C3708CA2963D3E0B6046ADB3F912DF9345D06CA5A22EB"
+                  },
+                  {
+                      "source":  "docs\\M5_21_WAVE_INDEX_20260606.md",
+                      "savedAs":  "docs_M5_21_WAVE_INDEX_20260606.md",
+                      "sha256":  "857263769A9666E5E19D99EE4764D2719B01B6B3FAF8A5A6B340750E59BD37AA"
+                  },
+                  {
+                      "source":  "docs\\PROJECT_MISSION_AND_MEMORY.md",
+                      "savedAs":  "docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "A6789EE85595F550CB09F2BAADAE3D7B166F9853CD766D742493DBE0F7942152"
+                  },
+                  {
+                      "source":  "docs\\SESSION_PROGRESS_20260606_M521_29.md",
+                      "savedAs":  "docs_SESSION_PROGRESS_20260606_M521_29.md",
+                      "sha256":  "D8B8D97F10FED443CEAB5BBC354A8E9D6DA4AE747E2488741A35479349CDCBC6"
+                  },
+                  {
+                      "source":  "docs\\v3.1\\DEVELOPMENT_GUIDE.md",
+                      "savedAs":  "docs_v3.1_DEVELOPMENT_GUIDE.md",
+                      "sha256":  "FD635634D629D51341D39B909C12D2DA1DA4BE1B1148C71A6C27A3D0D4E089AA"
+                  },
+                  {
+                      "source":  "docs\\M5_21_ONE_HUNDRED_TWENTY_FIRST_WAVE_NIM_WRITER_INTERFACE_SPEC_REQUIRED_LISTS_CLOSED_AUDIT_20260608.md",
+                      "savedAs":  "docs_M5_21_ONE_HUNDRED_TWENTY_FIRST_WAVE_NIM_WRITER_INTERFACE_SPEC_REQUIRED_LISTS_CLOSED_AUDIT_20260608.md",
+                      "sha256":  "8452E5537CADEE1E40076D798AF667DC08641E0751E9553666F2399EF8023860"
+                  },
+                  {
+                      "source":  "codex-memory\\kube-agent\\current\\RECOVERY_STATUS.md",
+                      "savedAs":  "RECOVERY_STATUS.md",
+                      "sha256":  "5CE7D8A5DE711A4CAC294F6F93F472549E9CB03ABFE93BD6D88F6F293800CE15"
+                  }
+              ]
+}
