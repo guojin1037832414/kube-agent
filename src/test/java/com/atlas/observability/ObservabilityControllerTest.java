@@ -1,6 +1,7 @@
 package com.atlas.observability;
 
 import com.atlas.audit.InMemoryAgentAuditRecorder;
+import com.atlas.auth.AgentPrincipalResolver;
 import com.atlas.auth.UserPermissionContext;
 import com.atlas.dto.ApiResponse;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -8,6 +9,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.Map;
 import java.util.Set;
@@ -24,11 +27,12 @@ class ObservabilityControllerTest {
     private final ObservabilityController controller = new ObservabilityController(
         new AgentMetricsService(new SimpleMeterRegistry()),
         auditRecorder,
-        userPermissionContext
+        new AgentPrincipalResolver(userPermissionContext)
     );
 
     @AfterEach
     void tearDown() {
+        SecurityContextHolder.clearContext();
         userPermissionContext.unbind();
     }
 
@@ -54,7 +58,20 @@ class ObservabilityControllerTest {
     }
 
     @Test
-    void snapshot_shouldAllowAdminUser() {
+    void snapshot_shouldAllowAdminUserFromSecurityContext() {
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<Map<String, Object>>> response = controller.snapshot();
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().isSuccess()).isTrue();
+        assertThat(response.getBody().getData()).containsKeys("metrics", "audit");
+    }
+
+    @Test
+    void snapshot_shouldAllowLegacyAdminFallback() {
         userPermissionContext.onLogin("admin-token", "boss", "sys_admin", Set.of());
         userPermissionContext.bind("admin-token", "100002");
 

@@ -1,7 +1,8 @@
 package com.atlas.observability;
 
 import com.atlas.audit.AgentAuditSnapshotProvider;
-import com.atlas.auth.UserPermissionContext;
+import com.atlas.auth.AgentPrincipal;
+import com.atlas.auth.AgentPrincipalResolver;
 import com.atlas.dto.ApiResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,21 +28,21 @@ public class ObservabilityController {
 
     private final AgentMetricsService metricsService;
     private final AgentAuditSnapshotProvider auditSnapshotProvider;
-    private final UserPermissionContext userPermissionContext;
+    private final AgentPrincipalResolver principalResolver;
 
     public ObservabilityController(AgentMetricsService metricsService,
                                    AgentAuditSnapshotProvider auditSnapshotProvider,
-                                   UserPermissionContext userPermissionContext) {
+                                   AgentPrincipalResolver principalResolver) {
         this.metricsService = metricsService;
         this.auditSnapshotProvider = auditSnapshotProvider;
-        this.userPermissionContext = userPermissionContext;
+        this.principalResolver = principalResolver;
     }
 
     /** 查询 Agent 指标快照。 */
     @GetMapping("/snapshot")
     public ResponseEntity<ApiResponse<Map<String, Object>>> snapshot() {
-        Optional<UserPermissionContext.UserPermission> currentUser = userPermissionContext.current();
-        if (currentUser.isEmpty()) {
+        Optional<AgentPrincipal> currentUser = principalResolver.current();
+        if (currentUser.isEmpty() || !currentUser.get().isAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(ApiResponse.fail("未登录或会话已过期"));
         }

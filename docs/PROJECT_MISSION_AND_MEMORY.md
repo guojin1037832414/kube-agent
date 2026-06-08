@@ -93,10 +93,30 @@ Current track:
 
 Recently completed:
 
-`M5.29-1 Spring Security identity bridge`
+`M5.29-2 unified Agent principal resolver`
 
 Latest checkpoint:
 
+- Date: 2026-06-09 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.29-2 implemented:
+  - Added `AgentPrincipal` and `AgentPrincipalResolver`.
+  - `AgentPrincipalResolver` prioritizes Spring Security `Authentication`, ignores anonymous auth, and falls back to `UserPermissionContext` during migration.
+  - `ObservabilityController` now uses the unified resolver instead of directly reading ThreadLocal permissions.
+  - Added `AgentPrincipalResolverTest`.
+  - Extended `ObservabilityControllerTest` for SecurityContext admin and legacy fallback coverage.
+- Verification:
+  - `mvn -q "-Dtest=AgentPrincipalResolverTest,ObservabilityControllerTest,AuthTokenFilterSecurityContextTest,AgentSecurityConfigWebMvcTest" test`
+- Scope boundary:
+  - Phase 1 generic Agent Core security-mainline migration only.
+  - No NIM/HPC/Slurm/BCM Phase 2 implementation was resumed.
+  - No real write/create/delete/state-changing kube-manager call was opened.
+- Security result:
+  - Controller, audit, and future method-security code now have a single current principal abstraction to consume, reducing `SecurityContext` / `UserPermissionContext` drift.
+- Next technical follow-up:
+  - Migrate more controller guards to `AgentPrincipalResolver`, define explicit endpoint authorization for remaining `/api/agent/**`, and feed audit actor projection from `AgentPrincipal`.
+
+- Previous checkpoint:
 - Date: 2026-06-09 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
 - M5.29-1 implemented:

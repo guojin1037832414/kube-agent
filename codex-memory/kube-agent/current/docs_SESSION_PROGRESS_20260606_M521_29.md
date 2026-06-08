@@ -6,7 +6,7 @@
 - Primary workspace recovery folder: `F:\gitProject\kube-agent\codex-memory\kube-agent\current`
 - Historical external memory folder: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.29-1, Spring Security identity bridge.
+- Current latest wave: M5.29-2, unified Agent principal resolver.
 - Phase update: HPC / Slurm / BCM and NIM are paused and moved to Phase 2 by user direction.
 - Phase 1 focus: deliver the top-tier Agent core through generic manager Agent foundations, safe read/query validation, non-HPC/NIM manager function coverage, Tool metadata quality, HITL/audit execution boundary, traceability, recovery, evaluation, teaching documentation, and vue-kube-manager workflow integration.
 - Phase boundary clarification: moving NIM / HPC / Slurm / BCM to Phase 2 postpones specialist domain plugins only; it does not reduce Phase 1 standards.
@@ -55,6 +55,24 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.29-2 unified Agent principal resolver is implemented:
+  - Added `src/main/java/com/atlas/auth/AgentPrincipal.java`.
+  - Added `src/main/java/com/atlas/auth/AgentPrincipalResolver.java`.
+  - `AgentPrincipalResolver` resolves the current actor from Spring Security `Authentication` first, ignores anonymous authentication, and falls back to `UserPermissionContext` for legacy Tool/SSE/kube-manager HTTP compatibility.
+  - `AgentPrincipal` normalizes role, authorities, permissions, organizationId and source, and centralizes `isAdmin()` / `isAuthenticated()` decisions.
+  - `ObservabilityController` now depends on `AgentPrincipalResolver` instead of directly reading `UserPermissionContext`.
+  - Added `src/test/java/com/atlas/auth/AgentPrincipalResolverTest.java`.
+  - Extended `ObservabilityControllerTest` to cover SecurityContext admin access and legacy admin fallback.
+  - Verification passed:
+    - `mvn -q "-Dtest=AgentPrincipalResolverTest,ObservabilityControllerTest,AuthTokenFilterSecurityContextTest,AgentSecurityConfigWebMvcTest" test`
+  - Security result:
+    - The first controller guard now uses the same principal abstraction that future audit actor extraction and method-level authorization can reuse.
+  - Next Phase 1 technical slices:
+    - migrate remaining controller guards to `AgentPrincipalResolver`;
+    - introduce explicit authorization for more `/api/agent/**` endpoints;
+    - wire audit actor projection from `AgentPrincipal`;
+    - continue durable audit / frontend replay DTO / RAG Memory / read-only MCP / Agent eval.
 
 - M5.29-1 Spring Security identity bridge is implemented:
   - Added `spring-boot-starter-security`.

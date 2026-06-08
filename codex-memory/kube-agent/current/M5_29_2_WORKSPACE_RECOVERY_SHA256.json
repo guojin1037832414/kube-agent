@@ -1,0 +1,116 @@
+﻿{
+    "project":  "kube-agent",
+    "milestone":  "M5.29-2",
+    "title":  "unified Agent principal resolver",
+    "generatedAt":  "2026-06-09T02:26:05+08:00",
+    "workspace":  "F:\\gitProject\\kube-agent",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "verification":  [
+                         "mvn -q \"-Dtest=AgentPrincipalResolverTest,ObservabilityControllerTest,AuthTokenFilterSecurityContextTest,AgentSecurityConfigWebMvcTest\" test",
+                         "mvn -q -DskipTests validate",
+                         "mvn -q test",
+                         "git diff --check"
+                     ],
+    "files":  [
+                  {
+                      "path":  "src/main/java/com/atlas/auth/AgentPrincipal.java",
+                      "sha256":  "0e3ad4c7e4ff00f0d572f584431bd520462761332d9cd9b798a094141a0f137e",
+                      "bytes":  2358
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/auth/AgentPrincipalResolver.java",
+                      "sha256":  "b205c16e0855df1d0af684d2bd66cbd29baee8bf59142fab30db8b10a840d582",
+                      "bytes":  3990
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/ObservabilityController.java",
+                      "sha256":  "275151827338abddd30697c8d8a6b17a99110aac3d38b87f98994f70e2981f5b",
+                      "bytes":  2393
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/auth/AgentPrincipalResolverTest.java",
+                      "sha256":  "106563fd316772134d1e59db219aa7cb593726220e47408f988f21c6c29e73ec",
+                      "bytes":  3894
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/ObservabilityControllerTest.java",
+                      "sha256":  "a1d71bdc560bc3877790ee4b0c27b3812eb18060fa9ebf8c02879e1f70450f3d",
+                      "bytes":  3364
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/auth/AuthTokenFilterSecurityContextTest.java",
+                      "sha256":  "3bc4d4d7c22721e2eef5e625526404c67f9edc5802969340c59ffe3e12e0fcbe",
+                      "bytes":  5013
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/auth/AgentSecurityConfigWebMvcTest.java",
+                      "sha256":  "14b5a74d0d9d98c519c06d2bf1e921f52fdccb0675636bce011265bf5f3a06fc",
+                      "bytes":  3841
+                  },
+                  {
+                      "path":  "CHANGELOG.md",
+                      "sha256":  "c7cb170c6356cad46fcb0b3432df77a3c3ba044ff4b62d18df1fcca4679af009",
+                      "bytes":  272997
+                  },
+                  {
+                      "path":  "docs/PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "0d252323c126b2e06d010b0f8063a426b3b0161adae097ca35f03fce997a55ef",
+                      "bytes":  296809
+                  },
+                  {
+                      "path":  "docs/SESSION_PROGRESS_20260606_M521_29.md",
+                      "sha256":  "11d8ef55c0e6c85e7a814752a8b65dffe81ff8caa98db56d15dd15cf8a878d38",
+                      "bytes":  297388
+                  },
+                  {
+                      "path":  "docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "b06b64ba8c86ba0e163c4ba542f388c8d2f4821fe838b46dde513a4e11862247",
+                      "bytes":  62880
+                  },
+                  {
+                      "path":  "docs/tech-stack/BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "11cfa8518d728a586ce9a48f28334d4b4058f4f8727b2a9a773ed2c2c5df0d63",
+                      "bytes":  16682
+                  },
+                  {
+                      "path":  "docs/tech-stack/BACKEND_JAVA_TECH_STACK_AUDIT_20260608.md",
+                      "sha256":  "1b29884429c11824d28a66a7f456e0ac1442034c7a2fa3912c4dae11a6133aad",
+                      "bytes":  12097
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/RECOVERY_STATUS.md",
+                      "sha256":  "6fd6752bfb6dcfa4f37c8c3d22e2a322da93dbda231549e7f5595d17cad0a2f7",
+                      "bytes":  13188
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/CHANGELOG.md",
+                      "sha256":  "c7cb170c6356cad46fcb0b3432df77a3c3ba044ff4b62d18df1fcca4679af009",
+                      "bytes":  272997
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "0d252323c126b2e06d010b0f8063a426b3b0161adae097ca35f03fce997a55ef",
+                      "bytes":  296809
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_SESSION_PROGRESS_20260606_M521_29.md",
+                      "sha256":  "11d8ef55c0e6c85e7a814752a8b65dffe81ff8caa98db56d15dd15cf8a878d38",
+                      "bytes":  297388
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "b06b64ba8c86ba0e163c4ba542f388c8d2f4821fe838b46dde513a4e11862247",
+                      "bytes":  62880
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "11cfa8518d728a586ce9a48f28334d4b4058f4f8727b2a9a773ed2c2c5df0d63",
+                      "bytes":  16682
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_JAVA_TECH_STACK_AUDIT_20260608.md",
+                      "sha256":  "1b29884429c11824d28a66a7f456e0ac1442034c7a2fa3912c4dae11a6133aad",
+                      "bytes":  12097
+                  }
+              ]
+}

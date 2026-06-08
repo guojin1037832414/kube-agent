@@ -444,6 +444,25 @@ M5.29-1 把安全入口从“普通 Servlet Filter + ThreadLocal”推进到 Spr
 
 学习重点：安全主线化不是“加一个 starter”这么简单。顶级 Agent 的身份事实要逐步统一到标准 `SecurityContext`，但执行层仍必须保留 `SafeToolExecutor`、Tool 风险元数据、HITL、trace 和 audit。Spring Security 负责 Web 入口授权，Agent 执行边界负责证明“这个 Tool 为什么可以执行”。
 
+### M5.29-2 统一 Principal Resolver
+
+M5.29-1 解决了 Web 入口“能不能把 Bearer session 转成 Spring Security Authentication”的问题。M5.29-2 继续解决第二个问题：业务代码到底应该从哪里读取“当前用户是谁”。
+
+如果 controller 继续直接读 `UserPermissionContext`，而 Security filter 读 `SecurityContext`，系统就会长期存在双轨身份事实。短期看只是重复代码，长期会变成安全风险：某个入口可能认为用户是 admin，另一个入口却认为用户未登录；审计 actor、method security、diagnostic controller 也会各自实现一套判断。
+
+本轮新增两个小抽象：
+
+- `AgentPrincipal`：当前安全主体快照，包含 username、role、authorities、permissions、organizationId 和 source；
+- `AgentPrincipalResolver`：统一解析入口，优先读取真实 Spring Security `Authentication`，忽略 anonymous authentication，再回落到 `UserPermissionContext`。
+
+`ObservabilityController` 已经迁移到 resolver。这样它既能接受 M5.29-1 产生的标准 `Authentication`，也能在旧链路还没完全迁移时继续兼容 ThreadLocal admin。测试覆盖了三种关键情况：
+
+- SecurityContext 有 `ROLE_SYS_ADMIN` 时优先使用 Spring Security 主体；
+- SecurityContext 是 anonymous 或为空时，回落到 legacy ThreadLocal；
+- 两边都没有可信主体时，诊断入口返回未登录。
+
+学习重点：顶级 Agent 的安全迁移不是把旧代码全删掉，而是先建立“唯一读取事实的门”。只要 controller、audit、method security 都通过 `AgentPrincipalResolver` 读取当前用户，后续把底层来源从 ThreadLocal 切到 SecurityContext 就是内部迁移，而不是业务到处改。
+
 ### Fail-Closed
 
 当证据缺失、来源不可信、格式不完整、digest 不匹配、词表扩展未审查时，系统必须拒绝，而不是降级为“试试看”。

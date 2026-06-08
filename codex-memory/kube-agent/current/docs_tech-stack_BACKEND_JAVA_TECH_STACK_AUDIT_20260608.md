@@ -66,10 +66,11 @@ M5.28-1 完成后，后端主语言审计结论进一步明确：`Java + Spring`
 - `CycloneDX SBOM`、`JaCoCo`、`SpotBugs`、`ArchUnit`、`Testcontainers` 已进入工程底座；
 - Spring AI / Spring AI Alibaba 被用于模型、ToolCallback 和 Graph/Agent 编排接入，但不承担最终安全授权。
 - M5.29-1 已接入 Spring Security `SecurityFilterChain`，把 kube-manager Bearer session 桥接为标准 `Authentication`，并保护 observability/actuator 诊断面。
+- M5.29-2 已新增 `AgentPrincipalResolver`，让 controller / audit / method security 后续可以统一读取当前主体，而不是各自读 `SecurityContext` 或 ThreadLocal。
 
 仍需要升级的部分：
 
-- Spring Security 主线仍是第一阶段：M5.29-1 已完成身份桥接和诊断面保护，但普通 Agent API 仍为兼容迁移保留 `permitAll`，后续需要 endpoint/method authorization、统一 principal resolver 和 controller guard 去重；
+- Spring Security 主线仍是第一阶段：M5.29-1 已完成身份桥接和诊断面保护，M5.29-2 已完成统一 principal resolver；普通 Agent API 仍为兼容迁移保留 `permitAll`，后续需要 endpoint/method authorization 和 controller guard 去重；
 - 审计仍是 `InMemoryAgentAuditRecorder` 诊断实现，`durableRetention=false`，不能替代可查询、可保留、可权限控制的持久审计；
 - SpotBugs / SBOM / coverage / secret scan / Agent eval 还没有全部变成失败即阻断的硬门禁；
 - Resilience4j read retry 还应继续细分异常和状态码：网络异常、超时、429、502、503、504 可考虑重试，400、401、403、404 不应重试；

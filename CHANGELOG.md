@@ -6,6 +6,21 @@
 
 ---
 
+## [M5.29-2] - Unified Agent principal resolver
+
+**Delivery**: Added a single `AgentPrincipalResolver` so controllers and future audit/method-security code can read the current actor from Spring Security first, then safely fall back to legacy `UserPermissionContext` during incremental migration.
+**Changes**
+- Added `AgentPrincipal` as a normalized current-user snapshot with role, authorities, permissions, organizationId, source, and admin checks.
+- Added `AgentPrincipalResolver`, prioritizing real Spring Security `Authentication` and ignoring anonymous authentication before falling back to `UserPermissionContext`.
+- Migrated `ObservabilityController` from direct ThreadLocal lookup to `AgentPrincipalResolver`.
+- Extended observability tests to cover SecurityContext admin access and legacy admin fallback.
+- Added `AgentPrincipalResolverTest` for SecurityContext priority, legacy fallback, anonymous-auth fallback, role normalization, and empty-principal behavior.
+**Verification**
+- `mvn -q "-Dtest=AgentPrincipalResolverTest,ObservabilityControllerTest,AuthTokenFilterSecurityContextTest,AgentSecurityConfigWebMvcTest" test` passed.
+**Security**
+- The first controller guard now reads the same principal abstraction that future endpoint/method authorization and audit actor extraction can reuse.
+- This reduces dual-track drift between `SecurityContext` and `UserPermissionContext` while preserving compatibility for Tool/SSE/kube-manager HTTP paths.
+
 ## [M5.29-1] - Spring Security identity bridge
 
 **Delivery**: Introduced the first Spring Security mainline bridge so kube-agent can start moving identity and endpoint authorization from ad-hoc ThreadLocal checks toward standard `SecurityFilterChain` / `Authentication` without breaking existing Agent chat and SSE flows.
