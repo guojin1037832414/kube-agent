@@ -59,10 +59,17 @@ class NimCreateDurableAuditReceiptValidationProbeResultBindingSupportTest {
             report.get("sourceReceiptSchemaDigest"));
         assertEquals(validationGateReport.get("validationPlanDigest"),
             report.get("sourceValidationPlanDigest"));
+        assertEquals(audit.get("organizationId"), report.get("sourceOrganizationId"));
+        assertEquals(audit.get("userId"), report.get("sourceUserId"));
+        assertEquals(principal.get("username"), report.get("sourceUsername"));
         assertTrue(report.get("bindingPlanDigest").toString().matches("[a-f0-9]{64}"));
 
         @SuppressWarnings("unchecked")
         Map<String, Object> plan = (Map<String, Object>) report.get("bindingPlan");
+        assertEquals(
+            NimCreateDurableAuditReceiptValidationProbeResultBindingSupport.bindingPlanFromReport(report),
+            plan
+        );
         assertEquals("SERVER_SIDE_RECEIPT_VALIDATION_REQUIRES_STORAGE_PROBE_RESULT",
             plan.get("bindingBoundary"));
         assertEquals(probeResultReport.get("probeResultContractDigest"),

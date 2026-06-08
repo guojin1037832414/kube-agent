@@ -13,6 +13,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.function.Consumer;
 
 import static java.util.Map.entry;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -301,6 +302,97 @@ class NimCreateDurableAuditValidationResultProbeBindingMigrationSupportTest {
     }
 
     @Test
+    void migration_shouldRejectDigestConsistentProbeBindingPlanTopLevelExtraKey() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+        Map<String, Object> forgedBindingReport = withDigestConsistentBindingPlanMutation(
+            probeBindingReport(audit, principal),
+            bindingPlan -> bindingPlan.put("futureCompatibilityAccepted", false)
+        );
+
+        assertRejectsDigestConsistentProbeBindingPlanDrift(audit, principal, forgedBindingReport);
+    }
+
+    @Test
+    void migration_shouldRejectDigestConsistentProbeBindingPlanIdentityExtraKey() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+        Map<String, Object> forgedBindingReport = withDigestConsistentBindingPlanMutation(
+            probeBindingReport(audit, principal),
+            bindingPlan -> objectMap(bindingPlan.get("trustedIdentityBinding"))
+                .put("callerIdentityCanSatisfyBinding", false)
+        );
+
+        assertRejectsDigestConsistentProbeBindingPlanDrift(audit, principal, forgedBindingReport);
+    }
+
+    @Test
+    void migration_shouldRejectDigestConsistentProbeBindingPlanEvidenceExtraKey() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+        Map<String, Object> forgedBindingReport = withDigestConsistentBindingPlanMutation(
+            probeBindingReport(audit, principal),
+            bindingPlan -> objectMap(bindingPlan.get("requiredBindingEvidence"))
+                .put("legacyReceiptCanSatisfyBinding", false)
+        );
+
+        assertRejectsDigestConsistentProbeBindingPlanDrift(audit, principal, forgedBindingReport);
+    }
+
+    @Test
+    void migration_shouldRejectDigestConsistentProbeBindingPlanNestedEvidenceExtraKey() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+        Map<String, Object> forgedBindingReport = withDigestConsistentBindingPlanMutation(
+            probeBindingReport(audit, principal),
+            bindingPlan -> objectMap(objectMap(bindingPlan.get("requiredBindingEvidence"))
+                .get("storageProbeResultContract"))
+                .put("probeResultDigestAloneCanSatisfyBinding", false)
+        );
+
+        assertRejectsDigestConsistentProbeBindingPlanDrift(audit, principal, forgedBindingReport);
+    }
+
+    @Test
+    void migration_shouldRejectDigestConsistentProbeBindingPlanTemplateExtraKey() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+        Map<String, Object> forgedBindingReport = withDigestConsistentBindingPlanMutation(
+            probeBindingReport(audit, principal),
+            bindingPlan -> objectMap(bindingPlan.get("currentDecisionTemplate"))
+                .put("probeBindingPreviewAvailable", false)
+        );
+
+        assertRejectsDigestConsistentProbeBindingPlanDrift(audit, principal, forgedBindingReport);
+    }
+
+    @Test
+    void migration_shouldRejectDigestConsistentProbeBindingPlanFailureContractExtraKey() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+        Map<String, Object> forgedBindingReport = withDigestConsistentBindingPlanMutation(
+            probeBindingReport(audit, principal),
+            bindingPlan -> objectMap(bindingPlan.get("failureContract"))
+                .put("fallbackToDigestConsistentBindingPlanAllowed", false)
+        );
+
+        assertRejectsDigestConsistentProbeBindingPlanDrift(audit, principal, forgedBindingReport);
+    }
+
+    @Test
+    void migration_shouldRejectDigestConsistentProbeBindingPlanForbiddenShortcutsListDrift() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+        Map<String, Object> forgedBindingReport = withDigestConsistentBindingPlanMutation(
+            probeBindingReport(audit, principal),
+            bindingPlan -> objectList(bindingPlan.get("forbiddenShortcuts"))
+                .add("accepting bindingPlanDigest without exact binding plan maps")
+        );
+
+        assertRejectsDigestConsistentProbeBindingPlanDrift(audit, principal, forgedBindingReport);
+    }
+
+    @Test
     void migration_shouldRejectForgedProbeBindingSuccessClaims() {
         Map<String, Object> audit = completeAuditContext();
         Map<String, Object> principal = trustedPrincipalSnapshot();
@@ -566,6 +658,70 @@ class NimCreateDurableAuditValidationResultProbeBindingMigrationSupportTest {
                 principal
             )
         );
+    }
+
+    private Map<String, Object> withDigestConsistentBindingPlanMutation(Map<String, Object> bindingReport,
+                                                                       Consumer<Map<String, Object>> mutator) {
+        Map<String, Object> forgedReport = new LinkedHashMap<>(bindingReport);
+        Map<String, Object> bindingPlan = objectMap(deepMutableCopy(forgedReport.get("bindingPlan")));
+        mutator.accept(bindingPlan);
+        forgedReport.put("bindingPlan", bindingPlan);
+        forgedReport.put("bindingPlanDigest", sha256(bindingPlan));
+        return forgedReport;
+    }
+
+    private void assertRejectsDigestConsistentProbeBindingPlanDrift(Map<String, Object> audit,
+                                                                   Map<String, Object> principal,
+                                                                   Map<String, Object> bindingReport) {
+        Map<String, Object> report = NimCreateDurableAuditValidationResultProbeBindingMigrationSupport.plan(
+            new NimCreateDurableAuditValidationResultProbeBindingMigrationSupport
+                .ValidationResultProbeBindingMigrationInput(
+                audit,
+                principal,
+                bindingReport,
+                validationResultMigrationReport(audit, principal),
+                Map.of()
+            )
+        );
+
+        assertEquals(NimCreateDurableAuditValidationResultProbeBindingMigrationSupport.REJECTED_STATE,
+            report.get("migrationState"));
+        assertEquals(false, report.get("inputAccepted"));
+        assertEquals(false, report.get("enhancedMigrationPlanPrepared"));
+        assertSuccessStatesRemainFalse(report);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> plan = (Map<String, Object>) report.get("enhancedMigrationPlan");
+        assertTrue(plan.isEmpty());
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+        assertHasBlocker(blockers,
+            "RECEIPT_VALIDATION_PROBE_RESULT_BINDING_REPORT_INVALID_FOR_MIGRATION");
+    }
+
+    private Object deepMutableCopy(Object value) {
+        if (value instanceof Map<?, ?> map) {
+            Map<String, Object> copy = new LinkedHashMap<>();
+            map.forEach((key, item) -> copy.put(String.valueOf(key), deepMutableCopy(item)));
+            return copy;
+        }
+        if (value instanceof List<?> list) {
+            List<Object> copy = new ArrayList<>();
+            for (Object item : list) {
+                copy.add(deepMutableCopy(item));
+            }
+            return copy;
+        }
+        return value;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> objectMap(Object value) {
+        return (Map<String, Object>) value;
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Object> objectList(Object value) {
+        return (List<Object>) value;
     }
 
     private Map<String, Object> withDigestConsistentExtraMigrationPlanListField(Map<String, Object> migrationReport,

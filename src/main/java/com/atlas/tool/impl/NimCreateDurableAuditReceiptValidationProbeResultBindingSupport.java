@@ -113,6 +113,9 @@ final class NimCreateDurableAuditReceiptValidationProbeResultBindingSupport {
         result.put("writePermitted", false);
         result.put("writeExecutionAllowed", false);
         result.put("realHttpExecutionAllowed", false);
+        result.put("sourceOrganizationId", text(auditContext.get("organizationId")));
+        result.put("sourceUserId", text(auditContext.get("userId")));
+        result.put("sourceUsername", text(principal.get("username")));
         result.put("durableReceiptCanBeIssued", false);
         result.put("durableReceiptIssued", false);
         result.put("durable", false);
@@ -493,30 +496,47 @@ final class NimCreateDurableAuditReceiptValidationProbeResultBindingSupport {
                                                    Map<String, Object> principal,
                                                    Map<String, Object> probeResultReport,
                                                    Map<String, Object> validationGateReport) {
+        return bindingPlanForDigests(
+            bindingSourceDigests(probeResultReport, validationGateReport),
+            digestFor(auditContext),
+            text(auditContext.get("organizationId")),
+            text(auditContext.get("userId")),
+            text(principal.get("username"))
+        );
+    }
+
+    static Map<String, Object> bindingPlanFromReport(Map<String, Object> bindingReport) {
+        return bindingPlanForDigests(
+            bindingReport,
+            text(bindingReport.get("sourceAuditEventDigest")),
+            text(bindingReport.get("sourceOrganizationId")),
+            text(bindingReport.get("sourceUserId")),
+            text(bindingReport.get("sourceUsername"))
+        );
+    }
+
+    private static Map<String, Object> bindingPlanForDigests(Map<String, Object> sourceDigests,
+                                                             String sourceAuditEventDigest,
+                                                             String organizationId,
+                                                             String userId,
+                                                             String username) {
         Map<String, Object> plan = new LinkedHashMap<>();
         plan.put("bindingBoundary", "SERVER_SIDE_RECEIPT_VALIDATION_REQUIRES_STORAGE_PROBE_RESULT");
         plan.put("futureBinding", FUTURE_BINDING);
         plan.put("futureValidator", NimCreateDurableAuditReceiptValidationGateSupport.FUTURE_VALIDATOR);
         plan.put("futureProbeResultType", NimCreateDurableAuditStorageProbeResultSupport.FUTURE_RESULT_TYPE);
         plan.put("futureProbeReceiptType", NimCreateDurableAuditReceiptSchemaSupport.STORAGE_PROBE_RECEIPT_TYPE);
-        plan.put("sourceProbeResultContractDigest", text(probeResultReport.get("probeResultContractDigest")));
-        plan.put("sourceProbeExecutorPlanDigest", text(probeResultReport.get("sourceProbeExecutorPlanDigest")));
-        plan.put("sourceReceiptSchemaDigest", text(probeResultReport.get("sourceReceiptSchemaDigest")));
-        plan.put("sourceValidationPlanDigest", text(validationGateReport.get("validationPlanDigest")));
-        plan.put("sourceInterfaceSpecDigest", text(probeResultReport.get("sourceInterfaceSpecDigest")));
-        plan.put("sourceBoundaryPlanDigest", text(probeResultReport.get("sourceBoundaryPlanDigest")));
-        plan.put("sourceWriterPlanDigest", text(probeResultReport.get("sourceWriterPlanDigest")));
-        plan.put("sourceAvailabilityPlanDigest", text(probeResultReport.get("sourceAvailabilityPlanDigest")));
-        plan.put("sourceAuditEventDigest", digestFor(auditContext));
+        putSourceDigests(plan, sourceDigests);
+        plan.put("sourceAuditEventDigest", sourceAuditEventDigest);
         plan.put("digestAlgorithm", NimCreateAuditWriterSupport.DIGEST_ALGORITHM);
         plan.put("trustedIdentityBinding", Map.of(
-            "organizationId", text(auditContext.get("organizationId")),
-            "userId", text(auditContext.get("userId")),
-            "username", text(principal.get("username")),
+            "organizationId", organizationId,
+            "userId", userId,
+            "username", username,
             "source", "SERVER_SESSION_CONTEXT",
             "protectedFromCallerParams", true
         ));
-        plan.put("requiredBindingEvidence", requiredBindingEvidence(probeResultReport, validationGateReport));
+        plan.put("requiredBindingEvidence", requiredBindingEvidence(sourceDigests));
         plan.put("validationSequencePatch", validationSequencePatch());
         plan.put("currentDecisionTemplate", currentDecisionTemplate());
         plan.put("failureContract", failureContract());
@@ -524,13 +544,37 @@ final class NimCreateDurableAuditReceiptValidationProbeResultBindingSupport {
         return plan;
     }
 
-    private static Map<String, Object> requiredBindingEvidence(Map<String, Object> probeResultReport,
-                                                               Map<String, Object> validationGateReport) {
+    private static Map<String, Object> bindingSourceDigests(Map<String, Object> probeResultReport,
+                                                            Map<String, Object> validationGateReport) {
+        Map<String, Object> source = new LinkedHashMap<>();
+        source.put("sourceProbeResultContractDigest", text(probeResultReport.get("probeResultContractDigest")));
+        source.put("sourceProbeExecutorPlanDigest", text(probeResultReport.get("sourceProbeExecutorPlanDigest")));
+        source.put("sourceReceiptSchemaDigest", text(probeResultReport.get("sourceReceiptSchemaDigest")));
+        source.put("sourceValidationPlanDigest", text(validationGateReport.get("validationPlanDigest")));
+        source.put("sourceInterfaceSpecDigest", text(probeResultReport.get("sourceInterfaceSpecDigest")));
+        source.put("sourceBoundaryPlanDigest", text(probeResultReport.get("sourceBoundaryPlanDigest")));
+        source.put("sourceWriterPlanDigest", text(probeResultReport.get("sourceWriterPlanDigest")));
+        source.put("sourceAvailabilityPlanDigest", text(probeResultReport.get("sourceAvailabilityPlanDigest")));
+        return source;
+    }
+
+    private static void putSourceDigests(Map<String, Object> target, Map<String, Object> sourceDigests) {
+        target.put("sourceProbeResultContractDigest", text(sourceDigests.get("sourceProbeResultContractDigest")));
+        target.put("sourceProbeExecutorPlanDigest", text(sourceDigests.get("sourceProbeExecutorPlanDigest")));
+        target.put("sourceReceiptSchemaDigest", text(sourceDigests.get("sourceReceiptSchemaDigest")));
+        target.put("sourceValidationPlanDigest", text(sourceDigests.get("sourceValidationPlanDigest")));
+        target.put("sourceInterfaceSpecDigest", text(sourceDigests.get("sourceInterfaceSpecDigest")));
+        target.put("sourceBoundaryPlanDigest", text(sourceDigests.get("sourceBoundaryPlanDigest")));
+        target.put("sourceWriterPlanDigest", text(sourceDigests.get("sourceWriterPlanDigest")));
+        target.put("sourceAvailabilityPlanDigest", text(sourceDigests.get("sourceAvailabilityPlanDigest")));
+    }
+
+    private static Map<String, Object> requiredBindingEvidence(Map<String, Object> sourceDigests) {
         Map<String, Object> evidence = new LinkedHashMap<>();
         evidence.put("storageProbeResultContract", Map.of(
             "requiredReportName", NimCreateDurableAuditStorageProbeResultSupport.RESULT_CONTRACT_NAME,
             "requiredStateNow", HOLD_STATE,
-            "sourceProbeResultContractDigest", text(probeResultReport.get("probeResultContractDigest")),
+            "sourceProbeResultContractDigest", text(sourceDigests.get("sourceProbeResultContractDigest")),
             "serverIssuedProbeResultRequiredFuture", true,
             "serverIssuedProbeResultAcceptedNow", false,
             "callerProbeResultAllowed", false
@@ -538,7 +582,7 @@ final class NimCreateDurableAuditReceiptValidationProbeResultBindingSupport {
         evidence.put("receiptValidationGate", Map.of(
             "requiredReportName", NimCreateDurableAuditReceiptValidationGateSupport.GATE_NAME,
             "requiredStateNow", HOLD_STATE,
-            "sourceValidationPlanDigest", text(validationGateReport.get("validationPlanDigest")),
+            "sourceValidationPlanDigest", text(sourceDigests.get("sourceValidationPlanDigest")),
             "schemaOnlyValidationAllowed", false,
             "validationCanRunNow", false
         ));
