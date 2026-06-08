@@ -10,6 +10,13 @@ public interface AgentAuditRecorder {
 
     void record(AgentAuditEvent event);
 
+    default AgentAuditDurableReceipt prewriteHighRisk(AgentAuditEvent event) {
+        return AgentAuditDurableReceipt.rejected(
+            "AGENT_AUDIT_DURABLE_PREWRITE_UNSUPPORTED",
+            durabilityStatus()
+        );
+    }
+
     default AgentAuditDurabilityStatus durabilityStatus() {
         return AgentAuditDurabilityStatus.disabled();
     }

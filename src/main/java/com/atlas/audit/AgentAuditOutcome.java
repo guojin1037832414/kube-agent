@@ -8,6 +8,9 @@ package com.atlas.audit;
  */
 public enum AgentAuditOutcome {
 
+    /** High-risk Tool has durable pre-execution evidence, but business outcome is not known yet. */
+    PREPARED,
+
     /** Tool 已被允许并返回业务成功。 */
     SUCCESS,
 

@@ -132,6 +132,18 @@ M5.30-1 已把 durable audit 推进到可验证底座：
 - admin snapshot 新增 `durability` 与 `durableRetention` 能力描述；
 - `SafeToolExecutor` 对高风险 `CREATE` / `UPDATE` / `DELETE` / `ACTION` / `PLACEHOLDER` 增加 durable audit readiness gate，生产可配置为缺少持久证据时 fail closed。
 
+### M5.30-3 Durable Audit Prewrite Receipt
+
+M5.30-3 已经把 durable audit 从 readiness gate 升级为 prewrite receipt gate：
+
+- `AgentAuditDurableReceipt` 表示本次高风险调用已经获得持久审计预写回执。
+- `AgentAuditOutcome.PREPARED` 表示执行前证据，不代表业务成功。
+- `JsonlAgentAuditDurableSink` 使用 `recordPhase=PRE_EXECUTION` 和 `recordPhase=FINAL` 区分执行前证据与最终结果证据。
+- `SafeToolExecutor` 在 `failClosedForHighRisk=true` 时要求高风险 Tool 执行前必须成功 `prewriteHighRisk(...)`，否则不调用真实 Tool。
+- `operationType=UNKNOWN`、缺失 metadata、`operationType=null` 在强审计模式下全部 fail closed。
+
+这说明当前 Java/Spring 主线不是落后，而是正在把现代 Agent 工程的关键能力变成可测试的安全协议：身份、HITL、trace、durable audit、redaction、admin query、pre-execution receipt 都已经进入同一条执行边界。下一步应继续补 database/search-backed audit query、retention/export、frontend replay timeline、Agent eval、RAG/persistent Memory 和 read-only MCP schema adapter。
+
 ## 最新 Agent 标准的落地顺序
 
 以下技术代表 2026 年 Agent 工程的先进方向，但必须按可验证顺序接入：

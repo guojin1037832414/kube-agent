@@ -10,6 +10,22 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
+## Latest Phase 1 Core Memory - M5.30-3
+
+M5.30-3 closed an important top-tier Agent safety gap in the durable audit line.
+
+The old M5.30-1 durable gate checked whether durable audit storage looked ready before a high-risk Tool ran. That was useful but not strong enough: storage can be ready at check time and still fail when this exact audit record is appended.
+
+The new rule is stronger:
+
+- High-risk Tool execution in mandatory durable mode must first obtain an `AgentAuditDurableReceipt`.
+- The receipt is produced by `AgentAuditRecorder#prewriteHighRisk(...)`, delegated to the durable sink.
+- JSONL durable audit writes a redacted `recordPhase=PRE_EXECUTION` record before execution and a `recordPhase=FINAL` record for normal final audit events.
+- `AgentAuditOutcome.PREPARED` means "durable pre-execution evidence exists"; it is not a Tool success result.
+- Missing metadata, null operation type, and `UNKNOWN` operation type fail closed when `failClosedForHighRisk=true`.
+
+Learning point: a top-tier Agent should not treat "audit storage is probably available" as sufficient permission for dangerous action. It should require evidence that this specific dangerous action is already durably recorded before the action can run.
+
 ## Product Direction
 
 - Use `kube-manager` backend and `vue-kube-manager` frontend as the primary capability evidence.

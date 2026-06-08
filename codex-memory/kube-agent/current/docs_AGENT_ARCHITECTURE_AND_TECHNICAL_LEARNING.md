@@ -195,6 +195,48 @@ AgentAuditQueryEvent / AgentAuditQueryResponse
 
 学习重点：审计的读模型要独立设计。写入事件里可能持有原始 principal、organization、conversation、endpoint 或 reason；管理员查询接口不能把这些字段原样抛给前端，而要返回可回放、可定位、可解释、但不泄漏租户和敏感值的证据摘要。M5.30-2 当前查询最近内存事件，后续 JSONL、PostgreSQL、Elasticsearch 或安全日志后端只需要替换 `AgentAuditQueryService`。
 
+### M5.30-3 Durable Prewrite Receipt
+
+M5.30-3 把高风险 Tool 的审计门禁从“存储状态检查”升级为“本次调用的持久证据回执”。
+
+```mermaid
+sequenceDiagram
+    participant U as User/Planner
+    participant S as SafeToolExecutor
+    participant H as HitlGuard
+    participant A as AgentAuditRecorder
+    participant D as DurableSink
+    participant T as BaseTool
+
+    U->>S: request high-risk Tool
+    S->>S: resolve metadata and trusted principal
+    S->>H: verify server HITL marker
+    H-->>S: allowed
+    S->>A: prewriteHighRisk(PREPARED event)
+    A->>D: append PRE_EXECUTION redacted evidence
+    D-->>A: AgentAuditDurableReceipt
+    A-->>S: accepted
+    S->>T: execute trusted params
+    T-->>S: business result
+    S->>A: record FINAL audit event
+```
+
+新增关键契约：
+
+- `AgentAuditDurableReceipt`：本次高风险调用的持久审计预写回执。
+- `AgentAuditOutcome.PREPARED`：表示“执行前证据已持久化”，不是业务成功。
+- JSONL `recordPhase=PRE_EXECUTION`：执行前证据记录。
+- JSONL `recordPhase=FINAL`：最终 Tool 结果记录。
+- `prewriteHighRisk(...)`：执行边界向 recorder / durable sink 申请本次高风险调用的持久证据票据。
+
+M5.30-3 同时收紧了风险元数据：
+
+- `operationType=UNKNOWN` 在 `failClosedForHighRisk=true` 时必须阻断。
+- metadata 缺失或 operation type 为 `null` 在强审计模式下必须阻断。
+- durable status ready 但本次 prewrite 失败时必须阻断，不能继续调用真实 Tool。
+
+学习重点：顶级 Agent 的持久审计不是“事后补日志”。对危险动作来说，审计证据必须成为执行许可链条的一部分。readiness 只能说明系统大概可写，receipt 才能说明“这一次动作已经留下证据”。
+
 ## 一期与二期范围
 
 2026-06-08 用户明确调整优先级：HPC / Slurm / BCM 与 NIM 相关能力先暂停，统一作为二期项目再继续添加和真实化。

@@ -1,6 +1,7 @@
 package com.atlas.tool.execution;
 
 import com.atlas.audit.AgentAuditEvent;
+import com.atlas.audit.AgentAuditDurableReceipt;
 import com.atlas.audit.AgentAuditDurabilityStatus;
 import com.atlas.audit.AgentAuditEventFactory;
 import com.atlas.audit.AgentAuditOutcome;
@@ -234,11 +235,47 @@ public class SafeToolExecutor {
                                                            String orgId,
                                                            AgentPrincipal auditPrincipal) {
         AgentAuditDurabilityStatus status = auditRecorder.durabilityStatus();
-        if (metadata == null || !isHighRiskOperation(metadata) || !status.failClosedForHighRisk()) {
+        if (!status.failClosedForHighRisk()) {
+            return null;
+        }
+        if (metadata == null || metadata.operationType() == null
+            || metadata.operationType() == com.atlas.tool.annotation.AtlasToolMapping.OperationType.UNKNOWN) {
+            String message = "AGENT_AUDIT_METADATA_REQUIRED: fail-closed high-risk mode requires explicit Tool risk metadata";
+            SafeToolExecutionResult result = SafeToolExecutionResult.notExecuted(message, traceId);
+            recordAudit(request, metadata, traceId, orgId, auditPrincipal, AgentAuditOutcome.BLOCKED, false, false, result.answer());
+            return result;
+        }
+        if (!isHighRiskOperation(metadata)) {
             return null;
         }
         if (!status.enabled() || !status.ready() || !status.durableRetention()) {
             String message = "AGENT_AUDIT_DURABLE_REQUIRED: high-risk Tool execution requires ready durable audit storage";
+            SafeToolExecutionResult result = SafeToolExecutionResult.notExecuted(message, traceId);
+            recordAudit(request, metadata, traceId, orgId, auditPrincipal, AgentAuditOutcome.BLOCKED, false, false, result.answer());
+            return result;
+        }
+        AgentAuditEvent preparedEvent = AgentAuditEventFactory.fromExecution(
+            request,
+            metadata,
+            traceId,
+            orgId,
+            auditPrincipal,
+            AgentAuditOutcome.PREPARED,
+            false,
+            false,
+            "High-risk Tool durable pre-execution evidence"
+        );
+        AgentAuditDurableReceipt receipt;
+        try {
+            receipt = auditRecorder.prewriteHighRisk(preparedEvent);
+        } catch (RuntimeException ex) {
+            receipt = AgentAuditDurableReceipt.rejected(
+                "AGENT_AUDIT_DURABLE_PREWRITE_EXCEPTION",
+                auditRecorder.durabilityStatus()
+            );
+        }
+        if (receipt == null || !receipt.accepted()) {
+            String message = "AGENT_AUDIT_DURABLE_PREWRITE_REQUIRED: high-risk Tool execution requires durable pre-execution evidence";
             SafeToolExecutionResult result = SafeToolExecutionResult.notExecuted(message, traceId);
             recordAudit(request, metadata, traceId, orgId, auditPrincipal, AgentAuditOutcome.BLOCKED, false, false, result.answer());
             return result;
@@ -248,11 +285,11 @@ public class SafeToolExecutor {
 
     private boolean isHighRiskOperation(ToolMetadata metadata) {
         if (metadata.operationType() == null) {
-            return false;
+            return true;
         }
         return switch (metadata.operationType()) {
-            case CREATE, UPDATE, DELETE, ACTION, PLACEHOLDER -> true;
-            case UNKNOWN, READ, SENSITIVE_READ -> false;
+            case CREATE, UPDATE, DELETE, ACTION, PLACEHOLDER, UNKNOWN -> true;
+            case READ, SENSITIVE_READ -> false;
         };
     }
 

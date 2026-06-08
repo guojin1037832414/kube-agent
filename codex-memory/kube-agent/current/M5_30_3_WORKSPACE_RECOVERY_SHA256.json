@@ -1,0 +1,106 @@
+﻿{
+    "schemaVersion":  "kube-agent-recovery-sha256.v1",
+    "generatedAt":  "2026-06-09T05:21:08.0418547+08:00",
+    "milestone":  "M5.30-3",
+    "title":  "Durable audit prewrite receipt gate",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "workspace":  "F:\\gitProject\\kube-agent",
+    "files":  [
+                  {
+                      "path":  "CHANGELOG.md",
+                      "sha256":  "4b3f83ebfb5ee42e3ee22c6245e247bf0a816df209423c4115a8622aa9e2e407"
+                  },
+                  {
+                      "path":  "docs/SESSION_PROGRESS_20260606_M521_29.md",
+                      "sha256":  "01563e61bc177687c67470e1e868f2202490a3eaab11ee868afa3becf7a91db4"
+                  },
+                  {
+                      "path":  "docs/PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "06d46fe5a3bbbf1b4f939a0d4b3359ac0415cc2cfc8c9798215156370aefd0d3"
+                  },
+                  {
+                      "path":  "docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "1a816de118cf8beae362aba02e59447b6906cbfa35a96888795edd0fc70fc5ab"
+                  },
+                  {
+                      "path":  "docs/tech-stack/BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "fd32d75f045c08250d1fafcd893cc76e4926b74de346e1fe79334b7e89f54e36"
+                  },
+                  {
+                      "path":  "docs/tech-stack/BACKEND_JAVA_TECH_STACK_AUDIT_20260608.md",
+                      "sha256":  "cf0dc00100f4e9092800991a39850336853757f70506d734a8834b426cd4662d"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/audit/AgentAuditDurableReceipt.java",
+                      "sha256":  "e4ed6ef8fbe64d89d7ad2ce69ac5f1c53ac68004d0132018d72f897eef42b294"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/audit/AgentAuditDurableSink.java",
+                      "sha256":  "5ed077c7263fd574c9ff1b47494a44c275975a5506c262d2f2eaa974164a7636"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/audit/AgentAuditOutcome.java",
+                      "sha256":  "9a270f0a891e356a44ba27031b124d4c7581f5b7756cb4f8ba9a6651fdcaaf72"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/audit/AgentAuditRecorder.java",
+                      "sha256":  "d03e1356018570687358d6e357d7ed2b0dbb35bd340df40c7967d5db74924964"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/audit/AgentAuditTelemetryProjector.java",
+                      "sha256":  "eb3f106c9d1dced1fb68a2266c549e44e4c5db3b5590e9ccc45ec6b288825e32"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/audit/InMemoryAgentAuditRecorder.java",
+                      "sha256":  "03b834bcf08a6bb046b57ea35367400bac923e625c21d22ae2fe6209603631e9"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/audit/JsonlAgentAuditDurableSink.java",
+                      "sha256":  "458b2a15c2b31fdf355e250bf9e12a0464beee97cfa5bb384eac06ceb6447565"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/tool/execution/SafeToolExecutor.java",
+                      "sha256":  "22e6d49e71c131c71e3db366fb06c6b7a7ac510a7c470fefdba8a80742054937"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/audit/AgentAuditRecorderTest.java",
+                      "sha256":  "9a6868cd5ef926b9f477622f4c8c6a57f399ea86825027071ec9a5204d24462e"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/audit/JsonlAgentAuditDurableSinkTest.java",
+                      "sha256":  "08f4e2ed628f2eaf8cb4f97ab39302656dbdf38a19648ee2cd50f4ad79e01f18"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/tool/execution/SafeToolExecutorTest.java",
+                      "sha256":  "e9bf46dce9b9530a2ad46788012df252eb94fc54c4e19386a06b8373206884cc"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/CHANGELOG.md",
+                      "sha256":  "4b3f83ebfb5ee42e3ee22c6245e247bf0a816df209423c4115a8622aa9e2e407"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/RECOVERY_STATUS.md",
+                      "sha256":  "c8e25bc5f0629779c7d460a95203224d2a3f4a4c521f80e1d01e3bbf76e087ce"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_SESSION_PROGRESS_20260606_M521_29.md",
+                      "sha256":  "01563e61bc177687c67470e1e868f2202490a3eaab11ee868afa3becf7a91db4"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "06d46fe5a3bbbf1b4f939a0d4b3359ac0415cc2cfc8c9798215156370aefd0d3"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "1a816de118cf8beae362aba02e59447b6906cbfa35a96888795edd0fc70fc5ab"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "fd32d75f045c08250d1fafcd893cc76e4926b74de346e1fe79334b7e89f54e36"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_JAVA_TECH_STACK_AUDIT_20260608.md",
+                      "sha256":  "cf0dc00100f4e9092800991a39850336853757f70506d734a8834b426cd4662d"
+                  }
+              ]
+}

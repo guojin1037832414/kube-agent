@@ -96,6 +96,9 @@ public final class AgentAuditTelemetryProjector {
         if (event.outcome() == AgentAuditOutcome.BUSINESS_FAILURE) {
             return "tool_business_failure";
         }
+        if (event.outcome() == AgentAuditOutcome.PREPARED) {
+            return "";
+        }
         return "";
     }
 

@@ -34,6 +34,7 @@ public class JsonlAgentAuditDurableSink implements AgentAuditDurableSink {
     private final AgentAuditProperties properties;
     private final ObjectMapper objectMapper;
     private final Path path;
+    private final Object writeMonitor = new Object();
     private final AtomicLong acceptedRecords = new AtomicLong();
     private final AtomicLong failedRecords = new AtomicLong();
     private volatile String lastError = "";
@@ -51,17 +52,46 @@ public class JsonlAgentAuditDurableSink implements AgentAuditDurableSink {
         if (!properties.getDurable().isEnabled() || event == null) {
             return;
         }
+        appendDurableRecord(event, "FINAL");
+    }
+
+    @Override
+    public AgentAuditDurableReceipt prewriteHighRisk(AgentAuditEvent event) {
+        if (!properties.getDurable().isEnabled() || event == null) {
+            return AgentAuditDurableReceipt.rejected(
+                "AGENT_AUDIT_DURABLE_DISABLED",
+                status()
+            );
+        }
+        try {
+            appendDurableRecord(event, "PRE_EXECUTION");
+            return AgentAuditDurableReceipt.accepted(
+                event.auditId(),
+                STORAGE_TYPE,
+                status()
+            );
+        } catch (RuntimeException ex) {
+            return AgentAuditDurableReceipt.rejected(
+                "AGENT_AUDIT_DURABLE_PREWRITE_FAILED",
+                status()
+            );
+        }
+    }
+
+    private void appendDurableRecord(AgentAuditEvent event, String recordPhase) {
         try {
             if (!ready && !preparePath()) {
                 throw new IllegalStateException("durable audit path is not writable");
             }
-            Files.writeString(
-                path,
-                objectMapper.writeValueAsString(toDurableRecord(event)) + System.lineSeparator(),
-                StandardCharsets.UTF_8,
-                StandardOpenOption.CREATE,
-                StandardOpenOption.APPEND
-            );
+            synchronized (writeMonitor) {
+                Files.writeString(
+                    path,
+                    objectMapper.writeValueAsString(toDurableRecord(event, recordPhase)) + System.lineSeparator(),
+                    StandardCharsets.UTF_8,
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.APPEND
+                );
+            }
             acceptedRecords.incrementAndGet();
             ready = true;
             lastError = "";
@@ -92,10 +122,11 @@ public class JsonlAgentAuditDurableSink implements AgentAuditDurableSink {
         );
     }
 
-    private Map<String, Object> toDurableRecord(AgentAuditEvent event) {
+    private Map<String, Object> toDurableRecord(AgentAuditEvent event, String recordPhase) {
         AgentAuditTelemetryProjection projection = AgentAuditTelemetryProjector.project(event);
         Map<String, Object> record = new LinkedHashMap<>();
         record.put("schemaVersion", "agent-audit-durable.v1");
+        record.put("recordPhase", safeText(recordPhase));
         record.put("recordedAt", Instant.now(Clock.systemUTC()).toString());
         record.put("auditId", event.auditId());
         record.put("traceId", event.traceId());
@@ -184,13 +215,15 @@ public class JsonlAgentAuditDurableSink implements AgentAuditDurableSink {
             if (parent != null) {
                 Files.createDirectories(parent);
             }
-            Files.writeString(
-                path,
-                "",
-                StandardCharsets.UTF_8,
-                StandardOpenOption.CREATE,
-                StandardOpenOption.APPEND
-            );
+            synchronized (writeMonitor) {
+                Files.writeString(
+                    path,
+                    "",
+                    StandardCharsets.UTF_8,
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.APPEND
+                );
+            }
             lastError = "";
             return true;
         } catch (IOException | RuntimeException ex) {

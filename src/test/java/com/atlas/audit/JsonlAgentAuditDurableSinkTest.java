@@ -9,8 +9,13 @@ import org.junit.jupiter.api.io.TempDir;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -40,6 +45,7 @@ class JsonlAgentAuditDurableSinkTest {
         assertThat(jsonl)
             .contains("\"schemaVersion\":\"agent-audit-durable.v1\"")
             .contains("\"auditId\":\"aud_0123456789abcdef0123456789abcdef\"")
+            .contains("\"recordPhase\":\"FINAL\"")
             .contains("\"traceId\":\"trc_0123456789abcdef0123456789abcdef\"")
             .contains("\"toolName\":\"pod_query_tool\"")
             .contains("\"operationType\":\"SENSITIVE_READ\"")
@@ -47,6 +53,60 @@ class JsonlAgentAuditDurableSinkTest {
             .contains("\"containsRawReason\":false")
             .contains("\"containsRawParameterValues\":false")
             .doesNotContain("conv-secret", "user-secret", "org-secret", "secret-token-value", "/api/org-secret");
+    }
+
+    @Test
+    void prewriteHighRisk_shouldWritePreparedRecordAndReturnReceipt() throws Exception {
+        Path auditFile = tempDir.resolve("audit").resolve("agent-audit-prewrite.jsonl");
+        AgentAuditProperties properties = enabledProperties(auditFile, true);
+        JsonlAgentAuditDurableSink sink = new JsonlAgentAuditDurableSink(properties, new ObjectMapper());
+
+        AgentAuditDurableReceipt receipt = sink.prewriteHighRisk(preparedSensitiveEvent());
+
+        String jsonl = Files.readString(auditFile);
+        assertThat(receipt.accepted()).isTrue();
+        assertThat(receipt.receiptId()).isEqualTo("aud_0123456789abcdef0123456789abcdef");
+        assertThat(jsonl)
+            .contains("\"recordPhase\":\"PRE_EXECUTION\"")
+            .contains("\"outcome\":\"PREPARED\"")
+            .doesNotContain("conv-secret", "user-secret", "org-secret", "secret-token-value", "/api/org-secret");
+    }
+
+    @Test
+    void append_shouldKeepJsonlLineIntegrityUnderConcurrentWrites() throws Exception {
+        Path auditFile = tempDir.resolve("audit").resolve("agent-audit-concurrent.jsonl");
+        AgentAuditProperties properties = enabledProperties(auditFile, true);
+        JsonlAgentAuditDurableSink sink = new JsonlAgentAuditDurableSink(properties, new ObjectMapper());
+        ObjectMapper objectMapper = new ObjectMapper();
+        int workers = 8;
+        CountDownLatch start = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(workers);
+        List<java.util.concurrent.Future<?>> futures = new ArrayList<>();
+
+        for (int i = 0; i < workers; i++) {
+            futures.add(executor.submit(() -> {
+                try {
+                    start.await();
+                    sink.append(sensitiveEvent());
+                } catch (Exception ex) {
+                    throw new IllegalStateException(ex);
+                }
+            }));
+        }
+        start.countDown();
+        for (java.util.concurrent.Future<?> future : futures) {
+            future.get(5, TimeUnit.SECONDS);
+        }
+        executor.shutdown();
+        assertThat(executor.awaitTermination(5, TimeUnit.SECONDS)).isTrue();
+
+        List<String> lines = Files.readAllLines(auditFile);
+        assertThat(lines).hasSize(workers);
+        for (String line : lines) {
+            assertThat(line).contains("\"schemaVersion\":\"agent-audit-durable.v1\"");
+            objectMapper.readTree(line);
+        }
+        assertThat(sink.status().acceptedRecords()).isEqualTo(workers);
     }
 
     @Test
@@ -97,6 +157,30 @@ class JsonlAgentAuditDurableSinkTest {
                     Map.of("name", "token", "protected", true, "type", "string", "present", true)
                 )
             )
+        );
+    }
+
+    private AgentAuditEvent preparedSensitiveEvent() {
+        AgentAuditEvent event = sensitiveEvent();
+        return new AgentAuditEvent(
+            event.auditId(),
+            event.occurredAt(),
+            event.traceId(),
+            event.conversationId(),
+            event.userId(),
+            event.organizationId(),
+            event.intentId(),
+            event.toolName(),
+            event.source(),
+            event.httpMethod(),
+            event.apiEndpoints(),
+            event.operationType(),
+            event.requiresConfirmation(),
+            AgentAuditOutcome.PREPARED,
+            false,
+            false,
+            "prepared because token=secret-token-value",
+            event.parameterSummary()
         );
     }
 }

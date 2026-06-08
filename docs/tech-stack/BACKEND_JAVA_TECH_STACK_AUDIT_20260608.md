@@ -189,6 +189,20 @@ M5.28-1 完成后，后端主语言审计结论进一步明确：`Java + Spring`
 - 不要在一期恢复 NIM/HPC/Slurm/BCM 专项实现；它们是二期插件，不是一期顶级 Core 的前置条件。
 - 不要把审计、trace、eval 只做成日志文本；它们必须成为可查询、可回放、可阻断发布的工程对象。
 
+## 2026-06-09 M5.30-3 更新
+
+M5.30-3 进一步证明 Java / Spring 作为主控制平面仍然是正确选择：它让“高风险 Tool 执行前必须已有持久审计证据”变成了类型化、可测试、可替换的协议，而不是散落在业务代码里的日志调用。
+
+本轮新增的先进性不是版本号，而是控制平面能力：
+
+- `AgentAuditDurableReceipt`：把本次高风险调用的审计预写结果建模成显式回执。
+- `AgentAuditOutcome.PREPARED`：区分执行前证据和最终业务结果。
+- JSONL `recordPhase=PRE_EXECUTION` / `FINAL`：让后续审计时间线可以区分“允许执行前的证据”和“执行后的结果”。
+- `SafeToolExecutor` mandatory durable mode：ready 状态不再足够，必须拿到本次 prewrite receipt。
+- `UNKNOWN` / 缺失 metadata fail-closed：避免未迁移 Tool 在强审计模式下被误判为低风险。
+
+技术选型结论保持不变：主线继续使用 `Java 17 + Spring Boot 3.5.x + Spring AI 1.1.x` 的可验证稳定底座；Java 21/25、Spring Boot 4、Spring AI 2、完整 MCP broker、A2A、GraphRAG 等继续进入兼容矩阵。下一阶段真正提升“顶级 Agent”程度的不是盲目升级主版本，而是把 database/search-backed audit、retention/export、frontend replay timeline、Agent eval、RAG/persistent Memory、read-only MCP schema adapter 和硬质量门禁继续主线化。
+
 ## 审计判断
 
 后端 Java 主语言不是短板，短板在于标准安全入口、持久审计、trace/audit/eval、HTTP outlet 细粒度治理、RAG/Memory 和质量硬门禁还没有完全主线化。下一阶段不应重写语言栈，而应把这些能力收敛成一个可证明、可回放、可评测、可恢复的 Agent Core。

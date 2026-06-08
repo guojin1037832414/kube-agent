@@ -6,6 +6,25 @@
 
 ---
 
+## [M5.30-3] - Durable audit prewrite receipt gate
+
+**Delivery**: Closed the high-risk audit durability race by requiring a concrete durable pre-execution receipt before `SafeToolExecutor` can call a high-risk Tool.
+**Changes**
+- Added `AgentAuditDurableReceipt` and `prewriteHighRisk(...)` contracts on the durable sink / recorder boundary.
+- Added `AgentAuditOutcome.PREPARED` to represent durable pre-execution evidence separately from final Tool outcomes.
+- Updated `JsonlAgentAuditDurableSink` so durable records carry `recordPhase=PRE_EXECUTION` or `FINAL`.
+- Added a process-local JSONL write monitor to prevent concurrent append interleaving inside the current process.
+- Updated `SafeToolExecutor` so `failClosedForHighRisk=true` now blocks UNKNOWN or missing Tool risk metadata, and high-risk execution requires a successful durable prewrite receipt.
+**Verification**
+- `mvn -q "-Dtest=AgentAuditRecorderTest,JsonlAgentAuditDurableSinkTest,SafeToolExecutorTest" test` passed.
+- `mvn -q "-Dtest=AgentAuditRecorderTest,JsonlAgentAuditDurableSinkTest,ObservabilityControllerTest,AgentSecurityConfigWebMvcTest,SafeToolExecutorTest" test` passed.
+- `mvn -q "-DskipTests" validate` passed.
+- `git diff --check` passed.
+**Security**
+- A ready durable status is no longer enough for high-risk execution; the specific call must have accepted durable pre-execution evidence.
+- UNKNOWN or missing risk metadata fails closed in mandatory durable mode instead of being treated as low risk.
+- PRE_EXECUTION JSONL records remain redacted and do not store raw principal, organization, conversation, endpoint strings, reason text, or parameter values.
+
 ## [M5.30-2] - Admin durable audit query API foundation
 
 **Delivery**: Added the first admin-only redacted audit query API so durable audit evidence can be safely looked up by `auditId` or `traceId` before a database/search-backed store is introduced.

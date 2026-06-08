@@ -1,6 +1,7 @@
 package com.atlas.tool.execution;
 
 import com.atlas.audit.AgentAuditEvent;
+import com.atlas.audit.AgentAuditDurableReceipt;
 import com.atlas.audit.AgentAuditDurabilityStatus;
 import com.atlas.audit.AgentAuditOutcome;
 import com.atlas.audit.AgentAuditRecorder;
@@ -391,6 +392,158 @@ class SafeToolExecutorTest {
         assertEquals(AgentAuditOutcome.BLOCKED, event.outcome());
         assertEquals("test.delete", event.intentId());
         assertEquals("trc_durable_required", event.traceId());
+    }
+
+    @Test
+    void executeIntent_shouldFailClosedForHighRiskToolWhenDurablePrewriteFails() {
+        RecordingDeleteTool deleteTool = new RecordingDeleteTool();
+        RecordingAuditRecorder auditRecorder = new RecordingAuditRecorder(new AgentAuditDurabilityStatus(
+            true,
+            true,
+            true,
+            true,
+            "jsonl",
+            "target/test-audit.jsonl",
+            10,
+            0,
+            ""
+        ));
+        auditRecorder.prewriteAccepted = false;
+        SafeToolExecutor executor = newExecutor(auditRecorder, deleteTool);
+
+        SafeToolExecutionResult result = executor.executeIntent(new SafeToolExecutionRequest(
+            "test.delete",
+            Map.of("name", "danger"),
+            "user-A",
+            "token-A",
+            "100002",
+            "conv-durable-prewrite-failure",
+            "trc_durable_prewrite_failure",
+            HitlConfirmation.human("thread-1", "test.delete"),
+            SafeToolExecutionSource.GRAPH_TOOL_CALL
+        ));
+
+        assertFalse(result.executed(), "Ready status alone is not enough; the specific high-risk call needs a durable receipt");
+        assertTrue(result.answer().contains("AGENT_AUDIT_DURABLE_PREWRITE_REQUIRED"));
+        assertNull(deleteTool.lastParams, "Prewrite failure must block before the real Tool.execute call");
+        assertEquals(1, auditRecorder.prewriteEvents.size(), "The executor should request one pre-execution durable evidence record");
+        assertEquals(AgentAuditOutcome.PREPARED, auditRecorder.prewriteEvents.get(0).outcome());
+        assertEquals(1, auditRecorder.events.size(), "A blocked diagnostic audit event should still be recorded");
+        assertEquals(AgentAuditOutcome.BLOCKED, auditRecorder.events.get(0).outcome());
+    }
+
+    @Test
+    void executeIntent_shouldWritePreparedAuditBeforeExecutingHighRiskToolWhenDurableIsMandatory() {
+        RecordingDeleteTool deleteTool = new RecordingDeleteTool();
+        RecordingAuditRecorder auditRecorder = new RecordingAuditRecorder(new AgentAuditDurabilityStatus(
+            true,
+            true,
+            true,
+            true,
+            "jsonl",
+            "target/test-audit.jsonl",
+            10,
+            0,
+            ""
+        ));
+        SafeToolExecutor executor = newExecutor(auditRecorder, deleteTool);
+
+        SafeToolExecutionResult result = executor.executeIntent(new SafeToolExecutionRequest(
+            "test.delete",
+            Map.of("name", "node-x"),
+            "user-A",
+            "token-A",
+            "100002",
+            "conv-durable-prewrite-success",
+            "trc_durable_prewrite_success",
+            HitlConfirmation.human("thread-1", "test.delete"),
+            SafeToolExecutionSource.GRAPH_TOOL_CALL
+        ));
+
+        assertTrue(result.executed(), "High-risk Tool may execute only after durable pre-execution evidence is accepted");
+        assertNotNull(deleteTool.lastParams);
+        assertEquals(1, auditRecorder.prewriteEvents.size());
+        AgentAuditEvent prepared = auditRecorder.prewriteEvents.get(0);
+        assertEquals(AgentAuditOutcome.PREPARED, prepared.outcome());
+        assertEquals("test.delete", prepared.intentId());
+        assertFalse(prepared.executed(), "PREPARED is a pre-execution receipt, not a business execution result");
+        assertEquals(1, auditRecorder.events.size());
+        assertEquals(AgentAuditOutcome.SUCCESS, auditRecorder.events.get(0).outcome());
+    }
+
+    @Test
+    void executeIntent_shouldFailClosedForUnknownOperationTypeWhenDurableFailClosedModeIsEnabled() {
+        UnknownOperationTool unknownTool = new UnknownOperationTool();
+        RecordingAuditRecorder auditRecorder = new RecordingAuditRecorder(new AgentAuditDurabilityStatus(
+            true,
+            true,
+            true,
+            true,
+            "jsonl",
+            "target/test-audit.jsonl",
+            10,
+            0,
+            ""
+        ));
+        SafeToolExecutor executor = newExecutor(auditRecorder, unknownTool);
+
+        SafeToolExecutionResult result = executor.executeIntent(new SafeToolExecutionRequest(
+            "test.unknown",
+            Map.of("name", "ambiguous"),
+            "user-A",
+            "token-A",
+            "100002",
+            "conv-unknown-operation",
+            "trc_unknown_operation",
+            HitlConfirmation.human("thread-1", "test.unknown"),
+            SafeToolExecutionSource.GRAPH_TOOL_CALL
+        ));
+
+        assertFalse(result.executed(), "UNKNOWN operationType must fail closed when high-risk durable mode is enabled");
+        assertTrue(result.answer().contains("AGENT_AUDIT_METADATA_REQUIRED"));
+        assertNull(unknownTool.lastParams);
+        assertEquals(0, auditRecorder.prewriteEvents.size(), "Unknown metadata should block before any prewrite attempt");
+        assertEquals(1, auditRecorder.events.size());
+        assertEquals(AgentAuditOutcome.BLOCKED, auditRecorder.events.get(0).outcome());
+    }
+
+    @Test
+    void executeIntent_shouldFailClosedWhenRiskMetadataIsMissingInDurableFailClosedMode() {
+        RecordingReadTool readTool = new RecordingReadTool();
+        RecordingAuditRecorder auditRecorder = new RecordingAuditRecorder(new AgentAuditDurabilityStatus(
+            true,
+            true,
+            true,
+            true,
+            "jsonl",
+            "target/test-audit.jsonl",
+            10,
+            0,
+            ""
+        ));
+        UserPermissionContext userPermissionContext = new UserPermissionContext();
+        MetadataMissingRegistry registry = new MetadataMissingRegistry(readTool, userPermissionContext);
+        registry.init();
+        SafeToolExecutor executor = new SafeToolExecutor(registry, new HitlGuard(), auditRecorder, null);
+
+        SafeToolExecutionResult result = executor.executeIntent(new SafeToolExecutionRequest(
+            "test.read",
+            Map.of("keyword", "gpu"),
+            "user-A",
+            "token-A",
+            "100002",
+            "conv-missing-metadata",
+            "trc_missing_metadata",
+            HitlConfirmation.human("thread-1", "test.read"),
+            SafeToolExecutionSource.GRAPH_TOOL_CALL
+        ));
+
+        assertFalse(result.executed(), "Missing Tool metadata must fail closed when durable high-risk mode is enabled");
+        assertTrue(result.answer().contains("AGENT_AUDIT_METADATA_REQUIRED"));
+        assertNull(readTool.lastParams);
+        assertEquals(0, auditRecorder.prewriteEvents.size());
+        assertEquals(1, auditRecorder.events.size());
+        assertEquals(AgentAuditOutcome.BLOCKED, auditRecorder.events.get(0).outcome());
     }
 
     @Test
@@ -962,7 +1115,9 @@ class SafeToolExecutorTest {
 
     private static final class RecordingAuditRecorder implements AgentAuditRecorder {
         private final List<AgentAuditEvent> events = new java.util.ArrayList<>();
+        private final List<AgentAuditEvent> prewriteEvents = new java.util.ArrayList<>();
         private final AgentAuditDurabilityStatus status;
+        private boolean prewriteAccepted = true;
 
         private RecordingAuditRecorder(AgentAuditDurabilityStatus status) {
             this.status = status;
@@ -974,8 +1129,38 @@ class SafeToolExecutorTest {
         }
 
         @Override
+        public AgentAuditDurableReceipt prewriteHighRisk(AgentAuditEvent event) {
+            prewriteEvents.add(event);
+            if (!prewriteAccepted) {
+                return AgentAuditDurableReceipt.rejected("test-prewrite-failed", status);
+            }
+            return AgentAuditDurableReceipt.accepted(event.auditId(), status.storageType(), status);
+        }
+
+        @Override
         public AgentAuditDurabilityStatus durabilityStatus() {
             return status;
+        }
+    }
+
+    private static final class MetadataMissingRegistry extends ToolRegistry {
+        private MetadataMissingRegistry(BaseTool tool, UserPermissionContext userPermissionContext) {
+            super(List.of(tool), userPermissionContext);
+        }
+
+        @Override
+        public java.util.Optional<ToolMetadata> resolveByIntentId(String intentId) {
+            return java.util.Optional.empty();
+        }
+
+        @Override
+        public ToolMetadata resolve(String toolName) {
+            throw new IllegalStateException("metadata missing for test");
+        }
+
+        @Override
+        public List<ToolMetadata> listAllMetadataForSystemAudit() {
+            return List.of();
         }
     }
 
@@ -1156,6 +1341,35 @@ class SafeToolExecutorTest {
     /**
      * 测试用异常抛出 Tool，用于验证异常后 ThreadLocal 恢复契约。
      */
+    @AtlasToolMapping(
+        name = "test_unknown_tool",
+        intentId = "test.unknown",
+        agent = "deploy",
+        description = "test unknown operation metadata tool",
+        httpMethod = "POST",
+        apiEndpoints = {"/api/test/unknown"},
+        operationType = AtlasToolMapping.OperationType.UNKNOWN,
+        requiresConfirmation = false
+    )
+    private static class UnknownOperationTool extends BaseTool {
+        private Map<String, Object> lastParams;
+
+        private UnknownOperationTool() {
+            super("test_unknown_tool", "test unknown operation metadata tool");
+        }
+
+        @Override
+        protected Set<String> getRequiredParams() {
+            return Set.of();
+        }
+
+        @Override
+        protected AtlasToolResult doExecute(Map<String, Object> params) {
+            lastParams = Map.copyOf(params);
+            return AtlasToolResult.ok("unknown executed", Map.of("ok", true));
+        }
+    }
+
     @AtlasToolMapping(
         name = "test_throwing_tool",
         intentId = "test.throwing",

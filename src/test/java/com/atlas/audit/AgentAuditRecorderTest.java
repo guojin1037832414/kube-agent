@@ -157,6 +157,29 @@ class AgentAuditRecorderTest {
     }
 
     @Test
+    void prewriteHighRisk_shouldDelegateToDurableSinkWithoutChangingDiagnosticRingBuffer() {
+        RecordingDurableSink sink = new RecordingDurableSink(new AgentAuditDurabilityStatus(
+            true,
+            true,
+            true,
+            true,
+            "jsonl",
+            "target/agent-audit/agent-audit.jsonl",
+            0,
+            0,
+            ""
+        ));
+        InMemoryAgentAuditRecorder recorder = new InMemoryAgentAuditRecorder(null, sink);
+
+        AgentAuditDurableReceipt receipt = recorder.prewriteHighRisk(event("aud_prepared", AgentAuditOutcome.PREPARED));
+
+        assertThat(receipt.accepted()).isTrue();
+        assertThat(sink.prewriteEvents).hasSize(1);
+        assertThat(recorder.recentEvents()).isEmpty();
+        assertThat(recorder.snapshot()).containsEntry("totalEvents", 0L);
+    }
+
+    @Test
     void query_shouldFindByAuditIdAndTraceIdWithoutRawEvidenceLeakage() {
         InMemoryAgentAuditRecorder recorder = new InMemoryAgentAuditRecorder();
         recorder.record(new AgentAuditEvent(
@@ -251,6 +274,30 @@ class AgentAuditRecorderTest {
 
         @Override
         public void append(AgentAuditEvent event) {
+        }
+
+        @Override
+        public AgentAuditDurabilityStatus status() {
+            return status;
+        }
+    }
+
+    private static final class RecordingDurableSink implements AgentAuditDurableSink {
+        private final AgentAuditDurabilityStatus status;
+        private final java.util.List<AgentAuditEvent> prewriteEvents = new java.util.ArrayList<>();
+
+        private RecordingDurableSink(AgentAuditDurabilityStatus status) {
+            this.status = status;
+        }
+
+        @Override
+        public void append(AgentAuditEvent event) {
+        }
+
+        @Override
+        public AgentAuditDurableReceipt prewriteHighRisk(AgentAuditEvent event) {
+            prewriteEvents.add(event);
+            return AgentAuditDurableReceipt.accepted(event.auditId(), status.storageType(), status);
         }
 
         @Override

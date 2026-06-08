@@ -6,11 +6,47 @@
 - Primary workspace recovery folder: `F:\gitProject\kube-agent\codex-memory\kube-agent\current`
 - Historical external memory folder: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.30-2, admin durable audit query API foundation.
+- Current latest wave: M5.30-3, durable audit prewrite receipt gate.
 - Phase update: HPC / Slurm / BCM and NIM are paused and moved to Phase 2 by user direction.
 - Phase 1 focus: deliver the top-tier Agent core through generic manager Agent foundations, safe read/query validation, non-HPC/NIM manager function coverage, Tool metadata quality, HITL/audit execution boundary, traceability, recovery, evaluation, teaching documentation, and vue-kube-manager workflow integration.
 - Phase boundary clarification: moving NIM / HPC / Slurm / BCM to Phase 2 postpones specialist domain plugins only; it does not reduce Phase 1 standards.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
+
+## Latest Completed Chunk - M5.30-3
+
+- Date: 2026-06-09 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- Title: durable audit prewrite receipt gate.
+- Core change:
+  - Added `AgentAuditDurableReceipt`.
+  - Added `AgentAuditDurableSink#prewriteHighRisk(...)`.
+  - Added `AgentAuditRecorder#prewriteHighRisk(...)`.
+  - Added `AgentAuditOutcome.PREPARED`.
+  - Added JSONL `recordPhase=PRE_EXECUTION` and `recordPhase=FINAL`.
+  - Added process-local JSONL write locking.
+  - Updated `SafeToolExecutor` so mandatory durable audit mode requires a concrete durable pre-execution receipt before any high-risk Tool execution.
+  - Updated `SafeToolExecutor` so missing metadata, null operation type, and `UNKNOWN` operation type fail closed in mandatory durable audit mode.
+- Security meaning:
+  - M5.30-1 only proved durable storage looked ready before execution.
+  - M5.30-3 proves this specific high-risk Tool call has already written redacted durable pre-execution evidence.
+  - A ready status is no longer treated as a write receipt.
+- Tests added:
+  - Ready durable status but prewrite failure blocks before `BaseTool.execute(...)`.
+  - Successful prewrite records `PREPARED` before high-risk Tool execution.
+  - UNKNOWN operation type and missing metadata fail closed in mandatory durable mode.
+  - JSONL prewrite writes a redacted `PRE_EXECUTION` record.
+  - Concurrent JSONL appends preserve line-level JSON integrity in the current process.
+- Verification passed:
+  - `mvn -q "-Dtest=AgentAuditRecorderTest,JsonlAgentAuditDurableSinkTest,SafeToolExecutorTest" test`
+  - `mvn -q "-Dtest=AgentAuditRecorderTest,JsonlAgentAuditDurableSinkTest,ObservabilityControllerTest,AgentSecurityConfigWebMvcTest,SafeToolExecutorTest" test`
+  - `mvn -q "-DskipTests" validate`
+  - `git diff --check`
+- Build note:
+  - Do not run multiple Maven builds concurrently in this same workspace `target` directory. One parallel attempt caused CycloneDX to read a partially written artifact; serial re-run passed.
+- HOLD:
+  - No real kube-manager `8100` call.
+  - No real kube-manager write/create/delete/state-changing API call.
+  - NIM / HPC / Slurm / BCM remain Phase 2 paused.
 
 ## User Requirements To Preserve
 

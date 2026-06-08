@@ -102,6 +102,11 @@ public class InMemoryAgentAuditRecorder implements AgentAuditRecorder, AgentAudi
     }
 
     @Override
+    public AgentAuditDurableReceipt prewriteHighRisk(AgentAuditEvent event) {
+        return durableSink.prewriteHighRisk(event);
+    }
+
+    @Override
     public AgentAuditQueryResponse findByAuditId(String auditId) {
         String normalizedAuditId = safeText(auditId);
         List<AgentAuditQueryEvent> matches = recentEvents().stream()
