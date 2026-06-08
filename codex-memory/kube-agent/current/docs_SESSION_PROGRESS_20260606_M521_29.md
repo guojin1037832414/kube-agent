@@ -6,7 +6,7 @@
 - Primary workspace recovery folder: `F:\gitProject\kube-agent\codex-memory\kube-agent\current`
 - Historical external memory folder: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.23-1, Agent trace context kernel.
+- Current latest wave: M5.24-1, kube-manager HTTP outlet trace propagation.
 - Phase update: HPC / Slurm / BCM and NIM are paused and moved to Phase 2 by user direction.
 - Phase 1 focus: deliver the top-tier Agent core through generic manager Agent foundations, safe read/query validation, non-HPC/NIM manager function coverage, Tool metadata quality, HITL/audit execution boundary, traceability, recovery, evaluation, teaching documentation, and vue-kube-manager workflow integration.
 - Phase boundary clarification: moving NIM / HPC / Slurm / BCM to Phase 2 postpones specialist domain plugins only; it does not reduce Phase 1 standards.
@@ -55,6 +55,19 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.24-1 kube-manager HTTP outlet trace propagation is implemented:
+  - `src/main/java/com/atlas/observability/AgentTraceContext.java` now supports converting internal `trc_ + 32hex` trace IDs into W3C `traceparent`.
+  - Non-32hex gateway trace IDs continue as `X-Trace-Id` only; the service does not forge a W3C traceparent from non-W3C values.
+  - `src/main/java/com/atlas/http/KubeManagerHttpClient.java` now uses `applyUserAndTraceHeaders(...)` for GET, POST, PATCH, PUT, DELETE, and `resolveOrgId` bucket-search HTTP calls.
+  - The shared helper writes `X-Token`, `X-Trace-Id`, and `traceparent` for kube-manager user/business requests.
+  - Fallback login remains intentionally unchanged because it is auth bootstrap rather than a user Tool outlet.
+  - `src/test/java/com/atlas/http/KubeManagerHttpClientTracePropagationTest.java` covers bound trace propagation, generated trace propagation, `resolveOrgId` propagation, and a source-level guard against hand-written business `X-Token` headers.
+  - `src/test/java/com/atlas/observability/AgentTraceContextTest.java` covers W3C traceparent conversion and all-zero trace-id rejection.
+  - Verification passed:
+    - `mvn -q "-Dtest=AgentTraceContextTest,KubeManagerHttpClientTracePropagationTest,KubeManagerHttpClientUrlContractTest,KubeManagerHttpClientTokenFallbackSecurityTest,KubeManagerHttpClientResolveOrgIdSecurityTest" test`
+  - No NIM/HPC/Slurm/BCM Phase 2 implementation was resumed and no real write/create/delete/state-changing kube-manager call was opened.
+  - Next Phase 1 technical slice: connect trace to audit event model, OpenTelemetry span mapping, frontend replay contracts, and Agent eval reports.
 
 - M5.23-1 Agent trace context kernel is implemented:
   - Added `src/main/java/com/atlas/observability/AgentTraceContext.java` as the first trace runtime kernel.

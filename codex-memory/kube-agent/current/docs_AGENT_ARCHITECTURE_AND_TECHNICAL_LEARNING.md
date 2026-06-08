@@ -288,6 +288,17 @@ M5.23-1 开始把“可观测性”从依赖清单推进为可测试的 Agent �
 
 学习重点：traceId 不是日志装饰，而是顶级 Agent 的证据链主键。没有统一 trace，就很难做前端回放、审计查询、红队复盘、SLA 诊断和多 Agent 协同调度。M5.23-1 的价值是先把这条线接进所有执行入口，后续再把它映射到 OpenTelemetry Span、审计表、HTTP header 和前端工作台。
 
+M5.24-1 把这条证据链继续接到 kube-manager HTTP 出口：
+
+- `AgentTraceContext` 保留内部 `trc_` 前缀，便于日志搜索和人工排障；
+- 当 traceId 能提取出合法 32 位十六进制 trace-id 时，会生成 W3C `traceparent`，格式为 `00-traceid-spanid-01`；
+- `KubeManagerHttpClient` 的 GET / POST / PATCH / PUT / DELETE 和 `resolveOrgId` 桶式搜索统一通过 `applyUserAndTraceHeaders(...)` 写入 `X-Token`、`X-Trace-Id` 和 `traceparent`；
+- 非 32hex 的外部网关 trace 只传播 `X-Trace-Id`，不伪造 W3C traceparent；
+- fallback login 保持不接入用户业务 trace helper，因为它是认证 bootstrap，不是 Tool 发起的 kube-manager 业务请求；
+- `KubeManagerHttpClientTracePropagationTest` 同时锁定真实请求头契约和源码契约，防止未来新增 HTTP 分支时手写 `X-Token` 漏掉 trace。
+
+学习重点：OpenTelemetry 不是从 dashboard 开始的，而是从每个出口都能带同一个证据主键开始的。M5.24-1 让 Agent 内部 trace 能进入成熟 kube-manager 后端，后续才能把 LLM、Tool、HTTP、HITL、audit 和前端回放映射成同一条时间线。
+
 ### Java 后端技术栈审计
 
 2026-06-08 针对“后端 Java 是否仍是最先进主语言”做了技术栈审计，结论是：Java / Spring 继续作为一期主线是合理且先进的，但升级方式必须是兼容矩阵，而不是盲目追主版本。

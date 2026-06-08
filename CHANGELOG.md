@@ -6,6 +6,21 @@
 
 ---
 
+## [M5.24-1] - kube-manager HTTP outlet trace propagation
+
+**Delivery**: Connected the M5.23 Agent trace kernel to the shared kube-manager HTTP outlet.
+**Changes**
+- Added W3C Trace Context conversion in `AgentTraceContext`: internal `trc_` trace IDs can now produce standard `traceparent` headers when they contain a valid 32-hex trace-id.
+- Updated `KubeManagerHttpClient` so GET, POST, PATCH, PUT, DELETE, and `resolveOrgId` bucket-search requests all write `X-Token`, `X-Trace-Id`, and W3C `traceparent` through one shared helper.
+- Kept fallback login unchanged because it is an authentication bootstrap call, not a user/business Tool outlet.
+- Added `KubeManagerHttpClientTracePropagationTest` to lock header propagation for bound trace IDs, generated trace IDs, and `resolveOrgId`.
+- Added a source-level contract in the HTTP trace test to prevent future business requests from hand-writing `X-Token` and accidentally skipping trace headers.
+**Verification**
+- `mvn -q "-Dtest=AgentTraceContextTest,KubeManagerHttpClientTracePropagationTest,KubeManagerHttpClientUrlContractTest,KubeManagerHttpClientTokenFallbackSecurityTest,KubeManagerHttpClientResolveOrgIdSecurityTest" test` passed.
+**Security**
+- No real write/create/delete/state-changing kube-manager call was opened.
+- Trace headers are generated server-side or accepted only after `AgentTraceContext` validation; non-W3C external trace IDs continue through `X-Trace-Id` without forging `traceparent`.
+
 ## [M5.23-1] - Agent trace context kernel
 
 **Delivery**: Added the first end-to-end Agent trace kernel for the top-tier Phase 1 Agent Core.

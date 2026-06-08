@@ -33,13 +33,21 @@ M5.23-1 已把可观测能力从“依赖底座”推进到“运行时内核”
 - 外部 trace 候选值经过长度/字符集/空白控制字符校验，避免日志和 MDC 注入；
 - traceId 被视为控制平面字段，不作为业务 Tool 参数透传。
 
+M5.24-1 已把 trace 内核推进到 kube-manager HTTP outlet：
+
+- `AgentTraceContext` 可以把内部 `trc_ + 32hex` 转换为标准 W3C `traceparent`；
+- `KubeManagerHttpClient` 的用户业务请求统一传播 `X-Trace-Id` 与 `traceparent`；
+- GET / POST / PATCH / PUT / DELETE / `resolveOrgId` 都走同一个 header helper；
+- fallback login 暂不接入业务 trace helper，避免混淆认证 bootstrap 与用户 Tool 调用；
+- 源码契约禁止未来重新手写业务 `X-Token` header 而漏掉 trace。
+
 ## 最新 Agent 标准的落地顺序
 
 以下技术代表 2026 年 Agent 工程的先进方向，但必须按可验证顺序接入：
 
 | 标准/技术 | 一期定位 | 当前落点 | 下一步 |
 |---|---|---|---|
-| OpenTelemetry / GenAI semantic conventions | 统一观测模型 | 已有 Micrometer Tracing + OTLP 依赖，M5.23 建立 traceId 内核 | 将 LLM、Tool、HTTP、HITL、audit 映射为 Span 与属性 |
+| OpenTelemetry / GenAI semantic conventions | 统一观测模型 | 已有 Micrometer Tracing + OTLP 依赖，M5.23 建立 traceId 内核，M5.24 接入 HTTP outlet | 将 LLM、Tool、HTTP、HITL、audit 映射为 Span 与属性 |
 | MCP (Model Context Protocol) | 外部 Tool / Resource / Prompt 暴露协议 | 暂不直接开放生产写工具 | 先做只读 Tool manifest 与 schema adapter，写工具继续 HITL/HOLD |
 | A2A (Agent2Agent) | 多 Agent 互操作协议 | 当前多专家流程仍以内部角色和 Graph 编排为主 | 在执行边界、trace、audit 稳定后，评估 Agent Card / Task / streaming adapter |
 | OWASP LLM / Agentic AI 安全实践 | 红队和安全门禁 | 已有 HITL、protected params、fail-closed、direct execute contract | 扩展 eval harness：prompt injection、tool misuse、excessive agency、sensitive data |
@@ -85,12 +93,29 @@ Spring Boot 4.0.x 官方系统要求是 Java 17+，但它会同时带来 Spring 
 ## 一期顶级 Agent Core 技术欠账
 
 - 统一执行内核：ReAct、Graph、ToolCallback、legacy fallback 已全部通过 `SafeToolExecutor`；后续新增入口必须继续受契约测试约束。
+- HTTP 证据链：M5.24 已完成基础 trace header 传播；后续要补 idempotency key、auditId、tenant evidence、baggage 与真实 OpenTelemetry client span。
 - HTTP 韧性：读请求可重试；写请求必须绑定 idempotency key / audit / HITL 后才能重试，默认不自动重试。
 - 连接治理：从简单 request factory 过渡到连接池或 WebClient，并暴露连接池指标。
-- OpenTelemetry：M5.23 已完成 traceId 内核；后续要把 intent、plan、tool、HTTP、HITL、audit、final answer 映射为 span/timeline/audit 统一证据链。
+- OpenTelemetry：M5.23/M5.24 已完成 traceId 内核与 HTTP 出口传播；后续要把 intent、plan、tool、HTTP、HITL、audit、final answer 映射为 span/timeline/audit 统一证据链。
 - 审计持久化：敏感读、高风险写、HITL 阻断、Tool 异常都要有脱敏审计事件。
 - CI 门禁：SBOM、SCA、SpotBugs、覆盖率、secret scan、Agent eval 必须进入发布流程。
 - 安全主干：逐步引入 Spring Security `SecurityFilterChain`，把身份事实从 ThreadLocal 兼容层迁移到标准 `Authentication`。
+
+## 多专家审计后的 Phase 1 技术优先级
+
+2026-06-08 多专家审计结论：当前 Java / Spring 技术选型足够先进，短板不在“再堆新框架”，而在把已有先进底座真正接入 Agent 执行闭环。
+
+| 优先级 | 技术任务 | 验收口径 |
+|---|---|---|
+| P0 | Resilience4j 真正治理 kube-manager HTTP outlet | READ 可重试/熔断/限并发；WRITE 默认不自动重试，除非具备 HITL + audit + idempotency key |
+| P0 | CI 从报告生成升级为硬门禁 | SpotBugs/SCA/secret scan/coverage/Agent eval 失败能阻断合并或发布 |
+| P0 | `SafeToolExecutor` 唯一真实执行边界持续守护 | 新增 Graph/ReAct/ToolCallback/插件入口不能直调 `BaseTool.execute(...)` |
+| P1 | Micrometer + OpenTelemetry span 化 | request、intent、plan、LLM、tool、HTTP、HITL、audit、final answer 能在同一 trace 下回放 |
+| P1 | Spring Security 主线化 | 可信身份从 ThreadLocal 兼容层迁移到标准 `Authentication/SecurityContext` |
+| P1 | Testcontainers 真实集成测试 | 覆盖 kube-manager HTTP contract、鉴权失败、trace header、重试/熔断边界 |
+| P2 | Java 21/25 与 Spring Boot 4 / Spring AI 2 兼容矩阵 | 先在 CI matrix 或试验分支验证，不破坏当前可恢复主线 |
+
+学习重点：顶级 Agent 的技术先进性最终体现在“闭环能力”：能安全执行、能解释原因、能追踪证据、能评测回归、能恢复现场。框架版本只是入口，工程闭环才是主体。
 
 ## 学习重点
 

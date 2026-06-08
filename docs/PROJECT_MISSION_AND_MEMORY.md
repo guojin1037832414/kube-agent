@@ -93,10 +93,31 @@ Current track:
 
 Recently completed:
 
-`M5.23-1 Agent trace context kernel`
+`M5.24-1 kube-manager HTTP outlet trace propagation`
 
 Latest checkpoint:
 
+- Date: 2026-06-08 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.24-1 implemented:
+  - Extended `AgentTraceContext` with W3C Trace Context support: internal `trc_ + 32hex` IDs can produce `traceparent` while non-32hex gateway trace IDs only travel as `X-Trace-Id`.
+  - Updated `KubeManagerHttpClient` so GET, POST, PATCH, PUT, DELETE, and `resolveOrgId` bucket search all use one shared `applyUserAndTraceHeaders(...)` helper.
+  - The helper writes `X-Token`, `X-Trace-Id`, and `traceparent` on kube-manager user/business outlet requests.
+  - Fallback login intentionally remains outside the helper because it is authentication bootstrap, not a user Tool business request.
+  - Added `KubeManagerHttpClientTracePropagationTest` for bound trace, generated trace, `resolveOrgId`, and source-level no-handwritten-business-`X-Token` guard.
+- Verification:
+  - `mvn -q "-Dtest=AgentTraceContextTest,KubeManagerHttpClientTracePropagationTest,KubeManagerHttpClientUrlContractTest,KubeManagerHttpClientTokenFallbackSecurityTest,KubeManagerHttpClientResolveOrgIdSecurityTest" test`
+- Scope boundary:
+  - Phase 1 Agent Core observability hardening only.
+  - No NIM/HPC/Slurm/BCM Phase 2 implementation was resumed.
+  - No new real write/create/delete/state-changing kube-manager call was opened.
+- Security result:
+  - kube-manager outbound requests can now be correlated with Agent trace evidence.
+  - External non-W3C trace IDs do not forge `traceparent`; invalid trace candidates are still rejected by `AgentTraceContext`.
+- Next technical follow-up:
+  - Map traceId to audit event records, OpenTelemetry spans, frontend replay contracts, and Agent eval reports.
+
+- Previous checkpoint:
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
 - M5.23-1 implemented:

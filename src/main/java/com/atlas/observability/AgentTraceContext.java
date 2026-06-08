@@ -17,8 +17,10 @@ public final class AgentTraceContext {
 
     public static final String MDC_TRACE_ID = "traceId";
     private static final int MAX_ACCEPTED_TRACE_ID_LENGTH = 96;
+    private static final int SPAN_ID_BYTES = 8;
     private static final Pattern ACCEPTED_TRACE_ID_PATTERN = Pattern.compile(
         "(?:trc_[0-9a-f]{32}|[0-9a-f]{32}|[A-Za-z0-9][A-Za-z0-9._:-]{0,95})");
+    private static final Pattern W3C_TRACE_ID_PATTERN = Pattern.compile("(?:trc_)?([0-9a-f]{32})");
     private static final ThreadLocal<String> CURRENT_TRACE_ID = new ThreadLocal<>();
     private static final SecureRandom RANDOM = new SecureRandom();
 
@@ -59,6 +61,45 @@ public final class AgentTraceContext {
         byte[] bytes = new byte[16];
         RANDOM.nextBytes(bytes);
         return "trc_" + HexFormat.of().formatHex(bytes);
+    }
+
+    /**
+     * 将当前 Agent traceId 转成 W3C Trace Context 的 {@code traceparent} header。
+     *
+     * <p>内部 traceId 使用 {@code trc_ + 32hex}，便于人读和日志搜索；HTTP 出口需要兼容
+     * OpenTelemetry / 网关 / Collector 的标准传播格式，所以这里在能提取 32 位十六进制 trace-id
+     * 时生成 {@code 00-traceid-spanid-01}。如果 traceId 来自外部网关且不是 32hex 形态，则返回空串，
+     * 只传播 {@code X-Trace-Id}。</p>
+     */
+    public static String traceparentOrBlank(String traceId) {
+        String w3cTraceId = w3cTraceIdOrBlank(traceId);
+        if (w3cTraceId.isBlank()) {
+            return "";
+        }
+        return "00-" + w3cTraceId + "-" + newSpanId() + "-01";
+    }
+
+    public static String w3cTraceIdOrBlank(String traceId) {
+        String accepted = safeCandidateOrBlank(traceId);
+        if (accepted.isBlank()) {
+            return "";
+        }
+        java.util.regex.Matcher matcher = W3C_TRACE_ID_PATTERN.matcher(accepted);
+        if (!matcher.matches()) {
+            return "";
+        }
+        String w3cTraceId = matcher.group(1);
+        return "00000000000000000000000000000000".equals(w3cTraceId) ? "" : w3cTraceId;
+    }
+
+    private static String newSpanId() {
+        byte[] bytes = new byte[SPAN_ID_BYTES];
+        String spanId;
+        do {
+            RANDOM.nextBytes(bytes);
+            spanId = HexFormat.of().formatHex(bytes);
+        } while ("0000000000000000".equals(spanId));
+        return spanId;
     }
 
     /**

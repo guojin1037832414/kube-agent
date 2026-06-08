@@ -1,12 +1,14 @@
 package com.atlas.http;
 
 import com.atlas.auth.UserPermissionContext;
+import com.atlas.observability.AgentTraceContext;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -147,7 +149,7 @@ public class KubeManagerHttpClient {
                 }
                 return builder.build();
             })
-            .header("X-Token", token)
+            .headers(headers -> applyUserAndTraceHeaders(headers, token))
             .retrieve()
             .onStatus(HttpStatusCode::isError, (req, res) -> {
                 String body = new String(res.getBody().readAllBytes(), StandardCharsets.UTF_8);
@@ -192,7 +194,7 @@ public class KubeManagerHttpClient {
 
         String responseBody = restClient.post()
             .uri(path)
-            .header("X-Token", token)
+            .headers(headers -> applyUserAndTraceHeaders(headers, token))
             .body(body)
             .retrieve()
             .onStatus(HttpStatusCode::isError, (req, res) -> {
@@ -226,7 +228,7 @@ public class KubeManagerHttpClient {
 
         String responseBody = restClient.patch()
             .uri(path)
-            .header("X-Token", token)
+            .headers(headers -> applyUserAndTraceHeaders(headers, token))
             .body(body)
             .retrieve()
             .onStatus(HttpStatusCode::isError, (req, res) -> {
@@ -270,7 +272,7 @@ public class KubeManagerHttpClient {
                 }
                 return builder.build();
             })
-            .header("X-Token", token)
+            .headers(headers -> applyUserAndTraceHeaders(headers, token))
             .body(body)
             .retrieve()
             .onStatus(HttpStatusCode::isError, (req, res) -> {
@@ -310,7 +312,7 @@ public class KubeManagerHttpClient {
 
         String responseBody = restClient.put()
             .uri(path)
-            .header("X-Token", token)
+            .headers(headers -> applyUserAndTraceHeaders(headers, token))
             .body(body)
             .retrieve()
             .onStatus(HttpStatusCode::isError, (req, res) -> {
@@ -354,7 +356,7 @@ public class KubeManagerHttpClient {
                 }
                 return builder.build();
             })
-            .header("X-Token", token)
+            .headers(headers -> applyUserAndTraceHeaders(headers, token))
             .body(body)
             .retrieve()
             .onStatus(HttpStatusCode::isError, (req, res) -> {
@@ -391,7 +393,7 @@ public class KubeManagerHttpClient {
                 }
                 return builder.build();
             })
-            .header("X-Token", token)
+            .headers(headers -> applyUserAndTraceHeaders(headers, token))
             .retrieve()
             .onStatus(HttpStatusCode::isError, (req, res) -> {
                 String raw = new String(res.getBody().readAllBytes(), StandardCharsets.UTF_8);
@@ -403,6 +405,23 @@ public class KubeManagerHttpClient {
             .body(String.class);
 
         return parseJson(responseBody);
+    }
+
+    /**
+     * 统一写入 kube-manager 出口请求头。
+     *
+     * <p>M5.24 将 M5.23 的 Agent traceId 接到 HTTP outlet。这里刻意把 token、traceId 和
+     * W3C traceparent 放在一个 helper 中，后续接入 auditId、idempotency key、tenant evidence、
+     * OpenTelemetry baggage 时不需要在每个 GET/POST/PUT/DELETE 分支复制逻辑。</p>
+     */
+    private void applyUserAndTraceHeaders(HttpHeaders headers, String token) {
+        headers.set("X-Token", token);
+        String traceId = AgentTraceContext.currentOrNew("");
+        headers.set("X-Trace-Id", traceId);
+        String traceparent = AgentTraceContext.traceparentOrBlank(traceId);
+        if (!traceparent.isBlank()) {
+            headers.set("traceparent", traceparent);
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -617,7 +636,7 @@ public class KubeManagerHttpClient {
 
                 String response = restClient.get()
                     .uri(url)
-                    .header("X-Token", authToken)
+                    .headers(headers -> applyUserAndTraceHeaders(headers, authToken))
                     .retrieve()
                     .body(String.class);
 

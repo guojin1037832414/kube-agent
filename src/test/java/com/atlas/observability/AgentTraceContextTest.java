@@ -49,6 +49,21 @@ class AgentTraceContextTest {
     }
 
     @Test
+    void traceparentOrBlank_shouldConvertInternalTraceIdToW3cHeader() {
+        String traceparent = AgentTraceContext.traceparentOrBlank("trc_0123456789abcdef0123456789abcdef");
+
+        assertTrue(traceparent.matches("00-0123456789abcdef0123456789abcdef-[0-9a-f]{16}-01"),
+            "内部 trc_ traceId 应能转换为 W3C traceparent，方便后续接 OpenTelemetry");
+        assertTrue(AgentTraceContext.traceparentOrBlank("fedcba9876543210fedcba9876543210")
+                .matches("00-fedcba9876543210fedcba9876543210-[0-9a-f]{16}-01"),
+            "外部网关若已经提供裸 32hex trace-id，也可以转换为 W3C traceparent");
+        assertEquals("", AgentTraceContext.traceparentOrBlank("gateway-trace-001"),
+            "非 32hex 形态的外部 traceId 只传播 X-Trace-Id，不伪造 W3C traceparent");
+        assertEquals("", AgentTraceContext.traceparentOrBlank("trc_00000000000000000000000000000000"),
+            "W3C trace-id 全 0 非法，不能传播 traceparent");
+    }
+
+    @Test
     void bind_shouldExposeTraceIdInThreadLocalAndMdcAndRestoreNestedScope() {
         try (AgentTraceContext.Scope outer = AgentTraceContext.bind("trc_outer")) {
             assertEquals("trc_outer", AgentTraceContext.currentTraceId());

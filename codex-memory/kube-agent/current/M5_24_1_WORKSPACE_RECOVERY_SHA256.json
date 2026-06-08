@@ -1,0 +1,91 @@
+﻿{
+    "project":  "kube-agent",
+    "wave":  "M5.24-1",
+    "title":  "kube-manager HTTP outlet trace propagation",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "generatedAt":  "2026-06-08 23:34:12 +08:00",
+    "workspace":  "F:\\gitProject\\kube-agent",
+    "verification":  [
+                         "mvn -q \"-Dtest=AgentTraceContextTest,KubeManagerHttpClientTracePropagationTest,KubeManagerHttpClientUrlContractTest,KubeManagerHttpClientTokenFallbackSecurityTest,KubeManagerHttpClientResolveOrgIdSecurityTest\" test",
+                         "mvn -q -DskipTests validate",
+                         "git diff --check",
+                         "rg direct BaseTool.execute scan only SafeToolExecutor"
+                     ],
+    "files":  [
+                  {
+                      "path":  "CHANGELOG.md",
+                      "sha256":  "b648ce9312a5857969a822025f90f2ad1a1156002f9af04f04b0ab9b497d5899",
+                      "bytes":  262045
+                  },
+                  {
+                      "path":  "docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "601268d2bfcef762fd52e499b3c246ae42e45c64f93207692868c39e2cbfa2c6",
+                      "bytes":  47403
+                  },
+                  {
+                      "path":  "docs/PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "a0c950e8a2ff58726d3b017795e39e959a1e4e53d91b29a1657946d6711df48a",
+                      "bytes":  284075
+                  },
+                  {
+                      "path":  "docs/SESSION_PROGRESS_20260606_M521_29.md",
+                      "sha256":  "9982b9ef95157bd9fb68afcea630ec1cbe69011e0c5fa21a11598fc9b3381462",
+                      "bytes":  284241
+                  },
+                  {
+                      "path":  "docs/tech-stack/BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "e4f5a8fc5709ac2f2f2b83c70d9e917d90da7a34879a2e56d21f6cff98bb5006",
+                      "bytes":  9147
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentTraceContext.java",
+                      "sha256":  "62c69c4e2b44a1c4020cfe15b2e47a021c09e69f90a517cb036c5d362dea07cf",
+                      "bytes":  5649
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/http/KubeManagerHttpClient.java",
+                      "sha256":  "2f3f8baa9aa79364cfc37c175b496235011b4590e855097a6beb24a0496fe98e",
+                      "bytes":  36322
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/AgentTraceContextTest.java",
+                      "sha256":  "c91f5c9fc97551e139b50fc008a2a1d9507f72de9708c57b84965cd2e0440471",
+                      "bytes":  5078
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/http/KubeManagerHttpClientTracePropagationTest.java",
+                      "sha256":  "e421b2f0df3e6cd39c3da06da2565624f10968c706602839283552a9699c0f33",
+                      "bytes":  8686
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/CHANGELOG.md",
+                      "sha256":  "b648ce9312a5857969a822025f90f2ad1a1156002f9af04f04b0ab9b497d5899",
+                      "bytes":  262045
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "601268d2bfcef762fd52e499b3c246ae42e45c64f93207692868c39e2cbfa2c6",
+                      "bytes":  47403
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "a0c950e8a2ff58726d3b017795e39e959a1e4e53d91b29a1657946d6711df48a",
+                      "bytes":  284075
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_SESSION_PROGRESS_20260606_M521_29.md",
+                      "sha256":  "9982b9ef95157bd9fb68afcea630ec1cbe69011e0c5fa21a11598fc9b3381462",
+                      "bytes":  284241
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "e4f5a8fc5709ac2f2f2b83c70d9e917d90da7a34879a2e56d21f6cff98bb5006",
+                      "bytes":  9147
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/RECOVERY_STATUS.md",
+                      "sha256":  "5bc3116b317ad60c33361c589a5784ee3143c167cc587b93cfc798786993b365",
+                      "bytes":  5878
+                  }
+              ]
+}
