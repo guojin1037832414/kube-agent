@@ -4,6 +4,7 @@ import com.atlas.audit.AgentAuditEvent;
 import com.atlas.audit.AgentAuditOutcome;
 import com.atlas.audit.AgentAuditRecorder;
 import com.atlas.audit.InMemoryAgentAuditRecorder;
+import com.atlas.auth.AgentPrincipalResolver;
 import com.atlas.auth.UserPermissionContext;
 import com.atlas.hitl.HitlConfirmation;
 import com.atlas.hitl.HitlGuard;
@@ -16,6 +17,8 @@ import com.atlas.tool.core.ToolParameterSpec;
 import com.atlas.tool.core.ToolRegistry;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -43,6 +46,7 @@ class SafeToolExecutorTest {
 
     @AfterEach
     void tearDown() {
+        SecurityContextHolder.clearContext();
         UserPermissionContext.CURRENT_TOKEN.remove();
         UserPermissionContext.CURRENT_ORG_ID.remove();
         AgentTraceContext.clear();
@@ -239,6 +243,79 @@ class SafeToolExecutorTest {
         assertParameterSummaryContains(event.parameterSummary(), "token", true, "string");
         assertFalse(event.parameterSummary().toString().contains("forged-token"),
             "审计参数摘要不得保存 token 等真实参数值");
+    }
+
+    @Test
+    void executeIntent_shouldRecordAuditActorFromSecurityContextSnapshot() {
+        // 【M5.29-3 身份治理契约】审计 actor 必须优先来自标准 SecurityContext，
+        // 且要在 Tool 执行绑定请求 ThreadLocal 之前拍快照，避免被请求字段改写。
+        RecordingReadTool readTool = new RecordingReadTool();
+        InMemoryAgentAuditRecorder auditRecorder = new InMemoryAgentAuditRecorder();
+        UserPermissionContext userPermissionContext = new UserPermissionContext();
+        SafeToolExecutor executor = newExecutor(
+            auditRecorder,
+            new AgentPrincipalResolver(userPermissionContext),
+            userPermissionContext,
+            readTool
+        );
+        UserPermissionContext.CURRENT_ORG_ID.set("trusted-security-org");
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "security-principal",
+            null,
+            "ROLE_USER",
+            "agent:tool:execute"
+        ));
+
+        SafeToolExecutionResult result = executor.executeIntent(new SafeToolExecutionRequest(
+            "test.read",
+            Map.of("keyword", "gpu"),
+            "request-user",
+            "request-token",
+            "request-org",
+            "conv-security-audit-actor",
+            "trc_security_audit_actor",
+            null,
+            SafeToolExecutionSource.REACT_ENGINE
+        ));
+
+        assertTrue(result.executed(), "普通 READ Tool 应执行成功");
+        AgentAuditEvent event = auditRecorder.recentEvents().get(0);
+        assertEquals("security-principal", event.userId(), "审计 actor 不得采用可由请求载荷携带的 userId");
+        assertEquals("trusted-security-org", event.organizationId(), "审计租户应来自执行前可信主体快照");
+    }
+
+    @Test
+    void executeIntent_shouldRecordAuditActorFromLegacyContextWhenSecurityContextMissing() {
+        // 【M5.29-3 兼容契约】尚未迁移到 SecurityContext 的 Tool/SSE 路径仍可从 UserPermissionContext
+        // 得到可信审计主体；没有 resolver 的旧构造器继续回落到 request 字段。
+        RecordingReadTool readTool = new RecordingReadTool();
+        InMemoryAgentAuditRecorder auditRecorder = new InMemoryAgentAuditRecorder();
+        UserPermissionContext userPermissionContext = new UserPermissionContext();
+        userPermissionContext.onLogin("trusted-token", "legacy-principal", "user", Set.of("agent:tool:execute"));
+        userPermissionContext.bind("trusted-token", "trusted-legacy-org");
+        SafeToolExecutor executor = newExecutor(
+            auditRecorder,
+            new AgentPrincipalResolver(userPermissionContext),
+            userPermissionContext,
+            readTool
+        );
+
+        SafeToolExecutionResult result = executor.executeIntent(new SafeToolExecutionRequest(
+            "test.read",
+            Map.of("keyword", "node"),
+            "request-user",
+            "request-token",
+            "request-org",
+            "conv-legacy-audit-actor",
+            "trc_legacy_audit_actor",
+            null,
+            SafeToolExecutionSource.GRAPH_TOOL_CALL
+        ));
+
+        assertTrue(result.executed(), "普通 READ Tool 应执行成功");
+        AgentAuditEvent event = auditRecorder.recentEvents().get(0);
+        assertEquals("legacy-principal", event.userId(), "旧 ThreadLocal 身份存在时，审计 actor 应优先使用缓存权限快照");
+        assertEquals("trusted-legacy-org", event.organizationId(), "旧 ThreadLocal orgId 存在时，审计租户应优先使用执行前快照");
     }
 
     @Test
@@ -786,9 +863,17 @@ class SafeToolExecutorTest {
     }
 
     private SafeToolExecutor newExecutor(com.atlas.audit.AgentAuditRecorder auditRecorder, BaseTool... tools) {
-        ToolRegistry registry = new ToolRegistry(List.of(tools), new UserPermissionContext());
+        UserPermissionContext userPermissionContext = new UserPermissionContext();
+        return newExecutor(auditRecorder, null, userPermissionContext, tools);
+    }
+
+    private SafeToolExecutor newExecutor(com.atlas.audit.AgentAuditRecorder auditRecorder,
+                                         AgentPrincipalResolver principalResolver,
+                                         UserPermissionContext userPermissionContext,
+                                         BaseTool... tools) {
+        ToolRegistry registry = new ToolRegistry(List.of(tools), userPermissionContext);
         registry.init();
-        return new SafeToolExecutor(registry, new HitlGuard(), auditRecorder);
+        return new SafeToolExecutor(registry, new HitlGuard(), auditRecorder, principalResolver);
     }
 
     @SuppressWarnings("unchecked")

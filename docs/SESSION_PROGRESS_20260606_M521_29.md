@@ -6,7 +6,7 @@
 - Primary workspace recovery folder: `F:\gitProject\kube-agent\codex-memory\kube-agent\current`
 - Historical external memory folder: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.29-2, unified Agent principal resolver.
+- Current latest wave: M5.29-3, principal-bound audit actor.
 - Phase update: HPC / Slurm / BCM and NIM are paused and moved to Phase 2 by user direction.
 - Phase 1 focus: deliver the top-tier Agent core through generic manager Agent foundations, safe read/query validation, non-HPC/NIM manager function coverage, Tool metadata quality, HITL/audit execution boundary, traceability, recovery, evaluation, teaching documentation, and vue-kube-manager workflow integration.
 - Phase boundary clarification: moving NIM / HPC / Slurm / BCM to Phase 2 postpones specialist domain plugins only; it does not reduce Phase 1 standards.
@@ -55,6 +55,26 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.29-3 principal-bound audit actor is implemented:
+  - `SafeToolExecutor` now optionally receives `AgentPrincipalResolver` through the Spring constructor while preserving older constructors for direct tests and legacy compatibility.
+  - `SafeToolExecutor` captures an `AgentPrincipal` audit snapshot before binding request token/orgId into `UserPermissionContext` for Tool execution compatibility.
+  - `AgentAuditEventFactory` now has a principal-aware overload and uses trusted principal username / organizationId before falling back to legacy request/org fields.
+  - Audit actor snapshot is reused across success, business failure, HITL block, permission denial, schema failure, malformed request, and Tool error paths.
+  - Added focused `SafeToolExecutorTest` coverage proving SecurityContext-first audit actor recording and legacy `UserPermissionContext` fallback.
+  - Verification passed:
+    - `mvn -q "-Dtest=SafeToolExecutorTest,AgentPrincipalResolverTest,AgentAuditRecorderTest" test`
+    - `mvn -q "-Dtest=SafeToolExecutorTest,AgentPrincipalResolverTest,AgentAuditRecorderTest,ObservabilityControllerTest" test`
+    - `mvn -q -DskipTests validate`
+    - `mvn -q test`
+    - `git diff --check`
+  - Security result:
+    - Audit `userId` and `organizationId` are no longer primarily derived from caller-supplied `SafeToolExecutionRequest` fields when a server-side principal is available.
+    - Raw Bearer token remains outside `AgentPrincipal` and audit telemetry.
+  - Next Phase 1 technical slices:
+    - migrate more `/api/agent/**` endpoints and controller guards to explicit Spring Security authorization;
+    - define method-level authorization for sensitive operations;
+    - continue durable audit / frontend replay DTO / RAG Memory / read-only MCP / Agent eval.
 
 - M5.29-2 unified Agent principal resolver is implemented:
   - Added `src/main/java/com/atlas/auth/AgentPrincipal.java`.

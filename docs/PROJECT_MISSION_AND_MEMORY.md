@@ -93,10 +93,33 @@ Current track:
 
 Recently completed:
 
-`M5.29-2 unified Agent principal resolver`
+`M5.29-3 principal-bound audit actor`
 
 Latest checkpoint:
 
+- Date: 2026-06-09 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.29-3 implemented:
+  - `SafeToolExecutor` now accepts optional `AgentPrincipalResolver` in the Spring constructor and keeps older constructors for compatibility.
+  - Audit actor extraction now captures `AgentPrincipal` before Tool execution binds request ThreadLocal context.
+  - `AgentAuditEventFactory` prefers trusted principal username / organizationId when producing audit `userId` / `organizationId`.
+  - Added `SafeToolExecutorTest` coverage for SecurityContext-first actor extraction and legacy `UserPermissionContext` fallback.
+- Verification:
+  - `mvn -q "-Dtest=SafeToolExecutorTest,AgentPrincipalResolverTest,AgentAuditRecorderTest" test`
+  - `mvn -q "-Dtest=SafeToolExecutorTest,AgentPrincipalResolverTest,AgentAuditRecorderTest,ObservabilityControllerTest" test`
+  - `mvn -q -DskipTests validate`
+  - `mvn -q test`
+  - `git diff --check`
+- Scope boundary:
+  - Phase 1 generic Agent Core identity/audit hardening only.
+  - No NIM/HPC/Slurm/BCM Phase 2 implementation was resumed.
+  - No real write/create/delete/state-changing kube-manager call was opened.
+- Security result:
+  - Audit actor evidence is now tied to a server-side principal snapshot when available, instead of trusting caller-supplied request `userId` / `organizationId`.
+- Next technical follow-up:
+  - Migrate remaining controller guards and `/api/agent/**` endpoint authorization to Spring Security, then continue durable audit, replay timeline DTOs, RAG/Memory, read-only MCP schema adapter, and Agent eval.
+
+- Previous checkpoint:
 - Date: 2026-06-09 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
 - M5.29-2 implemented:

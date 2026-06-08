@@ -1,5 +1,6 @@
 package com.atlas.audit;
 
+import com.atlas.auth.AgentPrincipal;
 import com.atlas.tool.core.ProtectedToolParameterFilter;
 import com.atlas.tool.core.ToolRegistry;
 import com.atlas.tool.execution.SafeToolExecutionRequest;
@@ -37,6 +38,21 @@ public final class AgentAuditEventFactory {
         boolean success,
         String reason
     ) {
+        return fromExecution(
+            request, metadata, traceId, organizationId, null, outcome, executed, success, reason);
+    }
+
+    public static AgentAuditEvent fromExecution(
+        SafeToolExecutionRequest request,
+        ToolRegistry.ToolMetadata metadata,
+        String traceId,
+        String organizationId,
+        AgentPrincipal principal,
+        AgentAuditOutcome outcome,
+        boolean executed,
+        boolean success,
+        String reason
+    ) {
         SafeToolExecutionRequest safeRequest = request != null
             ? request
             : new SafeToolExecutionRequest("", Map.of(), "", "", "", "", "", null, null);
@@ -45,8 +61,8 @@ public final class AgentAuditEventFactory {
             Instant.now(Clock.systemUTC()),
             traceId != null ? traceId : "",
             safeText(safeRequest.conversationId()),
-            safeText(safeRequest.userId()),
-            safeText(organizationId),
+            safeText(trustedUserId(principal, safeRequest.userId())),
+            safeText(trustedOrganizationId(principal, organizationId)),
             safeText(safeRequest.intentId()),
             metadata != null ? safeText(metadata.name()) : "",
             safeRequest.source() != null ? safeRequest.source() : SafeToolExecutionSource.GRAPH_TOOL_CALL,
@@ -111,6 +127,20 @@ public final class AgentAuditEventFactory {
             return "array";
         }
         return value.getClass().getSimpleName();
+    }
+
+    private static String trustedUserId(AgentPrincipal principal, String fallback) {
+        if (principal != null && principal.isAuthenticated()) {
+            return principal.username();
+        }
+        return fallback;
+    }
+
+    private static String trustedOrganizationId(AgentPrincipal principal, String fallback) {
+        if (principal != null && principal.organizationId() != null && !principal.organizationId().isBlank()) {
+            return principal.organizationId();
+        }
+        return fallback;
     }
 
     private static String safeText(String value) {

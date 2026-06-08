@@ -463,6 +463,25 @@ M5.29-1 解决了 Web 入口“能不能把 Bearer session 转成 Spring Securit
 
 学习重点：顶级 Agent 的安全迁移不是把旧代码全删掉，而是先建立“唯一读取事实的门”。只要 controller、audit、method security 都通过 `AgentPrincipalResolver` 读取当前用户，后续把底层来源从 ThreadLocal 切到 SecurityContext 就是内部迁移，而不是业务到处改。
 
+### M5.29-3 审计 Actor 可信快照
+
+M5.29-3 把统一 principal 真正接入 `SafeToolExecutor` 的审计事件。此前 `AgentAuditEventFactory` 的 `userId` 直接来自 `SafeToolExecutionRequest.userId()`，`organizationId` 来自执行器解析后的 orgId。这个设计在早期能把审计字段补齐，但对顶级 Agent 来说还不够强：请求对象可能由 Graph、ReAct、ToolCallback 或未来外部协议构造，里面的 `userId` 本质上仍属于 caller-supplied 字段，不能长期作为审计 actor 的权威来源。
+
+本轮做了三个关键收口：
+
+- `SafeToolExecutor` 可选注入 `AgentPrincipalResolver`，Spring 主路径会自动获得统一当前主体解析能力，旧构造器继续兼容测试和历史入口；
+- 执行器在进入 Tool 执行链时先拍一张 `AgentPrincipal` 审计快照，再绑定请求 token/orgId 到 legacy ThreadLocal；
+- `AgentAuditEventFactory` 新增 principal-aware overload，优先用可信 principal 的 username / organizationId，缺失时才回落到旧 request/org 字段。
+
+为什么要“先拍快照再绑定 ThreadLocal”：Tool 执行期间需要把请求 token/orgId 写入 `UserPermissionContext`，用于 kube-manager HTTP 兼容转发。但审计 actor 应代表“谁触发了本次执行”，不能被后续为了执行兼容而写入的请求上下文改写。先拍快照可以把 Web 安全入口的 `SecurityContext`、旧权限缓存和 Tool 执行临时上下文分开。
+
+测试覆盖两条核心链路：
+
+- `SecurityContext` 存在真实认证时，审计 `userId` 使用 `Authentication.getName()`，并使用执行前可信 org 快照；
+- 没有 `SecurityContext` 时，仍可从 legacy `UserPermissionContext` 读取用户和租户，保证 SSE/Tool 兼容路径不被一次性打断。
+
+学习重点：审计不是日志拼字段，而是证据链。顶级 Agent 的审计 actor 必须来自服务端可信主体快照；LLM、Graph、前端或外部协议传入的 `userId` 最多是兼容 fallback，不能成为长期权威。
+
 ### Fail-Closed
 
 当证据缺失、来源不可信、格式不完整、digest 不匹配、词表扩展未审查时，系统必须拒绝，而不是降级为“试试看”。

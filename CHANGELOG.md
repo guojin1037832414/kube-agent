@@ -6,6 +6,25 @@
 
 ---
 
+## [M5.29-3] - Principal-bound audit actor
+
+**Delivery**: Bound SafeToolExecutor audit actor extraction to the unified `AgentPrincipalResolver`, so audit `userId` / `organizationId` now prefer a trusted Spring Security or legacy permission snapshot instead of caller-supplied request fields.
+**Changes**
+- Added a principal-aware overload to `AgentAuditEventFactory#fromExecution(...)` while keeping the legacy overload for compatibility.
+- Injected optional `AgentPrincipalResolver` into `SafeToolExecutor` through a new Spring constructor while preserving existing direct constructors.
+- Captured the audit principal before Tool execution binds request ThreadLocal context, preventing forged request `userId` / `orgId` values from rewriting audit evidence.
+- Passed the same actor snapshot through success, business failure, HITL block, permission denial, schema failure, malformed request, and Tool error audit paths.
+- Added `SafeToolExecutorTest` coverage for SecurityContext-first audit actor recording and legacy `UserPermissionContext` fallback.
+**Verification**
+- `mvn -q "-Dtest=SafeToolExecutorTest,AgentPrincipalResolverTest,AgentAuditRecorderTest" test` passed.
+- `mvn -q "-Dtest=SafeToolExecutorTest,AgentPrincipalResolverTest,AgentAuditRecorderTest,ObservabilityControllerTest" test` passed.
+- `mvn -q -DskipTests validate` passed.
+- `mvn -q test` passed.
+- `git diff --check` passed.
+**Security**
+- Audit evidence now uses a server-side identity snapshot when available and keeps raw Bearer tokens out of the principal/audit path.
+- Compatibility remains intact for old direct `new SafeToolExecutor(...)` tests and for legacy Tool/SSE paths during the Spring Security migration.
+
 ## [M5.29-2] - Unified Agent principal resolver
 
 **Delivery**: Added a single `AgentPrincipalResolver` so controllers and future audit/method-security code can read the current actor from Spring Security first, then safely fall back to legacy `UserPermissionContext` during incremental migration.

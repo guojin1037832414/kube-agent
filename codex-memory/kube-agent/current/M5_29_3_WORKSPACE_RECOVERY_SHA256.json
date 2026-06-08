@@ -1,0 +1,97 @@
+﻿{
+    "project":  "kube-agent",
+    "milestone":  "M5.29-3",
+    "title":  "principal-bound audit actor",
+    "generatedAt":  "2026-06-09T02:46:10+08:00",
+    "workspace":  "F:\\gitProject\\kube-agent",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "verification":  [
+                         "mvn -q \"-Dtest=SafeToolExecutorTest,AgentPrincipalResolverTest,AgentAuditRecorderTest\" test",
+                         "mvn -q \"-Dtest=SafeToolExecutorTest,AgentPrincipalResolverTest,AgentAuditRecorderTest,ObservabilityControllerTest\" test",
+                         "mvn -q -DskipTests validate",
+                         "mvn -q test",
+                         "git diff --check"
+                     ],
+    "files":  [
+                  {
+                      "path":  "src/main/java/com/atlas/audit/AgentAuditEventFactory.java",
+                      "sha256":  "d271b8eec2e14f5e4bb1948fb07652c730019c1494f9831b50b2387aed80d6d7",
+                      "bytes":  5331
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/tool/execution/SafeToolExecutor.java",
+                      "sha256":  "fd7ad084ed0d2520f19ad562c4da0f8a047463967e6ee493cc9c0568e30eca6a",
+                      "bytes":  19279
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/tool/execution/SafeToolExecutorTest.java",
+                      "sha256":  "83ca78669ebac3bd3dcf92df12a74742bcd4d420a9938308815d7afbe748ab18",
+                      "bytes":  51297
+                  },
+                  {
+                      "path":  "CHANGELOG.md",
+                      "sha256":  "ceb704695f36aa957ddaf5d0fbf8e533fad4e155d0c71fa5f974a78aed265da1",
+                      "bytes":  274693
+                  },
+                  {
+                      "path":  "docs/PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "71ed6a98a6519c4ec317ae2b8cffb6822645156573f8e1f8b2aa631486e49812",
+                      "bytes":  298402
+                  },
+                  {
+                      "path":  "docs/SESSION_PROGRESS_20260606_M521_29.md",
+                      "sha256":  "8276561d0c82d10c2d714aa3d17d0ae12cc3e97205fd03c0adfd36ee1b238bc0",
+                      "bytes":  299165
+                  },
+                  {
+                      "path":  "docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "b7f7d5705302d14e36876dbc8b5f49ea7596033efd2e5c541df6c56ec04b7af7",
+                      "bytes":  64925
+                  },
+                  {
+                      "path":  "docs/tech-stack/BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "82674d48c7c68c1e47a256ddda8e33b991733c745f43bf1293abaa09fe2d361f",
+                      "bytes":  17294
+                  },
+                  {
+                      "path":  "docs/tech-stack/BACKEND_JAVA_TECH_STACK_AUDIT_20260608.md",
+                      "sha256":  "04dad4a9f6c95b19a4b50552d403286e8b059cb84fdd72e00a28ec5e2f754c9e",
+                      "bytes":  12576
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/RECOVERY_STATUS.md",
+                      "sha256":  "e9d78e49bea3d1de698aa19965719849b3f39f4733c077c5b3e0b814f54e7cfc",
+                      "bytes":  13868
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/CHANGELOG.md",
+                      "sha256":  "ceb704695f36aa957ddaf5d0fbf8e533fad4e155d0c71fa5f974a78aed265da1",
+                      "bytes":  274693
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "71ed6a98a6519c4ec317ae2b8cffb6822645156573f8e1f8b2aa631486e49812",
+                      "bytes":  298402
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_SESSION_PROGRESS_20260606_M521_29.md",
+                      "sha256":  "8276561d0c82d10c2d714aa3d17d0ae12cc3e97205fd03c0adfd36ee1b238bc0",
+                      "bytes":  299165
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "b7f7d5705302d14e36876dbc8b5f49ea7596033efd2e5c541df6c56ec04b7af7",
+                      "bytes":  64925
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "82674d48c7c68c1e47a256ddda8e33b991733c745f43bf1293abaa09fe2d361f",
+                      "bytes":  17294
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_JAVA_TECH_STACK_AUDIT_20260608.md",
+                      "sha256":  "04dad4a9f6c95b19a4b50552d403286e8b059cb84fdd72e00a28ec5e2f754c9e",
+                      "bytes":  12576
+                  }
+              ]
+}
