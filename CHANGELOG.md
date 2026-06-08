@@ -6,6 +6,20 @@
 
 ---
 
+## [M5.21-116] - NIM release decision required fields closed list
+
+**Delivery**: Hardened code release switch validation of the upstream release decision required-evidence field list.
+**Changes**
+- `NimCreateDurableAuditCodeReleaseSwitchContractSupport` now requires M5.21-71 `requiredFutureEvidenceDigestFields` to exactly match the source-owned release decision evidence list.
+- Added a digest-consistent forged release decision regression that appends `forgedReleaseDecisionFutureEvidenceDigest`, recomputes `releaseDecisionContractDigest`, and still expects code release switch contract rejection.
+**Verification**
+- Targeted code release switch regression and full code release switch contract test class passed.
+- Final `git diff --check` and `mvn -q test` passed; full Maven degraded to L1 embedding mode after local `model.onnx` download timeout but exited 0.
+**Security**
+- This is release-decision proof-list hardening only; it does not open runtime writes or a real code release switch.
+- No real `8100`, real NIM service HTTP call, Authorization header sending, durable audit write, deployment POST, state-machine release binding implementation, durable executor release binding implementation, validation result signer, release decision signer, code release switch implementation, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-115] - NIM switch contract required fields closed list
 
 **Delivery**: Hardened runtime binding validation of the upstream code release switch required-evidence field list.

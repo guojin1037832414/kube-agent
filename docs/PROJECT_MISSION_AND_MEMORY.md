@@ -82,12 +82,26 @@ Current track:
 
 Recently completed:
 
-`M5.21-115 NIM switch contract required fields closed list`
+`M5.21-116 NIM release decision required fields closed list`
 
 Latest checkpoint:
 
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-116 implemented:
+  - Hardened `NimCreateDurableAuditCodeReleaseSwitchContractSupport` so M5.21-71 `releaseDecisionContract.requiredFutureEvidenceDigestFields` must exactly match the source-owned release decision evidence field list before code release switch planning accepts release decision evidence.
+  - Added a digest-consistent forged release decision contract regression that appends `forgedReleaseDecisionFutureEvidenceDigest`, recomputes `releaseDecisionContractDigest`, and still expects code release switch contract rejection.
+  - Added `docs/M5_21_ONE_HUNDRED_SIXTEENTH_WAVE_NIM_RELEASE_DECISION_REQUIRED_FIELDS_CLOSED_LIST_AUDIT_20260608.md`.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimCreateDurableAuditCodeReleaseSwitchContractSupportTest#codeReleaseSwitch_shouldRejectDigestConsistentReleaseDecisionExtraFutureEvidenceField" test`
+    - `mvn -q "-Dtest=NimCreateDurableAuditCodeReleaseSwitchContractSupportTest" test`
+  - Final verification passed:
+    - `git diff --check`
+    - `mvn -q test`
+    - Full Maven note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - Security invariant: no real `8100`, no real NIM service HTTP call, no Authorization header sending, no durable audit write, no deployment POST, no runtime write behavior, no state-machine release binding implementation, no durable executor release binding implementation, no validation result signer, no release decision signer, no code release switch implementation, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Recommended next slice: close the adjacent M5.21-71 release decision contract consumer of validation-result required fields, continue closing remaining future-proof field lists, or continue release-binding proof design without opening writes.
+- Previous checkpoint:
 - M5.21-115 implemented:
   - Hardened `NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport` so M5.21-72 `codeReleaseSwitchContract.requiredFutureEvidenceDigestFields` must exactly match the source-owned switch evidence field list before runtime binding accepts switch contract evidence.
   - Aligned the runtime binding consumer list with the switch contract producer list by adding `sourceAuditEventDigest` and `trustedPrincipalDigest`.

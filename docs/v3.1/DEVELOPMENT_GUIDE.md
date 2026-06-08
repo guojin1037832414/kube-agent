@@ -576,3 +576,9 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - The runtime binding consumer list now includes the producer-owned `sourceAuditEventDigest` and `trustedPrincipalDigest` fields before applying exact equality.
 - Extra future switch evidence field names are rejected even when `codeReleaseSwitchContractDigest` is recomputed.
 - Learning distinction: producer and consumer proof taxonomies must evolve together. A digest-consistent contract with extra future slots is still unsafe unless reviewed code owns those slots.
+
+### M5.21-116 release decision required fields closed list note
+
+- Code release switch contract validation now requires M5.21-71 `releaseDecisionContract.requiredFutureEvidenceDigestFields` to exactly match the source-owned release decision evidence list.
+- Extra future release decision evidence field names are rejected even when `releaseDecisionContractDigest` is recomputed.
+- Learning distinction: release decision proof slots define future write-release authority. Treat them as reviewed protocol fields, not as caller-extensible metadata.

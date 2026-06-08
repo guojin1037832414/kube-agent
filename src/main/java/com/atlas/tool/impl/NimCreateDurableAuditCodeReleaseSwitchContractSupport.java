@@ -325,7 +325,7 @@ final class NimCreateDurableAuditCodeReleaseSwitchContractSupport {
             && validationBindingValid(report, validationBinding)
             && stateMachineBindingValid(stateMachineBinding)
             && durableExecutorBindingValid(durableExecutorBinding)
-            && requiredFields.containsAll(requiredReleaseDecisionEvidenceFields())
+            && requiredFields.equals(requiredReleaseDecisionEvidenceFields())
             && RELEASE_DENIED.equals(text(template.get("decision")))
             && VALIDATION_NOT_RUN.equals(text(template.get("validationStatus")))
             && Boolean.FALSE.equals(template.get("validationResultDigestVerified"))
