@@ -91,15 +91,34 @@ Current track:
 
 Recently completed:
 
-`M5.21-137 NIM storage probe result contract maps closed`
+`M5.21-138 NIM validation result migration plan maps closed`
 
 Latest checkpoint:
 
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
 - Teaching principle:
+  - `migrationPlanDigest` proves object self-consistency, not semantic approval of new migration authority fields.
+  - `migrationPlan` is now producer-owned and consumed by exact canonical equality at the validation-result probe-binding migration boundary.
   - This project is not only delivering software. It is also a teaching system for mastering Agent engineering.
   - Maintain `docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md` as the long-lived architecture and technical-learning map.
+- M5.21-138 implemented:
+  - Hardened `NimCreateDurableAuditValidationResultMigrationSupport` so validation-result migration reports include `sourceOrganizationId`, `sourceUserId`, and `sourceUsername`.
+  - Added producer-owned `migrationPlanFromReport(...)` canonical reconstruction for the whole M5.21-58 `migrationPlan`.
+  - Hardened `NimCreateDurableAuditValidationResultProbeBindingMigrationSupport` so it requires exact whole-plan equality instead of partial nested-map checks when consuming migration plans.
+  - Preserved top-level report HOLD checks, false execution/result states, digest verification, expected hold blocker, cross-binding, forged-claim rejection, caller-evidence rejection, and secret-material checks.
+  - Added digest-consistent forged migration-plan drift regressions covering top-level extra keys, identity-binding keys, migration-sequence drift, validation-result contract drift, validation-result template drift, release-decision contract drift, release-decision template drift, legacy-policy drift, release-credential-rule drift, failure-contract drift, failure-status list drift, and forbidden-shortcut drift.
+  - Added `docs/M5_21_ONE_HUNDRED_THIRTY_EIGHTH_WAVE_NIM_VALIDATION_RESULT_MIGRATION_PLAN_MAPS_CLOSED_AUDIT_20260608.md`.
+  - Updated the long-lived teaching map with the M5.21-138 lesson: `migrationPlan` is release-adjacent protocol and must be consumed as a producer-owned exact shape, not as digest-consistent explanatory JSON.
+  - Targeted verification passed:
+    - `git diff --check`
+    - `mvn -q "-Dtest=NimCreateDurableAuditValidationResultMigrationSupportTest,NimCreateDurableAuditValidationResultProbeBindingMigrationSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateDurableAuditValidationResultMigrationSupportTest,NimCreateDurableAuditValidationResultProbeBindingMigrationSupportTest,NimCreateDurableAuditReceiptValidationProbeResultBindingSupportTest,NimCreateDurableAuditReceiptValidationResultSupportTest,NimCreateDurableAuditReleaseDecisionGateSupportTest,NimCreateDurableAuditReleaseDecisionContractSupportTest" test`
+    - `mvn -q test`
+    - Full Maven note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - Security invariant: no real `8100`, no real NIM service HTTP call, no Authorization header sending, no durable audit write, no deployment POST, no runtime write behavior, no source guard installation, no state-machine release binding implementation, no durable executor release binding implementation, no validation result signer, no release decision signer, no code release switch implementation, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Multi-expert note: parallel review agreed that local nested-map interpretation can be replaced by producer-owned equality, but report-level HOLD, false-state, digest, blockedBy, cross-binding, forged-claim, caller-evidence, and secret checks must stay.
+- Previous checkpoint:
 - M5.21-137 implemented:
   - Hardened `NimCreateDurableAuditStorageProbeResultSupport` so storage probe result reports include `sourceOrganizationId`, `sourceUserId`, and `sourceUsername`.
   - Added producer-owned `probeResultContractFromReport(...)` canonical reconstruction for the whole M5.21-67 `probeResultContract`.

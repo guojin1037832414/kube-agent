@@ -6,7 +6,7 @@
 - Primary workspace recovery folder: `F:\gitProject\kube-agent\codex-memory\kube-agent\current`
 - Historical external memory folder: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-137, NIM storage probe result contract maps closed.
+- Current latest wave: M5.21-138, NIM validation result migration plan maps closed.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -50,6 +50,25 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-138 NIM validation result migration plan maps closed is implemented:
+  - Hardened `src/main/java/com/atlas/tool/impl/NimCreateDurableAuditValidationResultMigrationSupport.java`.
+  - Hardened `src/main/java/com/atlas/tool/impl/NimCreateDurableAuditValidationResultProbeBindingMigrationSupport.java`.
+  - Validation-result migration reports now include `sourceOrganizationId`, `sourceUserId`, and `sourceUsername`.
+  - `NimCreateDurableAuditValidationResultMigrationSupport` now exposes producer-owned `migrationPlanFromReport(...)`.
+  - Validation-result probe-binding migration now requires exact `migrationPlan` equality against that producer-owned canonical helper instead of locally hand-interpreting nested maps.
+  - Preserved report-level HOLD checks, false-state checks, digest checks, expected hold blocker checks, cross-binding checks, forged-claim checks, caller-evidence rejection, and secret-material checks.
+  - Added digest-consistent forged migration-plan drift regressions that append fake top-level/nested/list proof fields, recompute `migrationPlanDigest`, and still expect rejection.
+  - Added `docs/M5_21_ONE_HUNDRED_THIRTY_EIGHTH_WAVE_NIM_VALIDATION_RESULT_MIGRATION_PLAN_MAPS_CLOSED_AUDIT_20260608.md`.
+  - Updated `docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md` with the M5.21-138 learning note.
+  - Targeted verification passed:
+    - `git diff --check`
+    - `mvn -q "-Dtest=NimCreateDurableAuditValidationResultMigrationSupportTest,NimCreateDurableAuditValidationResultProbeBindingMigrationSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateDurableAuditValidationResultMigrationSupportTest,NimCreateDurableAuditValidationResultProbeBindingMigrationSupportTest,NimCreateDurableAuditReceiptValidationProbeResultBindingSupportTest,NimCreateDurableAuditReceiptValidationResultSupportTest,NimCreateDurableAuditReleaseDecisionGateSupportTest,NimCreateDurableAuditReleaseDecisionContractSupportTest" test`
+    - `mvn -q test`
+    - Full Maven note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - No real `8100` access; no real NIM service HTTP call; no Authorization header sending; no durable audit write; no deployment POST; no runtime write behavior opened; no source guard installation; no state-machine release binding implementation; no durable executor release binding implementation; no validation result signer; no release decision signer; no code release switch implementation; no Elasticsearch; no `ISysLogService`; no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Multi-expert follow-up: continue scanning remaining upstream proof objects consumed by release-adjacent paths for local nested-map interpretation that should become producer-owned canonical equality.
 
 - M5.21-137 NIM storage probe result contract maps closed is implemented:
   - Hardened `src/main/java/com/atlas/tool/impl/NimCreateDurableAuditStorageProbeResultSupport.java`.

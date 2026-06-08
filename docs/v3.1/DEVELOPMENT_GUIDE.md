@@ -733,6 +733,13 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Extra top-level keys, evidence-binding keys, identity-binding keys, required-future-field drift, current-template drift, prerequisite drift, failure-model drift, and failure-status drift are rejected even when `probeResultContractDigest` is recomputed.
 - Learning distinction: `probeResultContract` is the bridge between future storage-probe evidence and receipt validation. A digest-consistent contract superset can become future storage authority unless the consumer accepts only the producer-owned exact shape.
 
+### M5.21-138 validation result migration plan maps closed note
+
+- Validation result migration generation now exposes `migrationPlanFromReport(...)` as the producer-owned canonical reconstruction helper.
+- Validation-result probe-binding migration requires the whole `migrationPlan` to equal that canonical proof object instead of re-checking only known nested map fields.
+- Extra top-level keys, identity-binding keys, migration-sequence drift, validation-result contract drift, release-decision contract drift, template drift, legacy-policy drift, release-credential-rule drift, failure-contract drift, and forbidden-shortcut drift are rejected even when `migrationPlanDigest` is recomputed.
+- Learning distinction: a migration plan is release-adjacent protocol. Keep report-level HOLD and digest checks, then accept only the producer-owned exact plan shape so new migration semantics cannot enter downstream release logic silently.
+
 ### Architecture and technical learning map note
 
 - Maintain `docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md` as the long-lived architecture and technical-learning map.

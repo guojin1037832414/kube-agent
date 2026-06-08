@@ -77,6 +77,9 @@ class NimCreateDurableAuditValidationResultMigrationSupportTest {
         assertEquals(false, report.get("releaseCredentialIssued"));
         assertEquals(false, report.get("writeExecutionAllowed"));
         assertEquals(false, report.get("legacyAuditReceiptReleaseFlagTrusted"));
+        assertEquals(audit.get("organizationId"), report.get("sourceOrganizationId"));
+        assertEquals(audit.get("userId"), report.get("sourceUserId"));
+        assertEquals(principal.get("username"), report.get("sourceUsername"));
         assertEquals(validationGateReport.get("sourceReceiptSchemaDigest"),
             report.get("sourceReceiptSchemaDigest"));
         assertEquals(validationGateReport.get("validationPlanDigest"),
@@ -95,6 +98,10 @@ class NimCreateDurableAuditValidationResultMigrationSupportTest {
             plan.get("sourceReceiptSchemaDigest"));
         assertEquals(validationGateReport.get("validationPlanDigest"),
             plan.get("sourceValidationPlanDigest"));
+        assertEquals(
+            NimCreateDurableAuditValidationResultMigrationSupport.migrationPlanFromReport(report),
+            plan
+        );
 
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> sequence = (List<Map<String, Object>>) plan.get("migrationSequence");

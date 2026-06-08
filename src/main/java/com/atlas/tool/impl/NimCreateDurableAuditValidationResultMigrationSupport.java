@@ -124,6 +124,9 @@ final class NimCreateDurableAuditValidationResultMigrationSupport {
         result.put("releaseCredentialIssued", false);
         result.put("writeExecutionAllowed", false);
         result.put("legacyAuditReceiptReleaseFlagTrusted", false);
+        result.put("sourceOrganizationId", text(auditContext.get("organizationId")));
+        result.put("sourceUserId", text(auditContext.get("userId")));
+        result.put("sourceUsername", text(principal.get("username")));
         result.put("sourceAuditEventDigest", digestFor(auditContext));
         result.put("sourceReceiptSchemaDigest", text(validationGateReport.get("sourceReceiptSchemaDigest")));
         result.put("sourceValidationPlanDigest", text(validationGateReport.get("validationPlanDigest")));
@@ -302,29 +305,74 @@ final class NimCreateDurableAuditValidationResultMigrationSupport {
     private static Map<String, Object> migrationPlan(Map<String, Object> auditContext,
                                                      Map<String, Object> principal,
                                                      Map<String, Object> validationGateReport) {
+        return migrationPlanForDigests(
+            text(validationGateReport.get("sourceReceiptSchemaDigest")),
+            text(validationGateReport.get("validationPlanDigest")),
+            text(validationGateReport.get("sourceInterfaceSpecDigest")),
+            text(validationGateReport.get("sourceBoundaryPlanDigest")),
+            text(validationGateReport.get("sourceWriterPlanDigest")),
+            text(validationGateReport.get("sourceAvailabilityPlanDigest")),
+            digestFor(auditContext),
+            text(auditContext.get("organizationId")),
+            text(auditContext.get("userId")),
+            text(principal.get("username"))
+        );
+    }
+
+    static Map<String, Object> migrationPlanFromReport(Map<String, Object> migrationReport) {
+        return migrationPlanForDigests(
+            text(migrationReport.get("sourceReceiptSchemaDigest")),
+            text(migrationReport.get("sourceValidationPlanDigest")),
+            text(migrationReport.get("sourceInterfaceSpecDigest")),
+            text(migrationReport.get("sourceBoundaryPlanDigest")),
+            text(migrationReport.get("sourceWriterPlanDigest")),
+            text(migrationReport.get("sourceAvailabilityPlanDigest")),
+            text(migrationReport.get("sourceAuditEventDigest")),
+            text(migrationReport.get("sourceOrganizationId")),
+            text(migrationReport.get("sourceUserId")),
+            text(migrationReport.get("sourceUsername"))
+        );
+    }
+
+    private static Map<String, Object> migrationPlanForDigests(String sourceReceiptSchemaDigest,
+                                                               String sourceValidationPlanDigest,
+                                                               String sourceInterfaceSpecDigest,
+                                                               String sourceBoundaryPlanDigest,
+                                                               String sourceWriterPlanDigest,
+                                                               String sourceAvailabilityPlanDigest,
+                                                               String sourceAuditEventDigest,
+                                                               String organizationId,
+                                                               String userId,
+                                                               String username) {
         Map<String, Object> plan = new LinkedHashMap<>();
         plan.put("migrationBoundary", "SERVER_SIDE_VALIDATION_RESULT_AND_RELEASE_DECISION_REQUIRED");
         plan.put("futureValidator", NimCreateDurableAuditReceiptValidationGateSupport.FUTURE_VALIDATOR);
         plan.put("futureValidationResult", FUTURE_VALIDATION_RESULT);
         plan.put("futureReleaseDecision", FUTURE_RELEASE_DECISION);
-        plan.put("sourceReceiptSchemaDigest", text(validationGateReport.get("sourceReceiptSchemaDigest")));
-        plan.put("sourceValidationPlanDigest", text(validationGateReport.get("validationPlanDigest")));
-        plan.put("sourceInterfaceSpecDigest", text(validationGateReport.get("sourceInterfaceSpecDigest")));
-        plan.put("sourceBoundaryPlanDigest", text(validationGateReport.get("sourceBoundaryPlanDigest")));
-        plan.put("sourceWriterPlanDigest", text(validationGateReport.get("sourceWriterPlanDigest")));
-        plan.put("sourceAvailabilityPlanDigest", text(validationGateReport.get("sourceAvailabilityPlanDigest")));
-        plan.put("sourceAuditEventDigest", digestFor(auditContext));
+        plan.put("sourceReceiptSchemaDigest", sourceReceiptSchemaDigest);
+        plan.put("sourceValidationPlanDigest", sourceValidationPlanDigest);
+        plan.put("sourceInterfaceSpecDigest", sourceInterfaceSpecDigest);
+        plan.put("sourceBoundaryPlanDigest", sourceBoundaryPlanDigest);
+        plan.put("sourceWriterPlanDigest", sourceWriterPlanDigest);
+        plan.put("sourceAvailabilityPlanDigest", sourceAvailabilityPlanDigest);
+        plan.put("sourceAuditEventDigest", sourceAuditEventDigest);
         plan.put("digestAlgorithm", NimCreateAuditWriterSupport.DIGEST_ALGORITHM);
         plan.put("trustedIdentityBinding", Map.of(
-            "organizationId", text(auditContext.get("organizationId")),
-            "userId", text(auditContext.get("userId")),
-            "username", text(principal.get("username")),
+            "organizationId", organizationId,
+            "userId", userId,
+            "username", username,
             "source", "SERVER_SESSION_CONTEXT",
             "protectedFromCallerParams", true
         ));
         plan.put("migrationSequence", migrationSequence());
-        plan.put("validationResultContract", validationResultContract(validationGateReport));
-        plan.put("releaseDecisionContract", releaseDecisionContract(validationGateReport));
+        plan.put("validationResultContract", validationResultContractForDigests(
+            sourceReceiptSchemaDigest,
+            sourceValidationPlanDigest
+        ));
+        plan.put("releaseDecisionContract", releaseDecisionContractForDigests(
+            sourceReceiptSchemaDigest,
+            sourceValidationPlanDigest
+        ));
         plan.put("legacyCompatibilityPolicy", legacyCompatibilityPolicy());
         plan.put("releaseCredentialRules", releaseCredentialRules());
         plan.put("failureContract", migrationFailureContract());
