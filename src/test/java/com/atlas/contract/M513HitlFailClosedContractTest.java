@@ -29,6 +29,7 @@ class M513HitlFailClosedContractTest {
     private static final Path ORCHESTRATOR = Path.of("src/main/java/com/atlas/orchestrator/AtlasOrchestrator.java");
     private static final Path BRIDGE_CALLBACK = Path.of("src/main/java/com/atlas/graph/bridge/AtlasToolCallback.java");
     private static final Path BRIDGE_FACTORY = Path.of("src/main/java/com/atlas/graph/bridge/AtlasToolCallbackFactory.java");
+    private static final Path CORE_CALLBACK = Path.of("src/main/java/com/atlas/tool/core/AtlasToolCallback.java");
 
     /**
      * 执行层必须通过统一 HitlGuard 依据 Tool 元数据做 fail-closed 风险判断。
@@ -140,6 +141,14 @@ class M513HitlFailClosedContractTest {
             .contains("SafeToolExecutionSource.TOOL_CALLBACK")
             .contains("safeToolExecutor.executeIntent(request)")
             .doesNotContain("baseTool.execute(");
+
+        String coreCallback = read(CORE_CALLBACK);
+        assertThat(coreCallback)
+            .as("legacy core AtlasToolCallback 也必须委托 SafeToolExecutor，不能保留旧裸执行入口")
+            .contains("new SafeToolExecutionRequest(")
+            .contains("SafeToolExecutionSource.TOOL_CALLBACK")
+            .contains("safeToolExecutor.executeIntent(")
+            .doesNotContain("tool.execute(");
 
         assertThat(read(BRIDGE_FACTORY))
             .as("ToolCallbackFactory 必须向 callback 传入 SafeToolExecutor 和真实 ToolMetadata")

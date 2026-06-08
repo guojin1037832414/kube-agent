@@ -6,7 +6,7 @@
 - Primary workspace recovery folder: `F:\gitProject\kube-agent\codex-memory\kube-agent\current`
 - Historical external memory folder: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.22-3, ReActEngine safe execution kernel.
+- Current latest wave: M5.22-4, legacy core ToolCallback safe execution.
 - Phase update: HPC / Slurm / BCM and NIM are paused and moved to Phase 2 by user direction.
 - Phase 1 focus: deliver the top-tier Agent core through generic manager Agent foundations, safe read/query validation, non-HPC/NIM manager function coverage, Tool metadata quality, HITL/audit execution boundary, traceability, recovery, evaluation, teaching documentation, and vue-kube-manager workflow integration.
 - Phase boundary clarification: moving NIM / HPC / Slurm / BCM to Phase 2 postpones specialist domain plugins only; it does not reduce Phase 1 standards.
@@ -55,6 +55,18 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.22-4 legacy core ToolCallback safe execution is implemented:
+  - `src/main/java/com/atlas/tool/core/AtlasToolCallback.java` no longer directly calls `tool.execute(params)`.
+  - Legacy core callback now parses JSON, normalizes aliases, constructs `SafeToolExecutionRequest`, and delegates execution to `SafeToolExecutor` with `SafeToolExecutionSource.TOOL_CALLBACK`.
+  - Old public constructors are preserved through a single-tool compatibility runtime; a new injectable constructor supports explicit runtime wiring and testing.
+  - `src/test/java/com/atlas/tool/core/AtlasToolCallbackSafeExecutorTest.java` proves forged protected/control params are removed, trusted org/user context wins, and missing trusted org fail-closes before Tool execution.
+  - `M4Px4ToolExecuteEntrypointContractTest` removed legacy core callback from the temporary direct execute allowlist.
+  - Verification passed:
+    - `mvn -q "-Dtest=AtlasToolCallbackSafeExecutorTest,M513HitlFailClosedContractTest,M4Px4ToolExecuteEntrypointContractTest" test`
+  - No NIM/HPC/Slurm/BCM Phase 2 implementation was resumed and no new write path was opened.
+  - Remaining direct Tool execution debt: `AtlasOrchestrator` legacy fallback.
+  - Next Phase 1 technical slice: migrate `AtlasOrchestrator` fallback to `SafeToolExecutor`, then wire traceId through intent/plan/tool/http/HITL/audit/final answer.
 
 - M5.22-3 ReActEngine safe execution kernel is implemented:
   - `src/main/java/com/atlas/react/ReActEngine.java` no longer directly calls `meta.instance().execute(...)`.

@@ -93,10 +93,29 @@ Current track:
 
 Recently completed:
 
-`M5.22-3 ReActEngine safe execution kernel`
+`M5.22-4 Legacy core ToolCallback safe execution`
 
 Latest checkpoint:
 
+- Date: 2026-06-08 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.22-4 implemented:
+  - Migrated legacy `src/main/java/com/atlas/tool/core/AtlasToolCallback.java` from direct `tool.execute(params)` to `SafeToolExecutor`.
+  - Preserved legacy constructors through a single-tool compatibility runtime, and added an injectable constructor for explicit `ToolParameterNormalizer`, `SafeToolExecutor`, `UserPermissionContext`, and Tool metadata.
+  - Added `src/test/java/com/atlas/tool/core/AtlasToolCallbackSafeExecutorTest.java`.
+  - Removed legacy core callback from `M4Px4ToolExecuteEntrypointContractTest` temporary direct execute allowlist.
+- Verification:
+  - `mvn -q "-Dtest=AtlasToolCallbackSafeExecutorTest,M513HitlFailClosedContractTest,M4Px4ToolExecuteEntrypointContractTest" test`
+- Scope boundary:
+  - Phase 1 Agent Core safety hardening only.
+  - No NIM/HPC/Slurm/BCM Phase 2 implementation was resumed.
+  - No new real write/create/delete/state-changing kube-manager call was opened.
+- Remaining direct execution debt:
+  - `AtlasOrchestrator` legacy fallback.
+- Next technical follow-up:
+  - Migrate `AtlasOrchestrator` fallback to `SafeToolExecutor`; after that, add end-to-end traceId propagation.
+
+- Previous checkpoint:
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
 - M5.22-3 implemented:

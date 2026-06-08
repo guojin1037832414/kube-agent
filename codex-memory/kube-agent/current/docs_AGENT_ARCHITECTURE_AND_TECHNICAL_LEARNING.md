@@ -245,12 +245,20 @@ M5.22-3 继续收口手写 `ReActEngine`：
 
 学习重点：Agent 的“行动”和“展示”必须分开。执行层需要可信上下文才能访问后端，但前端时间线和 LLM 后续 Observation 不应该看到 token、租户控制字段和发布/审计控制字段。顶级 Agent 不是把所有上下文都塞给模型，而是让模型只看到完成任务所需的最小证据。
 
+M5.22-4 收口 legacy core `AtlasToolCallback`：
+
+- 旧 core callback 不再直接调用 `tool.execute(params)`；
+- 旧构造器保留，但内部构建单 Tool 兼容运行时，并委托 `SafeToolExecutor`；
+- 新增可注入构造器，测试和未来 Spring wiring 可以传入真实 `SafeToolExecutor`、`ToolParameterNormalizer`、`UserPermissionContext` 和 Tool metadata；
+- 缺少可信 orgId 时 fail-closed，LLM JSON 伪造的 `orgId/organizationId/userId/token/confirmed/auditReceipt/writePermitted` 不会进入业务 Tool。
+
+学习重点：安全债务不能因为“旧入口可能很少用”就继续保留。顶级 Agent 的执行边界要求所有可能通向真实 Tool 的路径都共享同一个内核；低频 legacy path 也必须可审计、可测试、可失败关闭。
+
 当前剩余直接执行债务：
 
-- legacy `com.atlas.tool.core.AtlasToolCallback`
 - `AtlasOrchestrator` legacy fallback
 
-这两个入口收口后，`SafeToolExecutor` 才能成为一期 Agent Core 中唯一永久真实 `BaseTool.execute(...)` 边界。
+这个入口收口后，`SafeToolExecutor` 才能成为一期 Agent Core 中唯一永久真实 `BaseTool.execute(...)` 边界。
 
 ### Java 后端技术栈审计
 

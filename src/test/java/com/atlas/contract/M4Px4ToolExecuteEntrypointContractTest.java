@@ -93,15 +93,6 @@ class M4Px4ToolExecuteEntrypointContractTest {
      */
     private static final List<TemporaryAllowedExecuteCall> TEMPORARY_DIRECT_EXECUTE_ALLOWLIST = List.of(
         new TemporaryAllowedExecuteCall(
-            "Core AtlasToolCallback 旧入口",
-            "src/main/java/com/atlas/tool/core/AtlasToolCallback.java",
-            "tool.execute(params)",
-            "旧 core callback 入口可能仍被部分 Spring AI 工具注册链路引用，需要先确认可达性再决定迁移或废弃。",
-            "若仍可达则统一委托 SafeToolExecutor；若确认不可达则删除旧入口并同步移除本白名单项。",
-            "P2",
-            "旧入口若残留可达，会形成与 Graph bridge 并行的裸执行通道。"
-        ),
-        new TemporaryAllowedExecuteCall(
             "AtlasOrchestrator legacy fallback",
             "src/main/java/com/atlas/orchestrator/AtlasOrchestrator.java",
             "tool.execute(toolParams)",
@@ -198,8 +189,8 @@ class M4Px4ToolExecuteEntrypointContractTest {
     @Test
     void temporaryAllowlist_shouldDocumentReasonAndMigrationTarget() {
         assertThat(TEMPORARY_DIRECT_EXECUTE_ALLOWLIST)
-            .as("Graph Bridge AtlasToolCallback 与 ReActEngine 已迁移到 SafeToolExecutor；剩余历史直接执行入口必须继续收敛")
-            .hasSize(2);
+            .as("Graph Bridge AtlasToolCallback、ReActEngine 与 core AtlasToolCallback 已迁移到 SafeToolExecutor；剩余历史直接执行入口必须继续收敛")
+            .hasSize(1);
 
         for (TemporaryAllowedExecuteCall allowed : TEMPORARY_DIRECT_EXECUTE_ALLOWLIST) {
             assertThat(allowed.entranceName()).as(allowed.file() + " 必须说明入口名称").isNotBlank();

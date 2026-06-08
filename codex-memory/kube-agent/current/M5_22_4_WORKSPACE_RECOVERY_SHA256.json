@@ -1,0 +1,63 @@
+﻿{
+    "project":  "kube-agent",
+    "wave":  "M5.22-4",
+    "title":  "Legacy core ToolCallback safe execution",
+    "generatedAt":  "2026-06-08 Asia/Shanghai",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "implementationCommit":  "pending local commit for M5.22-4",
+    "pushed":  false,
+    "files":  [
+                  {
+                      "path":  "CHANGELOG.md",
+                      "sha256":  "509cb017390000e527f099e01054c9b153427025d34b9c4642db7e1a3313b338"
+                  },
+                  {
+                      "path":  "docs\\AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "6411d8a20df3404e27f7513737e6741c5ec8f420ed29363199a6a4ac6f3a1ca5"
+                  },
+                  {
+                      "path":  "docs\\PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "62ea2c34ab524631c863716f19ceebc339a17a7c0af97c5417364f5cb98749e9"
+                  },
+                  {
+                      "path":  "docs\\SESSION_PROGRESS_20260606_M521_29.md",
+                      "sha256":  "2f932aa8e1a7eb1a5128f21363c17ace24b5a88a58e288d67bb0381a7d1b5c96"
+                  },
+                  {
+                      "path":  "codex-memory\\kube-agent\\current\\CHANGELOG.md",
+                      "sha256":  "509cb017390000e527f099e01054c9b153427025d34b9c4642db7e1a3313b338"
+                  },
+                  {
+                      "path":  "codex-memory\\kube-agent\\current\\docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "6411d8a20df3404e27f7513737e6741c5ec8f420ed29363199a6a4ac6f3a1ca5"
+                  },
+                  {
+                      "path":  "codex-memory\\kube-agent\\current\\docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "62ea2c34ab524631c863716f19ceebc339a17a7c0af97c5417364f5cb98749e9"
+                  },
+                  {
+                      "path":  "codex-memory\\kube-agent\\current\\docs_SESSION_PROGRESS_20260606_M521_29.md",
+                      "sha256":  "2f932aa8e1a7eb1a5128f21363c17ace24b5a88a58e288d67bb0381a7d1b5c96"
+                  },
+                  {
+                      "path":  "codex-memory\\kube-agent\\current\\RECOVERY_STATUS.md",
+                      "sha256":  "bc315db7e704f5710097833cefe21c45735f1c53a6493124c85b5739907dd8f9"
+                  },
+                  {
+                      "path":  "src\\main\\java\\com\\atlas\\tool\\core\\AtlasToolCallback.java",
+                      "sha256":  "09928c33bed2f74ec5d36b2bb564be7c45e26169f66fad47dcb605f0e585c388"
+                  },
+                  {
+                      "path":  "src\\test\\java\\com\\atlas\\contract\\M4Px4ToolExecuteEntrypointContractTest.java",
+                      "sha256":  "943ee61c0d6d8b03f2a130993fcc11533a50c4cdbdaf47c31c31808b2d24fcdc"
+                  },
+                  {
+                      "path":  "src\\test\\java\\com\\atlas\\contract\\M513HitlFailClosedContractTest.java",
+                      "sha256":  "529608e3e21c141299a62dc544cb26a2e30e9a17ceef7ddf14c908dbef2f78e3"
+                  },
+                  {
+                      "path":  "src\\test\\java\\com\\atlas\\tool\\core\\AtlasToolCallbackSafeExecutorTest.java",
+                      "sha256":  "de65d975de0aa2b11a89df73f38b726a622fd71c5af07e845764070de481a75e"
+                  }
+              ]
+}

@@ -6,6 +6,20 @@
 
 ---
 
+## [M5.22-4] - Legacy core ToolCallback safe execution
+
+**Delivery**: Migrated the legacy `com.atlas.tool.core.AtlasToolCallback` path into the shared `SafeToolExecutor` kernel.
+**Changes**
+- Legacy core `AtlasToolCallback` now parses JSON, normalizes aliases, and delegates actual Tool execution to `SafeToolExecutor` with `SafeToolExecutionSource.TOOL_CALLBACK`.
+- Preserved old public constructors by building a compatibility single-tool runtime, while adding an injectable constructor for tests and future Spring wiring.
+- Removed legacy core `AtlasToolCallback` from the temporary direct execute allowlist; remaining direct execution debt is now only `AtlasOrchestrator` fallback.
+- Added `AtlasToolCallbackSafeExecutorTest` to prove forged protected/control params are stripped, trusted org/user context wins, and missing trusted org fail-closes before Tool execution.
+**Verification**
+- `mvn -q "-Dtest=AtlasToolCallbackSafeExecutorTest,M513HitlFailClosedContractTest,M4Px4ToolExecuteEntrypointContractTest" test` passed.
+**Security**
+- Legacy Spring AI callback paths can no longer directly call `BaseTool.execute(...)`.
+- No new real write/create/delete/state-changing kube-manager call was opened.
+
 ## [M5.22-3] - ReActEngine safe execution kernel
 
 **Delivery**: Migrated the hand-written ReAct loop from direct Tool execution into the shared `SafeToolExecutor` kernel.
