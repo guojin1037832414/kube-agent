@@ -12,6 +12,7 @@ public record AgentReplayTimelineStep(
     int position,
     Instant occurredAt,
     String phase,
+    String recordPhase,
     String kind,
     String status,
     String auditId,

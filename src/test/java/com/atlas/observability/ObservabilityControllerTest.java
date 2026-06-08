@@ -243,6 +243,8 @@ class ObservabilityControllerTest {
         assertThat(timeline.steps()).hasSize(2);
         assertThat(timeline.steps()).extracting(AgentReplayTimelineStep::phase)
             .containsExactly("PRE_EXECUTION", "FINAL");
+        assertThat(timeline.steps()).extracting(AgentReplayTimelineStep::recordPhase)
+            .containsExactly("PRE_EXECUTION", "FINAL");
         assertThat(timeline.steps()).extracting(AgentReplayTimelineStep::kind)
             .containsExactly("TOOL_PREPARED", "TOOL_RESULT");
         assertThat(timeline.steps()).extracting(AgentReplayTimelineStep::status)

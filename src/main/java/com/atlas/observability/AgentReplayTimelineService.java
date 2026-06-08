@@ -44,11 +44,13 @@ public class AgentReplayTimelineService {
     private AgentReplayTimelineStep toStep(AgentAuditQueryEvent event, int position) {
         String outcome = safeText(event.outcome()).toUpperCase(Locale.ROOT);
         String operationType = safeText(event.operationType());
+        String phase = phase(event, outcome);
         return new AgentReplayTimelineStep(
             stepId(event, position),
             position,
             event.occurredAt(),
-            phase(outcome),
+            phase,
+            phase,
             kind(outcome),
             status(outcome),
             safeText(event.auditId()),
@@ -74,7 +76,11 @@ public class AgentReplayTimelineService {
         return !auditId.isBlank() ? auditId + ":" + position : "step-" + position;
     }
 
-    private String phase(String outcome) {
+    private String phase(AgentAuditQueryEvent event, String outcome) {
+        String recordPhase = safeText(event.recordPhase()).toUpperCase(Locale.ROOT);
+        if (!recordPhase.isBlank()) {
+            return recordPhase;
+        }
         return AgentAuditOutcome.PREPARED.name().equals(outcome) ? "PRE_EXECUTION" : "FINAL";
     }
 

@@ -10,7 +10,30 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.32-1
+## Latest Phase 1 Core Memory - M5.32-2
+
+M5.32-2 strengthens the replay timeline evidence contract by preserving durable audit `recordPhase`.
+
+Delivered:
+
+- Added `recordPhase` to `AgentAuditQueryEvent`.
+- `JsonlAgentAuditQueryService` reads and normalizes JSONL `recordPhase` into the closed vocabulary `PRE_EXECUTION` or `FINAL`.
+- `AgentReplayTimelineStep` exposes `recordPhase` alongside `phase`.
+- In-memory audit query events still derive a safe phase from outcome, so replay works across memory and JSONL backends.
+
+Security boundary:
+
+- `recordPhase` is a closed vocabulary evidence marker, not a raw log field.
+- Replay and audit query remain redacted-only.
+- This slice adds no kube-manager write/create/delete/state-changing behavior and no raw audit export/download endpoint.
+
+Learning point: replay should preserve source evidence when it exists instead of reconstructing everything from outcome strings. Durable audit already knows whether a record was `PRE_EXECUTION` or `FINAL`; carrying that marker forward makes frontend replay, eval reports, and incident review more precise.
+
+Latest verified command:
+
+- `mvn -q "-Dtest=JsonlAgentAuditDurableSinkTest,AgentAuditRecorderTest,AgentReplayTimelineServiceTest,ObservabilityControllerTest" test`
+
+## Previous Phase 1 Core Memory - M5.32-1
 
 M5.32-1 adds the backend replay timeline contract for frontend trace replay.
 

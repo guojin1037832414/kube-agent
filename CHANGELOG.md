@@ -6,6 +6,19 @@
 
 ---
 
+## [M5.32-2] - Replay record phase evidence
+
+**Delivery**: Preserved durable audit `recordPhase` through the redacted audit query DTO and replay timeline step contract.
+**Changes**
+- Added `recordPhase` to `AgentAuditQueryEvent`.
+- `JsonlAgentAuditQueryService` now reads JSONL `recordPhase` and normalizes it to `PRE_EXECUTION` or `FINAL`.
+- `AgentReplayTimelineStep` now exposes `recordPhase` alongside `phase` so frontend replay and eval reports can distinguish durable pre-execution evidence from final results without guessing from outcome text.
+**Verification**
+- `mvn -q "-Dtest=JsonlAgentAuditDurableSinkTest,AgentAuditRecorderTest,AgentReplayTimelineServiceTest,ObservabilityControllerTest" test` passed.
+**Security**
+- `recordPhase` is a closed vocabulary value, not a raw log field.
+- No raw principal, organization, conversation, endpoint string, reason text, parameter value, export endpoint, or kube-manager state-changing behavior was added.
+
 ## [M5.32-1] - Admin trace replay timeline API
 
 **Delivery**: Added the first backend contract for frontend replay: an admin-only redacted timeline API that converts trace-bound audit evidence into stable replay steps.

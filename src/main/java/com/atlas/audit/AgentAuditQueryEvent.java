@@ -17,6 +17,7 @@ import java.util.Map;
 public record AgentAuditQueryEvent(
     String auditId,
     Instant occurredAt,
+    String recordPhase,
     String traceId,
     String intentId,
     String toolName,
@@ -42,6 +43,7 @@ public record AgentAuditQueryEvent(
         return new AgentAuditQueryEvent(
             safeText(safeEvent.auditId()),
             safeEvent.occurredAt(),
+            recordPhase(safeEvent.outcome()),
             safeText(safeEvent.traceId()),
             safeText(safeEvent.intentId()),
             safeText(safeEvent.toolName()),
@@ -57,6 +59,19 @@ public record AgentAuditQueryEvent(
             parameterSummary(safeEvent.parameterSummary()),
             AgentAuditTelemetryProjector.project(safeEvent).toDiagnosticMap()
         );
+    }
+
+    public static String recordPhase(AgentAuditOutcome outcome) {
+        return outcome == AgentAuditOutcome.PREPARED ? "PRE_EXECUTION" : "FINAL";
+    }
+
+    public static String recordPhase(String recordPhase, String outcome) {
+        String safePhase = safeText(recordPhase).toUpperCase(Locale.ROOT);
+        if ("PRE_EXECUTION".equals(safePhase) || "FINAL".equals(safePhase)) {
+            return safePhase;
+        }
+        String safeOutcome = safeText(outcome).toUpperCase(Locale.ROOT);
+        return AgentAuditOutcome.PREPARED.name().equals(safeOutcome) ? "PRE_EXECUTION" : "FINAL";
     }
 
     @SuppressWarnings("unchecked")

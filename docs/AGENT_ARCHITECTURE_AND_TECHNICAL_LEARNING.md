@@ -35,6 +35,27 @@ AgentReplayTimelineResponse / AgentReplayTimelineStep
 
 学习重点：顶级 Agent 的 replay 不应该让前端去猜日志含义。后端要把“证据语义”整理成稳定契约，这样前端回放、管理员审计、OpenTelemetry timeline 和 Agent eval 报告可以共享同一套语言。
 
+## 2026-06-09 M5.32-2 recordPhase 证据透传
+
+M5.32-2 补强了 M5.32-1 的 replay 证据精度：JSONL durable audit 里已经存在 `recordPhase=PRE_EXECUTION` / `FINAL`，所以 replay 不应该只靠 `outcome=PREPARED` 反推阶段。现在读侧会把 `recordPhase` 带进 `AgentAuditQueryEvent`，再透传到 `AgentReplayTimelineStep`。
+
+```text
+JsonlAgentAuditDurableSink
+    |
+    | recordPhase=PRE_EXECUTION / FINAL
+    v
+JsonlAgentAuditQueryService
+    |
+    | AgentAuditQueryEvent.recordPhase
+    v
+AgentReplayTimelineService
+    |
+    v
+AgentReplayTimelineStep.recordPhase
+```
+
+学习重点：顶级 Agent 的证据链要优先保留源证据，而不是在后面重复猜测。推断可以作为兼容回退，但如果持久审计已经明确记录“执行前证据”和“最终结果”，前端回放、eval 和事故复盘就应该使用这个原始阶段标记。
+
 ## 项目定位
 
 `kube-agent` 不只是把 `kube-manager` / `vue-kube-manager` 的功能包成一个 Agent。它的目标是建设一个顶级 Kubernetes / Cloud / HPC Agent，并且把建设过程本身变成可学习、可复盘、可继续演进的教材。

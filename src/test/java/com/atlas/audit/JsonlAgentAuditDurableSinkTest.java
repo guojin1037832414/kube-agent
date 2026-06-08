@@ -100,8 +100,12 @@ class JsonlAgentAuditDurableSinkTest {
             .contains("redactedOnly=true", "downloadEndpointImplemented=false");
         assertThat(byAuditId.events()).extracting(AgentAuditQueryEvent::outcome)
             .containsExactly("BUSINESS_FAILURE", "PREPARED");
+        assertThat(byAuditId.events()).extracting(AgentAuditQueryEvent::recordPhase)
+            .containsExactly("FINAL", "PRE_EXECUTION");
         assertThat(byTraceId.events()).extracting(AgentAuditQueryEvent::outcome)
             .containsExactly("BUSINESS_FAILURE", "PREPARED");
+        assertThat(byTraceId.events()).extracting(AgentAuditQueryEvent::recordPhase)
+            .containsExactly("FINAL", "PRE_EXECUTION");
         assertThat(queryText)
             .contains("aud_0123456789abcdef0123456789abcdef", "trc_0123456789abcdef0123456789abcdef", "<protected>")
             .doesNotContain("conv-secret", "user-secret", "org-secret", "secret-token-value", "/api/org-secret");
@@ -125,6 +129,8 @@ class JsonlAgentAuditDurableSinkTest {
         assertThat(response.index()).containsEntry("backend", "jsonl-reverse-scan");
         assertThat(response.events()).extracting(AgentAuditQueryEvent::outcome)
             .containsExactly("BUSINESS_FAILURE", "PREPARED");
+        assertThat(response.events()).extracting(AgentAuditQueryEvent::recordPhase)
+            .containsExactly("FINAL", "PRE_EXECUTION");
         assertThat(recorder.recentEvents()).hasSize(1);
     }
 

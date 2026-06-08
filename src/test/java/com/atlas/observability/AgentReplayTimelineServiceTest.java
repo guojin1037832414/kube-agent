@@ -37,6 +37,8 @@ class AgentReplayTimelineServiceTest {
             .containsExactly("aud_prepared", "aud_success", "aud_business_failure", "aud_blocked", "aud_error");
         assertThat(response.steps()).extracting(AgentReplayTimelineStep::phase)
             .containsExactly("PRE_EXECUTION", "FINAL", "FINAL", "FINAL", "FINAL");
+        assertThat(response.steps()).extracting(AgentReplayTimelineStep::recordPhase)
+            .containsExactly("PRE_EXECUTION", "FINAL", "FINAL", "FINAL", "FINAL");
         assertThat(response.steps()).extracting(AgentReplayTimelineStep::kind)
             .containsExactly("TOOL_PREPARED", "TOOL_RESULT", "TOOL_BUSINESS_FAILURE", "TOOL_BLOCKED", "TOOL_ERROR");
         assertThat(response.steps()).extracting(AgentReplayTimelineStep::status)

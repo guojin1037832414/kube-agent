@@ -185,9 +185,11 @@ public class JsonlAgentAuditQueryService implements AgentAuditQueryService {
     private AgentAuditQueryEvent parseLine(String line) {
         try {
             Map<String, Object> record = objectMapper.readValue(line, Map.class);
+            String outcome = safeText(record.get("outcome"));
             return new AgentAuditQueryEvent(
                 safeText(record.get("auditId")),
                 parseInstant(record.get("eventTime")),
+                AgentAuditQueryEvent.recordPhase(safeText(record.get("recordPhase")), outcome),
                 safeText(record.get("traceId")),
                 safeText(record.get("intentId")),
                 safeText(record.get("toolName")),
@@ -195,7 +197,7 @@ public class JsonlAgentAuditQueryService implements AgentAuditQueryService {
                 safeText(record.get("httpMethod")),
                 safeText(record.get("operationType")),
                 Boolean.TRUE.equals(record.get("requiresConfirmation")),
-                safeText(record.get("outcome")),
+                outcome,
                 Boolean.TRUE.equals(record.get("executed")),
                 Boolean.TRUE.equals(record.get("success")),
                 safeInt(record.get("apiEndpointCount")),
