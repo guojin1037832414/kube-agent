@@ -276,6 +276,44 @@ class NimCreateDurableAuditReceiptValidationGateSupportTest {
     }
 
     @Test
+    void validationGate_shouldRejectDigestConsistentReceiptSchemaExtraFailureOrTestDoubleLists() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+
+        for (ListMutation mutation : List.of(
+            new ListMutation("failureContract", "failureStatuses", "FUTURE_SIGNER_NOT_READY"),
+            new ListMutation("testDoubleRules", "mustNotReturnTypeInstances", "ForgedDurableReceiptTestDouble"),
+            new ListMutation("testDoubleRules", "forbiddenSuccessClaims", "releaseEligible=true")
+        )) {
+            Map<String, Object> forgedSchemaReport = withDigestConsistentExtraTypedSchemaListField(
+                receiptSchemaReport(audit, principal),
+                mutation.contractKey(),
+                mutation.listKey(),
+                mutation.forgedValue()
+            );
+
+            Map<String, Object> report = NimCreateDurableAuditReceiptValidationGateSupport.plan(
+                new NimCreateDurableAuditReceiptValidationGateSupport.DurableAuditReceiptValidationGateInput(
+                    audit,
+                    principal,
+                    forgedSchemaReport
+                )
+            );
+
+            String scenario = mutation.contractKey() + "." + mutation.listKey();
+            assertEquals(NimCreateDurableAuditReceiptValidationGateSupport.REJECTED_STATE,
+                report.get("gateState"), scenario);
+            assertEquals(false, report.get("inputAccepted"), scenario);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> plan = (Map<String, Object>) report.get("validationPlan");
+            assertTrue(plan.isEmpty(), scenario);
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+            assertHasBlocker(blockers, "DURABLE_AUDIT_RECEIPT_ACK_SCHEMA_REPORT_INVALID_FOR_VALIDATION_GATE");
+        }
+    }
+
+    @Test
     void validationGate_shouldRejectSecretLeakageBeforeAnyPlan() {
         Map<String, Object> audit = new LinkedHashMap<>(completeAuditContext());
         audit.put("Authorization", "redacted-test-value");
@@ -428,6 +466,25 @@ class NimCreateDurableAuditReceiptValidationGateSupportTest {
         return forgedReport;
     }
 
+    private Map<String, Object> withDigestConsistentExtraTypedSchemaListField(Map<String, Object> schemaReport,
+                                                                             String contractKey,
+                                                                             String listKey,
+                                                                             String forgedValue) {
+        Map<String, Object> forgedReport = new LinkedHashMap<>(schemaReport);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> typedSchema = new LinkedHashMap<>((Map<String, Object>) forgedReport.get("typedSchema"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> contract = new LinkedHashMap<>((Map<String, Object>) typedSchema.get(contractKey));
+        @SuppressWarnings("unchecked")
+        List<String> list = new ArrayList<>((List<String>) contract.get(listKey));
+        list.add(forgedValue);
+        contract.put(listKey, list);
+        typedSchema.put(contractKey, contract);
+        forgedReport.put("typedSchema", typedSchema);
+        forgedReport.put("schemaDigest", sha256(typedSchema));
+        return forgedReport;
+    }
+
     private String sha256(Map<String, Object> value) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
@@ -473,6 +530,9 @@ class NimCreateDurableAuditReceiptValidationGateSupportTest {
             .replace("\n", "\\n")
             .replace("\r", "\\r")
             .replace("\t", "\\t");
+    }
+
+    private record ListMutation(String contractKey, String listKey, String forgedValue) {
     }
 
     private Map<String, Object> completeAuditContext() {

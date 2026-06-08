@@ -371,12 +371,7 @@ final class NimCreateDurableAuditReceiptValidationGateSupport {
             && Boolean.TRUE.equals(failureContract.get("failClosed"))
             && Boolean.FALSE.equals(failureContract.get("fallbackToMockReceiptAllowed"))
             && Boolean.FALSE.equals(failureContract.get("fallbackToSchemaOnlyAllowed"))
-            && statuses.contains("IMPLEMENTATION_HOLD")
-            && statuses.contains("STORAGE_PROBE_RECEIPT_MISSING")
-            && statuses.contains("PRE_WRITE_DURABLE_ACK_MISSING")
-            && statuses.contains("POST_WRITE_DURABLE_ACK_MISSING")
-            && statuses.contains("DURABLE_RECEIPT_DIGEST_CHAIN_MISMATCH")
-            && statuses.contains("ACK_OR_RECEIPT_FORGED");
+            && statuses.equals(NimCreateDurableAuditReceiptSchemaSupport.receiptFailureStatuses());
     }
 
     private static boolean testDoubleRulesValid(Map<String, Object> schemaReport,
@@ -389,13 +384,8 @@ final class NimCreateDurableAuditReceiptValidationGateSupport {
             && NimCreateDurableAuditReceiptSchemaSupport.HOLD_STATE.equals(text(testDoubleRules.get("mayReturnStatus")))
             && "NOT_PERFORMED".equals(text(testDoubleRules.get("mustReturnNetworkAccess")))
             && "NONE".equals(text(testDoubleRules.get("mustReturnSideEffect")))
-            && mustNotReturnTypes.contains(NimCreateDurableAuditReceiptSchemaSupport.STORAGE_PROBE_RECEIPT_TYPE)
-            && mustNotReturnTypes.contains(NimCreateDurableAuditReceiptSchemaSupport.PRE_WRITE_ACK_TYPE)
-            && mustNotReturnTypes.contains(NimCreateDurableAuditReceiptSchemaSupport.POST_WRITE_ACK_TYPE)
-            && mustNotReturnTypes.contains(NimCreateDurableAuditReceiptSchemaSupport.DURABLE_RECEIPT_TYPE)
-            && forbiddenClaims.contains("DurableAuditReceipt.receiptStatus=DURABLE_RECORDED")
-            && forbiddenClaims.contains("DurableAuditReceipt.storageMode=DURABLE_AUDIT_LOG")
-            && forbiddenClaims.contains("realStorageTouched=true");
+            && mustNotReturnTypes.equals(NimCreateDurableAuditReceiptSchemaSupport.receiptTestDoubleMustNotReturnTypes())
+            && forbiddenClaims.equals(NimCreateDurableAuditReceiptSchemaSupport.receiptTestDoubleForbiddenSuccessClaims());
     }
 
     private static Map<String, Object> validationPlan(Map<String, Object> auditContext,

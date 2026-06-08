@@ -627,3 +627,10 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Typed receipt schema validation requires exact equality for both lists.
 - Extra future failure or test-double claim values are rejected even when `interfaceSpecDigest` is recomputed.
 - Learning distinction: failure vocabularies and mock-success blockers look like strings, but in a write-release path they become protocol authority. Treat them as reviewed source-owned contracts.
+
+### M5.21-123 receipt schema failure/test-double lists closed note
+
+- Durable audit receipt schema generation now exposes source-owned closed lists for receipt failure statuses, test-double forbidden return types, and test-double forbidden success claims.
+- Validation gate schema validation requires exact equality for all three receipt-schema-owned lists.
+- Extra future failure, type, or success-claim values are rejected even when `schemaDigest` is recomputed.
+- Learning distinction: a digest proves object integrity, not semantic approval. Release-proof vocabularies still need source-owned exact validation before downstream gates can trust them.

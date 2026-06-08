@@ -83,6 +83,41 @@ final class NimCreateDurableAuditReceiptSchemaSupport {
         );
     }
 
+    static List<String> receiptFailureStatuses() {
+        return List.of(
+            "IMPLEMENTATION_HOLD",
+            "STORAGE_PROBE_RECEIPT_MISSING",
+            "STORAGE_PROBE_RECEIPT_NOT_AVAILABLE",
+            "PRE_WRITE_DURABLE_ACK_MISSING",
+            "PRE_WRITE_ACK_DIGEST_MISMATCH",
+            "POST_WRITE_DURABLE_ACK_MISSING",
+            "POST_WRITE_ACK_DIGEST_MISMATCH",
+            "DURABLE_RECEIPT_DIGEST_CHAIN_MISMATCH",
+            "ACK_OR_RECEIPT_FORGED",
+            "SECRET_MATERIAL_REJECTED"
+        );
+    }
+
+    static List<String> receiptTestDoubleMustNotReturnTypes() {
+        return List.of(
+            STORAGE_PROBE_RECEIPT_TYPE,
+            PRE_WRITE_ACK_TYPE,
+            POST_WRITE_ACK_TYPE,
+            DURABLE_RECEIPT_TYPE
+        );
+    }
+
+    static List<String> receiptTestDoubleForbiddenSuccessClaims() {
+        return List.of(
+            "StorageAvailabilityProbeReceipt.available=true",
+            "PreWriteDurableAck.ackStatus=PRE_WRITE_DURABLY_RECORDED",
+            "PostWriteDurableAck.ackStatus=POST_WRITE_DURABLY_RECORDED",
+            "DurableAuditReceipt.receiptStatus=DURABLE_RECORDED",
+            "DurableAuditReceipt.storageMode=DURABLE_AUDIT_LOG",
+            "realStorageTouched=true"
+        );
+    }
+
     static Map<String, Object> plan(DurableAuditReceiptSchemaInput input) {
         DurableAuditReceiptSchemaInput safeInput = input == null
             ? DurableAuditReceiptSchemaInput.empty()
@@ -555,18 +590,7 @@ final class NimCreateDurableAuditReceiptSchemaSupport {
         contract.put("failClosed", true);
         contract.put("fallbackToMockReceiptAllowed", false);
         contract.put("fallbackToSchemaOnlyAllowed", false);
-        contract.put("failureStatuses", List.of(
-            "IMPLEMENTATION_HOLD",
-            "STORAGE_PROBE_RECEIPT_MISSING",
-            "STORAGE_PROBE_RECEIPT_NOT_AVAILABLE",
-            "PRE_WRITE_DURABLE_ACK_MISSING",
-            "PRE_WRITE_ACK_DIGEST_MISMATCH",
-            "POST_WRITE_DURABLE_ACK_MISSING",
-            "POST_WRITE_ACK_DIGEST_MISMATCH",
-            "DURABLE_RECEIPT_DIGEST_CHAIN_MISMATCH",
-            "ACK_OR_RECEIPT_FORGED",
-            "SECRET_MATERIAL_REJECTED"
-        ));
+        contract.put("failureStatuses", receiptFailureStatuses());
         return contract;
     }
 
@@ -577,20 +601,8 @@ final class NimCreateDurableAuditReceiptSchemaSupport {
         rules.put("mayReturnStatus", HOLD_STATE);
         rules.put("mustReturnNetworkAccess", "NOT_PERFORMED");
         rules.put("mustReturnSideEffect", "NONE");
-        rules.put("mustNotReturnTypeInstances", List.of(
-            STORAGE_PROBE_RECEIPT_TYPE,
-            PRE_WRITE_ACK_TYPE,
-            POST_WRITE_ACK_TYPE,
-            DURABLE_RECEIPT_TYPE
-        ));
-        rules.put("forbiddenSuccessClaims", List.of(
-            "StorageAvailabilityProbeReceipt.available=true",
-            "PreWriteDurableAck.ackStatus=PRE_WRITE_DURABLY_RECORDED",
-            "PostWriteDurableAck.ackStatus=POST_WRITE_DURABLY_RECORDED",
-            "DurableAuditReceipt.receiptStatus=DURABLE_RECORDED",
-            "DurableAuditReceipt.storageMode=DURABLE_AUDIT_LOG",
-            "realStorageTouched=true"
-        ));
+        rules.put("mustNotReturnTypeInstances", receiptTestDoubleMustNotReturnTypes());
+        rules.put("forbiddenSuccessClaims", receiptTestDoubleForbiddenSuccessClaims());
         return rules;
     }
 

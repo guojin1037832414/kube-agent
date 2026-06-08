@@ -91,10 +91,26 @@ Current track:
 
 Recently completed:
 
-`M5.21-122 NIM writer interface failure/test-double lists closed`
+`M5.21-123 NIM receipt schema failure/test-double lists closed`
 
 Latest checkpoint:
 
+- Date: 2026-06-08 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-123 implemented:
+  - Hardened `NimCreateDurableAuditReceiptSchemaSupport` so receipt-schema-owned `failureContract.failureStatuses`, `testDoubleRules.mustNotReturnTypeInstances`, and `testDoubleRules.forbiddenSuccessClaims` are source-owned helper lists.
+  - Hardened `NimCreateDurableAuditReceiptValidationGateSupport` so validation planning rejects digest-consistent typed schema reports with extra failure status, forbidden return type, or forbidden success claim values.
+  - Added regressions that append fake future values, recompute `schemaDigest`, and still expect `DURABLE_AUDIT_RECEIPT_ACK_SCHEMA_REPORT_INVALID_FOR_VALIDATION_GATE`.
+  - Added `docs/M5_21_ONE_HUNDRED_TWENTY_THIRD_WAVE_NIM_RECEIPT_SCHEMA_FAILURE_TEST_DOUBLE_LISTS_CLOSED_AUDIT_20260608.md`.
+  - Targeted verification passed:
+    - `git diff --check`
+    - `mvn -q "-Dtest=NimCreateDurableAuditReceiptSchemaSupportTest,NimCreateDurableAuditReceiptValidationGateSupportTest" test`
+  - Final verification passed:
+    - `mvn -q test`
+    - Full Maven note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - Security invariant: no real `8100`, no real NIM service HTTP call, no Authorization header sending, no durable audit write, no deployment POST, no runtime write behavior, no state-machine release binding implementation, no durable executor release binding implementation, no validation result signer, no release decision signer, no code release switch implementation, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Recommended next slice: close validation-gate-owned failure/shortcut lists with the same source-owned equality pattern, or consider exact `digestChainRules.rules` validation if rule rows become release criteria.
+- Previous checkpoint:
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
 - M5.21-122 implemented:
