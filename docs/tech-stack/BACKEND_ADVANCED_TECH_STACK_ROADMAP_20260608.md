@@ -371,3 +371,15 @@ M5.34-2 tightens the suite foundation into a safer gate contract:
 - Strict `failOnWarnings=true` remains the default; warning-only suites pass only when the caller explicitly relaxes the policy.
 
 This closes a common release-gate failure mode: partial evaluation must not look like a full PASS. The next eval work should add named golden suites, must-block red-team traces, machine-readable CI export, and frontend replay/eval workbench integration.
+
+## M5.35-1 Update - Named Eval Suite Catalog
+
+M5.35-1 implements the next eval roadmap item: named suites are now discoverable and runnable through admin-only APIs.
+
+- `GET /api/agent/observability/eval/suites` returns a deterministic catalog of built-in suite definitions.
+- `POST /api/agent/observability/eval/suites/{suiteId}/run` runs a named suite with caller-provided trace ids.
+- Built-in suite ids are `core-safety-smoke`, `high-risk-prewrite`, `redaction-regression`, and `release-gate-strict`.
+- Named runs use suite defaults when request fields are omitted, then delegate to the existing hardened suite gate.
+- The catalog and run contracts state `redactedOnly=true`, `deterministic=true`, `llmUsed=false`, `externalCalls=false`, `toolExecution=false`, and `kubeManagerCalls=false`.
+
+Technology judgment: this is the right way to introduce advanced Agent eval into the Java/Spring mainline. It makes evaluation a typed, testable control-plane object without introducing a second LLM evaluator, a real kube-manager call, or a Tool execution path. The next advanced steps are CI JSON export, persisted golden/red-team trace sets, Vue replay/eval workbench integration, and release workflow wiring.

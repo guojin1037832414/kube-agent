@@ -38,6 +38,7 @@ public class ObservabilityController {
     private final AgentAuditQueryService auditQueryService;
     private final AgentReplayTimelineService replayTimelineService;
     private final AgentEvalReportService evalReportService;
+    private final AgentEvalSuiteCatalogService evalSuiteCatalogService;
     private final AgentPrincipalResolver principalResolver;
 
     public ObservabilityController(AgentMetricsService metricsService,
@@ -45,12 +46,14 @@ public class ObservabilityController {
                                    AgentAuditQueryService auditQueryService,
                                    AgentReplayTimelineService replayTimelineService,
                                    AgentEvalReportService evalReportService,
+                                   AgentEvalSuiteCatalogService evalSuiteCatalogService,
                                    AgentPrincipalResolver principalResolver) {
         this.metricsService = metricsService;
         this.auditSnapshotProvider = auditSnapshotProvider;
         this.auditQueryService = auditQueryService;
         this.replayTimelineService = replayTimelineService;
         this.evalReportService = evalReportService;
+        this.evalSuiteCatalogService = evalSuiteCatalogService;
         this.principalResolver = principalResolver;
     }
 
@@ -134,7 +137,7 @@ public class ObservabilityController {
     /** Evaluate a deterministic release-gate style suite from redacted replay evidence. */
     @PostMapping("/eval/suite")
     @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
-    public ResponseEntity<ApiResponse<AgentEvalSuiteResponse>> evalSuite(@RequestBody AgentEvalSuiteRequest request) {
+    public ResponseEntity<ApiResponse<AgentEvalSuiteResponse>> evalSuite(@RequestBody(required = false) AgentEvalSuiteRequest request) {
         ResponseEntity<ApiResponse<AgentEvalSuiteResponse>> guard = requireAdmin();
         if (guard != null) {
             return guard;
@@ -162,6 +165,32 @@ public class ObservabilityController {
             minimumScore,
             failOnWarnings
         )));
+    }
+
+    /** List built-in deterministic eval suites that CI or the frontend can run with trace evidence. */
+    @GetMapping("/eval/suites")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentEvalSuiteCatalogResponse>> evalSuites() {
+        ResponseEntity<ApiResponse<AgentEvalSuiteCatalogResponse>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return ResponseEntity.ok(ApiResponse.ok(evalSuiteCatalogService.catalog()));
+    }
+
+    /** Run a named deterministic eval suite using caller-provided redacted trace anchors. */
+    @PostMapping("/eval/suites/{suiteId}/run")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentEvalSuiteRunResponse>> runEvalSuite(@PathVariable String suiteId,
+                                                                               @RequestBody(required = false) AgentEvalSuiteRequest request) {
+        ResponseEntity<ApiResponse<AgentEvalSuiteRunResponse>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return evalSuiteCatalogService.run(suiteId, request)
+            .map(response -> ResponseEntity.ok(ApiResponse.ok(response)))
+            .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.fail("未知的 Agent eval suite: " + suiteId)));
     }
 
     private <T> ResponseEntity<ApiResponse<T>> requireAdmin() {

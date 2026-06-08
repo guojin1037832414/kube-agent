@@ -163,6 +163,48 @@ AgentEvalSuiteResponse.summary
 
 学习重点：发布门禁不能只看“已评估部分是否通过”，还必须看“应该评估的证据是否都被覆盖”。顶级 Agent 的 gate 要防止 false positive：当输入过大、证据不完整、或 warning 策略不明确时，宁可 fail closed，也不要给出虚假的 PASS。
 
+## 2026-06-09 M5.35-1 Named Eval Suite Catalog
+
+M5.35-1 把 eval suite 从“调用时临时传 traceIds”升级为“可发现、可命名、可运行的评测目录”。这一步很关键：顶级 Agent 的评测不能只靠人记住要跑哪些 trace，而要把标准套件沉淀成稳定协议，让 CI、前端工作台、多专家复盘和教学文档都围绕同一批 suite 名称协作。
+
+```text
+Admin / Future CI / Frontend Eval Workbench
+    |
+    | GET /api/agent/observability/eval/suites
+    v
+AgentEvalSuiteCatalogService.catalog()
+    |
+    |-- core-safety-smoke
+    |-- high-risk-prewrite
+    |-- redaction-regression
+    |-- release-gate-strict
+
+Admin / Future CI
+    |
+    | POST /api/agent/observability/eval/suites/{suiteId}/run
+    | { traceIds, limit?, minimumScore?, failOnWarnings? }
+    v
+AgentEvalSuiteCatalogService.run(...)
+    |
+    v
+AgentEvalReportService.evaluateSuite(...)
+```
+
+关键设计：
+- `AgentEvalSuiteDefinition` 只描述 suite 的目标、默认策略、checkCodes、evidenceRequirements 和安全保证，不携带 raw trace evidence。
+- `AgentEvalSuiteCatalogResponse` 给前端/CI 提供稳定目录，便于先选择套件，再提供真实 trace anchors。
+- `AgentEvalSuiteRunResponse` 包装命名 suite 的运行结果，但真正评测仍委托给 M5.34-2 已硬化的 `evaluateSuite(...)`。
+- 命名运行会使用 suite 自己的默认 `limit`、`minimumScore`、`failOnWarnings`，同时仍受全局上限和 fail-closed 规则约束。
+- catalog/run 都是 admin-only，并继续声明 `redactedOnly=true`、`deterministic=true`、`llmUsed=false`、`externalCalls=false`、`toolExecution=false`、`kubeManagerCalls=false`。
+
+内置 suite：
+- `core-safety-smoke`：基础 replay、隐私、顺序、trace 一致性、执行语义、结果健康冒烟。
+- `high-risk-prewrite`：高风险 Tool 的 `PRE_EXECUTION -> FINAL` 证据链和确认标记。
+- `redaction-regression`：防 raw principal、organization、conversation、endpoint、reason、parameter value 泄漏。
+- `release-gate-strict`：面向 CI/release gate 的严格综合套件。
+
+学习重点：命名 eval suite 是 Agent 工程从“手工调试”走向“产品化质量门禁”的标志。真正先进的 eval 不是让另一个 LLM 做主观打分，而是把证据、规则、默认策略、失败语义和隐私边界全部变成可测试、可恢复、可教学的后端契约。
+
 ## 项目定位
 
 `kube-agent` 不只是把 `kube-manager` / `vue-kube-manager` 的功能包成一个 Agent。它的目标是建设一个顶级 Kubernetes / Cloud / HPC Agent，并且把建设过程本身变成可学习、可复盘、可继续演进的教材。

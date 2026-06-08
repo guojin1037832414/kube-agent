@@ -10,7 +10,36 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.34-2
+## Latest Phase 1 Core Memory - M5.35-1
+
+M5.35-1 turns eval suites from an ad-hoc traceIds API into a named, discoverable catalog that CI, frontend workbench, and multi-expert review can share.
+
+Delivered:
+
+- Added `AgentEvalSuiteDefinition`, `AgentEvalSuiteCatalogResponse`, `AgentEvalSuiteRunResponse`, and `AgentEvalSuiteCatalogService`.
+- Added admin-only `GET /api/agent/observability/eval/suites`.
+- Added admin-only `POST /api/agent/observability/eval/suites/{suiteId}/run`.
+- Built-in Phase 1 suites:
+  - `core-safety-smoke`
+  - `high-risk-prewrite`
+  - `redaction-regression`
+  - `release-gate-strict`
+- Named suite runs apply definition defaults when request fields are omitted, then delegate to the hardened `AgentEvalReportService#evaluateSuite(...)` gate.
+
+Security boundary:
+
+- Suite catalog metadata contains no raw trace evidence.
+- Named suite runs remain admin-only, deterministic, redacted-only, non-executing, `llmUsed=false`, `externalCalls=false`, `toolExecution=false`, and `kubeManagerCalls=false`.
+- The run endpoint still requires caller-provided trace anchors; it does not discover raw audit, call LLMs, call kube-manager, or execute Tools.
+- NIM / HPC / Slurm / BCM remain Phase 2 paused scope.
+
+Learning point: a top-tier Agent needs eval suites to become productized contracts, not one-off operator requests. Named suites let the team discuss "core safety smoke" or "high-risk prewrite" as stable release gates, while the actual evidence remains caller-provided, redacted, bounded, and deterministic.
+
+Latest verified command:
+
+- `mvn -q "-Dtest=AgentEvalSuiteCatalogServiceTest,AgentEvalReportServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+## Previous Phase 1 Core Memory - M5.34-2
 
 M5.34-2 hardens the eval suite foundation into a safer release-gate contract.
 

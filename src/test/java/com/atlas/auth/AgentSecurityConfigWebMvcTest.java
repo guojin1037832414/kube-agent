@@ -99,6 +99,16 @@ class AgentSecurityConfigWebMvcTest {
                 .content("{\"traceIds\":[\"trc_123\"]}"))
             .andExpect(status().isForbidden());
 
+        mockMvc.perform(get("/api/agent/observability/eval/suites")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
+            .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/api/agent/observability/eval/suites/core-safety-smoke/run")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer user-token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"traceIds\":[\"trc_123\"]}"))
+            .andExpect(status().isForbidden());
+
         mockMvc.perform(get("/api/agent/observability/audit/index")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token"))
             .andExpect(status().isOk());
@@ -119,6 +129,21 @@ class AgentSecurityConfigWebMvcTest {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"traceIds\":[\"trc_123\"]}"))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/agent/observability/eval/suites")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token"))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/agent/observability/eval/suites/core-safety-smoke/run")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"traceIds\":[\"trc_123\"]}"))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/agent/observability/eval/suites/core-safety-smoke/run")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token")
+                .contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk());
     }
 
@@ -248,8 +273,18 @@ class AgentSecurityConfigWebMvcTest {
         }
 
         @PostMapping("/api/agent/observability/eval/suite")
-        String observabilityEvalSuite(@RequestBody String body) {
+        String observabilityEvalSuite(@RequestBody(required = false) String body) {
             return body;
+        }
+
+        @GetMapping("/api/agent/observability/eval/suites")
+        String observabilityEvalSuites() {
+            return "eval-suites";
+        }
+
+        @PostMapping("/api/agent/observability/eval/suites/{id}/run")
+        String observabilityEvalSuiteRun(@PathVariable String id, @RequestBody(required = false) String body) {
+            return id + body;
         }
 
         @GetMapping("/actuator/health")

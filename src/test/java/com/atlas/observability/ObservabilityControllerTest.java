@@ -25,12 +25,14 @@ class ObservabilityControllerTest {
     private final UserPermissionContext userPermissionContext = new UserPermissionContext();
     private final InMemoryAgentAuditRecorder auditRecorder = new InMemoryAgentAuditRecorder();
     private final AgentReplayTimelineService replayTimelineService = new AgentReplayTimelineService(auditRecorder);
+    private final AgentEvalReportService evalReportService = new AgentEvalReportService(replayTimelineService);
     private final ObservabilityController controller = new ObservabilityController(
         new AgentMetricsService(new SimpleMeterRegistry()),
         auditRecorder,
         auditRecorder,
         replayTimelineService,
-        new AgentEvalReportService(replayTimelineService),
+        evalReportService,
+        new AgentEvalSuiteCatalogService(evalReportService),
         new AgentPrincipalResolver(userPermissionContext)
     );
 
@@ -473,5 +475,116 @@ class ObservabilityControllerTest {
         assertThat(defaultedSuite.summary())
             .containsEntry("requestedCases", 1)
             .containsEntry("caseLimitExceeded", false);
+    }
+
+    @Test
+    void evalSuites_shouldRequireAdminUser() {
+        ResponseEntity<ApiResponse<AgentEvalSuiteCatalogResponse>> anonymous = controller.evalSuites();
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentEvalSuiteCatalogResponse>> user = controller.evalSuites();
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void evalSuites_shouldReturnCatalogForAdminUser() {
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentEvalSuiteCatalogResponse>> response = controller.evalSuites();
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        AgentEvalSuiteCatalogResponse catalog = response.getBody().getData();
+        assertThat(catalog.schemaVersion()).isEqualTo("agent-eval-suite-catalog.v1");
+        assertThat(catalog.suites()).extracting(AgentEvalSuiteDefinition::id)
+            .contains("core-safety-smoke", "high-risk-prewrite", "redaction-regression", "release-gate-strict");
+        assertThat(catalog.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("toolExecution", false)
+            .containsEntry("kubeManagerCalls", false);
+        assertThat(catalog.toString())
+            .doesNotContain("conv-sensitive", "user-sensitive", "org-sensitive", "secret-token-value", "/api/org-sensitive");
+    }
+
+    @Test
+    void runEvalSuite_shouldRequireAdminUserAndRejectUnknownSuite() {
+        AgentEvalSuiteRequest request = new AgentEvalSuiteRequest(java.util.List.of("trc_missing"), 10, 80, true);
+        ResponseEntity<ApiResponse<AgentEvalSuiteRunResponse>> anonymous =
+            controller.runEvalSuite("core-safety-smoke", request);
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentEvalSuiteRunResponse>> missing =
+            controller.runEvalSuite("missing-suite", request);
+
+        assertThat(missing.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(missing.getBody()).isNotNull();
+        assertThat(missing.getBody().isSuccess()).isFalse();
+    }
+
+    @Test
+    void runEvalSuite_shouldApplyNamedDefaultsAndReturnRedactedReport() {
+        auditRecorder.record(new com.atlas.audit.AgentAuditEvent(
+            "aud_eval_named_suite",
+            java.time.Instant.parse("2026-06-09T00:00:00Z"),
+            "trc_eval_named_suite",
+            "conv-sensitive",
+            "user-sensitive",
+            "org-sensitive",
+            "intent",
+            "tool",
+            com.atlas.tool.execution.SafeToolExecutionSource.REACT_ENGINE,
+            "GET",
+            java.util.List.of("/api/org-sensitive/pod?token=secret-token-value"),
+            com.atlas.tool.annotation.AtlasToolMapping.OperationType.READ,
+            false,
+            com.atlas.audit.AgentAuditOutcome.SUCCESS,
+            true,
+            true,
+            "ok token=secret-token-value",
+            java.util.Map.of("count", 1, "keys", java.util.List.of(java.util.Map.of(
+                "name", "token",
+                "protected", true,
+                "type", "string",
+                "present", true
+            )))
+        ));
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentEvalSuiteRunResponse>> response = controller.runEvalSuite(
+            "core-safety-smoke",
+            new AgentEvalSuiteRequest(java.util.List.of("trc_eval_named_suite"), null, null, null)
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        AgentEvalSuiteRunResponse run = response.getBody().getData();
+        assertThat(run.schemaVersion()).isEqualTo("agent-eval-suite-run.v1");
+        assertThat(run.suiteId()).isEqualTo("core-safety-smoke");
+        assertThat(run.definition().defaultMinimumScore()).isEqualTo(80);
+        assertThat(run.runPolicy())
+            .containsEntry("definitionDefaultsApplied", true)
+            .containsEntry("effectiveMinimumScore", 80)
+            .containsEntry("failOnWarnings", true);
+        assertThat(run.report().pass()).isTrue();
+        assertThat(run.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("llmUsed", false)
+            .containsEntry("externalCalls", false)
+            .containsEntry("toolExecution", false);
+        String bodyText = run.toString();
+        assertThat(bodyText)
+            .contains("aud_eval_named_suite", "trc_eval_named_suite", "<protected>")
+            .doesNotContain("conv-sensitive", "user-sensitive", "org-sensitive", "secret-token-value", "/api/org-sensitive");
     }
 }

@@ -6,6 +6,23 @@
 
 ---
 
+## [M5.35-1] - Named Agent eval suite catalog
+
+**Delivery**: Added discoverable named Agent eval suites and a named run entrypoint for future CI and frontend eval workbench integration.
+**Changes**
+- Added `AgentEvalSuiteDefinition`, `AgentEvalSuiteCatalogResponse`, `AgentEvalSuiteRunResponse`, and `AgentEvalSuiteCatalogService`.
+- Added admin-only `GET /api/agent/observability/eval/suites`.
+- Added admin-only `POST /api/agent/observability/eval/suites/{suiteId}/run`.
+- Built in four Phase 1 suite definitions: `core-safety-smoke`, `high-risk-prewrite`, `redaction-regression`, and `release-gate-strict`.
+- Named runs apply suite-owned defaults when request fields are omitted, then delegate evaluation to the existing hardened `AgentEvalReportService#evaluateSuite(...)` gate.
+**Verification**
+- `mvn -q "-Dtest=AgentEvalSuiteCatalogServiceTest,AgentEvalReportServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed.
+**Security**
+- Catalog and named run endpoints are protected by observability admin URL rules plus method-level `@PreAuthorize`.
+- Catalog metadata contains no raw trace evidence.
+- Named suite execution remains deterministic, redacted-only, non-executing, `llmUsed=false`, `externalCalls=false`, `toolExecution=false`, and `kubeManagerCalls=false`.
+- This slice adds no kube-manager write/create/delete/state-changing behavior and does not reopen NIM/HPC/Slurm/BCM scope.
+
 ## [M5.34-2] - Agent eval suite gate hardening
 
 **Delivery**: Hardened the eval suite foundation into a safer release-gate contract.
