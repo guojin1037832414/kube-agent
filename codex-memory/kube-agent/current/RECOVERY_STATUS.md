@@ -8,8 +8,8 @@
 - Latest completed title: ToolCallback safe execution kernel
 - Workspace: F:\gitProject\kube-agent
 - Last synchronized: 2026-06-08 Asia/Shanghai
-- Latest implementation commit: pending for M5.22-2
-- Pushed to remote: pending for M5.22-2
+- Latest implementation commit: e31f567 fix(M5.22): route tool callbacks through safe executor
+- Pushed to remote: yes, origin/codex/m521-29-top-agent-mission includes e31f567
 - Recovery policy: new progress and memory files are written to this workspace-local directory first to avoid external filesystem approval prompts.
 - Verification: M5.22-2 targeted callback/execute-entrypoint tests passed; wider SafeToolExecutor/Plan/ProtectedToolParameterFilter tests passed; mvn -q -DskipTests validate passed; git diff --check passed. M5.22-1 earlier full mvn -q test and mvn -q verify passed on Spring Boot 3.5.14 / Spring AI 1.1.7.
 - Security invariant: Graph Bridge ToolCallback no longer directly calls BaseTool.execute; it now delegates to SafeToolExecutor with source TOOL_CALLBACK. LLM JSON cannot forge token/orgId/userId/HITL/audit/release/write-control params into business Tool. nim_create remains HOLD/mock-first and is now Phase 2; no real 8100 write, NIM HTTP call, Authorization header sending, durable audit write, deployment POST, validation result signer, release decision signer, code switch implementation, runtime write behavior, Elasticsearch, ISysLogService, or sys_log write was added.

@@ -4,15 +4,15 @@
     "title":  "ToolCallback safe execution kernel",
     "phaseGoal":  "Phase 1 delivers the full top-tier kube-manager Agent Core; NIM/HPC/Slurm/BCM are Phase 2 specialist plugins.",
     "branch":  "codex/m521-29-top-agent-mission",
-    "implementationCommit":  "pending for M5.22-2",
-    "pushedToRemote":  "pending for M5.22-2",
+    "implementationCommit":  "e31f567 fix(M5.22): route tool callbacks through safe executor",
+    "pushedToRemote":  "yes, origin/codex/m521-29-top-agent-mission includes e31f567",
     "recoveryHome":  "F:\\gitProject\\kube-agent\\codex-memory\\kube-agent\\current",
     "generatedAt":  "2026-06-08 Asia/Shanghai",
     "files":  [
                   {
                       "file":  "RECOVERY_STATUS.md",
-                      "sha256":  "c9ffb661471d46fddaaecafc1363adb6712d7c79104630645fb4128a15f22015",
-                      "length":  3422
+                      "sha256":  "e07165e971ffac9762c683b522e400019c05ebca90426be54ed9eccfa8ed2c9b",
+                      "length":  3506
                   },
                   {
                       "file":  "CHANGELOG.md",
