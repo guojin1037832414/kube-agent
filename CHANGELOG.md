@@ -6,6 +6,21 @@
 
 ---
 
+## [M5.34-2] - Agent eval suite gate hardening
+
+**Delivery**: Hardened the eval suite foundation into a safer release-gate contract.
+**Changes**
+- Added service-owned gate constants for default trace limit, default minimum score, default fail-on-warning policy, maximum per-trace replay results, and maximum suite cases.
+- `AgentEvalReportService#evaluateSuite(...)` now bounds per-trace replay limits, clamps minimum score, evaluates at most 50 deduplicated trace ids, and fails the gate when the requested suite exceeds that case cap.
+- Suite summaries now include `requestedCases`, `evaluatedCases`, `maxCases`, `caseLimitExceeded`, and `skippedTraceIds`.
+- `ObservabilityController#evalSuite(...)` now uses the service-owned defaults for null requests and null policy fields.
+**Verification**
+- `mvn -q "-Dtest=AgentEvalReportServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed.
+**Security**
+- Oversized suites can no longer silently pass after partial evaluation.
+- Warning tolerance is explicit through `failOnWarnings`; strict mode remains the default.
+- This slice remains admin-only, deterministic, redacted-only, and non-executing.
+
 ## [M5.34-1] - Agent eval suite release-gate foundation
 
 **Delivery**: Added the first deterministic Agent eval suite API so multiple trace eval reports can become a future CI/release-gate input.

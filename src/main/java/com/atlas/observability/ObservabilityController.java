@@ -141,10 +141,21 @@ public class ObservabilityController {
         }
         AgentEvalSuiteRequest safeRequest = request != null
             ? request
-            : new AgentEvalSuiteRequest(java.util.List.of(), 50, 80, true);
-        int limit = safeRequest.limit() != null ? safeRequest.limit() : 50;
-        int minimumScore = safeRequest.minimumScore() != null ? safeRequest.minimumScore() : 80;
-        boolean failOnWarnings = safeRequest.failOnWarnings() == null || safeRequest.failOnWarnings();
+            : new AgentEvalSuiteRequest(
+                java.util.List.of(),
+                AgentEvalReportService.DEFAULT_TRACE_MAX_RESULTS,
+                AgentEvalReportService.DEFAULT_SUITE_MINIMUM_SCORE,
+                AgentEvalReportService.DEFAULT_SUITE_FAIL_ON_WARNINGS
+            );
+        int limit = safeRequest.limit() != null
+            ? safeRequest.limit()
+            : AgentEvalReportService.DEFAULT_TRACE_MAX_RESULTS;
+        int minimumScore = safeRequest.minimumScore() != null
+            ? safeRequest.minimumScore()
+            : AgentEvalReportService.DEFAULT_SUITE_MINIMUM_SCORE;
+        boolean failOnWarnings = safeRequest.failOnWarnings() != null
+            ? safeRequest.failOnWarnings()
+            : AgentEvalReportService.DEFAULT_SUITE_FAIL_ON_WARNINGS;
         return ResponseEntity.ok(ApiResponse.ok(evalReportService.evaluateSuite(
             safeRequest.traceIds(),
             limit,

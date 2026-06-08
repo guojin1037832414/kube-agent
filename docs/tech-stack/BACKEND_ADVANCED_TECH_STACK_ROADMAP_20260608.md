@@ -360,3 +360,14 @@ M5.34-1 turns eval into a suite-level gate foundation:
 - The suite reuses deterministic single-trace eval reports instead of inventing a second scoring path.
 
 This matches the current advanced Agent engineering direction: eval should be part of the control plane, not an offline afterthought. The next steps are to add curated golden cases, must-block red-team suites, CI JSON export, and eventually frontend replay/eval workbench integration.
+
+## M5.34-2 Update - Eval Suite Gate Hardening
+
+M5.34-2 tightens the suite foundation into a safer gate contract:
+
+- Suite defaults and caps now live in `AgentEvalReportService` so HTTP, future CI jobs, and internal callers share the same policy.
+- Per-trace replay `limit` is bounded before evaluation, and requested `minimumScore` is clamped to `0..100`.
+- A suite evaluates at most 50 deduplicated trace ids. If the request contains more, the response records `caseLimitExceeded=true`, exposes `skippedTraceIds`, and fails the gate.
+- Strict `failOnWarnings=true` remains the default; warning-only suites pass only when the caller explicitly relaxes the policy.
+
+This closes a common release-gate failure mode: partial evaluation must not look like a full PASS. The next eval work should add named golden suites, must-block red-team traces, machine-readable CI export, and frontend replay/eval workbench integration.

@@ -10,7 +10,35 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.34-1
+## Latest Phase 1 Core Memory - M5.34-2
+
+M5.34-2 hardens the eval suite foundation into a safer release-gate contract.
+
+Delivered:
+
+- Added service-owned constants for suite defaults and caps:
+  - default per-trace replay limit: `50`
+  - default suite minimum score: `80`
+  - default `failOnWarnings`: `true`
+  - maximum per-trace replay results: `200`
+  - maximum suite cases: `50`
+- `AgentEvalReportService#evaluateSuite(...)` now bounds per-trace replay limits, clamps minimum score, evaluates at most 50 deduplicated trace ids, and marks oversized suites as failed instead of silently passing partial evidence.
+- Suite summaries now expose `requestedCases`, `evaluatedCases`, `maxCases`, `caseLimitExceeded`, and `skippedTraceIds`.
+- `ObservabilityController#evalSuite(...)` now uses the same service-owned defaults for null requests and null policy fields.
+
+Security boundary:
+
+- Oversized release-gate suites fail closed.
+- Warning tolerance remains explicit through `failOnWarnings`; strict fail-on-warning behavior remains the default.
+- Suite eval is still admin-only, deterministic, redacted-only, non-executing, and does not call kube-manager or LLMs.
+
+Learning point: release gates must be honest about coverage. A gate that evaluates only part of an oversized suite but still reports pass can create false confidence. M5.34-2 teaches the safer pattern: cap work, report skipped evidence, and fail closed when coverage is incomplete.
+
+Latest verified command:
+
+- `mvn -q "-Dtest=AgentEvalReportServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+## Previous Phase 1 Core Memory - M5.34-1
 
 M5.34-1 upgrades single-trace eval into a deterministic suite-level release-gate foundation.
 

@@ -418,4 +418,60 @@ class ObservabilityControllerTest {
             .contains("aud_eval_suite", "trc_eval_suite", "<protected>")
             .doesNotContain("conv-sensitive", "user-sensitive", "org-sensitive", "secret-token-value", "/api/org-sensitive");
     }
+
+    @Test
+    void evalSuite_shouldUseDocumentedDefaultsForNullRequestAndNullFields() {
+        auditRecorder.record(new com.atlas.audit.AgentAuditEvent(
+            "aud_eval_suite_default",
+            java.time.Instant.parse("2026-06-09T00:00:00Z"),
+            "trc_eval_suite_default",
+            "conv-sensitive",
+            "user-sensitive",
+            "org-sensitive",
+            "intent",
+            "tool",
+            com.atlas.tool.execution.SafeToolExecutionSource.REACT_ENGINE,
+            "GET",
+            java.util.List.of("/api/org-sensitive/pod?token=secret-token-value"),
+            com.atlas.tool.annotation.AtlasToolMapping.OperationType.READ,
+            false,
+            com.atlas.audit.AgentAuditOutcome.SUCCESS,
+            true,
+            true,
+            "ok token=secret-token-value",
+            java.util.Map.of("count", 1, "keys", java.util.List.of(java.util.Map.of(
+                "name", "token",
+                "protected", true,
+                "type", "string",
+                "present", true
+            )))
+        ));
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentEvalSuiteResponse>> nullRequest = controller.evalSuite(null);
+        ResponseEntity<ApiResponse<AgentEvalSuiteResponse>> nullFields = controller.evalSuite(
+            new AgentEvalSuiteRequest(java.util.List.of("trc_eval_suite_default"), null, null, null)
+        );
+
+        assertThat(nullRequest.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(nullRequest.getBody()).isNotNull();
+        AgentEvalSuiteResponse emptySuite = nullRequest.getBody().getData();
+        assertThat(emptySuite.maxResults()).isEqualTo(AgentEvalReportService.DEFAULT_TRACE_MAX_RESULTS);
+        assertThat(emptySuite.minimumScore()).isEqualTo(AgentEvalReportService.DEFAULT_SUITE_MINIMUM_SCORE);
+        assertThat(emptySuite.failOnWarnings()).isEqualTo(AgentEvalReportService.DEFAULT_SUITE_FAIL_ON_WARNINGS);
+        assertThat(emptySuite.pass()).isFalse();
+        assertThat(emptySuite.summary()).containsEntry("emptyInput", true);
+
+        assertThat(nullFields.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(nullFields.getBody()).isNotNull();
+        AgentEvalSuiteResponse defaultedSuite = nullFields.getBody().getData();
+        assertThat(defaultedSuite.pass()).isTrue();
+        assertThat(defaultedSuite.maxResults()).isEqualTo(AgentEvalReportService.DEFAULT_TRACE_MAX_RESULTS);
+        assertThat(defaultedSuite.minimumScore()).isEqualTo(AgentEvalReportService.DEFAULT_SUITE_MINIMUM_SCORE);
+        assertThat(defaultedSuite.failOnWarnings()).isEqualTo(AgentEvalReportService.DEFAULT_SUITE_FAIL_ON_WARNINGS);
+        assertThat(defaultedSuite.summary())
+            .containsEntry("requestedCases", 1)
+            .containsEntry("caseLimitExceeded", false);
+    }
 }

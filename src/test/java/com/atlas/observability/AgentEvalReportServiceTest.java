@@ -276,7 +276,11 @@ class AgentEvalReportServiceTest {
         assertThat(suite.pass()).isTrue();
         assertThat(suite.traceIds()).containsExactly("trc_suite_one", "trc_suite_two");
         assertThat(suite.summary())
+            .containsEntry("requestedCases", 2)
             .containsEntry("caseCount", 2)
+            .containsEntry("evaluatedCases", 2)
+            .containsEntry("maxCases", AgentEvalReportService.MAX_SUITE_CASES)
+            .containsEntry("caseLimitExceeded", false)
             .containsEntry("passedReports", 2)
             .containsEntry("failedReports", 0)
             .containsEntry("warningReports", 0)
@@ -340,6 +344,112 @@ class AgentEvalReportServiceTest {
         assertThat(empty.summary())
             .containsEntry("caseCount", 0)
             .containsEntry("emptyInput", true);
+    }
+
+    @Test
+    void evaluateSuite_shouldAllowWarningReportsOnlyWhenPolicyIsLoose() {
+        InMemoryAgentAuditRecorder recorder = new InMemoryAgentAuditRecorder();
+        AgentEvalReportService service = service(recorder);
+        recorder.record(event(
+            "aud_warning",
+            "trc_suite_warning_policy",
+            Instant.parse("2026-06-09T00:00:00Z"),
+            AtlasToolMapping.OperationType.READ,
+            false,
+            AgentAuditOutcome.ERROR,
+            true,
+            false
+        ));
+
+        AgentEvalSuiteResponse strict = service.evaluateSuite(
+            List.of("trc_suite_warning_policy"),
+            10,
+            80,
+            true
+        );
+        AgentEvalSuiteResponse loose = service.evaluateSuite(
+            List.of("trc_suite_warning_policy"),
+            10,
+            80,
+            false
+        );
+
+        assertThat(strict.pass()).isFalse();
+        assertThat(strict.gateVerdict()).isEqualTo("FAIL");
+        assertThat(strict.failOnWarnings()).isTrue();
+        assertThat(loose.pass()).isTrue();
+        assertThat(loose.gateVerdict()).isEqualTo("PASS");
+        assertThat(loose.failOnWarnings()).isFalse();
+        assertThat(loose.summary())
+            .containsEntry("warningReports", 1)
+            .containsEntry("failedReports", 0);
+    }
+
+    @Test
+    void evaluateSuite_shouldFailWhenCaseLimitIsExceededAndSkipOverflowTraceIds() {
+        InMemoryAgentAuditRecorder recorder = new InMemoryAgentAuditRecorder();
+        AgentEvalReportService service = service(recorder);
+        List<String> traceIds = java.util.stream.IntStream.rangeClosed(1, AgentEvalReportService.MAX_SUITE_CASES + 1)
+            .mapToObj(index -> "trc_case_" + index)
+            .toList();
+        for (int i = 0; i < traceIds.size(); i++) {
+            recorder.record(event(
+                "aud_case_" + i,
+                traceIds.get(i),
+                Instant.parse("2026-06-09T00:00:00Z").plusSeconds(i),
+                AtlasToolMapping.OperationType.READ,
+                false,
+                AgentAuditOutcome.SUCCESS,
+                true,
+                true
+            ));
+        }
+
+        AgentEvalSuiteResponse suite = service.evaluateSuite(traceIds, 10, 80, false);
+
+        assertThat(suite.pass()).isFalse();
+        assertThat(suite.gateVerdict()).isEqualTo("FAIL");
+        assertThat(suite.traceIds()).hasSize(AgentEvalReportService.MAX_SUITE_CASES);
+        assertThat(suite.traceIds()).doesNotContain("trc_case_" + (AgentEvalReportService.MAX_SUITE_CASES + 1));
+        assertThat(suite.reports()).hasSize(AgentEvalReportService.MAX_SUITE_CASES);
+        assertThat(suite.summary())
+            .containsEntry("requestedCases", AgentEvalReportService.MAX_SUITE_CASES + 1)
+            .containsEntry("caseCount", AgentEvalReportService.MAX_SUITE_CASES)
+            .containsEntry("evaluatedCases", AgentEvalReportService.MAX_SUITE_CASES)
+            .containsEntry("maxCases", AgentEvalReportService.MAX_SUITE_CASES)
+            .containsEntry("caseLimitExceeded", true)
+            .containsEntry("failedReports", 0);
+        assertThat(suite.summary().get("skippedTraceIds"))
+            .isInstanceOfSatisfying(Iterable.class, skippedTraceIds -> assertThat(skippedTraceIds)
+                .containsExactly("trc_case_" + (AgentEvalReportService.MAX_SUITE_CASES + 1)));
+    }
+
+    @Test
+    void evaluateSuite_shouldBoundLimitAndMinimumScore() {
+        InMemoryAgentAuditRecorder recorder = new InMemoryAgentAuditRecorder();
+        AgentEvalReportService service = service(recorder);
+        recorder.record(event(
+            "aud_bounds",
+            "trc_suite_bounds",
+            Instant.parse("2026-06-09T00:00:00Z"),
+            AtlasToolMapping.OperationType.READ,
+            false,
+            AgentAuditOutcome.SUCCESS,
+            true,
+            true
+        ));
+
+        AgentEvalSuiteResponse negative = service.evaluateSuite(List.of("trc_suite_bounds"), -100, -10, true);
+        AgentEvalSuiteResponse tooLarge = service.evaluateSuite(List.of("trc_suite_bounds"), 999, 999, true);
+
+        assertThat(negative.maxResults()).isEqualTo(1);
+        assertThat(negative.minimumScore()).isZero();
+        assertThat(negative.reports()).extracting(AgentEvalReportResponse::maxResults)
+            .containsExactly(1);
+        assertThat(tooLarge.maxResults()).isEqualTo(AgentEvalReportService.MAX_TRACE_MAX_RESULTS);
+        assertThat(tooLarge.minimumScore()).isEqualTo(100);
+        assertThat(tooLarge.reports()).extracting(AgentEvalReportResponse::maxResults)
+            .containsExactly(AgentEvalReportService.MAX_TRACE_MAX_RESULTS);
     }
 
     private AgentEvalReportService service(InMemoryAgentAuditRecorder recorder) {

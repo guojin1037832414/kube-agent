@@ -130,6 +130,39 @@ AgentEvalSuiteResponse
 
 学习重点：顶级 Agent 的 eval 要从“单点诊断”走向“套件回归”。单条 trace 能解释一次行为，suite 才能证明一批关键行为在版本演进后仍然安全、可回放、可脱敏、可评分。
 
+## 2026-06-09 M5.34-2 Eval Suite 发布门禁硬化
+
+M5.34-2 把 suite 从“能聚合多条 trace”推进到“更像真实发布门禁”。核心变化不是增加新评测规则，而是明确发布门禁的边界条件：默认策略在哪里定义、最多评估多少用例、超限时能不能继续通过、warning 是否阻断发布。
+
+```text
+AgentEvalReportService
+    |
+    | DEFAULT_TRACE_MAX_RESULTS = 50
+    | DEFAULT_SUITE_MINIMUM_SCORE = 80
+    | DEFAULT_SUITE_FAIL_ON_WARNINGS = true
+    | MAX_TRACE_MAX_RESULTS = 200
+    | MAX_SUITE_CASES = 50
+    v
+evaluateSuite(...)
+    |
+    |-- dedupe trace ids
+    |-- cap evaluated cases to 50
+    |-- record skipped trace ids
+    |-- fail gate if caseLimitExceeded=true
+    v
+AgentEvalSuiteResponse.summary
+```
+
+关键设计：
+
+- 默认值由 service 层拥有，而不是散落在 controller 里。未来 CI、内部任务或前端调用同一个服务时，不会出现不同默认发布策略。
+- `limit` 会被收口到 `1..200`，避免单个 trace replay 造成过大查询成本。
+- suite 最多评估 50 个去重 trace。超出的 trace 会进入 `skippedTraceIds`，同时 `caseLimitExceeded=true` 并让 gate fail。
+- `failOnWarnings=true` 是默认严格策略；只有调用方显式设为 `false`，warning-only suite 才能 pass。
+- `requestedCases`、`evaluatedCases`、`maxCases`、`caseLimitExceeded` 让前端和未来 CI 都能看到“这次 gate 的覆盖率是否完整”。
+
+学习重点：发布门禁不能只看“已评估部分是否通过”，还必须看“应该评估的证据是否都被覆盖”。顶级 Agent 的 gate 要防止 false positive：当输入过大、证据不完整、或 warning 策略不明确时，宁可 fail closed，也不要给出虚假的 PASS。
+
 ## 项目定位
 
 `kube-agent` 不只是把 `kube-manager` / `vue-kube-manager` 的功能包成一个 Agent。它的目标是建设一个顶级 Kubernetes / Cloud / HPC Agent，并且把建设过程本身变成可学习、可复盘、可继续演进的教材。

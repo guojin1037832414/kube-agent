@@ -21,6 +21,12 @@ import java.util.Set;
 @Service
 public class AgentEvalReportService {
 
+    public static final int DEFAULT_TRACE_MAX_RESULTS = 50;
+    public static final int DEFAULT_SUITE_MINIMUM_SCORE = 80;
+    public static final boolean DEFAULT_SUITE_FAIL_ON_WARNINGS = true;
+    public static final int MAX_TRACE_MAX_RESULTS = 200;
+    public static final int MAX_SUITE_CASES = 50;
+
     private final AgentReplayTimelineService replayTimelineService;
 
     public AgentEvalReportService(AgentReplayTimelineService replayTimelineService) {
@@ -61,12 +67,26 @@ public class AgentEvalReportService {
                                                 int minimumScore,
                                                 boolean failOnWarnings) {
         List<String> normalizedTraceIds = normalizeTraceIds(traceIds);
-        List<AgentEvalReportResponse> reports = normalizedTraceIds.stream()
-            .map(traceId -> evaluateTrace(traceId, maxResults))
+        boolean caseLimitExceeded = normalizedTraceIds.size() > MAX_SUITE_CASES;
+        List<String> evaluatedTraceIds = normalizedTraceIds.stream()
+            .limit(MAX_SUITE_CASES)
+            .toList();
+        List<String> skippedTraceIds = normalizedTraceIds.stream()
+            .skip(MAX_SUITE_CASES)
+            .toList();
+        int boundedMaxResults = boundMaxResults(maxResults);
+        int boundedMinimumScore = boundMinimumScore(minimumScore);
+        List<AgentEvalReportResponse> reports = evaluatedTraceIds.stream()
+            .map(traceId -> evaluateTrace(traceId, boundedMaxResults))
             .toList();
         SuiteSummary summary = summarizeSuite(reports, normalizedTraceIds.isEmpty());
-        int boundedMinimumScore = Math.max(0, Math.min(100, minimumScore));
+        summary.requestedCases = normalizedTraceIds.size();
+        summary.evaluatedCases = evaluatedTraceIds.size();
+        summary.maxCases = MAX_SUITE_CASES;
+        summary.caseLimitExceeded = caseLimitExceeded;
+        summary.skippedTraceIds.addAll(skippedTraceIds);
         boolean pass = !normalizedTraceIds.isEmpty()
+            && !caseLimitExceeded
             && summary.failedReports == 0
             && summary.minimumScore >= boundedMinimumScore
             && (!failOnWarnings || summary.warningReports == 0);
@@ -75,8 +95,8 @@ public class AgentEvalReportService {
             pass,
             boundedMinimumScore,
             failOnWarnings,
-            maxResults,
-            normalizedTraceIds,
+            boundedMaxResults,
+            evaluatedTraceIds,
             summary.toMap(),
             suitePrivacy(reports),
             reports
@@ -173,6 +193,14 @@ public class AgentEvalReportService {
 
     private boolean truthy(Map<String, Object> data, String key) {
         return data != null && Boolean.TRUE.equals(data.get(key));
+    }
+
+    private int boundMaxResults(int maxResults) {
+        return Math.max(1, Math.min(maxResults, MAX_TRACE_MAX_RESULTS));
+    }
+
+    private int boundMinimumScore(int minimumScore) {
+        return Math.max(0, Math.min(100, minimumScore));
     }
 
     private AgentEvalCheck tracePresenceCheck(AgentReplayTimelineResponse replay) {
@@ -475,7 +503,11 @@ public class AgentEvalReportService {
     }
 
     private static final class SuiteSummary {
+        private int requestedCases;
         private int caseCount;
+        private int evaluatedCases;
+        private int maxCases;
+        private boolean caseLimitExceeded;
         private int passedReports;
         private int failedReports;
         private int warningReports;
@@ -486,10 +518,15 @@ public class AgentEvalReportService {
         private boolean emptyInput;
         private final List<String> failedTraceIds = new ArrayList<>();
         private final List<String> warningTraceIds = new ArrayList<>();
+        private final List<String> skippedTraceIds = new ArrayList<>();
 
         private Map<String, Object> toMap() {
             Map<String, Object> data = new LinkedHashMap<>();
+            data.put("requestedCases", requestedCases);
             data.put("caseCount", caseCount);
+            data.put("evaluatedCases", evaluatedCases);
+            data.put("maxCases", maxCases);
+            data.put("caseLimitExceeded", caseLimitExceeded);
             data.put("passedReports", passedReports);
             data.put("failedReports", failedReports);
             data.put("warningReports", warningReports);
@@ -500,6 +537,7 @@ public class AgentEvalReportService {
             data.put("emptyInput", emptyInput);
             data.put("failedTraceIds", List.copyOf(failedTraceIds));
             data.put("warningTraceIds", List.copyOf(warningTraceIds));
+            data.put("skippedTraceIds", List.copyOf(skippedTraceIds));
             return data;
         }
     }
