@@ -225,3 +225,18 @@ M5.31-1 继续证明当前 Java / Spring 主线的价值：不用替换语言栈
 - 继续放入兼容矩阵：Spring Boot 4 / Spring AI 2 / Java 21/25 / A2A / full MCP broker / GraphRAG。
 
 学习重点：顶级 Agent 的后端先进性体现在“证据链可恢复”。内存 snapshot 适合排障，持久 read model 才能支撑审计追责、红队评测、前端回放和未来受控写放行。
+
+## 2026-06-09 M5.31-2 更新
+
+M5.31-2 将 durable audit 的技术路线从“持久可查”推进到“生命周期策略可见”。这仍然是 Java/Spring 控制平面的典型优势：配置、元数据、admin query、安全边界和测试可以在同一套类型系统里闭合。
+
+本轮新增：
+- durable audit retention 配置：保留天数与最大文件大小。
+- durable audit export 配置：导出开关、目录、格式，但不实现下载端点。
+- durable audit query 配置：最大扫描记录数、最大返回结果数、单个 auditId 最大阶段记录数。
+- admin index metadata 返回 retention/export/query governance 信息。
+
+技术判断更新：
+- 这不是“功能缩水”，而是顶级 Agent 的正确顺序：先公开生命周期契约，再做真实导出、清理和索引。
+- 下一步仍应是 retention enforcement、export job、database/search-backed index、frontend replay timeline、Agent eval 和 CI hard gate。
+- Boot 4 / Spring AI 2 / Java 21/25 继续留在兼容矩阵；当前更重要的是把审计生命周期变成可测试、可恢复、可解释的生产控制面能力。

@@ -10,7 +10,37 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.31-1
+## Latest Phase 1 Core Memory - M5.31-2
+
+M5.31-2 adds lifecycle-governance metadata for durable audit evidence.
+
+Delivered:
+
+- Added durable audit retention/export/query configuration:
+  - `retention-days`
+  - `max-file-bytes`
+  - `export-enabled`
+  - `export-directory`
+  - `export-format`
+  - `query-max-scan-records`
+  - `query-max-results`
+  - `audit-id-max-phase-records`
+- `JsonlAgentAuditQueryService#indexMetadata()` now exposes retention and export policy metadata.
+- JSONL scan/result limits are configuration-driven but capped server-side.
+
+Security boundary:
+
+- This is metadata-only lifecycle governance.
+- No export/download endpoint, purge job, raw JSONL file exposure, or kube-manager write behavior was added.
+- Export metadata explicitly states `adminOnly=true`, `redactedOnly=true`, and `downloadEndpointImplemented=false`.
+
+Learning point: a top-tier Agent audit store needs lifecycle semantics before it needs a shiny export button. Retention, size limits, redacted-only export policy, and server-side query caps are part of the audit contract and must be visible to operators before real export/purge workflows are implemented.
+
+Latest verified command:
+
+- `mvn -q "-Dtest=JsonlAgentAuditDurableSinkTest,AgentAuditRecorderTest,ObservabilityControllerTest" test`
+
+## Previous Phase 1 Core Memory - M5.31-1
 
 M5.31-1 turns the durable audit line from "can write evidence" into "can query durable evidence" for the first time.
 

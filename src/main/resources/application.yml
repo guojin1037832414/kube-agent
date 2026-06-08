@@ -80,6 +80,14 @@ atlas:
       enabled: ${ATLAS_AUDIT_DURABLE_ENABLED:false}
       fail-closed-for-high-risk: ${ATLAS_AUDIT_DURABLE_FAIL_CLOSED_FOR_HIGH_RISK:false}
       path: ${ATLAS_AUDIT_DURABLE_PATH:target/agent-audit/agent-audit.jsonl}
+      retention-days: ${ATLAS_AUDIT_DURABLE_RETENTION_DAYS:30}
+      max-file-bytes: ${ATLAS_AUDIT_DURABLE_MAX_FILE_BYTES:268435456}
+      export-enabled: ${ATLAS_AUDIT_DURABLE_EXPORT_ENABLED:false}
+      export-directory: ${ATLAS_AUDIT_DURABLE_EXPORT_DIRECTORY:target/agent-audit/export}
+      export-format: ${ATLAS_AUDIT_DURABLE_EXPORT_FORMAT:jsonl-redacted}
+      query-max-scan-records: ${ATLAS_AUDIT_DURABLE_QUERY_MAX_SCAN_RECORDS:10000}
+      query-max-results: ${ATLAS_AUDIT_DURABLE_QUERY_MAX_RESULTS:500}
+      audit-id-max-phase-records: ${ATLAS_AUDIT_DURABLE_AUDIT_ID_MAX_PHASE_RECORDS:20}
 
   agent-routing:
     default-agent: "query"

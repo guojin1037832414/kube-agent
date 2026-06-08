@@ -26,8 +26,6 @@ import java.util.Map;
 @Service
 public class JsonlAgentAuditQueryService implements AgentAuditQueryService {
 
-    private static final int DEFAULT_SCAN_LIMIT = 10_000;
-
     private final AgentAuditProperties properties;
     private final ObjectMapper objectMapper;
     private final Path path;
@@ -45,11 +43,12 @@ public class JsonlAgentAuditQueryService implements AgentAuditQueryService {
     @Override
     public AgentAuditQueryResponse findByAuditId(String auditId) {
         String normalizedAuditId = safeText(auditId);
-        ScanResult scan = scan(DEFAULT_SCAN_LIMIT, event -> normalizedAuditId.equals(event.auditId()), 20);
+        int maxPhaseRecords = boundedAuditIdMaxPhaseRecords();
+        ScanResult scan = scan(boundedMaxScanRecords(), event -> normalizedAuditId.equals(event.auditId()), maxPhaseRecords);
         return AgentAuditQueryResponse.of(
             "auditId",
             normalizedAuditId,
-            20,
+            maxPhaseRecords,
             scan.truncated(),
             indexMetadata(),
             scan.events()
@@ -59,9 +58,9 @@ public class JsonlAgentAuditQueryService implements AgentAuditQueryService {
     @Override
     public AgentAuditQueryResponse findByTraceId(String traceId, int maxResults) {
         String normalizedTraceId = safeText(traceId);
-        int boundedMaxResults = Math.max(1, Math.min(maxResults, 500));
+        int boundedMaxResults = Math.max(1, Math.min(maxResults, boundedQueryMaxResults()));
         ScanResult scan = scan(
-            DEFAULT_SCAN_LIMIT,
+            boundedMaxScanRecords(),
             event -> normalizedTraceId.equals(event.traceId()),
             boundedMaxResults
         );
@@ -78,16 +77,21 @@ public class JsonlAgentAuditQueryService implements AgentAuditQueryService {
     @Override
     public Map<String, Object> indexMetadata() {
         boolean available = available();
+        AgentAuditProperties.Durable durable = properties.getDurable();
         Map<String, Object> metadata = new LinkedHashMap<>();
         metadata.put("schemaVersion", "agent-audit-index.v1");
         metadata.put("backend", "jsonl-reverse-scan");
         metadata.put("storageType", "jsonl");
-        metadata.put("durableRetention", properties.getDurable().isEnabled());
+        metadata.put("durableRetention", durable.isEnabled());
         metadata.put("available", available);
         metadata.put("lookupFields", List.of("auditId", "traceId"));
         metadata.put("scanDirection", "newest-first");
-        metadata.put("maxScanRecords", DEFAULT_SCAN_LIMIT);
-        metadata.put("pathConfigured", properties.getDurable().getPath() != null && !properties.getDurable().getPath().isBlank());
+        metadata.put("maxScanRecords", boundedMaxScanRecords());
+        metadata.put("maxQueryResults", boundedQueryMaxResults());
+        metadata.put("auditIdMaxPhaseRecords", boundedAuditIdMaxPhaseRecords());
+        metadata.put("pathConfigured", durable.getPath() != null && !durable.getPath().isBlank());
+        metadata.put("retention", retentionMetadata(durable));
+        metadata.put("export", exportMetadata(durable));
         metadata.put("containsRawPrincipal", false);
         metadata.put("containsRawReason", false);
         metadata.put("containsRawParameterValues", false);
@@ -96,6 +100,43 @@ public class JsonlAgentAuditQueryService implements AgentAuditQueryService {
             metadata.put("sizeBytes", fileSize());
         }
         return metadata;
+    }
+
+    private Map<String, Object> retentionMetadata(AgentAuditProperties.Durable durable) {
+        return Map.of(
+            "policyConfigured", true,
+            "retentionDays", Math.max(1, durable.getRetentionDays()),
+            "maxFileBytes", Math.max(1L, durable.getMaxFileBytes()),
+            "enforcementMode", "metadata-only",
+            "rotationImplemented", false,
+            "purgeImplemented", false
+        );
+    }
+
+    private Map<String, Object> exportMetadata(AgentAuditProperties.Durable durable) {
+        String format = durable.getExportFormat() != null && !durable.getExportFormat().isBlank()
+            ? durable.getExportFormat()
+            : "jsonl-redacted";
+        return Map.of(
+            "enabled", durable.isExportEnabled(),
+            "format", format,
+            "directoryConfigured", durable.getExportDirectory() != null && !durable.getExportDirectory().isBlank(),
+            "adminOnly", true,
+            "redactedOnly", true,
+            "downloadEndpointImplemented", false
+        );
+    }
+
+    private int boundedMaxScanRecords() {
+        return Math.max(1, Math.min(properties.getDurable().getQueryMaxScanRecords(), 100_000));
+    }
+
+    private int boundedQueryMaxResults() {
+        return Math.max(1, Math.min(properties.getDurable().getQueryMaxResults(), 2_000));
+    }
+
+    private int boundedAuditIdMaxPhaseRecords() {
+        return Math.max(1, Math.min(properties.getDurable().getAuditIdMaxPhaseRecords(), 100));
     }
 
     private ScanResult scan(int maxScanRecords, AuditEventPredicate predicate, int maxResults) {

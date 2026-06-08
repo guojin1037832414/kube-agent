@@ -6,6 +6,19 @@
 
 ---
 
+## [M5.31-2] - Durable audit retention and export policy metadata
+
+**Delivery**: Added explicit durable audit retention/export/query policy metadata so admin audit indexes describe lifecycle governance before any real export or purge endpoint is introduced.
+**Changes**
+- Added `atlas.audit.durable.retention-days`, `max-file-bytes`, `export-enabled`, `export-directory`, `export-format`, `query-max-scan-records`, `query-max-results`, and `audit-id-max-phase-records`.
+- Updated `JsonlAgentAuditQueryService` to expose retention/export policy metadata in the admin audit index.
+- Made JSONL scan and result limits configuration-driven with bounded server-side caps.
+**Verification**
+- `mvn -q "-Dtest=JsonlAgentAuditDurableSinkTest,AgentAuditRecorderTest,ObservabilityControllerTest" test` passed.
+**Security**
+- Export is metadata-only in this slice: no download/export endpoint, purge job, or raw durable file exposure was added.
+- Metadata states `redactedOnly=true`, `adminOnly=true`, and `downloadEndpointImplemented=false`.
+
 ## [M5.31-1] - JSONL durable audit query read model
 
 **Delivery**: Added the first JSONL-backed redacted audit query read model so admin audit lookup can recover durable evidence across process restarts when durable JSONL audit is enabled.

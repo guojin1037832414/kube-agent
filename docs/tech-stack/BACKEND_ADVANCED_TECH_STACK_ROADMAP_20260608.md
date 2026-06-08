@@ -288,3 +288,13 @@ M5.31-1 delivers the next audit storage upgrade without changing the public admi
 - Query metadata now distinguishes `backend=jsonl-reverse-scan` from `backend=in-memory-ring-buffer`.
 
 This is still a bounded first-stage implementation. The next advanced storage steps are retention/export policy, database/search indexing, and replay timeline DTOs. The important Phase 1 lesson is that top-tier Agent evidence must be recoverable after process restart; otherwise audit, replay, and red-team evaluation are too dependent on volatile memory.
+
+## M5.31-2 Update - Durable Audit Lifecycle Metadata
+
+M5.31-2 adds the first durable audit lifecycle contract:
+
+- Retention metadata: configured retention days and max file bytes.
+- Export metadata: export enabled flag, redacted format, admin-only requirement, and explicit `downloadEndpointImplemented=false`.
+- Query metadata: configurable but bounded scan/result limits.
+
+This is intentionally metadata-only. A top-tier Agent should not add an audit download endpoint before it has a clear redacted-only export contract, operator-visible retention policy, and tests proving no raw principal, endpoint, reason, or parameter values are exposed. Future work should implement retention enforcement, export jobs, and database/search indexing behind the same admin-only and redacted-only contract.

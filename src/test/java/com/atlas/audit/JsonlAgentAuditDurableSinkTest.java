@@ -94,6 +94,10 @@ class JsonlAgentAuditDurableSinkTest {
             .containsEntry("backend", "jsonl-reverse-scan")
             .containsEntry("containsRawEndpoints", false)
             .containsEntry("containsRawParameterValues", false);
+        assertThat(byAuditId.index().get("retention").toString())
+            .contains("metadata-only", "rotationImplemented=false", "purgeImplemented=false");
+        assertThat(byAuditId.index().get("export").toString())
+            .contains("redactedOnly=true", "downloadEndpointImplemented=false");
         assertThat(byAuditId.events()).extracting(AgentAuditQueryEvent::outcome)
             .containsExactly("BUSINESS_FAILURE", "PREPARED");
         assertThat(byTraceId.events()).extracting(AgentAuditQueryEvent::outcome)
@@ -122,6 +126,44 @@ class JsonlAgentAuditDurableSinkTest {
         assertThat(response.events()).extracting(AgentAuditQueryEvent::outcome)
             .containsExactly("BUSINESS_FAILURE", "PREPARED");
         assertThat(recorder.recentEvents()).hasSize(1);
+    }
+
+    @Test
+    void jsonlQueryService_shouldExposeConfiguredRetentionExportAndQueryLimits() {
+        Path auditFile = tempDir.resolve("audit").resolve("agent-audit-policy.jsonl");
+        AgentAuditProperties properties = enabledProperties(auditFile, true);
+        properties.getDurable().setRetentionDays(90);
+        properties.getDurable().setMaxFileBytes(1024);
+        properties.getDurable().setExportEnabled(true);
+        properties.getDurable().setExportDirectory(tempDir.resolve("export").toString());
+        properties.getDurable().setExportFormat("jsonl-redacted");
+        properties.getDurable().setQueryMaxScanRecords(2);
+        properties.getDurable().setQueryMaxResults(1);
+        properties.getDurable().setAuditIdMaxPhaseRecords(1);
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonlAgentAuditDurableSink sink = new JsonlAgentAuditDurableSink(properties, objectMapper);
+        JsonlAgentAuditQueryService queryService = new JsonlAgentAuditQueryService(properties, objectMapper);
+
+        sink.prewriteHighRisk(preparedSensitiveEvent());
+        sink.append(sensitiveEvent());
+
+        AgentAuditQueryResponse byAuditId =
+            queryService.findByAuditId("aud_0123456789abcdef0123456789abcdef");
+        AgentAuditQueryResponse byTraceId =
+            queryService.findByTraceId("trc_0123456789abcdef0123456789abcdef", 10);
+
+        assertThat(byAuditId.maxResults()).isEqualTo(1);
+        assertThat(byAuditId.events()).hasSize(1);
+        assertThat(byTraceId.maxResults()).isEqualTo(1);
+        assertThat(byTraceId.truncated()).isTrue();
+        assertThat(byTraceId.index())
+            .containsEntry("maxScanRecords", 2)
+            .containsEntry("maxQueryResults", 1)
+            .containsEntry("auditIdMaxPhaseRecords", 1);
+        assertThat(byTraceId.index().get("retention").toString())
+            .contains("retentionDays=90", "maxFileBytes=1024", "enforcementMode=metadata-only");
+        assertThat(byTraceId.index().get("export").toString())
+            .contains("enabled=true", "format=jsonl-redacted", "adminOnly=true", "redactedOnly=true");
     }
 
     @Test

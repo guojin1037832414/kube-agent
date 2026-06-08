@@ -268,6 +268,24 @@ InMemoryAgentAuditRecorder (@Primary facade)
 - 后续仍需要 retention/export、数据库或搜索索引、前端 timeline DTO、Agent eval 报告和发布门禁。
 - 查询结果继续保持脱敏：不返回 raw principal、organization、conversation、endpoint、reason 或参数值。
 
+## M5.31-2 Durable Audit Lifecycle Metadata
+
+M5.31-2 把持久审计从“能查”继续推进到“能说明生命周期策略”。这一步没有做真实导出，也没有做 purge/rotate 后台任务，而是先把策略契约放入配置和 admin index metadata：
+
+- `retentionDays`：审计证据计划保留天数。
+- `maxFileBytes`：单个 JSONL 文件的治理上限。
+- `export.enabled`：是否允许后续实现导出流程。
+- `export.format=jsonl-redacted`：未来导出只能基于脱敏证据模型。
+- `queryMaxScanRecords` / `queryMaxResults` / `auditIdMaxPhaseRecords`：查询读侧的服务端上限。
+
+学习重点：顶级 Agent 的审计不是“日志文件越多越好”。真正可治理的审计需要回答：保留多久、文件多大、谁能导出、导出是否脱敏、查询最多扫描多少、一次最多返回多少。先公开 metadata，再实现导出/清理，可以避免过早打开原始日志下载这类高风险能力。
+
+当前安全边界：
+- `downloadEndpointImplemented=false`，没有新增下载接口。
+- `purgeImplemented=false`，没有新增删除任务。
+- `rotationImplemented=false`，没有新增轮转任务。
+- `redactedOnly=true`，后续导出只能围绕脱敏模型设计。
+
 ## 一期与二期范围
 
 2026-06-08 用户明确调整优先级：HPC / Slurm / BCM 与 NIM 相关能力先暂停，统一作为二期项目再继续添加和真实化。
