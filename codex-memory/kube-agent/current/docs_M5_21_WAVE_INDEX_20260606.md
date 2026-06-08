@@ -1,0 +1,142 @@
+# M5.21 kube-manager Tool 对齐批次索引
+
+> 目的: 汇总 M5.21 持续对齐 mature kube-manager 的批次审计记录，方便后续开发者从能力域、风险边界和验证入口快速回溯。
+
+## 总原则
+
+- 所有能力先对照 mature `kube-manager` 后端 controller、`vue-kube-manager` 前端调用和现有 kube-agent Tool 形态。
+- 真实写入、删除、状态变更、支付、充值、环境安装、集群变更等能力必须走 `requiresConfirmation=true`，且优先使用 mock 契约测试，不直接打真实 `8100`。
+- 普通 GET 不等于低风险读取；日志、用户、财务、训练路径、内部产品配置、HPC 软件栈等统一按 `SENSITIVE_READ` 处理。
+- 未拿到成熟前后端证据或安全边界不清楚的接口保持 HOLD，不用猜测路径补 Tool。
+
+## 批次索引
+
+| 批次 | 审计文档 | 核心范围 |
+|---|---|---|
+| M5.21 总览 | `docs/M5_21_KUBE_MANAGER_TOOL_ALIGNMENT_AUDIT_20260605.md` | mature kube-manager Tool 对齐总审计 |
+| M5.21-2 | `docs/M5_21_SECOND_WAVE_HIGH_RISK_TOOL_AUDIT_20260605.md` | 高风险 Tool 接口审计 |
+| M5.21-3 | `docs/M5_21_THIRD_WAVE_IMAGE_STORAGE_TOOL_AUDIT_20260605.md` | Image/Storage 高风险 Tool |
+| M5.21-4 | `docs/M5_21_FOURTH_WAVE_EXPERIMENT_TOOL_AUDIT_20260605.md` | Experiment 高风险 Tool |
+| M5.21-5 | `docs/M5_21_FIFTH_WAVE_USER_RBAC_TOOL_AUDIT_20260605.md` | User/RBAC 高风险 Tool |
+| M5.21-6 | `docs/M5_21_SIXTH_WAVE_SLURM_NIM_TOOL_AUDIT_20260605.md` | Slurm/NIM 创建 Tool |
+| M5.21-7 | `docs/M5_21_SEVENTH_WAVE_COMPOSE_HELM_TOOL_AUDIT_20260605.md` | Compose/Helm 高风险 Tool |
+| M5.21-8 | `docs/M5_21_EIGHTH_WAVE_HELM_COMPOSE_WRITE_TOOL_AUDIT_20260605.md` | Helm/Compose 写操作补齐 |
+| M5.21-9 | `docs/M5_21_NINTH_WAVE_EXTERNAL_LINK_OBSERVABILITY_AUDIT_20260605.md` | 外部链接与可观测入口 |
+| M5.21-10 | `docs/M5_21_TENTH_WAVE_EASY_FLOW_LOG_ANALYSIS_AUDIT_20260605.md` | EasyFlow 日志分析 |
+| M5.21-11 | `docs/M5_21_ELEVENTH_WAVE_EASY_FLOW_METADATA_AUDIT_20260605.md` | EasyFlow 流程/阶段元数据 |
+| M5.21-12 | `docs/M5_21_TWELFTH_WAVE_DASHBOARD_RESOURCE_ANALYSIS_AUDIT_20260605.md` | Dashboard 与资源预设分析 |
+| M5.21-13 | `docs/M5_21_THIRTEENTH_WAVE_FINANCIAL_ANALYSIS_AUDIT_20260605.md` | 成本与使用分析 |
+| M5.21-14 | `docs/M5_21_FOURTEENTH_WAVE_METRIC_RESOURCE_ANALYSIS_AUDIT_20260605.md` | 资源余量与公开监控指标 |
+| M5.21-15 | `docs/M5_21_FIFTEENTH_WAVE_INDUSTRY_APP_ANALYSIS_AUDIT_20260605.md` | 行业应用分析 |
+| M5.21-16 | `docs/M5_21_SIXTEENTH_WAVE_SALE_PRODUCT_QUOTE_AUDIT_20260605.md` | 产品与租赁报价分析 |
+| M5.21-17 | `docs/M5_21_SEVENTEENTH_WAVE_USER_STATUS_RECHARGE_AUDIT_20260606.md` | User/RBAC 状态与充值高风险 Tool |
+| M5.21-18 | `docs/M5_21_EIGHTEENTH_WAVE_HPC_JOB_PREPARATION_AUDIT_20260606.md` | HPC 作业准备数据 |
+| M5.21-19 | `docs/M5_21_NINETEENTH_WAVE_VIRTUAL_MACHINE_READ_AUDIT_20260606.md` | 虚拟机只读能力 |
+| M5.21-20 | `docs/M5_21_TWENTIETH_WAVE_TEMPLATE_DETAIL_AUDIT_20260606.md` | 模板详情只读能力 |
+| M5.21-21 | `docs/M5_21_TWENTY_FIRST_WAVE_COURSEWARE_READ_AUDIT_20260606.md` | 课件只读能力 |
+| M5.21-22 | `docs/M5_21_TWENTY_SECOND_WAVE_COURSEWARE_LEARNING_STATUS_AUDIT_20260606.md` | 课程学习状态 |
+| M5.21-23 | `docs/M5_21_TWENTY_THIRD_WAVE_TENSORBOARD_READ_AUDIT_20260606.md` | TensorBoard 训练监控只读能力 |
+| M5.21-24 | `docs/M5_21_TWENTY_FOURTH_WAVE_SERVER_CONFIG_READ_AUDIT_20260606.md` | 服务器产品配置敏感只读 |
+| M5.21-25 | `docs/M5_21_TWENTY_FIFTH_WAVE_PRODUCT_CONFIG_READ_AUDIT_20260606.md` | 组织内产品配置敏感只读 |
+| M5.21-26 | `docs/M5_21_TWENTY_SIXTH_WAVE_HPC_ENVIRONMENT_MODULE_AUDIT_20260606.md` | HPC 环境与 Lmod module 敏感只读 |
+| M5.21-27 | `docs/M5_21_TWENTY_SEVENTH_WAVE_BCM_ALLOCATION_READ_AUDIT_20260606.md` | BCM 用户与节点分配敏感只读 |
+| M5.21-28 | `docs/M5_21_TWENTY_EIGHTH_WAVE_FILE_STORAGE_READ_AUDIT_20260606.md` | 文件/存储准备上下文敏感只读 |
+| M5.21-29 | `docs/M5_21_TWENTY_NINTH_WAVE_LEGACY_GET_METADATA_AUDIT_20260606.md` | Legacy GET Tool HTTP 元数据与路径对齐 |
+| M5.21-30 | `docs/M5_21_THIRTIETH_WAVE_MIG_CONFIG_READ_AUDIT_20260606.md` | MIG 配置按 GPU ID 只读对齐 |
+| M5.21-31 | `docs/M5_21_THIRTY_FIRST_WAVE_DOWNLOAD_STATUS_READ_AUDIT_20260606.md` | 下载任务状态按任务 ID 敏感只读对齐 |
+| M5.21-32 | `docs/M5_21_THIRTY_SECOND_WAVE_DOWNLOAD_PROGRESS_READ_AUDIT_20260606.md` | 下载任务进度按任务 ID 敏感只读对齐 |
+| M5.21-33 | `docs/M5_21_THIRTY_THIRD_WAVE_REGISTRY_SITE_READ_AUDIT_20260606.md` | 镜像注册处站点级敏感只读对齐 |
+| M5.21-34 | `docs/M5_21_THIRTY_FOURTH_WAVE_REPOSITORY_CATALOG_READ_AUDIT_20260606.md` | 产品/应用镜像目录与 tag 敏感只读对齐 |
+| M5.21-35 | `docs/M5_21_THIRTY_FIFTH_WAVE_NIM_DEPLOYMENT_PREFLIGHT_AUDIT_20260606.md` | NIM 部署前 repository/tag/template 只读预检 |
+| M5.21-36 | `docs/M5_21_THIRTY_SIXTH_WAVE_NIM_TEMPLATE_MERGE_PREVIEW_AUDIT_20260606.md` | NIM 模板合并与 DeploymentDTO 离线预览 |
+| M5.21-37 | `docs/M5_21_THIRTY_SEVENTH_WAVE_NIM_CREATION_GATE_AUDIT_20260606.md` | NIM 创建门禁与 HITL 卡片草案 |
+| M5.21-38 | `docs/M5_21_THIRTY_EIGHTH_WAVE_NIM_TRUSTED_POLICY_SNAPSHOT_AUDIT_20260606.md` | NIM 可信策略快照 |
+| M5.21-39 | `docs/M5_21_THIRTY_NINTH_WAVE_NIM_CREATE_STATE_MACHINE_AUDIT_20260606.md` | NIM 创建状态机安全契约 |
+| M5.21-40 | `docs/M5_21_FORTIETH_WAVE_NIM_AUDIT_READINESS_PLAN_AUDIT_20260606.md` | NIM 审计上下文与 readiness 计划草案 |
+| M5.21-41 | `docs/M5_21_FORTY_FIRST_WAVE_NIM_TRUSTED_POLICY_PROVIDER_AUDIT_20260606.md` | NIM 可信策略提供器契约 |
+| M5.21-42 | `docs/M5_21_FORTY_SECOND_WAVE_NIM_AUDIT_WRITER_RECEIPT_AUDIT_20260607.md` | NIM mock-first 审计写入 receipt 契约 |
+| M5.21-43 | `docs/M5_21_FORTY_THIRD_WAVE_NIM_READINESS_EXECUTOR_AUDIT_20260607.md` | NIM readiness 只读执行器契约 |
+| M5.21-44 | `docs/M5_21_FORTY_FOURTH_WAVE_NIM_READINESS_REPORT_GATE_AUDIT_20260607.md` | NIM readiness 执行报告门禁 |
+| M5.21-45 | `docs/M5_21_FORTY_FIFTH_WAVE_NIM_READINESS_HTTP_ADAPTER_AUDIT_20260607.md` | NIM readiness HTTP adapter request spec 契约 |
+| M5.21-46 | `docs/M5_21_FORTY_SIXTH_WAVE_NIM_WRITE_BODY_REBUILDER_AUDIT_20260607.md` | NIM 受控写入 body 重建契约 |
+| M5.21-47 | `docs/M5_21_FORTY_SEVENTH_WAVE_NIM_WRITE_REQUEST_SPEC_ADAPTER_AUDIT_20260607.md` | NIM 受控 POST request spec 适配器契约 |
+| M5.21-48 | `docs/M5_21_FORTY_EIGHTH_WAVE_NIM_WRITE_EXECUTION_HANDOFF_AUDIT_20260607.md` | NIM 写执行交接与幂等契约 |
+| M5.21-49 | `docs/M5_21_FORTY_NINTH_WAVE_NIM_DURABLE_WRITE_EXECUTOR_SHELL_AUDIT_20260607.md` | NIM durable write executor 合同壳 |
+| M5.21-50 | `docs/M5_21_FIFTIETH_WAVE_NIM_DURABLE_WRITE_EXECUTOR_REPORT_GATE_AUDIT_20260607.md` | NIM durable write executor 报告门禁 |
+| M5.21-51 | `docs/M5_21_FIFTY_FIRST_WAVE_NIM_DURABLE_AUDIT_STORAGE_CANDIDATE_AUDIT_20260607.md` | NIM durable audit storage 候选契约 |
+| M5.21-52 | `docs/M5_21_FIFTY_SECOND_WAVE_NIM_DURABLE_AUDIT_WRITER_PLAN_AUDIT_20260607.md` | NIM durable audit writer 两阶段计划契约 |
+| M5.21-53 | `docs/M5_21_FIFTY_THIRD_WAVE_NIM_DURABLE_AUDIT_STORAGE_AVAILABILITY_GATE_AUDIT_20260607.md` | NIM durable audit storage 可用性门禁计划契约 |
+| M5.21-54 | `docs/M5_21_FIFTY_FOURTH_WAVE_NIM_DEDICATED_DURABLE_AUDIT_WRITER_BOUNDARY_AUDIT_20260607.md` | NIM 专用 durable audit writer 边界与测试替身契约 |
+| M5.21-55 | `docs/M5_21_FIFTY_FIFTH_WAVE_NIM_DURABLE_AUDIT_WRITER_INTERFACE_SPEC_AUDIT_20260607.md` | NIM durable audit writer 接口规格契约 |
+| M5.21-56 | `docs/M5_21_FIFTY_SIXTH_WAVE_NIM_DURABLE_AUDIT_RECEIPT_ACK_SCHEMA_AUDIT_20260607.md` | NIM durable audit typed ack/receipt schema 契约 |
+| M5.21-57 | `docs/M5_21_FIFTY_SEVENTH_WAVE_NIM_DURABLE_AUDIT_RECEIPT_VALIDATION_GATE_AUDIT_20260607.md` | NIM durable audit receipt validation gate 契约 |
+| M5.21-58 | `docs/M5_21_FIFTY_EIGHTH_WAVE_NIM_DURABLE_AUDIT_VALIDATION_RESULT_MIGRATION_AUDIT_20260607.md` | NIM durable audit validation result / release decision migration contract |
+| M5.21-59 | `docs/M5_21_FIFTY_NINTH_WAVE_NIM_DURABLE_AUDIT_RELEASE_DECISION_GATE_AUDIT_20260607.md` | NIM durable audit release decision gate contract |
+| M5.21-60 | `docs/M5_21_SIXTIETH_WAVE_NIM_STATE_MACHINE_RELEASE_DECISION_REQUIREMENT_AUDIT_20260607.md` | NIM state-machine release decision report requirement contract |
+| M5.21-61 | `docs/M5_21_SIXTY_FIRST_WAVE_NIM_STATE_MACHINE_SECRET_COVERAGE_AUDIT_20260607.md` | NIM state-machine release decision requirement secret coverage hardening |
+| M5.21-62 | `docs/M5_21_SIXTY_SECOND_WAVE_NIM_STATE_MACHINE_SECRET_LIST_MATRIX_AUDIT_20260607.md` | NIM state-machine secret list-item coverage matrix |
+| M5.21-63 | `docs/M5_21_SIXTY_THIRD_WAVE_NIM_STATE_MACHINE_GATE_REPORT_ACCEPTANCE_SEMANTICS_AUDIT_20260607.md` | NIM state-machine gate report acceptance semantics |
+| M5.21-64 | `docs/M5_21_SIXTY_FOURTH_WAVE_NIM_ACCEPTED_BOOLEAN_NON_AUTHORITATIVE_CONTRACT_AUDIT_20260607.md` | NIM accepted boolean non-authoritative contract |
+| M5.21-65 | `docs/M5_21_SIXTY_FIFTH_WAVE_NIM_ACCEPTED_BOOLEAN_SOURCE_GUARD_AUDIT_20260607.md` | NIM accepted boolean source guard |
+| M5.21-66 | `docs/M5_21_SIXTY_SIXTH_WAVE_NIM_DURABLE_AUDIT_STORAGE_PROBE_EXECUTOR_AUDIT_20260607.md` | NIM durable audit storage probe executor contract |
+| M5.21-67 | `docs/M5_21_SIXTY_SEVENTH_WAVE_NIM_DURABLE_AUDIT_STORAGE_PROBE_RESULT_AUDIT_20260607.md` | NIM durable audit storage probe result contract |
+| M5.21-68 | `docs/M5_21_SIXTY_EIGHTH_WAVE_NIM_DURABLE_AUDIT_RECEIPT_VALIDATION_PROBE_RESULT_BINDING_AUDIT_20260607.md` | NIM receipt validation probe result binding contract |
+| M5.21-69 | `docs/M5_21_SIXTY_NINTH_WAVE_NIM_DURABLE_AUDIT_VALIDATION_RESULT_PROBE_BINDING_MIGRATION_AUDIT_20260607.md` | NIM validation result / release decision probe binding migration contract |
+| M5.21-70 | `docs/M5_21_SEVENTIETH_WAVE_NIM_DURABLE_AUDIT_RECEIPT_VALIDATION_RESULT_CONTRACT_AUDIT_20260607.md` | NIM durable audit receipt validation result value contract |
+| M5.21-71 | `docs/M5_21_SEVENTY_FIRST_WAVE_NIM_DURABLE_AUDIT_RELEASE_DECISION_CONTRACT_AUDIT_20260607.md` | NIM durable audit release decision value contract |
+| M5.21-72 | `docs/M5_21_SEVENTY_SECOND_WAVE_NIM_CODE_RELEASE_SWITCH_CONTRACT_AUDIT_20260607.md` | NIM code release switch contract |
+| M5.21-73 | `docs/M5_21_SEVENTY_THIRD_WAVE_NIM_CODE_RELEASE_SWITCH_RUNTIME_BINDING_AUDIT_20260607.md` | NIM code release switch runtime binding contract |
+| M5.21-74 | `docs/M5_21_SEVENTY_FOURTH_WAVE_NIM_CODE_RELEASE_SWITCH_CONTRACT_REPORT_BINDING_AUDIT_20260607.md` | NIM code release switch contract report binding |
+| M5.21-75 | `docs/M5_21_SEVENTY_FIFTH_WAVE_NIM_CODE_RELEASE_SWITCH_RUNTIME_SOURCE_GUARD_AUDIT_20260608.md` | NIM code release switch runtime source guard matrix |
+| M5.21-76 | `docs/M5_21_SEVENTY_SIXTH_WAVE_NIM_CODE_RELEASE_SWITCH_RUNTIME_SOURCE_GUARD_REPORT_BINDING_AUDIT_20260608.md` | NIM code release switch runtime source guard report binding |
+| M5.21-77 | `docs/M5_21_SEVENTY_SEVENTH_WAVE_NIM_RUNTIME_SOURCE_GUARD_BINDING_STATIC_CONTRACT_AUDIT_20260608.md` | NIM runtime source guard binding static contract |
+| M5.21-78 | `docs/M5_21_SEVENTY_EIGHTH_WAVE_NIM_DURABLE_AUDIT_WRITER_PROBE_BOUNDARY_STATIC_CONTRACT_AUDIT_20260608.md` | NIM durable audit writer/probe boundary static contract |
+| M5.21-79 | `docs/M5_21_SEVENTY_NINTH_WAVE_NIM_CREATE_TOOL_ENTRY_NO_IO_STATIC_CONTRACT_AUDIT_20260608.md` | NIM create Tool entry no-I/O static contract |
+| M5.21-80 | `docs/M5_21_EIGHTIETH_WAVE_NIM_CREATE_DEFAULTS_INTENT_HOLD_CONTRACT_AUDIT_20260608.md` | NIM create defaults / intent HOLD contract |
+| M5.21-81 | `docs/M5_21_EIGHTY_FIRST_WAVE_DEFAULT_VALUE_GLOBAL_SAFETY_CONTRACT_AUDIT_20260608.md` | Default value global safety contract |
+| M5.21-82 | `docs/M5_21_EIGHTY_SECOND_WAVE_DEFAULT_VALUE_PROMPT_AUTHORITY_CONTRACT_AUDIT_20260608.md` | Default value prompt authority contract |
+| M5.21-83 | `docs/M5_21_EIGHTY_THIRD_WAVE_REACT_RISK_METADATA_PROMPT_CONTRACT_AUDIT_20260608.md` | ReAct risk metadata prompt contract |
+| M5.21-84 | `docs/M5_21_EIGHTY_FOURTH_WAVE_REACT_HITL_EXECUTION_GUARD_CONTRACT_AUDIT_20260608.md` | ReAct HITL execution guard contract |
+| M5.21-85 | `docs/M5_21_EIGHTY_FIFTH_WAVE_SHARED_PROTECTED_TOOL_PARAMETER_FILTER_AUDIT_20260608.md` | Shared protected Tool parameter filter |
+| M5.21-86 | `docs/M5_21_EIGHTY_SIXTH_WAVE_SHARED_NIM_FORBIDDEN_SECRET_MATERIAL_DETECTOR_AUDIT_20260608.md` | Shared NIM forbidden secret material detector |
+| M5.21-87 | `docs/M5_21_EIGHTY_SEVENTH_WAVE_NIM_WRITE_CHAIN_SHARED_SECRET_DETECTOR_MIGRATION_AUDIT_20260608.md` | NIM write request and handoff shared secret detector migration |
+| M5.21-88 | `docs/M5_21_EIGHTY_EIGHTH_WAVE_NIM_DURABLE_WRITE_CHAIN_SHARED_SECRET_DETECTOR_MIGRATION_AUDIT_20260608.md` | NIM durable write-chain shared secret detector migration |
+| M5.21-89 | `docs/M5_21_EIGHTY_NINTH_WAVE_NIM_DURABLE_AUDIT_STORAGE_SHARED_SECRET_DETECTOR_MIGRATION_AUDIT_20260608.md` | NIM durable audit storage shared secret detector migration |
+| M5.21-90 | `docs/M5_21_NINETIETH_WAVE_NIM_VALIDATION_PROBE_RESULT_SHARED_SECRET_DETECTOR_MIGRATION_AUDIT_20260608.md` | NIM validation/probe-result shared secret detector migration |
+| M5.21-91 | `docs/M5_21_NINETY_FIRST_WAVE_NIM_RELEASE_SWITCH_SHARED_SECRET_DETECTOR_MIGRATION_AUDIT_20260608.md` | NIM release/switch shared secret detector migration |
+| M5.21-92 | `docs/M5_21_NINETY_SECOND_WAVE_NIM_RUNTIME_BINDING_STRICT_SECRET_DETECTOR_MIGRATION_AUDIT_20260608.md` | NIM runtime binding strict shared secret detector migration |
+| M5.21-93 | `docs/M5_21_NINETY_THIRD_WAVE_NIM_RECEIPT_VALIDATION_GATE_RECEIPT_SCHEMA_SECRET_DETECTOR_MIGRATION_AUDIT_20260608.md` | NIM receipt validation gate receipt-schema shared secret detector migration |
+| M5.21-94 | `docs/M5_21_NINETY_FOURTH_WAVE_NIM_VALIDATION_RESULT_MIGRATION_RECEIPT_SCHEMA_SECRET_DETECTOR_MIGRATION_AUDIT_20260608.md` | NIM validation result migration receipt-schema shared secret detector migration |
+| M5.21-95 | `docs/M5_21_NINETY_FIFTH_WAVE_NIM_RELEASE_DECISION_GATE_RECEIPT_SCHEMA_SECRET_DETECTOR_MIGRATION_AUDIT_20260608.md` | NIM release decision gate receipt-schema shared secret detector migration |
+| M5.21-96 | `docs/M5_21_NINETY_SIXTH_WAVE_NIM_STATE_MACHINE_RELEASE_REQUIREMENT_RECEIPT_SCHEMA_SECRET_DETECTOR_MIGRATION_AUDIT_20260608.md` | NIM state-machine release requirement receipt-schema shared secret detector migration |
+| M5.21-97 | `docs/M5_21_NINETY_SEVENTH_WAVE_NIM_READINESS_EXECUTOR_PLACEHOLDER_AWARE_SECRET_DETECTOR_MIGRATION_AUDIT_20260608.md` | NIM readiness executor placeholder-aware shared secret detector migration |
+| M5.21-98 | `docs/M5_21_NINETY_EIGHTH_WAVE_NIM_READINESS_HTTP_ADAPTER_PLACEHOLDER_AWARE_SECRET_DETECTOR_MIGRATION_AUDIT_20260608.md` | NIM readiness HTTP adapter placeholder-aware shared secret detector migration |
+| M5.21-99 | `docs/M5_21_NINETY_NINTH_WAVE_NIM_AUDIT_WRITER_SECRET_DETECTOR_MIGRATION_AUDIT_20260608.md` | NIM audit writer shared secret detector migration |
+| M5.21-100 | `docs/M5_21_ONE_HUNDREDTH_WAVE_NIM_WRITE_BODY_REBUILDER_SECRET_DETECTOR_MIGRATION_AUDIT_20260608.md` | NIM write body rebuilder shared secret detector migration |
+| M5.21-101 | `docs/M5_21_ONE_HUNDRED_FIRST_WAVE_NIM_STATE_MACHINE_PLACEHOLDER_AWARE_SECRET_DETECTOR_MIGRATION_AUDIT_20260608.md` | NIM state-machine placeholder-aware shared secret detector migration |
+| M5.21-102 | `docs/M5_21_ONE_HUNDRED_SECOND_WAVE_NIM_SECRET_DETECTOR_GLOBAL_DRIFT_CONTRACT_AUDIT_20260608.md` | NIM secret detector global drift static contract |
+| M5.21-103 | `docs/M5_21_ONE_HUNDRED_THIRD_WAVE_NIM_PROTECTED_CONTEXT_DETECTOR_AUDIT_20260608.md` | NIM protected context detector contract |
+| M5.21-104 | `docs/M5_21_ONE_HUNDRED_FOURTH_WAVE_NIM_DOWNSTREAM_PROTECTED_CONTEXT_CONTRACT_AUDIT_20260608.md` | NIM downstream protected context contract |
+| M5.21-105 | `docs/M5_21_ONE_HUNDRED_FIFTH_WAVE_NIM_EXECUTION_ATTEMPT_SPEC_BINDING_CONTRACT_AUDIT_20260608.md` | NIM durable execution attempt spec binding contract |
+| M5.21-106 | `docs/M5_21_ONE_HUNDRED_SIXTH_WAVE_NIM_DURABLE_IDEMPOTENCY_DERIVATION_BINDING_CONTRACT_AUDIT_20260608.md` | NIM durable idempotency derivation binding contract |
+| M5.21-107 | `docs/M5_21_ONE_HUNDRED_SEVENTH_WAVE_NIM_DURABLE_HANDOFF_SOURCE_EVIDENCE_BINDING_CONTRACT_AUDIT_20260608.md` | NIM durable handoff source evidence binding contract |
+| M5.21-108 | `docs/M5_21_ONE_HUNDRED_EIGHTH_WAVE_NIM_CODE_RELEASE_SWITCH_RUNTIME_RELEASE_DECISION_BINDING_CONTRACT_AUDIT_20260608.md` | NIM code release switch runtime release-decision binding contract |
+| M5.21-109 | `docs/M5_21_ONE_HUNDRED_NINTH_WAVE_NIM_RUNTIME_SOURCE_GUARD_NESTED_SWITCH_DIGEST_BINDING_CONTRACT_AUDIT_20260608.md` | NIM runtime source guard nested switch digest binding contract |
+| M5.21-110 | `docs/M5_21_ONE_HUNDRED_TENTH_WAVE_NIM_RUNTIME_SOURCE_GUARD_MATRIX_DIGEST_BINDING_CONTRACT_AUDIT_20260608.md` | NIM runtime source guard matrix digest binding contract |
+| M5.21-111 | `docs/M5_21_ONE_HUNDRED_ELEVENTH_WAVE_NIM_RUNTIME_SOURCE_GUARD_CLOSED_MATRIX_TAXONOMY_CONTRACT_AUDIT_20260608.md` | NIM runtime source guard closed matrix taxonomy contract |
+| M5.21-112 | `docs/M5_21_ONE_HUNDRED_TWELFTH_WAVE_NIM_RUNTIME_SOURCE_GUARD_CLOSED_CONTRACT_SHAPE_AUDIT_20260608.md` | NIM runtime source guard closed contract shape |
+| M5.21-113 | `docs/M5_21_ONE_HUNDRED_THIRTEENTH_WAVE_NIM_RUNTIME_SOURCE_GUARD_CLOSED_TOP_LEVEL_LISTS_AUDIT_20260608.md` | NIM runtime source guard closed top-level lists |
+| M5.21-114 | `docs/M5_21_ONE_HUNDRED_FOURTEENTH_WAVE_NIM_RUNTIME_BINDING_REQUIRED_FIELDS_CLOSED_LIST_AUDIT_20260608.md` | NIM runtime binding required fields closed list |
+| M5.21-115 | `docs/M5_21_ONE_HUNDRED_FIFTEENTH_WAVE_NIM_SWITCH_CONTRACT_REQUIRED_FIELDS_CLOSED_LIST_AUDIT_20260608.md` | NIM switch contract required fields closed list |
+| M5.21-116 | `docs/M5_21_ONE_HUNDRED_SIXTEENTH_WAVE_NIM_RELEASE_DECISION_REQUIRED_FIELDS_CLOSED_LIST_AUDIT_20260608.md` | NIM release decision required fields closed list |
+| M5.21-117 | `docs/M5_21_ONE_HUNDRED_SEVENTEENTH_WAVE_NIM_VALIDATION_RESULT_REQUIRED_FIELDS_CLOSED_LIST_AUDIT_20260608.md` | NIM validation result required fields closed list |
+| M5.21-118 | `docs/M5_21_ONE_HUNDRED_EIGHTEENTH_WAVE_NIM_CODE_SWITCH_DOWNSTREAM_REQUIRED_FIELDS_CLOSED_LIST_AUDIT_20260608.md` | NIM code switch downstream required fields closed list |
+| M5.21-119 | `docs/M5_21_ONE_HUNDRED_NINETEENTH_WAVE_NIM_READINESS_TARGET_TAXONOMY_CLOSED_LIST_AUDIT_20260608.md` | NIM readiness target taxonomy closed list |
+| M5.21-120 | `docs/M5_21_ONE_HUNDRED_TWENTIETH_WAVE_NIM_RECEIPT_SCHEMA_REQUIRED_FIELDS_CLOSED_LIST_AUDIT_20260608.md` | NIM receipt schema required fields closed list |
+
+## 后续追加规范
+
+- 每新增一个批次，先补审计文档，再补本索引。
+- 审计文档必须包含 mature 证据、专家会诊结论、HOLD 清单、测试命令和是否访问真实 `8100` 的说明。
+- 涉及代码变更时同步更新 `CHANGELOG.md`、`intents.yml`、契约测试和必要的中文注释。
+- kube-manager 查询类方法可以在安全范围内接入本地 `8100` 做真实查询测试；写入、创建、删除、状态变更、支付、充值、环境安装和集群变更仍必须优先使用 HOLD / HITL / mock-first 契约，不得默认真实执行。

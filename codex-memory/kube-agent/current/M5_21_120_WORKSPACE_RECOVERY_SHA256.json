@@ -1,0 +1,48 @@
+﻿{
+    "project":  "kube-agent",
+    "wave":  "M5.21-120",
+    "title":  "Workspace-local recovery migration after NIM receipt schema required fields closed list",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "headAtLastPushedFeatureWave":  "3906f1b1d9cfb2e5104082997cb29d90eb525fe5",
+    "recoveryHome":  "codex-memory/kube-agent/current",
+    "previousExternalBackup":  "H:\\codex重要文件\\kube-agent",
+    "pushed":  true,
+    "generatedAt":  "2026-06-08T14:36:00+08:00",
+    "files":  [
+                  {
+                      "source":  "CHANGELOG.md",
+                      "savedAs":  "CHANGELOG.md",
+                      "sha256":  "283E973911FC4714914A0E7BB24F3FDFF6F725202E6B2FD4F613F9D847C0269D"
+                  },
+                  {
+                      "source":  "docs\\M5_21_WAVE_INDEX_20260606.md",
+                      "savedAs":  "docs_M5_21_WAVE_INDEX_20260606.md",
+                      "sha256":  "75F6DB44C9A367AD5E2942E20BE7FD5BE110D5B6D4E844EA88923D12FE4C9B31"
+                  },
+                  {
+                      "source":  "docs\\PROJECT_MISSION_AND_MEMORY.md",
+                      "savedAs":  "docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "8EA025330551555736BAD3BEC0013EC0E40E4867A153741020E1A81EAF98CBF8"
+                  },
+                  {
+                      "source":  "docs\\SESSION_PROGRESS_20260606_M521_29.md",
+                      "savedAs":  "docs_SESSION_PROGRESS_20260606_M521_29.md",
+                      "sha256":  "8E6BEBB727DCF53B6DBA7ACEC0A46F1D6BB6043A6ECEBA8B2B06FE06D361F11C"
+                  },
+                  {
+                      "source":  "docs\\v3.1\\DEVELOPMENT_GUIDE.md",
+                      "savedAs":  "docs_v3.1_DEVELOPMENT_GUIDE.md",
+                      "sha256":  "89DBF8BEC9893D494B2B87ADC1C6A5362AF9E5F157DAD3DF14880DC7A6A66299"
+                  },
+                  {
+                      "source":  "docs\\M5_21_ONE_HUNDRED_TWENTIETH_WAVE_NIM_RECEIPT_SCHEMA_REQUIRED_FIELDS_CLOSED_LIST_AUDIT_20260608.md",
+                      "savedAs":  "docs_M5_21_ONE_HUNDRED_TWENTIETH_WAVE_NIM_RECEIPT_SCHEMA_REQUIRED_FIELDS_CLOSED_LIST_AUDIT_20260608.md",
+                      "sha256":  "E2CB617CA47E59A9B4A3C3DC4B85C6ABE500228FD2E0EC1207B9516040EA31D1"
+                  },
+                  {
+                      "source":  "codex-memory\\kube-agent\\current\\RECOVERY_STATUS.md",
+                      "savedAs":  "RECOVERY_STATUS.md",
+                      "sha256":  "2C374008C189AE6408E6DCA42996458C7F9D795E58D8D541D07FB7925E8982A9"
+                  }
+              ]
+}
