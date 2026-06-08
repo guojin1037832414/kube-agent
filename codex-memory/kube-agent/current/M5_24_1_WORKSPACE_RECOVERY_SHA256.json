@@ -4,7 +4,9 @@
     "title":  "kube-manager HTTP outlet trace propagation",
     "branch":  "codex/m521-29-top-agent-mission",
     "implementationCommit":  "26b07a9 feat(M5.24): propagate trace through kube-manager HTTP outlet",
-    "generatedAt":  "2026-06-08 23:37:18 +08:00",
+    "recoveryCommit":  "c3d1e89 docs(M5.24): update HTTP trace recovery memory",
+    "pushedRemote":  "origin/codex/m521-29-top-agent-mission includes c3d1e89 before final pushed marker",
+    "generatedAt":  "2026-06-08 23:38:02 +08:00",
     "workspace":  "F:\\gitProject\\kube-agent",
     "verification":  [
                          "mvn -q \"-Dtest=AgentTraceContextTest,KubeManagerHttpClientTracePropagationTest,KubeManagerHttpClientUrlContractTest,KubeManagerHttpClientTokenFallbackSecurityTest,KubeManagerHttpClientResolveOrgIdSecurityTest\" test",
@@ -86,8 +88,8 @@
                   },
                   {
                       "path":  "codex-memory/kube-agent/current/RECOVERY_STATUS.md",
-                      "sha256":  "2275f65b5986636fb9ad533b78d8f3553a1b1d7b3cde02b4b92c74c511b2578c",
-                      "bytes":  5902
+                      "sha256":  "8fc016716d304fd2dfe51b6bcd845c3a2bc61de677b0b6268fbba407a3bd19d6",
+                      "bytes":  5938
                   }
               ]
 }
