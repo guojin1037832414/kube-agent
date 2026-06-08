@@ -8,8 +8,8 @@
 - Latest completed title: Advanced backend engineering baseline
 - Workspace: F:\gitProject\kube-agent
 - Last synchronized: 2026-06-08 Asia/Shanghai
-- Git HEAD: 6af7ad120575e8bec3b17c552000fa59f1800521
-- Pushed to remote: pending for M5.22-1
+- Latest implementation commit: 0c7cd93 feat(M5.22): add advanced backend engineering baseline
+- Pushed to remote: yes, origin/codex/m521-29-top-agent-mission includes 0c7cd93
 - Recovery policy: new progress and memory files are written to this workspace-local directory first to avoid external filesystem approval prompts.
 - Verification: mvn -q -DskipTests validate; mvn -q test; mvn -q verify; git diff --check all passed on Spring Boot 3.5.14 / Spring AI 1.1.7. Maven generated CycloneDX SBOM files under target/bom.json and target/bom.xml plus JaCoCo reports under target/site/jacoco. Full Maven still degraded to L1 embedding mode after local model.onnx download timeout but exited 0.
 - Security invariant: nim_create remains HOLD/mock-first and is now Phase 2; no real 8100 write, NIM HTTP call, Authorization header sending, durable audit write, deployment POST, validation result signer, release decision signer, code switch implementation, runtime write behavior, Elasticsearch, ISysLogService, or sys_log write was added.

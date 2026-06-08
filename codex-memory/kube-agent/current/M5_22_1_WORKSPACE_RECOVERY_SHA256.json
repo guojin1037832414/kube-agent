@@ -4,14 +4,15 @@
     "title":  "Advanced backend engineering baseline",
     "phaseGoal":  "Phase 1 delivers the full top-tier kube-manager Agent Core; NIM/HPC/Slurm/BCM are Phase 2 specialist plugins.",
     "branch":  "codex/m521-29-top-agent-mission",
-    "gitHead":  "6af7ad11747db2302f00e3a5c9729639f1be0d96",
+    "implementationCommit":  "0c7cd93 feat(M5.22): add advanced backend engineering baseline",
+    "pushedToRemote":  "yes, origin/codex/m521-29-top-agent-mission includes 0c7cd93",
     "recoveryHome":  "F:\\gitProject\\kube-agent\\codex-memory\\kube-agent\\current",
     "generatedAt":  "2026-06-08 Asia/Shanghai",
     "files":  [
                   {
                       "file":  "RECOVERY_STATUS.md",
-                      "sha256":  "f1fe389a166b67ec6658fad35c7d65eb91520c6b9a4ce129368a507353d3b3ed",
-                      "length":  2890
+                      "sha256":  "27ad89bf763531681ecc592aa89233ec880f6fc5d717bb03f951222be7ef55c2",
+                      "length":  2973
                   },
                   {
                       "file":  "CHANGELOG.md",
