@@ -28,6 +28,7 @@ class ObservabilityControllerTest {
         new AgentMetricsService(new SimpleMeterRegistry()),
         auditRecorder,
         auditRecorder,
+        new AgentReplayTimelineService(auditRecorder),
         new AgentPrincipalResolver(userPermissionContext)
     );
 
@@ -154,5 +155,101 @@ class ObservabilityControllerTest {
         assertThat(response.getBody().getData())
             .containsEntry("backend", "in-memory-ring-buffer")
             .containsEntry("containsRawEndpoints", false);
+    }
+
+    @Test
+    void replayTimeline_shouldRequireAdminUser() {
+        ResponseEntity<ApiResponse<AgentReplayTimelineResponse>> anonymous =
+            controller.replayByTraceId("trc_missing", 10);
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentReplayTimelineResponse>> user =
+            controller.replayByTraceId("trc_missing", 10);
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void replayTimeline_shouldReturnRedactedChronologicalAdminSteps() {
+        auditRecorder.record(new com.atlas.audit.AgentAuditEvent(
+            "aud_replay",
+            java.time.Instant.parse("2026-06-09T00:00:00Z"),
+            "trc_replay",
+            "conv-sensitive",
+            "user-sensitive",
+            "org-sensitive",
+            "intent",
+            "tool",
+            com.atlas.tool.execution.SafeToolExecutionSource.REACT_ENGINE,
+            "POST",
+            java.util.List.of("/api/org-sensitive/deployment?token=secret-token-value"),
+            com.atlas.tool.annotation.AtlasToolMapping.OperationType.CREATE,
+            true,
+            com.atlas.audit.AgentAuditOutcome.PREPARED,
+            false,
+            false,
+            "prepared token=secret-token-value",
+            java.util.Map.of("count", 1, "keys", java.util.List.of(java.util.Map.of(
+                "name", "token",
+                "protected", true,
+                "type", "string",
+                "present", true
+            )))
+        ));
+        auditRecorder.record(new com.atlas.audit.AgentAuditEvent(
+            "aud_replay",
+            java.time.Instant.parse("2026-06-09T00:00:05Z"),
+            "trc_replay",
+            "conv-sensitive",
+            "user-sensitive",
+            "org-sensitive",
+            "intent",
+            "tool",
+            com.atlas.tool.execution.SafeToolExecutionSource.REACT_ENGINE,
+            "POST",
+            java.util.List.of("/api/org-sensitive/deployment?token=secret-token-value"),
+            com.atlas.tool.annotation.AtlasToolMapping.OperationType.CREATE,
+            true,
+            com.atlas.audit.AgentAuditOutcome.SUCCESS,
+            true,
+            true,
+            "ok token=secret-token-value",
+            java.util.Map.of("count", 1, "keys", java.util.List.of(java.util.Map.of(
+                "name", "token",
+                "protected", true,
+                "type", "string",
+                "present", true
+            )))
+        ));
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentReplayTimelineResponse>> response =
+            controller.replayByTraceId("trc_replay", 10);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        AgentReplayTimelineResponse timeline = response.getBody().getData();
+        assertThat(timeline.schemaVersion()).isEqualTo("agent-replay-timeline.v1");
+        assertThat(timeline.order()).isEqualTo("oldest-first");
+        assertThat(timeline.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("containsRawEndpoints", false)
+            .containsEntry("containsRawParameterValues", false);
+        assertThat(timeline.steps()).hasSize(2);
+        assertThat(timeline.steps()).extracting(AgentReplayTimelineStep::phase)
+            .containsExactly("PRE_EXECUTION", "FINAL");
+        assertThat(timeline.steps()).extracting(AgentReplayTimelineStep::kind)
+            .containsExactly("TOOL_PREPARED", "TOOL_RESULT");
+        assertThat(timeline.steps()).extracting(AgentReplayTimelineStep::status)
+            .containsExactly("prepared", "success");
+        String bodyText = timeline.toString();
+        assertThat(bodyText)
+            .contains("aud_replay", "trc_replay", "<protected>", "confirmation:required")
+            .doesNotContain("conv-sensitive", "user-sensitive", "org-sensitive", "secret-token-value", "/api/org-sensitive");
     }
 }

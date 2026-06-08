@@ -2,6 +2,39 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-09 M5.32-1 Replay Timeline 后端契约
+
+M5.32-1 把审计读模型继续推进到“前端可回放时间线”。这一步不是做一个普通列表接口，而是给顶级 Agent 建立统一证据词汇：执行前证据、最终结果、阻断、异常、业务失败，都由后端转换成稳定 DTO，前端不需要猜 raw log 的含义。
+
+```text
+Frontend Replay Workbench
+    |
+    | GET /api/agent/observability/replay/trace/{traceId}?limit=50
+    v
+ObservabilityController
+    |
+    v
+AgentReplayTimelineService
+    |
+    v
+AgentAuditQueryService
+    |
+    |-- JSONL durable query when available
+    |-- in-memory ring buffer fallback
+    v
+AgentReplayTimelineResponse / AgentReplayTimelineStep
+```
+
+关键设计：
+
+- `AgentReplayTimelineService` 只消费 `AgentAuditQueryService` 返回的脱敏证据，不直接读取 raw audit event。
+- audit query 为管理员排障保留 newest-first 语义；replay timeline 为前端播放转换成 `oldest-first`。
+- `PREPARED` 映射为 `phase=PRE_EXECUTION`、`kind=TOOL_PREPARED`、`status=prepared`。
+- `SUCCESS` / `BUSINESS_FAILURE` / `BLOCKED` / `ERROR` 映射为稳定的前端 kind/status，便于后续 Vue 工作台做颜色、图标、筛选和回放。
+- response 自带 `privacy.redactedOnly=true`，并声明不包含 raw principal、organization、conversation、endpoint、reason text 或 parameter values。
+
+学习重点：顶级 Agent 的 replay 不应该让前端去猜日志含义。后端要把“证据语义”整理成稳定契约，这样前端回放、管理员审计、OpenTelemetry timeline 和 Agent eval 报告可以共享同一套语言。
+
 ## 项目定位
 
 `kube-agent` 不只是把 `kube-manager` / `vue-kube-manager` 的功能包成一个 Agent。它的目标是建设一个顶级 Kubernetes / Cloud / HPC Agent，并且把建设过程本身变成可学习、可复盘、可继续演进的教材。

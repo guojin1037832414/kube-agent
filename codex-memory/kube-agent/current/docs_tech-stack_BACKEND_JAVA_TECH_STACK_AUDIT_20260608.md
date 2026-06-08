@@ -240,3 +240,14 @@ M5.31-2 将 durable audit 的技术路线从“持久可查”推进到“生命
 - 这不是“功能缩水”，而是顶级 Agent 的正确顺序：先公开生命周期契约，再做真实导出、清理和索引。
 - 下一步仍应是 retention enforcement、export job、database/search-backed index、frontend replay timeline、Agent eval 和 CI hard gate。
 - Boot 4 / Spring AI 2 / Java 21/25 继续留在兼容矩阵；当前更重要的是把审计生命周期变成可测试、可恢复、可解释的生产控制面能力。
+
+## 2026-06-09 M5.32-1 Update - Replay timeline as Java control-plane evidence
+
+M5.32-1 confirms the Java/Spring backend remains the right main control plane for a top-tier Agent. The new replay timeline API is not a UI shortcut; it is a typed evidence contract that maps redacted audit query events into frontend-ready phases, kinds, statuses, labels, privacy flags, and telemetry.
+
+Key technical choice:
+- Keep `Spring Boot 3.5.14 + Spring AI 1.1.7 + Java 17` as the verifiable mainline.
+- Put Java 21/25, Spring Boot 4, Spring AI 2, full MCP broker, A2A, GraphRAG, rerankers, and virtual threads into the compatibility matrix.
+- Mainline the advanced Agent capabilities that are already testable now: durable audit, admin-only redacted query, replay timeline, OTel compatibility layer, Agent eval, RAG/Memory, and read-only MCP schema adapter.
+
+Learning point: the most advanced Agent architecture is evidence-oriented. Framework upgrades matter, but they must not break the stronger invariant: every important decision should be replayable, redacted, queryable, testable, and recoverable.

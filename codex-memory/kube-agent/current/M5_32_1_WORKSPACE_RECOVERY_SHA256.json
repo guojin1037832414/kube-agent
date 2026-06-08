@@ -1,0 +1,124 @@
+﻿{
+    "schemaVersion":  "kube-agent-recovery-manifest.v1",
+    "project":  "kube-agent",
+    "wave":  "M5.32-1",
+    "title":  "Admin trace replay timeline API",
+    "generatedAt":  "2026-06-08T21:59:24.0787898Z",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "files":  [
+                  {
+                      "path":  "CHANGELOG.md",
+                      "sha256":  "6e79b9c2f7d43cd8b51c1815c70e042e073e20395817c8dfe1ac1b7bbddd8992",
+                      "bytes":  290302,
+                      "lastWriteTimeUtc":  "2026-06-08T21:53:32.3725282Z"
+                  },
+                  {
+                      "path":  "docs/PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "715104cbe941c0e0ed97a64e724df12481e1e205eef0245f347463e4fa075d43",
+                      "bytes":  313517,
+                      "lastWriteTimeUtc":  "2026-06-08T21:53:44.9318634Z"
+                  },
+                  {
+                      "path":  "docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "98ecddde6ca2de165eb0bd04c7b75cd116998237213c0b86e362c9bb9dc01841",
+                      "bytes":  82390,
+                      "lastWriteTimeUtc":  "2026-06-08T21:54:39.3140347Z"
+                  },
+                  {
+                      "path":  "docs/tech-stack/BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "98077b1b9f4d119713d205fa7ede25c5ce35e2cb3908082c7964752735e2c518",
+                      "bytes":  26802,
+                      "lastWriteTimeUtc":  "2026-06-08T21:54:53.2452458Z"
+                  },
+                  {
+                      "path":  "docs/tech-stack/BACKEND_JAVA_TECH_STACK_AUDIT_20260608.md",
+                      "sha256":  "8b4bcf52a0a1197885e1b19120d7ae5e856950aee0963755a25778ccf658caa8",
+                      "bytes":  20639,
+                      "lastWriteTimeUtc":  "2026-06-08T21:56:12.0682309Z"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/ObservabilityController.java",
+                      "sha256":  "2a80be56c36cd3bb1b7e8062b3683e2484a85febef4f0913a6fa4b63f649fd97",
+                      "bytes":  6028,
+                      "lastWriteTimeUtc":  "2026-06-08T21:46:45.5638990Z"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentReplayTimelineService.java",
+                      "sha256":  "311a72cebb425e1f9723b1e4994b748910627306b535984bfc750572877add62",
+                      "bytes":  4969,
+                      "lastWriteTimeUtc":  "2026-06-08T21:46:45.5628984Z"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentReplayTimelineResponse.java",
+                      "sha256":  "143ada3b95c84ebe93e623842cd2ac763c158839d0a2cf64157db60661ba94d4",
+                      "bytes":  1841,
+                      "lastWriteTimeUtc":  "2026-06-08T21:46:45.5618995Z"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentReplayTimelineStep.java",
+                      "sha256":  "b7c3c09c53d69655907aac5048caa5cfc88f802753930106f083ae47ef5ec27e",
+                      "bytes":  725,
+                      "lastWriteTimeUtc":  "2026-06-08T21:46:45.5608956Z"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/AgentReplayTimelineServiceTest.java",
+                      "sha256":  "ef871b4dcd0466899ada44a24c797e4ba907832205399d13b4671d39abb6d652",
+                      "bytes":  3347,
+                      "lastWriteTimeUtc":  "2026-06-08T21:50:31.7164116Z"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/ObservabilityControllerTest.java",
+                      "sha256":  "97499ce6af344dd49e157e166fad94e483eae2262889b0162c5e21717eaaa431",
+                      "bytes":  10742,
+                      "lastWriteTimeUtc":  "2026-06-08T21:49:07.2982342Z"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/ObservabilityControllerSecurityContractTest.java",
+                      "sha256":  "9b78c340998de34a4134125916adf0b58f4b33f22709af4439a7ef3cf3271308",
+                      "bytes":  2233,
+                      "lastWriteTimeUtc":  "2026-06-08T21:49:07.2987514Z"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/auth/AgentSecurityConfigWebMvcTest.java",
+                      "sha256":  "9b4537cdf77d1f33d8dda184096a8e371c3a65492a94aaff482ea296838ae206",
+                      "bytes":  10229,
+                      "lastWriteTimeUtc":  "2026-06-08T21:49:07.2992705Z"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/RECOVERY_STATUS.md",
+                      "sha256":  "fc1a430f403b5a939ea42b785a0953a3afd9f0863019eab47cbd85d1d8fed105",
+                      "bytes":  22446,
+                      "lastWriteTimeUtc":  "2026-06-08T21:58:58.9075482Z"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/CHANGELOG.md",
+                      "sha256":  "6e79b9c2f7d43cd8b51c1815c70e042e073e20395817c8dfe1ac1b7bbddd8992",
+                      "bytes":  290302,
+                      "lastWriteTimeUtc":  "2026-06-08T21:53:32.3725282Z"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "715104cbe941c0e0ed97a64e724df12481e1e205eef0245f347463e4fa075d43",
+                      "bytes":  313517,
+                      "lastWriteTimeUtc":  "2026-06-08T21:53:44.9318634Z"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "98ecddde6ca2de165eb0bd04c7b75cd116998237213c0b86e362c9bb9dc01841",
+                      "bytes":  82390,
+                      "lastWriteTimeUtc":  "2026-06-08T21:54:39.3140347Z"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "98077b1b9f4d119713d205fa7ede25c5ce35e2cb3908082c7964752735e2c518",
+                      "bytes":  26802,
+                      "lastWriteTimeUtc":  "2026-06-08T21:54:53.2452458Z"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_JAVA_TECH_STACK_AUDIT_20260608.md",
+                      "sha256":  "8b4bcf52a0a1197885e1b19120d7ae5e856950aee0963755a25778ccf658caa8",
+                      "bytes":  20639,
+                      "lastWriteTimeUtc":  "2026-06-08T21:56:12.0682309Z"
+                  }
+              ]
+}

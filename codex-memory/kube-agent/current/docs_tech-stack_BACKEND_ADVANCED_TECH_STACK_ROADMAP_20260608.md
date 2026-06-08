@@ -179,6 +179,31 @@ M5.30-3 已经把 durable audit 从 readiness gate 升级为 prewrite receipt ga
 - [Oracle Java SE Support Roadmap](https://www.oracle.com/java/technologies/java-se-support-roadmap.html)
 - [Model Context Protocol Specification](https://modelcontextprotocol.io/specification)
 - [OpenTelemetry GenAI Semantic Conventions](https://opentelemetry.io/docs/specs/semconv/gen-ai/)
+- [Kubernetes Releases](https://kubernetes.io/releases/)
+- [OpenAI Agents SDK](https://platform.openai.com/docs/guides/agents-sdk/)
+
+## 2026-06-09 Latest Technology Baseline Refresh
+
+最新官方资料再次确认：一期应该“引入全部先进能力”，但方式是主线可验证、兼容矩阵可试验。
+
+主线继续推进：
+
+- Spring Security method/URL 双层授权。
+- Durable audit、pre-execution receipt、retention/export metadata、redacted query、replay timeline。
+- Micrometer / OpenTelemetry：先保持内部 `atlas.agent.*` 稳定属性，再把 GenAI development 语义放到兼容层。
+- MCP：先做 read-only manifest/schema adapter；`tools/call` 未来必须进入 `SafeToolExecutor`、HITL、trace、audit。
+- Agent eval：把 trace replay、audit evidence、must-block red-team case 变成发布门禁。
+- RAG / persistent Memory：基于 Spring AI VectorStore 抽象，但必须带租户隔离、引用证据、脱敏和可删除。
+- Kubernetes 能力：以当前维护分支 1.36/1.35/1.34 为兼容目标，优先适配 read/query、Gateway API、状态回放、事件/日志/资源解释，不在一期恢复 NIM/HPC/Slurm/BCM 专项插件。
+
+兼容矩阵继续验证：
+
+- Java 21 / Java 25 LTS toolchain。
+- Spring Boot 4 / Spring Framework 7 / Spring AI 2.x。
+- OpenAI Agents SDK / Responses API 的 tracing、handoff、tool 调用思想。
+- 完整 MCP broker、A2A / Agent Card、GraphRAG、reranker、多向量库、virtual threads / structured concurrency。
+
+教学结论：所谓“最新技术”不是把所有 RC 或实验协议直接压进主线，而是让每项新能力都通过安全边界、测试、文档、恢复记忆和可回滚路径进入项目。M5.32-1 的 replay timeline 就是这种路线：先把证据语义稳定下来，再让前端、OTel、eval 和未来数据库索引复用。
 
 ## 为什么不直接把主线改成 Java 25 / Spring Boot 4
 

@@ -10,7 +10,32 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.31-2
+## Latest Phase 1 Core Memory - M5.32-1
+
+M5.32-1 adds the backend replay timeline contract for frontend trace replay.
+
+Delivered:
+
+- Added `AgentReplayTimelineService`, `AgentReplayTimelineResponse`, and `AgentReplayTimelineStep`.
+- Added admin-only `GET /api/agent/observability/replay/trace/{traceId}?limit=50`.
+- The replay API consumes the existing redacted `AgentAuditQueryService` read model instead of reading raw audit events directly.
+- Timeline steps are returned `oldest-first` for frontend playback, while the audit query backend can remain newest-first for investigation.
+- `PREPARED` becomes `PRE_EXECUTION / TOOL_PREPARED / prepared`; final outcomes become stable frontend kinds/statuses such as `TOOL_RESULT`, `TOOL_BLOCKED`, `TOOL_ERROR`, and `TOOL_BUSINESS_FAILURE`.
+
+Security boundary:
+
+- Replay is admin-only at URL and method levels.
+- Replay DTOs explicitly report `redactedOnly=true`.
+- Replay does not expose raw principal, organization, conversation, endpoint strings, reason text, or parameter values.
+- This slice adds no kube-manager write/create/delete/state-changing behavior, no raw JSONL download, and no export endpoint.
+
+Learning point: top-tier Agent replay should not ask the frontend to interpret raw logs. The backend should publish a stable replay contract with phase/kind/status semantics, privacy flags, and redacted evidence summaries. This lets the UI, audit review, and future Agent eval reports share the same evidence vocabulary.
+
+Latest verified command:
+
+- `mvn -q "-Dtest=JsonlAgentAuditDurableSinkTest,AgentAuditRecorderTest,AgentReplayTimelineServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+## Previous Phase 1 Core Memory - M5.31-2
 
 M5.31-2 adds lifecycle-governance metadata for durable audit evidence.
 

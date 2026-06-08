@@ -6,6 +6,22 @@
 
 ---
 
+## [M5.32-1] - Admin trace replay timeline API
+
+**Delivery**: Added the first backend contract for frontend replay: an admin-only redacted timeline API that converts trace-bound audit evidence into stable replay steps.
+**Changes**
+- Added `AgentReplayTimelineService`, `AgentReplayTimelineResponse`, and `AgentReplayTimelineStep`.
+- Added `GET /api/agent/observability/replay/trace/{traceId}?limit=50`.
+- Timeline steps are returned `oldest-first` and include phase, kind, status, labels, audit/trace ids, Tool metadata, execution flags, redacted reason/parameter summaries, telemetry, and privacy metadata.
+- Mapped `PREPARED` to `PRE_EXECUTION / TOOL_PREPARED / prepared`; final outcomes map to `TOOL_RESULT`, `TOOL_BUSINESS_FAILURE`, `TOOL_BLOCKED`, or `TOOL_ERROR`.
+**Verification**
+- `mvn -q "-Dtest=ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed.
+- `mvn -q "-Dtest=JsonlAgentAuditDurableSinkTest,AgentAuditRecorderTest,AgentReplayTimelineServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed.
+**Security**
+- The endpoint is protected by observability admin URL rules plus method-level `@PreAuthorize`.
+- Replay DTOs are redacted-only and do not expose raw principal, organization, conversation, endpoint strings, reason text, or parameter values.
+- This slice adds no kube-manager write/create/delete/state-changing behavior and no raw audit download/export endpoint.
+
 ## [M5.31-2] - Durable audit retention and export policy metadata
 
 **Delivery**: Added explicit durable audit retention/export/query policy metadata so admin audit indexes describe lifecycle governance before any real export or purge endpoint is introduced.
