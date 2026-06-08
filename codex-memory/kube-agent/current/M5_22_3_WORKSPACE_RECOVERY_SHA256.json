@@ -4,8 +4,8 @@
     "title":  "ReActEngine safe execution kernel",
     "generatedAt":  "2026-06-08 Asia/Shanghai",
     "branch":  "codex/m521-29-top-agent-mission",
-    "implementationCommit":  "pending local commit for M5.22-3",
-    "pushed":  false,
+    "implementationCommit":  "b480086 fix(M5.22): route react engine through safe executor",
+    "pushed":  true,
     "files":  [
                   {
                       "path":  "CHANGELOG.md",
