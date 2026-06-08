@@ -525,3 +525,11 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - The regression mutates `releaseDecisionBinding.sourceReleaseDecisionContractDigest` and recomputes `codeReleaseSwitchContractDigest`; runtime binding still rejects the report because nested release-decision evidence no longer belongs to the same switch proof.
 - This remains contract-only: no server-owned switch issuer, no state-machine write release, no durable executor release, and no real POST were introduced.
 - Learning distinction: digest consistency over a container proves the container was recomputed, not that every nested evidence binding is semantically anchored. Downstream runtime gates must re-check the nested release proof they will eventually depend on.
+
+### M5.21-109 runtime source guard nested switch digest binding note
+
+- `NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport` now re-validates the nested state-machine and durable-executor runtime binding switch digests.
+- `stateMachineRuntimeBinding.sourceCodeReleaseSwitchContractDigest` and `durableExecutorRuntimeBinding.sourceCodeReleaseSwitchContractDigest` must match the trusted runtime binding report's `sourceCodeReleaseSwitchContractDigest`.
+- The regression mutates both nested runtime binding switch digests and recomputes `runtimeBindingContractDigest`; source guard still rejects the report because the nested consumers no longer point at the same switch proof.
+- This remains source-governance only: no candidate source is accepted for release, no state-machine write permission is enabled, and no durable executor POST is opened.
+- Learning distinction: a source guard is not just a list of forbidden sources. It also binds every future consumer path to the exact same reviewed switch digest, so state-machine and executor gates cannot drift apart.

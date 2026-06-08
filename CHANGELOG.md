@@ -6,6 +6,17 @@
 
 ---
 
+## [M5.21-109] - NIM runtime source guard nested switch digest binding contract
+
+**Delivery**: Hardened runtime source guard validation so nested state-machine and durable-executor runtime bindings must point to the same code release switch contract digest as the trusted runtime binding report.
+**Changes**
+- `NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport` now validates nested `stateMachineRuntimeBinding.sourceCodeReleaseSwitchContractDigest` and `durableExecutorRuntimeBinding.sourceCodeReleaseSwitchContractDigest` against the runtime binding report.
+- Added a digest-consistent forged runtime binding regression that drifts both nested runtime binding switch digests and recomputes `runtimeBindingContractDigest`; source guard still rejects it.
+**Security**
+- This is source-governance proof hardening only; it does not open runtime writes or a real code release switch.
+- No real `8100`, real NIM service HTTP call, Authorization header sending, durable audit write, deployment POST, state-machine release binding implementation, durable executor release binding implementation, validation result signer, release decision signer, code release switch implementation, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-108] - NIM code release switch runtime release-decision binding contract
 
 **Delivery**: Hardened code release switch runtime binding validation so the nested `releaseDecisionBinding` inside the switch contract must match the trusted switch report evidence, not merely sit inside a digest-consistent contract.

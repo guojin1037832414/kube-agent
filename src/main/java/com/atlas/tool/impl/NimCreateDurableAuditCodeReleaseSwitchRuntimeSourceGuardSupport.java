@@ -506,8 +506,8 @@ final class NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport {
                 text(contract.get("sourceCodeReleaseSwitchContractDigest")))
             && digestFor(auditContext).equals(text(contract.get("sourceAuditEventDigest")))
             && digestFor(principal).equals(text(contract.get("trustedPrincipalDigest")))
-            && stateMachineRuntimeBindingValid(stateMachineBinding)
-            && durableExecutorRuntimeBindingValid(durableExecutorBinding)
+            && stateMachineRuntimeBindingValid(report, stateMachineBinding)
+            && durableExecutorRuntimeBindingValid(report, durableExecutorBinding)
             && requiredFields.containsAll(requiredRuntimeEvidenceFields())
             && SWITCH_LOCKED.equals(text(template.get("switchState")))
             && Boolean.FALSE.equals(template.get("codeReleaseSwitchContractReportAccepted"))
@@ -538,10 +538,13 @@ final class NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport {
         }
     }
 
-    private static boolean stateMachineRuntimeBindingValid(Map<String, Object> binding) {
+    private static boolean stateMachineRuntimeBindingValid(Map<String, Object> report,
+                                                           Map<String, Object> binding) {
         return NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport.TARGET_STATE_MACHINE.equals(
                 text(binding.get("target")))
             && "codeReleaseSwitchContractReport".equals(text(binding.get("futureReadinessRequestField")))
+            && text(report.get("sourceCodeReleaseSwitchContractDigest")).equals(
+                text(binding.get("sourceCodeReleaseSwitchContractDigest")))
             && Boolean.TRUE.equals(binding.get("codeReleaseSwitchContractReportRequired"))
             && Boolean.TRUE.equals(binding.get("codeReleaseSwitchContractDigestRequired"))
             && Boolean.TRUE.equals(binding.get("mustRecomputeCodeReleaseSwitchContractDigest"))
@@ -556,9 +559,12 @@ final class NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport {
             && Boolean.FALSE.equals(binding.get("writePermittedCanBeTrueNow"));
     }
 
-    private static boolean durableExecutorRuntimeBindingValid(Map<String, Object> binding) {
+    private static boolean durableExecutorRuntimeBindingValid(Map<String, Object> report,
+                                                              Map<String, Object> binding) {
         return NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport.TARGET_DURABLE_EXECUTOR.equals(
                 text(binding.get("target")))
+            && text(report.get("sourceCodeReleaseSwitchContractDigest")).equals(
+                text(binding.get("sourceCodeReleaseSwitchContractDigest")))
             && Boolean.TRUE.equals(binding.get("codeReleaseSwitchDigestRequired"))
             && Boolean.TRUE.equals(binding.get("mustRecheckImmediatelyBeforePost"))
             && Boolean.TRUE.equals(binding.get("mustBindSameHandoffDigest"))

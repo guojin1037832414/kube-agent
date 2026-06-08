@@ -2,11 +2,16 @@ package com.atlas.tool.impl;
 
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import static java.util.Map.entry;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -190,6 +195,33 @@ class NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupportTest {
                 audit,
                 principal,
                 tampered,
+                Map.of()
+            )
+        );
+
+        assertEquals(NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport.REJECTED_STATE,
+            report.get("guardState"));
+        assertEquals(false, report.get("inputAccepted"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+        assertHasBlocker(blockers,
+            "CODE_RELEASE_SWITCH_RUNTIME_BINDING_REPORT_INVALID_FOR_SOURCE_GUARD");
+    }
+
+    @Test
+    void sourceGuard_shouldRejectDigestConsistentNestedRuntimeSwitchDigestDrift() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+        Map<String, Object> driftedReport = withDriftedNestedRuntimeSwitchDigest(
+            runtimeBindingReport(audit, principal),
+            "d".repeat(64)
+        );
+
+        Map<String, Object> report = NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport.plan(
+            new NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport.RuntimeSourceGuardInput(
+                audit,
+                principal,
+                driftedReport,
                 Map.of()
             )
         );
@@ -391,6 +423,30 @@ class NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupportTest {
                 Map.of()
             )
         );
+    }
+
+    private Map<String, Object> withDriftedNestedRuntimeSwitchDigest(Map<String, Object> runtimeBindingReport,
+                                                                    String sourceCodeReleaseSwitchContractDigest) {
+        Map<String, Object> forgedReport = new LinkedHashMap<>(runtimeBindingReport);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> contract = new LinkedHashMap<>(
+            (Map<String, Object>) forgedReport.get("runtimeBindingContract")
+        );
+        @SuppressWarnings("unchecked")
+        Map<String, Object> stateMachineBinding = new LinkedHashMap<>(
+            (Map<String, Object>) contract.get("stateMachineRuntimeBinding")
+        );
+        @SuppressWarnings("unchecked")
+        Map<String, Object> durableExecutorBinding = new LinkedHashMap<>(
+            (Map<String, Object>) contract.get("durableExecutorRuntimeBinding")
+        );
+        stateMachineBinding.put("sourceCodeReleaseSwitchContractDigest", sourceCodeReleaseSwitchContractDigest);
+        durableExecutorBinding.put("sourceCodeReleaseSwitchContractDigest", sourceCodeReleaseSwitchContractDigest);
+        contract.put("stateMachineRuntimeBinding", stateMachineBinding);
+        contract.put("durableExecutorRuntimeBinding", durableExecutorBinding);
+        forgedReport.put("runtimeBindingContract", contract);
+        forgedReport.put("runtimeBindingContractDigest", digestFor(contract));
+        return forgedReport;
     }
 
     private Map<String, Object> codeReleaseSwitchContractReport(Map<String, Object> audit,
@@ -619,5 +675,52 @@ class NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupportTest {
     private void assertHasBlocker(List<Map<String, Object>> blockers, String code) {
         assertTrue(blockers.stream().anyMatch(item -> code.equals(item.get("code"))),
             "expected blocker code: " + code + ", actual blockers: " + blockers);
+    }
+
+    private String digestFor(Object value) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance(NimCreateAuditWriterSupport.DIGEST_ALGORITHM);
+            return HexFormat.of().formatHex(digest.digest(canonical(value).getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IllegalStateException("JDK missing SHA-256 digest algorithm", ex);
+        }
+    }
+
+    private String canonical(Object value) {
+        if (value == null) {
+            return "null";
+        }
+        if (value instanceof Map<?, ?> map) {
+            Map<String, Object> sorted = new TreeMap<>();
+            map.forEach((key, item) -> sorted.put(String.valueOf(key), item));
+            StringBuilder builder = new StringBuilder("{");
+            boolean first = true;
+            for (Map.Entry<String, Object> entry : sorted.entrySet()) {
+                if (!first) {
+                    builder.append(",");
+                }
+                first = false;
+                builder.append(escape(entry.getKey())).append("=").append(canonical(entry.getValue()));
+            }
+            return builder.append("}").toString();
+        }
+        if (value instanceof List<?> list) {
+            StringBuilder builder = new StringBuilder("[");
+            for (int i = 0; i < list.size(); i++) {
+                if (i > 0) {
+                    builder.append(",");
+                }
+                builder.append(canonical(list.get(i)));
+            }
+            return builder.append("]").toString();
+        }
+        return escape(value.toString());
+    }
+
+    private String escape(String value) {
+        return value.replace("\\", "\\\\")
+            .replace("\n", "\\n")
+            .replace("\r", "\\r")
+            .replace("\t", "\\t");
     }
 }

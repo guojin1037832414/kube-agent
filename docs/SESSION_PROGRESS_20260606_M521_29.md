@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-108, NIM code release switch runtime release-decision binding contract.
+- Current latest wave: M5.21-109, NIM runtime source guard nested switch digest binding contract.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -48,6 +48,17 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-109 NIM runtime source guard nested switch digest binding contract is implemented:
+  - Hardened `src/main/java/com/atlas/tool/impl/NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport.java`.
+  - Source guard validation now re-checks nested `stateMachineRuntimeBinding.sourceCodeReleaseSwitchContractDigest` and `durableExecutorRuntimeBinding.sourceCodeReleaseSwitchContractDigest`.
+  - Both nested values must match the trusted runtime binding report's `sourceCodeReleaseSwitchContractDigest`.
+  - Added a digest-consistent forged runtime binding regression that drifts both nested runtime binding switch digests and recomputes `runtimeBindingContractDigest`; source guard still rejects it.
+  - Added `docs/M5_21_ONE_HUNDRED_NINTH_WAVE_NIM_RUNTIME_SOURCE_GUARD_NESTED_SWITCH_DIGEST_BINDING_CONTRACT_AUDIT_20260608.md`.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupportTest" test`
+  - No real `8100` access; no real NIM service HTTP call; no Authorization header sending; no durable audit write; no deployment POST; no runtime write behavior opened; no state-machine release binding implementation; no durable executor release binding implementation; no validation result signer; no release decision signer; no code release switch implementation; no Elasticsearch; no `ISysLogService`; no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Next recommended slice: continue closing runtime-source and durable-executor release proof drift around source guard matrix digests, or continue release-binding proof design without opening writes.
 
 - M5.21-108 NIM code release switch runtime release-decision binding contract is implemented:
   - Hardened `src/main/java/com/atlas/tool/impl/NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport.java`.

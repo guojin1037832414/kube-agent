@@ -82,12 +82,22 @@ Current track:
 
 Recently completed:
 
-`M5.21-108 NIM code release switch runtime release-decision binding contract`
+`M5.21-109 NIM runtime source guard nested switch digest binding contract`
 
 Latest checkpoint:
 
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-109 implemented:
+  - Hardened `NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport` so source guard validation re-checks nested state-machine and durable-executor runtime binding switch digests.
+  - `stateMachineRuntimeBinding.sourceCodeReleaseSwitchContractDigest` and `durableExecutorRuntimeBinding.sourceCodeReleaseSwitchContractDigest` must match the trusted runtime binding report evidence.
+  - Added a digest-consistent forged runtime binding regression that drifts both nested runtime binding switch digests and recomputes `runtimeBindingContractDigest`; source guard still rejects it.
+  - Added `docs/M5_21_ONE_HUNDRED_NINTH_WAVE_NIM_RUNTIME_SOURCE_GUARD_NESTED_SWITCH_DIGEST_BINDING_CONTRACT_AUDIT_20260608.md`.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupportTest" test`
+  - Security invariant: no real `8100`, no real NIM service HTTP call, no Authorization header sending, no durable audit write, no deployment POST, no runtime write behavior, no state-machine release binding implementation, no durable executor release binding implementation, no validation result signer, no release decision signer, no code release switch implementation, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Recommended next slice: continue closing runtime-source and durable-executor release proof drift around source guard matrix digests, or continue release-binding proof design without opening writes.
+- Previous checkpoint:
 - M5.21-108 implemented:
   - Hardened `NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport` so runtime binding validation re-checks nested `codeReleaseSwitchContract.releaseDecisionBinding`.
   - Nested release-decision binding must match the trusted switch report on `sourceReleaseDecisionContractDigest`, `sourceValidationResultContractDigest`, all source proof digests, and `trustedPrincipalDigest`.
