@@ -7,6 +7,18 @@
 
 ---
 
+## 2026-06-09 M5.29-7 状态更新
+
+M5.29-7 已关闭普通 Agent API 的临时兼容放行窗口：
+
+- `AgentSecurityConfig` 已启用 `@EnableMethodSecurity`。
+- `/api/agent/**` 现在有默认 `.authenticated()` 兜底，只有更靠前的显式 whitelist 或 admin matcher 可以覆盖。
+- `/api/agent/login`、`/api/agent/logout`、`/api/agent/me`、`/api/agent/health` 仍是显式 bootstrap / compatibility 入口。
+- `/api/agent/observability/**` 保持 URL 级 admin-only，`ObservabilityController#snapshot()` 还叠加 `@PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")`。
+- 新增或重构 Agent Controller 时，如果没有显式放入 whitelist，就不会再被 `.anyRequest().permitAll()` 匿名放行。
+
+学习结论：顶级 Agent 的授权配置要采用“显式开放 + 显式加严 + 默认认证兜底”。URL matcher 是入口边界，方法级授权是业务方法边界，Tool 执行仍由 `SafeToolExecutor` 作为最后安全边界。
+
 ## 2026-06-09 M5.29-6 状态更新
 
 M5.29-6 已把 Chat/SSE/Graph/HITL 执行入口迁移到可信运行时身份主线：

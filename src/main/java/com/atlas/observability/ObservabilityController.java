@@ -6,6 +6,7 @@ import com.atlas.auth.AgentPrincipalResolver;
 import com.atlas.dto.ApiResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -40,6 +41,7 @@ public class ObservabilityController {
 
     /** 查询 Agent 指标快照。 */
     @GetMapping("/snapshot")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> snapshot() {
         Optional<AgentPrincipal> currentUser = principalResolver.current();
         if (currentUser.isEmpty() || !currentUser.get().isAuthenticated()) {

@@ -35,9 +35,10 @@ class AgentSecurityConfigContractTest {
     }
 
     @Test
-    void shouldProtectAdminDiagnosticsRuntimeSseAndActuatorWithoutLockingAllAgentApisYet() throws Exception {
+    void shouldProtectAdminDiagnosticsRuntimeSseAndDefaultAgentApiSurface() throws Exception {
         String source = Files.readString(SOURCE);
 
+        assertThat(source).contains("@EnableMethodSecurity");
         assertThat(source).contains(".requestMatchers(\"/api/agent/observability/**\").hasAnyRole(\"ADMIN\", \"SYS_ADMIN\")");
         assertThat(source)
             .contains("\"/api/agent/chat/stream\"")
@@ -48,6 +49,7 @@ class AgentSecurityConfigContractTest {
             .contains("\"/api/agent/conversations\"")
             .contains("\"/api/agent/conversations/**\"")
             .contains(").authenticated()");
+        assertThat(source).contains(".requestMatchers(\"/api/agent/**\").authenticated()");
         assertThat(source).contains(".requestMatchers(\"/actuator/health\", \"/actuator/info\").permitAll()");
         assertThat(source).contains(".requestMatchers(\"/actuator/**\").hasAnyRole(\"ADMIN\", \"SYS_ADMIN\")");
         assertThat(source).contains(".anyRequest().permitAll()");

@@ -6,6 +6,23 @@
 
 ---
 
+## [M5.29-7] - Default Agent API authorization guard
+
+**Delivery**: Closed the incremental `permitAll` compatibility window for Agent APIs by making `/api/agent/**` authenticated by default, while keeping only explicit bootstrap/health endpoints open.
+**Changes**
+- Enabled Spring method security through `@EnableMethodSecurity`.
+- Added a fallback Spring Security matcher so future `/api/agent/**` endpoints require authentication unless they are deliberately whitelisted earlier.
+- Added method-level admin protection to `ObservabilityController#snapshot()` with `@PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")`.
+- Updated MockMvc and source-contract tests so unknown Agent API surfaces are rejected anonymously and allowed through Bearer/session-authenticated principals.
+- Added an observability controller security contract test to keep the admin-only method guard in place during future refactors.
+**Verification**
+- `mvn -q "-Dtest=AgentSecurityConfigContractTest,AgentSecurityConfigWebMvcTest,ObservabilityControllerSecurityContractTest,ObservabilityControllerTest,AuthTokenFilterSecurityContextTest" test` passed.
+- `git diff --check` passed.
+**Security**
+- `/api/agent/login`, `/api/agent/logout`, `/api/agent/me`, and `/api/agent/health` remain explicit bootstrap/compatibility endpoints.
+- Admin diagnostics now have defense in depth: URL-level admin matcher plus method-level `@PreAuthorize`.
+- Newly added Agent controllers can no longer become anonymous by accident through the global `.anyRequest().permitAll()` fallback.
+
 ## [M5.29-6] - Chat/SSE runtime identity migration
 
 **Delivery**: Migrated Chat/SSE runtime ownership to trusted principal + server-side session context, and moved `/api/agent/chat/stream`, `/api/agent/chat/graph`, and `/api/agent/hitl/**` behind Spring Security authentication.

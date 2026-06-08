@@ -24,7 +24,7 @@
 1. **前端代理登录**：前端期望 `POST /api/agent/login`（JSON），但 kube-manager 只认 `POST /api/login`（form-urlencoded）
 2. **登出接口**：无 `/api/agent/logout` 端点，无法清理 `UserPermissionContext` 缓存
 3. **会话 CRUD**：无 conversation 列表、详情、删除接口，前端无法管理历史会话
-4. **会话绑定**：历史设计阶段 `X-Session-Id` 只做会话标识；M5.29-4 起它已可通过 `SessionStore` 桥接到 Spring Security `Authentication`；M5.29-5 已完成 conversation metadata owner 迁移；M5.29-6 已完成 Chat/SSE runtime identity 迁移
+4. **会话绑定**：历史设计阶段 `X-Session-Id` 只做会话标识；M5.29-4 起它已可通过 `SessionStore` 桥接到 Spring Security `Authentication`；M5.29-5 已完成 conversation metadata owner 迁移；M5.29-6 已完成 Chat/SSE runtime identity 迁移；M5.29-7 已将 `/api/agent/**` 收口为默认 authenticated
 
 ---
 
@@ -67,6 +67,8 @@
 > M5.29-4 更新：当前实现返回的是 `ses_*` sessionId，并保存到 `SessionStore`。后续请求若没有 `Authorization: Bearer`，`AuthTokenFilter` 会用 `X-Session-Id` 反查服务端 `SessionData`，再生成 Spring Security `Authentication`。如果请求显式带了 Bearer，则 Bearer 是本次请求身份权威；未知 Bearer 不自动降级到 SessionId。`X-Session-Id` 是服务端会话索引，不是用户或 LLM 可自声明的身份。
 >
 > M5.29-6 更新：Chat/SSE 运行时不再把 `X-Session-Id`、请求体 `userId` 或 `conversationId` 当作身份事实。`AtlasOrchestrator` 先通过 `AgentPrincipalResolver` 取得当前主体，再从 `SessionStore` 补齐 token/orgId，并用 `ConversationStore.findByUserAndId(...)` 校验 conversation owner。SSE/Graph/HITL 使用新生成的 `run-*` / `graph-*` 作为运行关联 ID，不复用 raw `ses_*` 登录会话 ID。
+>
+> M5.29-7 更新：早期普通 Agent API 的临时 `permitAll` 迁移窗口已经关闭。除 `/api/agent/login`、`/api/agent/logout`、`/api/agent/me`、`/api/agent/health` 这些显式 bootstrap/compatibility 入口外，`/api/agent/**` 默认要求 Spring Security authentication；观测诊断还叠加 URL 级 admin matcher 和方法级 `@PreAuthorize`。
 
 ---
 

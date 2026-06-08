@@ -106,7 +106,7 @@ M5.29 把项目从历史 ThreadLocal / raw session id 兼容模式，推进到 S
 | 会话定位器 `X-Session-Id` | 查 `SessionStore`，恢复服务端 token/org/role/session data | 不能当 userId、owner、role、orgId 或授权事实 |
 | 运行关联 ID `run-*` / `graph-*` / `conversationId` | 关联 SSE、Graph、HITL、审计、前端会话和 trace | 不能证明资源归属；`conversationId` 使用前必须校验 owner |
 
-M5.29-4 已完成 `X-Session-Id -> SessionStore -> Authentication`。M5.29-5 已把 conversation metadata owner 迁移到 trusted principal。M5.29-6 则把 Chat/SSE/Graph/ReAct/HITL 的执行链收口到可信 runtime identity snapshot：
+M5.29-4 已完成 `X-Session-Id -> SessionStore -> Authentication`。M5.29-5 已把 conversation metadata owner 迁移到 trusted principal。M5.29-6 把 Chat/SSE/Graph/ReAct/HITL 的执行链收口到可信 runtime identity snapshot。M5.29-7 关闭早期普通 Agent API 的临时 `permitAll` 迁移窗口，把 `/api/agent/**` 收口为默认 authenticated：
 
 ```text
 HTTP request
@@ -126,6 +126,15 @@ RuntimeIdentity(user, token, orgId, checkedConversationId, traceId)
 ```
 
 学习重点：顶级 Agent 不能把“可关联”误当成“可授权”。`conversationId`、`threadId`、`sessionId` 都是 locator/correlation id；真正能决定 owner 的，只能是服务端可信主体与服务端状态校验。
+
+M5.29-7 的默认安全姿态：
+
+- 显式开放：`/api/agent/login`、`/api/agent/logout`、`/api/agent/me`、`/api/agent/health` 作为登录、登出、当前用户和健康探测兼容入口。
+- 显式加严：`/api/agent/observability/**` 继续 admin-only。
+- 默认兜底：其余 `/api/agent/**` 全部 `.authenticated()`，防止未来新增 Controller 被 `.anyRequest().permitAll()` 误放行。
+- 方法级防线：`ObservabilityController#snapshot()` 增加 `@PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")`，即使 URL matcher 未来重构，诊断快照仍有第二道管理员门禁。
+
+学习重点：顶级 Agent 的 Web 安全不是“把当前已知接口列完”就结束，而是要让未来未知接口默认落在更安全的一边。端点级 matcher 负责 HTTP 入口，方法级授权负责业务方法边界，`SafeToolExecutor` 负责 Tool 执行边界；三层各守一段，系统才不会因为一次新 Controller 合并就漏出匿名能力。
 
 ## 一期与二期范围
 
@@ -461,17 +470,17 @@ M5.29-1 把安全入口从“普通 Servlet Filter + ThreadLocal”推进到 Spr
 - 关闭默认 CSRF、HTTP Basic、form login 和 logout，避免 API 服务静默出现另一套浏览器/Basic 认证入口；
 - 显式提供 `agentUserDetailsService`，让 Spring Boot 不再生成默认开发用户，身份来源只来自 kube-manager Bearer session 桥接；
 - `/api/agent/observability/**` 和除 health/info 之外的 `/actuator/**` 先进入 admin-only；
-- 普通 Agent API 暂时 `permitAll`，这是为了小步迁移，不代表最终鉴权完成；
+- 普通 Agent API 在 M5.29-1 时曾暂时 `permitAll`，这是为了小步迁移；M5.29-7 已通过 `/api/agent/**` fallback matcher 关闭这个临时窗口；
 - `AuthTokenFilter` 在请求入口和出口都清理 `SecurityContext` 与 ThreadLocal，防止线程复用导致身份串线；
 - 有效缓存 Token 会被映射成 `Authentication`，role 统一转成 `ROLE_*`，但 raw Bearer Token 不写入 `Authentication.credentials`。
 
-为什么不一次性锁全 `/api/agent/**`：当前聊天、SSE、HITL resume、会话 bootstrap 里仍有历史认证/上下文传递路径。顶级工程不是一刀切把系统打断，而是先把高敏诊断面和 actuator 收口，再逐步把剩余 API 迁移到标准 endpoint/method authorization。这样每一步都有测试、可回滚、可恢复记忆。
+为什么 M5.29-1 没有一次性锁全 `/api/agent/**`：当时聊天、SSE、HITL resume、会话 bootstrap 里仍有历史认证/上下文传递路径。顶级工程不是一刀切把系统打断，而是先把高敏诊断面和 actuator 收口，再逐步把剩余 API 迁移到标准 endpoint/method authorization。到 M5.29-7，memory/mcp、conversation、Chat/SSE/HITL 的身份迁移已经完成，因此可以安全加入 `/api/agent/**` 默认认证兜底。
 
 本轮测试分三层：
 
 - `AuthTokenFilterSecurityContextTest`：验证 Bearer session 到 `Authentication` 的桥接、未知 token 不认证、入口/出口清理残留上下文；
-- `AgentSecurityConfigContractTest`：锁住 stateless、关闭默认登录入口、admin-only matcher 和暂时兼容放行策略；
-- `AgentSecurityConfigWebMvcTest`：用真实 MockMvc 过滤链验证 observability/actuator 的 403/200 行为和普通 Agent API 的兼容放行。
+- `AgentSecurityConfigContractTest`：锁住 stateless、关闭默认登录入口、admin-only matcher、method security 和 `/api/agent/**` 默认认证兜底；
+- `AgentSecurityConfigWebMvcTest`：用真实 MockMvc 过滤链验证 observability/actuator 的 403/200 行为、Chat/SSE/HITL 认证行为和未知 Agent API 的默认拒绝。
 
 学习重点：安全主线化不是“加一个 starter”这么简单。顶级 Agent 的身份事实要逐步统一到标准 `SecurityContext`，但执行层仍必须保留 `SafeToolExecutor`、Tool 风险元数据、HITL、trace 和 audit。Spring Security 负责 Web 入口授权，Agent 执行边界负责证明“这个 Tool 为什么可以执行”。
 

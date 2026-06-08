@@ -4,6 +4,7 @@ import com.atlas.store.SessionStore;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -22,6 +23,7 @@ import org.springframework.security.web.authentication.AnonymousAuthenticationFi
  */
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class AgentSecurityConfig {
 
     @Bean
@@ -54,6 +56,7 @@ public class AgentSecurityConfig {
                     "/api/agent/conversations",
                     "/api/agent/conversations/**"
                 ).authenticated()
+                .requestMatchers("/api/agent/**").authenticated()
                 .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                 .requestMatchers("/actuator/**").hasAnyRole("ADMIN", "SYS_ADMIN")
                 .anyRequest().permitAll()

@@ -93,10 +93,31 @@ Current track:
 
 Recently completed:
 
-`M5.29-6 Chat/SSE runtime identity migration`
+`M5.29-7 default Agent API authorization guard`
 
 Latest checkpoint:
 
+- Date: 2026-06-09 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.29-7 implemented:
+  - `AgentSecurityConfig` now enables Spring method security and adds a fallback `/api/agent/**` authenticated matcher.
+  - The explicit anonymous/bootstrap Agent allowlist remains limited to `/api/agent/login`, `/api/agent/logout`, `/api/agent/me`, and `/api/agent/health`.
+  - `ObservabilityController#snapshot()` now has method-level `@PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")` in addition to the URL-level admin matcher.
+  - Unknown future `/api/agent/**` endpoints no longer inherit anonymous access from `.anyRequest().permitAll()`.
+- Verification:
+  - `mvn -q "-Dtest=AgentSecurityConfigContractTest,AgentSecurityConfigWebMvcTest,ObservabilityControllerSecurityContractTest,ObservabilityControllerTest,AuthTokenFilterSecurityContextTest" test`
+  - `git diff --check`
+- Scope boundary:
+  - Phase 1 generic Agent Core security-mainline migration only.
+  - No NIM/HPC/Slurm/BCM Phase 2 implementation was resumed.
+  - No real write/create/delete/state-changing kube-manager call was opened.
+- Security result:
+  - M5.29-1's temporary ordinary Agent API `permitAll` compatibility window is closed for `/api/agent/**`.
+  - Admin observability has defense in depth: SecurityFilterChain admin matcher plus method-level authorization.
+- Next technical follow-up:
+  - Continue durable audit storage, replay timeline DTOs, Agent eval, RAG/persistent Memory, read-only MCP schema adapter, and 8100 read-only manager validation.
+
+- Previous checkpoint:
 - Date: 2026-06-09 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
 - M5.29-6 implemented:

@@ -71,10 +71,11 @@ M5.28-1 完成后，后端主语言审计结论进一步明确：`Java + Spring`
 - M5.29-4 已把前端 `X-Session-Id` 通过 `SessionStore` 桥接到 Spring Security，并将 `/api/agent/memory/**`、`/api/agent/mcp/**` 作为首批非聊天端点迁移到 `.authenticated()`。
 - M5.29-5 已把 `ConversationController` 会话元数据 owner 迁移到 `AgentPrincipalResolver`，并将 `/api/agent/conversations`、`/api/agent/conversations/**` 迁移到 `.authenticated()`。
 - M5.29-6 已把 Chat/SSE/Graph/HITL 运行时身份迁移到 `AgentPrincipalResolver + SessionStore + ConversationStore` 的可信快照，并将 `/api/agent/chat/stream`、`/api/agent/chat/graph`、`/api/agent/hitl/**` 迁移到 `.authenticated()`。
+- M5.29-7 已启用 `@EnableMethodSecurity`，将 `/api/agent/**` 收口为默认 `.authenticated()` 兜底，并为 `ObservabilityController#snapshot()` 增加方法级 admin guard。
 
 仍需要升级的部分：
 
-- Spring Security 主线仍在迁移：M5.29-1 已完成 Bearer 身份桥接和诊断面保护，M5.29-2 已完成统一 principal resolver，M5.29-3 已完成审计 actor 可信快照，M5.29-4 已完成 `X-Session-Id` 会话桥接和 memory/mcp 首批端点授权，M5.29-5 已完成 conversation owner/endpoint 迁移，M5.29-6 已完成 Chat/SSE/Graph/HITL runtime identity 迁移；后续需要把剩余 `/api/agent/**` 从兼容放行迁移到显式 endpoint/method authorization，并做 controller guard 去重；
+- Spring Security 主线仍在迁移：M5.29-1 已完成 Bearer 身份桥接和诊断面保护，M5.29-2 已完成统一 principal resolver，M5.29-3 已完成审计 actor 可信快照，M5.29-4 已完成 `X-Session-Id` 会话桥接和 memory/mcp 首批端点授权，M5.29-5 已完成 conversation owner/endpoint 迁移，M5.29-6 已完成 Chat/SSE/Graph/HITL runtime identity 迁移，M5.29-7 已完成 `/api/agent/**` 默认认证兜底和观测方法级 admin guard；后续需要为 durable audit、未来写相邻服务和更细粒度 controller 方法补充 method-level policy，并做 guard 去重；
 - 审计仍是 `InMemoryAgentAuditRecorder` 诊断实现，`durableRetention=false`，不能替代可查询、可保留、可权限控制的持久审计；
 - SpotBugs / SBOM / coverage / secret scan / Agent eval 还没有全部变成失败即阻断的硬门禁；
 - Resilience4j read retry 还应继续细分异常和状态码：网络异常、超时、429、502、503、504 可考虑重试，400、401、403、404 不应重试；
@@ -110,7 +111,8 @@ M5.28-1 完成后，后端主语言审计结论进一步明确：`Java + Spring`
    - 已完成会话兼容层：M5.29-4 将前端 `X-Session-Id` 反查为服务端 `SessionData` 后桥接到 `Authentication`，并保护 memory/mcp 首批非聊天端点。
    - 已完成 conversation 元数据层：M5.29-5 将 raw session-id owner 迁移到可信 principal，并保护 conversations 端点。
    - 已完成 Chat/SSE 运行时层：M5.29-6 将 streaming / graph / ReAct / HITL runtime identity 收口到 trusted principal + server-side session + owner-checked conversation。
-   - 下一步：把剩余 `/api/agent/**` 从兼容放行迁移到显式 endpoint/method authorization。
+   - 已完成默认授权兜底：M5.29-7 将 `/api/agent/**` 收口到 authenticated，并为 observability snapshot 增加 method-level admin guard。
+   - 下一步：为 durable audit、未来写相邻服务和更细粒度 controller 方法补充 method-level policy。
    - `AuthTokenFilter` 可以保留为兼容桥，但生产鉴权、角色和端点策略应由 Spring Security 承担。
 
 7. 持久审计主线化。
@@ -124,6 +126,7 @@ M5.28-1 完成后，后端主语言审计结论进一步明确：`Java + Spring`
    - M5.29-2 / M5.29-3 已把 controller guard 与 audit actor 的读取入口逐步迁入 `AgentPrincipalResolver`。
    - M5.29-4 已把 `X-Session-Id` 会话桥接到 `SecurityContext`，并让长期记忆只按 trusted principal 分桶。
    - M5.29-5 已让 conversation 元数据只按 trusted principal 分桶。
+   - M5.29-7 已让未知 `/api/agent/**` 默认要求 authentication。
    - ThreadLocal 可保留为 legacy bridge，但权限事实不能长期散落。
 
 2. OpenTelemetry / audit 主线化。

@@ -6,7 +6,7 @@
 - Primary workspace recovery folder: `F:\gitProject\kube-agent\codex-memory\kube-agent\current`
 - Historical external memory folder: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.29-6, Chat/SSE runtime identity migration.
+- Current latest wave: M5.29-7, default Agent API authorization guard.
 - Phase update: HPC / Slurm / BCM and NIM are paused and moved to Phase 2 by user direction.
 - Phase 1 focus: deliver the top-tier Agent core through generic manager Agent foundations, safe read/query validation, non-HPC/NIM manager function coverage, Tool metadata quality, HITL/audit execution boundary, traceability, recovery, evaluation, teaching documentation, and vue-kube-manager workflow integration.
 - Phase boundary clarification: moving NIM / HPC / Slurm / BCM to Phase 2 postpones specialist domain plugins only; it does not reduce Phase 1 standards.
@@ -55,6 +55,30 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.29-7 default Agent API authorization guard is implemented:
+  - `AgentSecurityConfig` now enables method security through `@EnableMethodSecurity`.
+  - `/api/agent/**` is now authenticated by default after the explicit bootstrap whitelist and stronger admin matchers.
+  - `/api/agent/login`, `/api/agent/logout`, `/api/agent/me`, and `/api/agent/health` remain explicit compatibility/bootstrap endpoints.
+  - `ObservabilityController#snapshot()` now has method-level `@PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")` in addition to the URL-level admin matcher.
+  - Added/extended tests:
+    - `AgentSecurityConfigWebMvcTest` now proves unknown Agent API paths reject anonymous callers and allow authenticated Bearer callers.
+    - `AgentSecurityConfigContractTest` locks `@EnableMethodSecurity` and the `/api/agent/**` fallback matcher.
+    - `ObservabilityControllerSecurityContractTest` locks the method-level admin guard.
+  - Verification passed:
+    - `mvn -q "-Dtest=AgentSecurityConfigContractTest,AgentSecurityConfigWebMvcTest,ObservabilityControllerSecurityContractTest,ObservabilityControllerTest,AuthTokenFilterSecurityContextTest" test`
+    - `git diff --check`
+  - Security result:
+    - The M5.29-1 temporary ordinary Agent API `permitAll` migration window is closed for `/api/agent/**`.
+    - Future Agent controllers cannot become anonymous by accident through the global `.anyRequest().permitAll()` fallback.
+    - Admin observability now has defense in depth: SecurityFilterChain admin matcher plus method-level authorization.
+  - Intentional migration boundary:
+    - This slice does not add new manager/NIM/HPC/Slurm/BCM business capabilities.
+    - More granular method authorization for future write-adjacent services and durable audit APIs remains a follow-up.
+  - Next Phase 1 technical slices:
+    - design durable audit storage with admin-only read access, retention, redaction, and pre-write fail-closed policy;
+    - define frontend replay timeline DTOs for request/intent/plan/tool/HTTP/HITL/audit/final-answer;
+    - continue Agent eval, RAG/persistent Memory, read-only MCP schema adapter, and 8100 read-only manager validation.
 
 - M5.29-6 Chat/SSE runtime identity migration is implemented:
   - `/api/agent/chat/stream`, `/api/agent/chat/graph`, and `/api/agent/hitl/**` now require Spring Security authentication.

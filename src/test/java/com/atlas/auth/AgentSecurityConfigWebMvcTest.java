@@ -27,8 +27,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * M5.29-1 真实 MVC 过滤链测试。
  *
  * <p>教学重点：源代码契约测试能防止配置被误删，但不能证明 Spring Security 真的拦截请求。
- * 这里用最小 Controller 切片验证三类入口：诊断面 admin-only、Actuator 管理面 admin-only、
- * 普通 Agent API 暂时保持兼容放行。</p>
+ * 这里用最小 Controller 切片验证四类入口：诊断面 admin-only、Actuator 管理面 admin-only、
+ * 运行时 Agent API authenticated，以及未来未知 /api/agent/** 的默认认证兜底。</p>
  */
 @WebMvcTest(controllers = AgentSecurityConfigWebMvcTest.TestController.class)
 @Import({
@@ -86,8 +86,12 @@ class AgentSecurityConfigWebMvcTest {
     }
 
     @Test
-    void ordinaryAgentApiRemainsOpenDuringIncrementalMigration() throws Exception {
+    void unknownAgentApiShouldRequireAuthenticatedPrincipalByDefault() throws Exception {
         mockMvc.perform(get("/api/agent/chat"))
+            .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/agent/chat")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
             .andExpect(status().isOk());
     }
 
