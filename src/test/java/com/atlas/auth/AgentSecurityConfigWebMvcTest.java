@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Set;
@@ -105,6 +106,24 @@ class AgentSecurityConfigWebMvcTest {
             .andExpect(status().isOk());
     }
 
+    @Test
+    void conversationEndpointsRequireAuthenticatedPrincipal() throws Exception {
+        mockMvc.perform(get("/api/agent/conversations"))
+            .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/agent/conversations/conv-1"))
+            .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/agent/conversations")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
+            .andExpect(status().isOk());
+
+        String sessionId = sessionStore.createSession("session-token", "session-user", "100002", "user", Set.of());
+        mockMvc.perform(get("/api/agent/conversations/conv-1")
+                .header("X-Session-Id", sessionId))
+            .andExpect(status().isOk());
+    }
+
     @RestController
     public static class TestController {
 
@@ -136,6 +155,16 @@ class AgentSecurityConfigWebMvcTest {
         @GetMapping("/api/agent/mcp/manifest")
         String mcpManifest() {
             return "mcp";
+        }
+
+        @GetMapping("/api/agent/conversations")
+        String conversations() {
+            return "conversations";
+        }
+
+        @GetMapping("/api/agent/conversations/{id}")
+        String conversationDetail(@PathVariable String id) {
+            return id;
         }
     }
 

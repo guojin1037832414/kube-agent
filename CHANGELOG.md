@@ -6,6 +6,21 @@
 
 ---
 
+## [M5.29-5] - Principal-owned conversations
+
+**Delivery**: Migrated Agent conversation metadata ownership from raw `X-Session-Id` strings to trusted `AgentPrincipalResolver` identities and moved `/api/agent/conversations` plus child resources behind Spring Security `authenticated()` rules.
+**Changes**
+- Injected `AgentPrincipalResolver` into `ConversationController` while keeping the legacy constructor for direct-test compatibility.
+- Updated create/list/detail/delete/title-update paths to require a trusted principal username and fail closed when no principal exists.
+- Removed the previous `anonymous`/raw-session-id owner fallback from conversation CRUD.
+- Extended `AgentSecurityConfig` to authenticate `/api/agent/conversations` and `/api/agent/conversations/**`.
+- Added controller and security tests for trusted-principal ownership, cross-user rejection, and Bearer/session authenticated conversation endpoint access.
+**Verification**
+- `mvn -q "-Dtest=ConversationControllerTest,AgentSecurityConfigContractTest,AgentSecurityConfigWebMvcTest,AuthTokenFilterSecurityContextTest,AgentPrincipalResolverTest" test` passed.
+**Security**
+- Conversation IDs and `X-Session-Id` values are treated as resource/session locators, not authorization facts.
+- Chat/SSE streaming identity migration remains a separate follow-up; this slice covers conversation metadata CRUD only.
+
 ## [M5.29-4] - Session bridge endpoint authorization
 
 **Delivery**: Bridged frontend `X-Session-Id` sessions into Spring Security and moved the first authenticated non-chat Agent surfaces, `/api/agent/memory/**` and `/api/agent/mcp/**`, behind explicit `authenticated()` rules without breaking existing Bearer-token compatibility.

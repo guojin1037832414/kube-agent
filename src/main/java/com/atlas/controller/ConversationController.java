@@ -1,7 +1,10 @@
 package com.atlas.controller;
 
+import com.atlas.auth.AgentPrincipal;
+import com.atlas.auth.AgentPrincipalResolver;
 import com.atlas.dto.*;
 import com.atlas.store.ConversationStore;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -21,8 +24,10 @@ import java.util.*;
  *   <li>PUT /api/agent/conversations/{id}/title — 更新标题</li>
  * </ul>
  *
- * <p><b>会话绑定：</b>通过 {@code X-Session-Id} header 识别当前用户，
- * 只返回该用户创建的会话。</p>
+ * <p><b>会话绑定：</b>M5.29-5 起通过 {@link AgentPrincipalResolver} 读取服务端可信主体，
+ * 不再把客户端持有的 {@code X-Session-Id} 字符串当作会话 owner。前端仍可携带
+ * {@code X-Session-Id}，由 Spring Security 过滤器反查 {@code SessionStore} 后恢复
+ * 标准 Authentication。</p>
  *
  * @author Atlas Team
  * @since 3.1.0-M2.5
@@ -34,9 +39,17 @@ public class ConversationController {
     private static final Logger log = LoggerFactory.getLogger(ConversationController.class);
 
     private final ConversationStore conversationStore;
+    private final AgentPrincipalResolver principalResolver;
 
     public ConversationController(ConversationStore conversationStore) {
+        this(conversationStore, null);
+    }
+
+    @Autowired
+    public ConversationController(ConversationStore conversationStore,
+                                  AgentPrincipalResolver principalResolver) {
         this.conversationStore = conversationStore;
+        this.principalResolver = principalResolver;
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -54,10 +67,13 @@ public class ConversationController {
             @RequestHeader(value = "X-Session-Id", required = false) String sessionId,
             @RequestBody(required = false) Map<String, String> body) {
 
-        String userId = resolveUserId(sessionId);
+        Optional<String> userId = resolveUserId();
+        if (userId.isEmpty()) {
+            return ResponseEntity.badRequest().body(ApiResponse.fail("未找到可信用户身份"));
+        }
         String title = (body != null) ? body.get("title") : null;
 
-        Conversation created = conversationStore.create(userId, title);
+        Conversation created = conversationStore.create(userId.get(), title);
 
         // 转为前端期望的 CreateConversationResponse 格式
         Map<String, Object> result = new LinkedHashMap<>();
@@ -66,7 +82,7 @@ public class ConversationController {
         result.put("createdAt", created.createdAt());
 
         log.debug("[Conversation] 会话已创建: convId={}, user={}, title={}",
-                created.id(), userId, created.title());
+                created.id(), userId.get(), created.title());
         return ResponseEntity.ok(ApiResponse.ok(result));
     }
 
@@ -81,8 +97,11 @@ public class ConversationController {
     public ResponseEntity<?> list(
             @RequestHeader(value = "X-Session-Id", required = false) String sessionId) {
 
-        String userId = resolveUserId(sessionId);
-        List<Conversation> convs = conversationStore.findByUser(userId);
+        Optional<String> userId = resolveUserId();
+        if (userId.isEmpty()) {
+            return ResponseEntity.badRequest().body(ApiResponse.fail("未找到可信用户身份"));
+        }
+        List<Conversation> convs = conversationStore.findByUser(userId.get());
 
         List<ConversationItemDto> items = convs.stream()
                 .map(c -> new ConversationItemDto(
@@ -106,8 +125,11 @@ public class ConversationController {
             @RequestHeader(value = "X-Session-Id", required = false) String sessionId,
             @PathVariable String id) {
 
-        String userId = resolveUserId(sessionId);
-        Optional<Conversation> opt = conversationStore.findByUserAndId(userId, id);
+        Optional<String> userId = resolveUserId();
+        if (userId.isEmpty()) {
+            return ResponseEntity.badRequest().body(ApiResponse.fail("未找到可信用户身份"));
+        }
+        Optional<Conversation> opt = conversationStore.findByUserAndId(userId.get(), id);
         if (opt.isEmpty()) {
             return ResponseEntity.status(404).body(ApiResponse.fail("会话不存在"));
         }
@@ -131,8 +153,11 @@ public class ConversationController {
             @RequestHeader(value = "X-Session-Id", required = false) String sessionId,
             @PathVariable String id) {
 
-        String userId = resolveUserId(sessionId);
-        boolean removed = conversationStore.removeForUser(userId, id);
+        Optional<String> userId = resolveUserId();
+        if (userId.isEmpty()) {
+            return ResponseEntity.badRequest().body(ApiResponse.fail("未找到可信用户身份"));
+        }
+        boolean removed = conversationStore.removeForUser(userId.get(), id);
         if (!removed) {
             return ResponseEntity.status(404).body(ApiResponse.fail("会话不存在"));
         }
@@ -157,8 +182,11 @@ public class ConversationController {
             return ResponseEntity.badRequest().body(ApiResponse.fail("标题不能为空"));
         }
 
-        String userId = resolveUserId(sessionId);
-        boolean updated = conversationStore.updateTitleForUser(userId, id, newTitle);
+        Optional<String> userId = resolveUserId();
+        if (userId.isEmpty()) {
+            return ResponseEntity.badRequest().body(ApiResponse.fail("未找到可信用户身份"));
+        }
+        boolean updated = conversationStore.updateTitleForUser(userId.get(), id, newTitle);
         if (!updated) {
             return ResponseEntity.status(404).body(ApiResponse.fail("会话不存在"));
         }
@@ -171,10 +199,16 @@ public class ConversationController {
     // ═══════════════════════════════════════════════════════════
 
     /**
-     * 从 sessionId 解析用户标识。
-     * <p>未登录时返回 "anonymous" 作为降级 userId。</p>
+     * 从服务端可信主体解析会话 owner。
+     * <p>注意：{@code X-Session-Id} 是会话索引，不是身份事实；缺少可信主体时必须拒绝。</p>
      */
-    private String resolveUserId(String sessionId) {
-        return (sessionId != null && !sessionId.isBlank()) ? sessionId : "anonymous";
+    private Optional<String> resolveUserId() {
+        if (principalResolver == null) {
+            return Optional.empty();
+        }
+        return principalResolver.current()
+            .filter(AgentPrincipal::isAuthenticated)
+            .map(AgentPrincipal::username)
+            .filter(username -> username != null && !username.isBlank());
     }
 }

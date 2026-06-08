@@ -6,7 +6,7 @@
 - Primary workspace recovery folder: `F:\gitProject\kube-agent\codex-memory\kube-agent\current`
 - Historical external memory folder: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.29-4, X-Session-Id security bridge and first authenticated non-chat endpoints.
+- Current latest wave: M5.29-5, principal-owned conversations.
 - Phase update: HPC / Slurm / BCM and NIM are paused and moved to Phase 2 by user direction.
 - Phase 1 focus: deliver the top-tier Agent core through generic manager Agent foundations, safe read/query validation, non-HPC/NIM manager function coverage, Tool metadata quality, HITL/audit execution boundary, traceability, recovery, evaluation, teaching documentation, and vue-kube-manager workflow integration.
 - Phase boundary clarification: moving NIM / HPC / Slurm / BCM to Phase 2 postpones specialist domain plugins only; it does not reduce Phase 1 standards.
@@ -55,6 +55,29 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.29-5 principal-owned conversations is implemented:
+  - `ConversationController` now receives `AgentPrincipalResolver` and uses trusted principal username as the conversation owner.
+  - Conversation create/list/detail/delete/title-update no longer treat raw `X-Session-Id` or missing session as a user identity.
+  - Missing trusted principal now fails closed with `未找到可信用户身份`.
+  - `AgentSecurityConfig` now protects `/api/agent/conversations` and `/api/agent/conversations/**` with `.authenticated()`.
+  - Added/extended tests:
+    - `ConversationControllerTest` for missing-principal rejection, principal-owned create, and cross-user detail/update/delete rejection.
+    - `AgentSecurityConfigWebMvcTest` for authenticated conversation endpoint access through Bearer and `X-Session-Id` bridge.
+    - `AgentSecurityConfigContractTest` for source-level matcher drift protection.
+  - Verification passed:
+    - `mvn -q "-Dtest=ConversationControllerTest,AgentSecurityConfigContractTest,AgentSecurityConfigWebMvcTest,AuthTokenFilterSecurityContextTest,AgentPrincipalResolverTest" test`
+  - Security result:
+    - Conversation ID and `X-Session-Id` are now locators only; they do not decide who owns conversation metadata.
+    - Existing frontend login remains compatible because `X-Session-Id` already bridges to `Authentication` through M5.29-4.
+  - Compatibility note:
+    - Historical in-memory conversations created under raw session-id owners may not appear under username-owned lists after this security migration. This is accepted for the volatile Caffeine store; future persistent storage should define an explicit migration plan.
+  - Intentional migration boundary:
+    - Chat/SSE streaming identity ownership is still a separate follow-up because stream execution has additional token/org/trace propagation semantics.
+  - Next Phase 1 technical slices:
+    - migrate chat/SSE runtime ownership and stream context to `AgentPrincipalResolver` / server-side session data;
+    - continue method-level authorization for sensitive operations;
+    - continue durable audit / frontend replay DTO / RAG Memory / read-only MCP / Agent eval.
 
 - M5.29-4 X-Session-Id security bridge and first authenticated non-chat endpoints is implemented:
   - `AuthTokenFilter` now optionally receives `SessionStore` and can bridge frontend `X-Session-Id` into Spring Security `Authentication` when no Bearer header is present.

@@ -45,7 +45,7 @@ public class AgentSecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/agent/login", "/api/agent/logout", "/api/agent/me", "/api/agent/health").permitAll()
                 .requestMatchers("/api/agent/observability/**").hasAnyRole("ADMIN", "SYS_ADMIN")
-                .requestMatchers("/api/agent/memory/**", "/api/agent/mcp/**").authenticated()
+                .requestMatchers("/api/agent/memory/**", "/api/agent/mcp/**", "/api/agent/conversations", "/api/agent/conversations/**").authenticated()
                 .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                 .requestMatchers("/actuator/**").hasAnyRole("ADMIN", "SYS_ADMIN")
                 .anyRequest().permitAll()

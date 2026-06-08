@@ -39,7 +39,7 @@ class AgentSecurityConfigContractTest {
         String source = Files.readString(SOURCE);
 
         assertThat(source).contains(".requestMatchers(\"/api/agent/observability/**\").hasAnyRole(\"ADMIN\", \"SYS_ADMIN\")");
-        assertThat(source).contains(".requestMatchers(\"/api/agent/memory/**\", \"/api/agent/mcp/**\").authenticated()");
+        assertThat(source).contains(".requestMatchers(\"/api/agent/memory/**\", \"/api/agent/mcp/**\", \"/api/agent/conversations\", \"/api/agent/conversations/**\").authenticated()");
         assertThat(source).contains(".requestMatchers(\"/actuator/health\", \"/actuator/info\").permitAll()");
         assertThat(source).contains(".requestMatchers(\"/actuator/**\").hasAnyRole(\"ADMIN\", \"SYS_ADMIN\")");
         assertThat(source).contains(".anyRequest().permitAll()");

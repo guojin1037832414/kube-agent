@@ -102,6 +102,13 @@ M5.29-4 已把前端 `X-Session-Id` 会话推进到 Spring Security，并开启�
 - `MemoryController` 使用 `AgentPrincipalResolver` 的 username 作为长期记忆 owner，不再把 raw session id 作为身份；
 - chat/SSE/conversation 暂不一起锁定，后续必须先迁移它们的数据归属语义，再进入 endpoint/method authorization。
 
+M5.29-5 已把 conversation 元数据 owner 迁移到可信 principal：
+
+- `ConversationController` 通过 `AgentPrincipalResolver` 解析 owner，不再把 raw `X-Session-Id` 或 `anonymous` 当作用户身份；
+- create/list/detail/delete/title-update 全部以 principal username 做资源归属收敛；
+- `/api/agent/conversations` 与 `/api/agent/conversations/**` 已进入 `.authenticated()`；
+- chat/SSE 流式运行时仍作为独立 follow-up，因为那里还涉及 token/org/trace/SSE/Graph/ReAct 上下文传播。
+
 ## 最新 Agent 标准的落地顺序
 
 以下技术代表 2026 年 Agent 工程的先进方向，但必须按可验证顺序接入：
@@ -164,7 +171,7 @@ Spring Boot 4.0.x 官方系统要求是 Java 17+，但它会同时带来 Spring 
 - OpenTelemetry：M5.23/M5.24/M5.25/M5.26/M5.27 已完成 traceId 内核、HTTP 出口传播、审计事件模型、审计 telemetry projection 和审计 Observation 发布；后续要把 intent、plan、tool、HTTP、HITL、audit、final answer 映射为 span/timeline/audit 统一证据链。
 - 审计持久化：M5.25 已完成内存诊断 recorder；下一步要把敏感读、高风险写、HITL 阻断、Tool 异常接入可查询、可保留、可权限控制的脱敏持久化审计存储。
 - CI 门禁：SBOM、SCA、SpotBugs、覆盖率、secret scan、Agent eval 必须进入发布流程。
-- 安全主干：M5.29-1 已引入 Spring Security `SecurityFilterChain` 并完成 observability/actuator 第一层保护；M5.29-2 已新增 `AgentPrincipalResolver` 统一当前主体解析；M5.29-3 已让 SafeToolExecutor 审计 actor 绑定统一 principal 快照；M5.29-4 已桥接前端 `X-Session-Id` 并把 memory/mcp 首批非聊天端点迁移到 `.authenticated()`；后续把 conversation/chat/SSE 身份归属、剩余 API、controller guard 和方法级授权逐步迁移到标准 `Authentication`。
+- 安全主干：M5.29-1 已引入 Spring Security `SecurityFilterChain` 并完成 observability/actuator 第一层保护；M5.29-2 已新增 `AgentPrincipalResolver` 统一当前主体解析；M5.29-3 已让 SafeToolExecutor 审计 actor 绑定统一 principal 快照；M5.29-4 已桥接前端 `X-Session-Id` 并把 memory/mcp 首批非聊天端点迁移到 `.authenticated()`；M5.29-5 已把 conversation 元数据 owner 迁移到 trusted principal 并保护 conversations 端点；后续把 chat/SSE 运行时身份归属、剩余 API、controller guard 和方法级授权逐步迁移到标准 `Authentication`。
 
 ## 多专家审计后的 Phase 1 技术优先级
 
@@ -178,7 +185,7 @@ Spring Boot 4.0.x 官方系统要求是 Java 17+，但它会同时带来 Spring 
 | P0 | CI 从报告生成升级为硬门禁 | SpotBugs/SCA/secret scan/coverage/Agent eval 失败能阻断合并或发布 |
 | P0 | `SafeToolExecutor` 唯一真实执行边界持续守护 | 新增 Graph/ReAct/ToolCallback/插件入口不能直调 `BaseTool.execute(...)` |
 | P1 | Micrometer + OpenTelemetry span 化 | request、intent、plan、LLM、tool、HTTP、HITL、audit、final answer 能在同一 trace 下回放 |
-| P1 | Spring Security 主线化 | M5.29-1 已完成 Bearer 身份桥接和诊断面保护；M5.29-2 已完成 principal resolver；M5.29-3 已完成审计 actor 可信快照；M5.29-4 已完成 `X-Session-Id` 会话桥接和 memory/mcp 首批 authenticated 端点；下一步迁移 conversation/chat/SSE 身份归属、剩余 `/api/agent/**` 授权与方法级授权 |
+| P1 | Spring Security 主线化 | M5.29-1 已完成 Bearer 身份桥接和诊断面保护；M5.29-2 已完成 principal resolver；M5.29-3 已完成审计 actor 可信快照；M5.29-4 已完成 `X-Session-Id` 会话桥接和 memory/mcp 首批 authenticated 端点；M5.29-5 已完成 conversation owner/endpoint 迁移；下一步迁移 chat/SSE 身份归属、剩余 `/api/agent/**` 授权与方法级授权 |
 | P1 | Testcontainers 真实集成测试 | 覆盖 kube-manager HTTP contract、鉴权失败、trace header、重试/熔断边界 |
 | P2 | Java 21/25 与 Spring Boot 4 / Spring AI 2 兼容矩阵 | 先在 CI matrix 或试验分支验证，不破坏当前可恢复主线 |
 

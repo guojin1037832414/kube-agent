@@ -507,6 +507,24 @@ Bearer 优先级必须高于 `X-Session-Id`。如果请求同时带了 Bearer �
 
 学习重点：`X-Session-Id` 是客户端持有的会话索引，不是权限事实。顶级 Agent 要把它还原成服务端会话快照，再交给 Spring Security / `AgentPrincipalResolver` 使用。Web 入口授权、业务数据归属、Tool 执行边界、审计 actor 是四件不同但相互绑定的事，不能只改其中一层就宣称安全迁移完成。
 
+### M5.29-5 Conversation Owner 可信主体迁移
+
+M5.29-5 继续收口 M5.29-4 留下的一个明确问题：`ConversationController` 历史上把 raw `X-Session-Id` 当作 `userId`，未携带 session 时还会降级到 `anonymous`。这在早期能让前端侧边栏会话 CRUD 跑起来，但对顶级 Agent 来说不够安全，因为 session id 是客户端持有的 locator，不是“谁拥有这条会话元数据”的权威事实。
+
+本轮把 conversation 元数据所有权迁到 `AgentPrincipalResolver`：
+
+- 创建会话时，owner 使用当前可信 principal 的 username；
+- 列表、详情、删除、改标题都用 principal username 再收敛一次；
+- 缺少可信 principal 时 fail closed，返回“未找到可信用户身份”；
+- `/api/agent/conversations` 与 `/api/agent/conversations/**` 进入 Spring Security `.authenticated()`；
+- `ConversationControllerTest` 锁定 raw session id 不再成为 owner，跨用户 conversationId 不能读取、改名或删除。
+
+为什么这一步不直接等同于 chat/SSE 全部完成：Conversation CRUD 是产品会话元数据管理；chat/SSE 是流式运行时执行链，里面还涉及 kube-manager token、orgId、traceId、SSE emitter、ReAct/Graph 状态和 Tool 执行上下文。顶级工程应该把“资源归属”和“运行时执行上下文”分层迁移，而不是用一个 matcher 把所有流式路径一次性锁上。
+
+兼容性上，这会让历史内存会话从“按 sessionId 分桶”切到“按 username 分桶”。由于当前 `ConversationStore` 是 24 小时 Caffeine 内存缓存，不是持久合规数据，这个断点可以接受；但未来如果 conversation 元数据进入数据库或 Redis，就必须设计显式 owner migration，而不能静默把旧 owner 当新身份。
+
+学习重点：Conversation ID 只能定位资源，`X-Session-Id` 只能定位服务端会话，真正的 owner 必须来自服务端可信 principal。这个区别非常关键：顶级 Agent 的控制面安全不是“拿到一个 id 就能操作”，而是“拿到 id 后还要用当前主体再验证资源归属”。
+
 ### Fail-Closed
 
 当证据缺失、来源不可信、格式不完整、digest 不匹配、词表扩展未审查时，系统必须拒绝，而不是降级为“试试看”。
