@@ -2,7 +2,8 @@
     "project":  "kube-agent",
     "wave":  "M5.28-1",
     "title":  "kube-manager HTTP resilience policy and Java stack audit refresh",
-    "generatedAt":  "2026-06-09T01:45:48+08:00",
+    "implementationCommit":  "9f691a7 feat(M5.28): govern kube-manager http resilience",
+    "generatedAt":  "2026-06-09T01:46:48+08:00",
     "branch":  "codex/m521-29-top-agent-mission",
     "files":  [
                   {
@@ -92,8 +93,8 @@
                   },
                   {
                       "path":  "codex-memory/kube-agent/current/RECOVERY_STATUS.md",
-                      "sha256":  "0ce0b9a6c69eaf75ad4599a56ffc12a0443c2697532a8d61bb593a4e7d99dd4b",
-                      "bytes":  11109
+                      "sha256":  "d15d69ddeaecee671f37a919d94f8bde7603f1a73d8d9dcf808df2f4758a0f7a",
+                      "bytes":  11155
                   }
               ]
 }
