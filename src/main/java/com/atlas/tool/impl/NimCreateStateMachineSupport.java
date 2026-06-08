@@ -1567,24 +1567,13 @@ final class NimCreateStateMachineSupport {
     }
 
     private static boolean stateMachineSwitchBindingValid(Map<String, Object> binding) {
-        return "NimCreateStateMachineSupport".equals(text(binding.get("target")))
-            && Boolean.TRUE.equals(binding.get("futureCodeReleaseSwitchDigestRequired"))
-            && Boolean.TRUE.equals(binding.get("futureReleaseDecisionDigestRequired"))
-            && Boolean.TRUE.equals(binding.get("futureValidationResultDigestRequired"))
-            && Boolean.TRUE.equals(binding.get("mustRecomputeSwitchDigestBeforeWritePermitted"))
-            && Boolean.FALSE.equals(binding.get("fallbackToRuntimeFlagAllowed"))
-            && Boolean.FALSE.equals(binding.get("fallbackToEnvironmentVariableAllowed"))
-            && Boolean.FALSE.equals(binding.get("writePermittedCanBeTrueNow"));
+        return binding.equals(
+            NimCreateDurableAuditCodeReleaseSwitchContractSupport.codeReleaseSwitchStateMachineBinding());
     }
 
     private static boolean durableExecutorSwitchBindingValid(Map<String, Object> binding) {
-        return NimCreateDurableWriteExecutorSupport.EXECUTOR_NAME.equals(text(binding.get("target")))
-            && Boolean.TRUE.equals(binding.get("futureCodeReleaseSwitchDigestRequired"))
-            && Boolean.TRUE.equals(binding.get("futureReleaseDecisionDigestRequired"))
-            && Boolean.TRUE.equals(binding.get("futureValidationResultDigestRequired"))
-            && Boolean.TRUE.equals(binding.get("mustRecheckImmediatelyBeforePost"))
-            && Boolean.FALSE.equals(binding.get("fallbackToStateMachineFlagOnlyAllowed"))
-            && Boolean.FALSE.equals(binding.get("writeExecutionAllowedNow"));
+        return binding.equals(
+            NimCreateDurableAuditCodeReleaseSwitchContractSupport.codeReleaseSwitchDurableExecutorBinding());
     }
 
     private static boolean codeReleaseSwitchContractDigestsMatchWriteChain(Map<String, Object> report,

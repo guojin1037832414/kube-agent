@@ -348,6 +348,53 @@ class NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupportTest {
     }
 
     @Test
+    void runtimeBinding_shouldRejectDigestConsistentSwitchContractBindingMapExtensions() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+
+        for (Map<String, Object> switchReport : List.of(
+            withDigestConsistentSwitchContractNestedMapField(
+                codeReleaseSwitchContractReport(audit, principal),
+                "releaseDecisionBinding",
+                "fallbackToReleaseDecisionContractAllowed",
+                false
+            ),
+            withDigestConsistentSwitchContractNestedMapField(
+                codeReleaseSwitchContractReport(audit, principal),
+                "stateMachineBinding",
+                "fallbackToRuntimeBindingAcceptedAllowed",
+                false
+            ),
+            withDigestConsistentSwitchContractNestedMapField(
+                codeReleaseSwitchContractReport(audit, principal),
+                "durableExecutorBinding",
+                "fallbackToStateMachineWritePermittedAllowed",
+                false
+            )
+        )) {
+            Map<String, Object> report = NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport.plan(
+                new NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport
+                    .CodeReleaseSwitchRuntimeBindingInput(
+                    audit,
+                    principal,
+                    switchReport,
+                    Map.of(),
+                    Map.of()
+                )
+            );
+
+            assertEquals(NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport.REJECTED_STATE,
+                report.get("bindingState"), switchReport.toString());
+            assertEquals(false, report.get("inputAccepted"), switchReport.toString());
+            assertRuntimeStatesRemainFalse(report);
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+            assertHasBlocker(blockers,
+                "CODE_RELEASE_SWITCH_CONTRACT_REPORT_INVALID_FOR_RUNTIME_BINDING");
+        }
+    }
+
+    @Test
     void runtimeBinding_shouldRejectForgedRuntimeReleaseEvidence() {
         Map<String, Object> audit = completeAuditContext();
         Map<String, Object> principal = trustedPrincipalSnapshot();

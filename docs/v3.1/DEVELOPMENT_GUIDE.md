@@ -677,6 +677,13 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Extra future authority-shaped keys are rejected even when `codeReleaseSwitchContractDigest` is recomputed.
 - Learning distinction: release-proof maps are protocol schemas. Their key sets need reviewed source ownership, not partial downstream field checks.
 
+### M5.21-130 code switch binding maps closed note
+
+- Code release switch contract generation now exposes source-owned closed maps for release-decision, state-machine, and durable-executor bindings.
+- State-machine, durable executor, and runtime binding validation require exact binding-map equality instead of partial field checks.
+- Extra future authority-shaped binding keys are rejected even when `codeReleaseSwitchContractDigest` is recomputed.
+- Learning distinction: binding maps are inter-component authorization contracts. They must be source-owned and exact before future release wiring can trust them.
+
 ### Architecture and technical learning map note
 
 - Maintain `docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md` as the long-lived architecture and technical-learning map.

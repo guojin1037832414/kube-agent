@@ -101,6 +101,69 @@ final class NimCreateDurableAuditCodeReleaseSwitchContractSupport {
         return prerequisites;
     }
 
+    static Map<String, Object> codeReleaseSwitchReleaseDecisionBinding(Map<String, Object> releaseDecisionReport) {
+        Map<String, Object> binding = new LinkedHashMap<>();
+        binding.put("sourceReleaseDecisionContractDigest",
+            text(releaseDecisionReport.get("releaseDecisionContractDigest")));
+        binding.put("sourceValidationResultContractDigest",
+            text(releaseDecisionReport.get("sourceValidationResultContractDigest")));
+        putSourceDigests(binding, releaseDecisionReport);
+        binding.put("trustedPrincipalDigest", text(releaseDecisionReport.get("trustedPrincipalDigest")));
+        binding.put("futureReleaseDecisionDigestRequired", true);
+        binding.put("futureValidationResultDigestRequired", true);
+        binding.put("mustBindServerIssuedReleaseDecisionDigest", true);
+        binding.put("mustBindServerIssuedValidationResultDigest", true);
+        binding.put("mustBindTrustedPrincipalDigest", true);
+        binding.put("mustBindAuditEventDigest", true);
+        binding.put("callerReleaseDecisionAllowed", false);
+        return binding;
+    }
+
+    static Map<String, Object> codeReleaseSwitchReleaseDecisionBindingFromSwitchReport(
+        Map<String, Object> switchReport
+    ) {
+        Map<String, Object> binding = new LinkedHashMap<>();
+        binding.put("sourceReleaseDecisionContractDigest",
+            text(switchReport.get("sourceReleaseDecisionContractDigest")));
+        binding.put("sourceValidationResultContractDigest",
+            text(switchReport.get("sourceValidationResultContractDigest")));
+        putSourceDigests(binding, switchReport);
+        binding.put("trustedPrincipalDigest", text(switchReport.get("trustedPrincipalDigest")));
+        binding.put("futureReleaseDecisionDigestRequired", true);
+        binding.put("futureValidationResultDigestRequired", true);
+        binding.put("mustBindServerIssuedReleaseDecisionDigest", true);
+        binding.put("mustBindServerIssuedValidationResultDigest", true);
+        binding.put("mustBindTrustedPrincipalDigest", true);
+        binding.put("mustBindAuditEventDigest", true);
+        binding.put("callerReleaseDecisionAllowed", false);
+        return binding;
+    }
+
+    static Map<String, Object> codeReleaseSwitchStateMachineBinding() {
+        Map<String, Object> binding = new LinkedHashMap<>();
+        binding.put("target", "NimCreateStateMachineSupport");
+        binding.put("futureCodeReleaseSwitchDigestRequired", true);
+        binding.put("futureReleaseDecisionDigestRequired", true);
+        binding.put("futureValidationResultDigestRequired", true);
+        binding.put("mustRecomputeSwitchDigestBeforeWritePermitted", true);
+        binding.put("fallbackToRuntimeFlagAllowed", false);
+        binding.put("fallbackToEnvironmentVariableAllowed", false);
+        binding.put("writePermittedCanBeTrueNow", false);
+        return binding;
+    }
+
+    static Map<String, Object> codeReleaseSwitchDurableExecutorBinding() {
+        Map<String, Object> binding = new LinkedHashMap<>();
+        binding.put("target", NimCreateDurableWriteExecutorSupport.EXECUTOR_NAME);
+        binding.put("futureCodeReleaseSwitchDigestRequired", true);
+        binding.put("futureReleaseDecisionDigestRequired", true);
+        binding.put("futureValidationResultDigestRequired", true);
+        binding.put("mustRecheckImmediatelyBeforePost", true);
+        binding.put("fallbackToStateMachineFlagOnlyAllowed", false);
+        binding.put("writeExecutionAllowedNow", false);
+        return binding;
+    }
+
     static Map<String, Object> plan(CodeReleaseSwitchContractInput input) {
         CodeReleaseSwitchContractInput safeInput = input == null
             ? CodeReleaseSwitchContractInput.empty()
@@ -567,21 +630,7 @@ final class NimCreateDurableAuditCodeReleaseSwitchContractSupport {
     }
 
     private static Map<String, Object> releaseDecisionBinding(Map<String, Object> releaseDecisionReport) {
-        Map<String, Object> binding = new LinkedHashMap<>();
-        binding.put("sourceReleaseDecisionContractDigest",
-            text(releaseDecisionReport.get("releaseDecisionContractDigest")));
-        binding.put("sourceValidationResultContractDigest",
-            text(releaseDecisionReport.get("sourceValidationResultContractDigest")));
-        putSourceDigests(binding, releaseDecisionReport);
-        binding.put("trustedPrincipalDigest", text(releaseDecisionReport.get("trustedPrincipalDigest")));
-        binding.put("futureReleaseDecisionDigestRequired", true);
-        binding.put("futureValidationResultDigestRequired", true);
-        binding.put("mustBindServerIssuedReleaseDecisionDigest", true);
-        binding.put("mustBindServerIssuedValidationResultDigest", true);
-        binding.put("mustBindTrustedPrincipalDigest", true);
-        binding.put("mustBindAuditEventDigest", true);
-        binding.put("callerReleaseDecisionAllowed", false);
-        return binding;
+        return codeReleaseSwitchReleaseDecisionBinding(releaseDecisionReport);
     }
 
     private static Map<String, Object> writeChainBinding() {
@@ -611,28 +660,11 @@ final class NimCreateDurableAuditCodeReleaseSwitchContractSupport {
     }
 
     private static Map<String, Object> stateMachineBinding() {
-        Map<String, Object> binding = new LinkedHashMap<>();
-        binding.put("target", "NimCreateStateMachineSupport");
-        binding.put("futureCodeReleaseSwitchDigestRequired", true);
-        binding.put("futureReleaseDecisionDigestRequired", true);
-        binding.put("futureValidationResultDigestRequired", true);
-        binding.put("mustRecomputeSwitchDigestBeforeWritePermitted", true);
-        binding.put("fallbackToRuntimeFlagAllowed", false);
-        binding.put("fallbackToEnvironmentVariableAllowed", false);
-        binding.put("writePermittedCanBeTrueNow", false);
-        return binding;
+        return codeReleaseSwitchStateMachineBinding();
     }
 
     private static Map<String, Object> durableExecutorBinding() {
-        Map<String, Object> binding = new LinkedHashMap<>();
-        binding.put("target", NimCreateDurableWriteExecutorSupport.EXECUTOR_NAME);
-        binding.put("futureCodeReleaseSwitchDigestRequired", true);
-        binding.put("futureReleaseDecisionDigestRequired", true);
-        binding.put("futureValidationResultDigestRequired", true);
-        binding.put("mustRecheckImmediatelyBeforePost", true);
-        binding.put("fallbackToStateMachineFlagOnlyAllowed", false);
-        binding.put("writeExecutionAllowedNow", false);
-        return binding;
+        return codeReleaseSwitchDurableExecutorBinding();
     }
 
     private static List<String> requiredFutureSwitchDigestFields() {

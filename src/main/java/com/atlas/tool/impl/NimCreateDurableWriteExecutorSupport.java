@@ -767,13 +767,8 @@ final class NimCreateDurableWriteExecutorSupport {
     }
 
     private static boolean durableExecutorSwitchBindingValid(Map<String, Object> binding) {
-        return EXECUTOR_NAME.equals(text(binding.get("target")))
-            && Boolean.TRUE.equals(binding.get("futureCodeReleaseSwitchDigestRequired"))
-            && Boolean.TRUE.equals(binding.get("futureReleaseDecisionDigestRequired"))
-            && Boolean.TRUE.equals(binding.get("futureValidationResultDigestRequired"))
-            && Boolean.TRUE.equals(binding.get("mustRecheckImmediatelyBeforePost"))
-            && Boolean.FALSE.equals(binding.get("fallbackToStateMachineFlagOnlyAllowed"))
-            && Boolean.FALSE.equals(binding.get("writeExecutionAllowedNow"));
+        return binding.equals(
+            NimCreateDurableAuditCodeReleaseSwitchContractSupport.codeReleaseSwitchDurableExecutorBinding());
     }
 
     private static boolean codeReleaseSwitchContractClaimsRelease(Map<String, Object> report) {

@@ -118,6 +118,9 @@ class NimCreateDurableAuditCodeReleaseSwitchContractSupportTest {
 
         @SuppressWarnings("unchecked")
         Map<String, Object> releaseBinding = (Map<String, Object>) contract.get("releaseDecisionBinding");
+        assertEquals(NimCreateDurableAuditCodeReleaseSwitchContractSupport
+                .codeReleaseSwitchReleaseDecisionBinding(releaseDecisionReport),
+            releaseBinding);
         assertEquals(releaseDecisionReport.get("releaseDecisionContractDigest"),
             releaseBinding.get("sourceReleaseDecisionContractDigest"));
         assertEquals(releaseDecisionReport.get("sourceValidationResultContractDigest"),
@@ -151,6 +154,8 @@ class NimCreateDurableAuditCodeReleaseSwitchContractSupportTest {
 
         @SuppressWarnings("unchecked")
         Map<String, Object> stateMachine = (Map<String, Object>) contract.get("stateMachineBinding");
+        assertEquals(NimCreateDurableAuditCodeReleaseSwitchContractSupport.codeReleaseSwitchStateMachineBinding(),
+            stateMachine);
         assertEquals(true, stateMachine.get("futureCodeReleaseSwitchDigestRequired"));
         assertEquals(true, stateMachine.get("mustRecomputeSwitchDigestBeforeWritePermitted"));
         assertEquals(false, stateMachine.get("fallbackToRuntimeFlagAllowed"));
@@ -159,6 +164,8 @@ class NimCreateDurableAuditCodeReleaseSwitchContractSupportTest {
 
         @SuppressWarnings("unchecked")
         Map<String, Object> executor = (Map<String, Object>) contract.get("durableExecutorBinding");
+        assertEquals(NimCreateDurableAuditCodeReleaseSwitchContractSupport.codeReleaseSwitchDurableExecutorBinding(),
+            executor);
         assertEquals(true, executor.get("futureCodeReleaseSwitchDigestRequired"));
         assertEquals(true, executor.get("mustRecheckImmediatelyBeforePost"));
         assertEquals(false, executor.get("fallbackToStateMachineFlagOnlyAllowed"));

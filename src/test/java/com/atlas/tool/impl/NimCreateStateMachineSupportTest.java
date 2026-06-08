@@ -891,6 +891,62 @@ class NimCreateStateMachineSupportTest {
     }
 
     @Test
+    void stateMachine_shouldRejectDigestConsistentCodeSwitchBindingMapExtensions() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> receipt = completeAuditReceipt();
+        Map<String, Object> bodyReport = completeWriteBodyRebuildReport(audit, receipt);
+        Map<String, Object> requestSpecReport = completeWriteRequestSpecReport(audit, receipt, bodyReport);
+        Map<String, Object> handoffReport = completeWriteExecutionHandoffReport(audit, receipt, bodyReport, requestSpecReport);
+        Map<String, Object> sourceGuardReport = completeCodeReleaseSwitchRuntimeSourceGuardReport(audit);
+        Map<String, Object> executorReport = completeDurableWriteExecutorReport(
+            handoffReport,
+            requestSpecReport,
+            completeCodeReleaseSwitchContractReport(audit),
+            sourceGuardReport
+        );
+
+        for (Map<String, Object> codeSwitchReport : List.of(
+            withDigestConsistentCodeSwitchNestedMapField(
+                completeCodeReleaseSwitchContractReport(audit),
+                "stateMachineBinding",
+                "fallbackToReleaseDecisionAcceptedAllowed",
+                false
+            ),
+            withDigestConsistentCodeSwitchNestedMapField(
+                completeCodeReleaseSwitchContractReport(audit),
+                "durableExecutorBinding",
+                "fallbackToExecutorSuccessAsSwitchAllowed",
+                false
+            )
+        )) {
+            Map<String, Object> guard = NimCreateStateMachineSupport.evaluate(new NimCreateStateMachineSupport.ReadinessRequest(
+                Map.of("name", "nim-forged-code-switch-binding-map"),
+                openGate(),
+                completePreview(),
+                HitlConfirmation.human("thread-1", "nim_create"),
+                audit,
+                receipt,
+                bodyReport,
+                requestSpecReport,
+                handoffReport,
+                codeSwitchReport,
+                sourceGuardReport,
+                executorReport,
+                completeReadinessPlan(),
+                completeReadinessExecutionReport(),
+                NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
+                true
+            ));
+
+            assertEquals("HELD", guard.get("state"), codeSwitchReport.toString());
+            assertEquals(false, guard.get("writePermitted"), codeSwitchReport.toString());
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> blockers = (List<Map<String, Object>>) guard.get("blockedBy");
+            assertHasBlocker(blockers, "CODE_RELEASE_SWITCH_CONTRACT_REPORT_CONTRACT_INVALID");
+        }
+    }
+
+    @Test
     void stateMachine_shouldRejectForgedOpenCodeReleaseSwitchClaims() {
         Map<String, Object> audit = completeAuditContext();
         Map<String, Object> receipt = completeAuditReceipt();

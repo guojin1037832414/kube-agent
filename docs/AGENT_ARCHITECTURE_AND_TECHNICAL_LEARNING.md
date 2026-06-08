@@ -215,7 +215,24 @@ NIM 链路明确禁止真实 Authorization、token、password、secret、NGC/NIM
 
 学习重点：对于长期 Agent 项目，文档不是附属物。文档是架构记忆、教学材料和恢复机制的一部分。
 
-## M5.21-129 最新学习笔记
+## M5.21-130 最新学习笔记
+
+本轮关闭的是 code release switch contract 的 binding maps：
+
+- `codeReleaseSwitchContract.releaseDecisionBinding`
+- `codeReleaseSwitchContract.stateMachineBinding`
+- `codeReleaseSwitchContract.durableExecutorBinding`
+
+关键收获：
+
+- binding map 是组件之间的授权合同，不是说明性 metadata。它定义未来 release decision、state machine、durable executor 如何彼此绑定。
+- `releaseDecisionBinding` 包含动态 digest 字段，因此 exact 校验要能从上游 release decision report 或 code switch report 重建标准 map，而不是简单硬编码。
+- `stateMachineBinding` 和 `durableExecutorBinding` 当前仍处于 HOLD，但越是未来会接近写放行，越要提前关闭 key-set。
+- 本轮继续使用 digest-consistent forgery：追加 fake fallback key，重新计算 `codeReleaseSwitchContractDigest`，仍然要求 state machine、durable executor、runtime binding 拒绝。
+
+学习总结：顶级 Agent 的 release 链路要把“组件之间如何互相信任”建模成显式协议。binding map 一旦被下游接受，就可能成为未来授权解释的来源；所以它必须由 producer 拥有，由所有消费者 exact validation。
+
+## M5.21-129 学习笔记
 
 本轮关闭的是 code release switch contract 中两个结构化 map：
 
