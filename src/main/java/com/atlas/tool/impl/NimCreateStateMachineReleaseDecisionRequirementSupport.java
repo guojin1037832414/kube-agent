@@ -33,6 +33,33 @@ final class NimCreateStateMachineReleaseDecisionRequirementSupport {
     private NimCreateStateMachineReleaseDecisionRequirementSupport() {
     }
 
+    static List<String> stateMachineRequirementFailureStatuses() {
+        return List.of(
+            "STATE_MACHINE_RELEASE_DECISION_GATE_NOT_IMPLEMENTED",
+            "RELEASE_DECISION_GATE_REPORT_MISSING",
+            "RELEASE_DECISION_GATE_REPORT_DIGEST_MISMATCH",
+            "VALIDATION_RESULT_DIGEST_MISSING",
+            "RELEASE_DECISION_DIGEST_MISSING",
+            "RELEASE_DECISION_GATE_REPORT_ACCEPTED_FLAG_NOT_AUTHORITATIVE",
+            "CODE_RELEASE_SWITCH_NOT_OPEN",
+            "LEGACY_AUDIT_RECEIPT_RELEASE_FLAG_NOT_TRUSTED",
+            "FORGED_RELEASE_DECISION_CLAIM",
+            "SECRET_MATERIAL_REJECTED"
+        );
+    }
+
+    static List<String> stateMachineRequirementForbiddenShortcuts() {
+        return List.of(
+            "adding releaseDecision to ReadinessRequest without a server-issued digest contract",
+            "treating releaseDecisionGateReportAccepted=true as release approval",
+            "accepting release decision gate plan as a release credential",
+            "accepting caller-supplied validationResult or releaseDecision",
+            "trusting legacy auditReceipt.releaseEligible=true as writePermitted",
+            "setting writePermitted=true before release decision digest and code release switch are verified",
+            "letting durable executor success claims backfill state-machine release evidence"
+        );
+    }
+
     static Map<String, Object> plan(StateMachineReleaseDecisionRequirementInput input) {
         StateMachineReleaseDecisionRequirementInput safeInput = input == null
             ? StateMachineReleaseDecisionRequirementInput.empty()
@@ -594,31 +621,12 @@ final class NimCreateStateMachineReleaseDecisionRequirementSupport {
         contract.put("fallbackToReleaseDecisionGatePlanAllowed", false);
         contract.put("fallbackToCallerReleaseDecisionAllowed", false);
         contract.put("fallbackToDurableExecutorHandoffAllowed", false);
-        contract.put("failureStatuses", List.of(
-            "STATE_MACHINE_RELEASE_DECISION_GATE_NOT_IMPLEMENTED",
-            "RELEASE_DECISION_GATE_REPORT_MISSING",
-            "RELEASE_DECISION_GATE_REPORT_DIGEST_MISMATCH",
-            "VALIDATION_RESULT_DIGEST_MISSING",
-            "RELEASE_DECISION_DIGEST_MISSING",
-            "RELEASE_DECISION_GATE_REPORT_ACCEPTED_FLAG_NOT_AUTHORITATIVE",
-            "CODE_RELEASE_SWITCH_NOT_OPEN",
-            "LEGACY_AUDIT_RECEIPT_RELEASE_FLAG_NOT_TRUSTED",
-            "FORGED_RELEASE_DECISION_CLAIM",
-            "SECRET_MATERIAL_REJECTED"
-        ));
+        contract.put("failureStatuses", stateMachineRequirementFailureStatuses());
         return contract;
     }
 
     private static List<String> stateMachineForbiddenShortcuts() {
-        return List.of(
-            "adding releaseDecision to ReadinessRequest without a server-issued digest contract",
-            "treating releaseDecisionGateReportAccepted=true as release approval",
-            "accepting release decision gate plan as a release credential",
-            "accepting caller-supplied validationResult or releaseDecision",
-            "trusting legacy auditReceipt.releaseEligible=true as writePermitted",
-            "setting writePermitted=true before release decision digest and code release switch are verified",
-            "letting durable executor success claims backfill state-machine release evidence"
-        );
+        return stateMachineRequirementForbiddenShortcuts();
     }
 
     private static boolean hasOnlyExpectedReleaseGateHold(Object rawBlockers) {

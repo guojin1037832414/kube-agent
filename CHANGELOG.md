@@ -6,6 +6,22 @@
 
 ---
 
+## [M5.21-127] - NIM state-machine requirement failure/shortcut lists closed
+
+**Delivery**: Closed the state-machine release requirement plan's own failure and forbidden-shortcut vocabulary before future downstream state-machine binding consumes it.
+**Changes**
+- `NimCreateStateMachineReleaseDecisionRequirementSupport` now owns source-controlled helper lists for `stateMachineRequirementPlan.failureContract.failureStatuses` and `stateMachineRequirementPlan.forbiddenShortcuts`.
+- The state-machine requirement plan emits those helpers instead of private inline list literals.
+- The positive state-machine requirement regression now requires exact equality for companion acceptance signals, failure statuses, and forbidden shortcuts.
+**Verification**
+- Targeted state-machine release decision requirement test passed.
+- `git diff --check` passed.
+- Full `mvn -q test` passed; full Maven degraded to L1 embedding mode after local `model.onnx` download timeout but exited 0.
+**Security**
+- This is state-machine requirement proof-vocabulary hardening only; it does not open runtime writes, real audit writes, real readiness polling, or a real code release switch.
+- No real `8100`, real NIM service HTTP call, Authorization header sending, durable audit write, deployment POST, state-machine release binding implementation, durable executor release binding implementation, validation result signer, release decision signer, code release switch implementation, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-126] - NIM release decision gate failure/shortcut lists closed
 
 **Delivery**: Hardened release decision gate failure and forbidden-shortcut proof-list validation at the state-machine release requirement boundary.

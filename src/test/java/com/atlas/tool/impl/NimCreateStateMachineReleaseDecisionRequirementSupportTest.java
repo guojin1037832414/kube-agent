@@ -63,13 +63,13 @@ class NimCreateStateMachineReleaseDecisionRequirementSupportTest {
         @SuppressWarnings("unchecked")
         List<String> acceptanceCompanionSignals =
             (List<String>) report.get("releaseDecisionGateReportAcceptedRequiredCompanionSignals");
-        assertTrue(acceptanceCompanionSignals.contains(
-            "releaseDecisionGateReportAcceptanceScope=CONTRACT_INPUT_SHAPE_ONLY"));
-        assertTrue(acceptanceCompanionSignals.contains(
-            "realStateMachineReleaseDecisionGateReportAccepted=false"));
-        assertTrue(acceptanceCompanionSignals.contains("releaseDecisionGateDigestVerified=false"));
-        assertTrue(acceptanceCompanionSignals.contains("releaseDecisionDigestVerified=false"));
-        assertTrue(acceptanceCompanionSignals.contains("stateMachineCanSetWritePermittedNow=false"));
+        assertEquals(List.of(
+            "releaseDecisionGateReportAcceptanceScope=CONTRACT_INPUT_SHAPE_ONLY",
+            "realStateMachineReleaseDecisionGateReportAccepted=false",
+            "releaseDecisionGateDigestVerified=false",
+            "releaseDecisionDigestVerified=false",
+            "stateMachineCanSetWritePermittedNow=false"
+        ), acceptanceCompanionSignals);
         assertEquals("CONTRACT_INPUT_SHAPE_ONLY", report.get("releaseDecisionGateReportAcceptanceScope"));
         assertEquals(false, report.get("releaseDecisionGateReportAcceptanceIsRealStateMachineRelease"));
         assertEquals(false, report.get("releaseDecisionGateReportAcceptanceCanEnableWrite"));
@@ -186,6 +186,15 @@ class NimCreateStateMachineReleaseDecisionRequirementSupportTest {
         assertEquals(false, failure.get("fallbackToReleaseDecisionGatePlanAllowed"));
         assertEquals(false, failure.get("fallbackToCallerReleaseDecisionAllowed"));
         assertEquals(false, failure.get("fallbackToDurableExecutorHandoffAllowed"));
+        @SuppressWarnings("unchecked")
+        List<String> failureStatuses = (List<String>) failure.get("failureStatuses");
+        assertEquals(NimCreateStateMachineReleaseDecisionRequirementSupport.stateMachineRequirementFailureStatuses(),
+            failureStatuses);
+
+        @SuppressWarnings("unchecked")
+        List<String> forbiddenShortcuts = (List<String>) plan.get("forbiddenShortcuts");
+        assertEquals(NimCreateStateMachineReleaseDecisionRequirementSupport.stateMachineRequirementForbiddenShortcuts(),
+            forbiddenShortcuts);
 
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
