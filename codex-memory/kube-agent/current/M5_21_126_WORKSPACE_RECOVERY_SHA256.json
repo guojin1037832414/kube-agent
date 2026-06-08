@@ -1,0 +1,58 @@
+﻿{
+    "project":  "kube-agent",
+    "wave":  "M5.21-126",
+    "title":  "NIM release decision gate failure/shortcut lists closed",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "head":  "09638c3538a249b8a12b52aa62ca11ada902a847",
+    "recoveryHome":  "codex-memory/kube-agent/current",
+    "pushed":  true,
+    "generatedAt":  "2026-06-08T16:14:56.6581596+08:00",
+    "teachingMap":  "docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+    "files":  [
+                  {
+                      "source":  "CHANGELOG.md",
+                      "savedAs":  "CHANGELOG.md",
+                      "sha256":  "CD8758CE62C70BE2EAED71372A598FD05316BC977F6743FEE0C75E0CA672FF2B"
+                  },
+                  {
+                      "source":  "docs\\INDEX.md",
+                      "savedAs":  "docs_INDEX.md",
+                      "sha256":  "D37839DE71FCB099F78EBE970D76026BA8141AC790E5753493185D49CFBE87A7"
+                  },
+                  {
+                      "source":  "docs\\AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "savedAs":  "docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "F23290DDF632717273F1CDD9D351CE25D6FFF3E328CA621936C10CDA7561FD8D"
+                  },
+                  {
+                      "source":  "docs\\M5_21_WAVE_INDEX_20260606.md",
+                      "savedAs":  "docs_M5_21_WAVE_INDEX_20260606.md",
+                      "sha256":  "06413B8132D639744106DA7587EA19E34F2ECDECD320B06D0053CB01682233FC"
+                  },
+                  {
+                      "source":  "docs\\PROJECT_MISSION_AND_MEMORY.md",
+                      "savedAs":  "docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "FB4E8FEED895164584571C930B8D3159C95651C041D058C4AE12C79B0CAF6FA5"
+                  },
+                  {
+                      "source":  "docs\\SESSION_PROGRESS_20260606_M521_29.md",
+                      "savedAs":  "docs_SESSION_PROGRESS_20260606_M521_29.md",
+                      "sha256":  "24FB3837603B66A4EA7B34597B3C086894565CBDBE382B8D497A1F63A06A0650"
+                  },
+                  {
+                      "source":  "docs\\v3.1\\DEVELOPMENT_GUIDE.md",
+                      "savedAs":  "docs_v3.1_DEVELOPMENT_GUIDE.md",
+                      "sha256":  "279DFA42AC8201780AE3D9ED23C228C0E0984CC7C7207484B2CDFFD8F24310D4"
+                  },
+                  {
+                      "source":  "docs\\M5_21_ONE_HUNDRED_TWENTY_SIXTH_WAVE_NIM_RELEASE_DECISION_GATE_FAILURE_SHORTCUT_LISTS_CLOSED_AUDIT_20260608.md",
+                      "savedAs":  "docs_M5_21_ONE_HUNDRED_TWENTY_SIXTH_WAVE_NIM_RELEASE_DECISION_GATE_FAILURE_SHORTCUT_LISTS_CLOSED_AUDIT_20260608.md",
+                      "sha256":  "6A7A41EC745FE3A68C115862D28EC9E127BC613E45C507D45CE7BE8AA8164066"
+                  },
+                  {
+                      "source":  "codex-memory\\kube-agent\\current\\RECOVERY_STATUS.md",
+                      "savedAs":  "RECOVERY_STATUS.md",
+                      "sha256":  "74043A2E2871DC54C62D4F4FA03A4E15A5C34A6B91F60C2E655DA1ECA25380E2"
+                  }
+              ]
+}

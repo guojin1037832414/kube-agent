@@ -649,6 +649,13 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Extra future failure or shortcut values are rejected even when `migrationPlanDigest` is recomputed.
 - Learning distinction: if multiple downstream consumers accept the same proof object, every current consumer must validate the same closed protocol vocabulary. A digest-consistent JSON append is still unsafe unless reviewed source code owns the new vocabulary.
 
+### M5.21-126 release decision gate failure/shortcut lists closed note
+
+- Durable audit release decision gate generation now exposes source-owned closed lists for release gate failure statuses and forbidden shortcuts.
+- State-machine release decision requirement validation requires exact equality for both M5.21-59 release-gate-owned lists.
+- Extra future failure or shortcut values are rejected even when `releaseDecisionGatePlanDigest` is recomputed.
+- Learning distinction: release-proof protocol version skew should fail closed. Strict producer/consumer coupling is safer than accepting unreviewed authority-shaped vocabulary near the write-release boundary.
+
 ### Architecture and technical learning map note
 
 - Maintain `docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md` as the long-lived architecture and technical-learning map.
