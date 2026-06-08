@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-116, NIM release decision required fields closed list.
+- Current latest wave: M5.21-117, NIM validation result required fields closed list.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -48,6 +48,21 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-117 NIM validation result required fields closed list is implemented:
+  - Hardened `src/main/java/com/atlas/tool/impl/NimCreateDurableAuditReleaseDecisionContractSupport.java`.
+  - M5.21-70 `validationResultContract.requiredFutureEvidenceDigestFields` must now exactly match the source-owned validation result evidence field list before release decision planning accepts validation result evidence.
+  - Added a digest-consistent forged validation result contract regression that appends `forgedValidationResultFutureEvidenceDigest`, recomputes `validationResultContractDigest`, and still expects release decision contract rejection.
+  - Added `docs/M5_21_ONE_HUNDRED_SEVENTEENTH_WAVE_NIM_VALIDATION_RESULT_REQUIRED_FIELDS_CLOSED_LIST_AUDIT_20260608.md`.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimCreateDurableAuditReleaseDecisionContractSupportTest#releaseDecision_shouldRejectDigestConsistentValidationResultExtraFutureEvidenceField" test`
+  - Final verification passed:
+    - `mvn -q "-Dtest=NimCreateDurableAuditReleaseDecisionContractSupportTest" test`
+    - `git diff --check`
+    - `mvn -q test`
+    - Full Maven note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - No real `8100` access; no real NIM service HTTP call; no Authorization header sending; no durable audit write; no deployment POST; no runtime write behavior opened; no state-machine release binding implementation; no durable executor release binding implementation; no validation result signer; no release decision signer; no code release switch implementation; no Elasticsearch; no `ISysLogService`; no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Next recommended slice: continue closing any remaining future-proof field lists that still use superset acceptance, or continue release-binding proof design without opening writes.
 
 - M5.21-116 NIM release decision required fields closed list is implemented:
   - Hardened `src/main/java/com/atlas/tool/impl/NimCreateDurableAuditCodeReleaseSwitchContractSupport.java`.

@@ -332,7 +332,7 @@ final class NimCreateDurableAuditReleaseDecisionContractSupport {
             && "SERVER_SESSION_CONTEXT".equals(text(identity.get("source")))
             && Boolean.TRUE.equals(identity.get("protectedFromCallerParams"))
             && evidenceBindingValid(report, evidence)
-            && requiredFutureFields.containsAll(requiredValidationResultDigestFields())
+            && requiredFutureFields.equals(requiredValidationResultDigestFields())
             && VALIDATION_NOT_RUN.equals(text(template.get("validationStatus")))
             && Boolean.FALSE.equals(template.get("enhancedMigrationDigestVerified"))
             && Boolean.FALSE.equals(template.get("probeBindingDigestVerified"))
