@@ -10,7 +10,29 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.30-3
+## Latest Phase 1 Core Memory - M5.31-1
+
+M5.31-1 turns the durable audit line from "can write evidence" into "can query durable evidence" for the first time.
+
+Delivered:
+
+- `JsonlAgentAuditQueryService` reads redacted `agent-audit-durable.v1` JSONL records newest-first.
+- The existing `InMemoryAgentAuditRecorder` stays the primary Spring query facade and falls back to memory when JSONL is disabled or unavailable.
+- When durable JSONL is enabled and the file exists, admin `auditId` / `traceId` lookup now uses JSONL instead of only the in-memory ring buffer.
+- `auditId` lookup can return the multi-phase evidence chain for the same audit id, including `PRE_EXECUTION/PREPARED` and `FINAL`.
+- JSONL query metadata exposes backend type, scan direction, max scan records, availability, retention, and privacy flags.
+
+Security and learning point:
+
+- The durable query read model still returns only redacted evidence. It does not expose raw principal, organization, conversation, endpoint strings, reason text, or parameter values.
+- A top-tier Agent needs evidence that survives process restart; otherwise replay, red-team evaluation, incident review, and future write-release gates are too fragile.
+- This slice still does not call real kube-manager write/create/delete/state-changing APIs.
+
+Latest verified command:
+
+- `mvn -q "-Dtest=JsonlAgentAuditDurableSinkTest,AgentAuditRecorderTest,ObservabilityControllerTest" test`
+
+## Previous Phase 1 Core Memory - M5.30-3
 
 M5.30-3 closed an important top-tier Agent safety gap in the durable audit line.
 

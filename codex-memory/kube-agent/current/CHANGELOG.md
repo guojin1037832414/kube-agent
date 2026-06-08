@@ -6,6 +6,20 @@
 
 ---
 
+## [M5.31-1] - JSONL durable audit query read model
+
+**Delivery**: Added the first JSONL-backed redacted audit query read model so admin audit lookup can recover durable evidence across process restarts when durable JSONL audit is enabled.
+**Changes**
+- Added `JsonlAgentAuditQueryService` as a bounded newest-first JSONL scan implementation behind the existing audit query contract.
+- Kept `InMemoryAgentAuditRecorder` as the primary query facade while automatically preferring the JSONL read model when durable evidence is enabled and available.
+- Updated `auditId` query semantics for JSONL to return the multi-phase evidence chain, including `PRE_EXECUTION/PREPARED` and `FINAL` records for the same audit id.
+- Added JSONL query metadata for backend type, scan direction, max scan records, availability, durable retention, and privacy flags.
+**Verification**
+- `mvn -q "-Dtest=JsonlAgentAuditDurableSinkTest,AgentAuditRecorderTest,ObservabilityControllerTest" test` passed.
+**Security**
+- JSONL query results are still redacted: no raw principal, organization, conversation, endpoint string, reason text, or parameter value is exposed.
+- The read model is admin-facing only through the existing observability audit endpoints and does not introduce any kube-manager write or state-changing behavior.
+
 ## [M5.30-3] - Durable audit prewrite receipt gate
 
 **Delivery**: Closed the high-risk audit durability race by requiring a concrete durable pre-execution receipt before `SafeToolExecutor` can call a high-risk Tool.

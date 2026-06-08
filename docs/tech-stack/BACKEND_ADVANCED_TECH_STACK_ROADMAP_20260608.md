@@ -276,3 +276,15 @@ M5.30-2 adds the first admin-only redacted audit query read model:
 - Query responses intentionally omit raw principal, organization, conversation, endpoint strings, reason text, and parameter values.
 
 Next audit storage upgrades should replace the in-memory query backend with JSONL scan, PostgreSQL/search index, retention metadata, export controls, and frontend replay timeline DTOs.
+
+## M5.31-1 Update - JSONL Durable Audit Query
+
+M5.31-1 delivers the next audit storage upgrade without changing the public admin API:
+
+- `JsonlAgentAuditQueryService` reads the redacted durable JSONL evidence stream.
+- `InMemoryAgentAuditRecorder` remains the primary `AgentAuditQueryService` facade and automatically prefers JSONL lookup when durable JSONL is enabled and available.
+- `auditId` lookup can now return the multi-phase evidence chain for a high-risk action: `PRE_EXECUTION/PREPARED` plus `FINAL`.
+- `traceId` lookup can recover durable evidence newest-first, which is the first backend step toward frontend replay timeline and Agent eval reports.
+- Query metadata now distinguishes `backend=jsonl-reverse-scan` from `backend=in-memory-ring-buffer`.
+
+This is still a bounded first-stage implementation. The next advanced storage steps are retention/export policy, database/search indexing, and replay timeline DTOs. The important Phase 1 lesson is that top-tier Agent evidence must be recoverable after process restart; otherwise audit, replay, and red-team evaluation are too dependent on volatile memory.

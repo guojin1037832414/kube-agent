@@ -208,3 +208,20 @@ M5.30-3 进一步证明 Java / Spring 作为主控制平面仍然是正确选择
 后端 Java 主语言不是短板，短板在于标准安全入口、持久审计、trace/audit/eval、HTTP outlet 细粒度治理、RAG/Memory 和质量硬门禁还没有完全主线化。下一阶段不应重写语言栈，而应把这些能力收敛成一个可证明、可回放、可评测、可恢复的 Agent Core。
 
 学习重点：顶级 Agent 的“先进”不是把所有最新主版本一次性塞进主线，而是让最新能力被安全边界、审计证据、测试门禁和恢复记忆托住。Java/Spring 负责稳定控制面，兼容矩阵负责拥抱未来。
+
+## 2026-06-09 M5.31-1 更新
+
+M5.31-1 继续证明当前 Java / Spring 主线的价值：不用替换语言栈，就可以把 Agent Core 的证据能力往“可恢复、可回放、可评测”推进。
+
+本轮新增：
+- `JsonlAgentAuditQueryService`：基于脱敏 JSONL 的审计读侧实现。
+- `InMemoryAgentAuditRecorder @Primary`：继续作为统一查询门面，JSONL 可用时优先查持久证据，不可用时回退内存。
+- JSONL `auditId` 查询返回多阶段证据链，适配 `PRE_EXECUTION/PREPARED -> FINAL`。
+- JSONL index metadata 暴露 backend、scan direction、scan limit、available、durableRetention 和 privacy flags。
+
+技术选型判断更新：
+- 已完成：durable audit write、prewrite receipt gate、admin-only in-memory query、JSONL durable query。
+- 仍需主线推进：retention/export、database/search index、frontend replay timeline、Agent eval、CI hard gate、persistent Memory/RAG、read-only MCP schema adapter。
+- 继续放入兼容矩阵：Spring Boot 4 / Spring AI 2 / Java 21/25 / A2A / full MCP broker / GraphRAG。
+
+学习重点：顶级 Agent 的后端先进性体现在“证据链可恢复”。内存 snapshot 适合排障，持久 read model 才能支撑审计追责、红队评测、前端回放和未来受控写放行。

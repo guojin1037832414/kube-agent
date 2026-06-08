@@ -1,0 +1,89 @@
+﻿{
+    "schemaVersion":  "kube-agent-recovery-sha256.v1",
+    "milestone":  "M5.31-1",
+    "title":  "JSONL durable audit query read model",
+    "generatedAt":  "2026-06-08T21:34:29.7816837Z",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "files":  [
+                  {
+                      "path":  "CHANGELOG.md",
+                      "sha256":  "52e69a140c1a5255524465bbacf26a32281f75fc9bc2217c70aaeb615f2a5fd9",
+                      "bytes":  287752
+                  },
+                  {
+                      "path":  "ROADMAP.md",
+                      "sha256":  "8e7ed648e29b5af0557297e9de62e9fcb26167328660ebc2f7d651792fb99581",
+                      "bytes":  9581
+                  },
+                  {
+                      "path":  "docs/PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "d3372592afce0c931a02f471c09cfae8115a6911c87d2f6dc28f27b4d0338ad8",
+                      "bytes":  310512
+                  },
+                  {
+                      "path":  "docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "4a433149d1a90454e79b63a2af544f3debc5d8bcc192b7ba972973c329f1bcc8",
+                      "bytes":  79483
+                  },
+                  {
+                      "path":  "docs/tech-stack/BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "7171cb7d9088f54e03a4b1c83dd17a79760e5f83a96af23549a79424e3402d86",
+                      "bytes":  24142
+                  },
+                  {
+                      "path":  "docs/tech-stack/BACKEND_JAVA_TECH_STACK_AUDIT_20260608.md",
+                      "sha256":  "92072ad2ab525c5404b5490e7a53e2285815542a544ecef0bb1198852bfabd4e",
+                      "bytes":  18401
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/audit/JsonlAgentAuditQueryService.java",
+                      "sha256":  "db6ffd9210824638dfa5e103190ee877d2fddee04e6cc4c965426f613e05e7fc",
+                      "bytes":  7919
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/audit/InMemoryAgentAuditRecorder.java",
+                      "sha256":  "ff595bd383d4210ce92e6a9136b1d4f34c6985ed4a65c5fa2a0d079817b025c9",
+                      "bytes":  12141
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/audit/JsonlAgentAuditDurableSinkTest.java",
+                      "sha256":  "3046ea24278b9491888c9ec5fdc1d2670c9ab81e260593658bf3b4c54995817b",
+                      "bytes":  10468
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/RECOVERY_STATUS.md",
+                      "sha256":  "f678fdbb729c67d773650cc54cf224653470c193c537cf110d0d406dab486d53",
+                      "bytes":  20962
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/CHANGELOG.md",
+                      "sha256":  "52e69a140c1a5255524465bbacf26a32281f75fc9bc2217c70aaeb615f2a5fd9",
+                      "bytes":  287752
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/ROADMAP.md",
+                      "sha256":  "8e7ed648e29b5af0557297e9de62e9fcb26167328660ebc2f7d651792fb99581",
+                      "bytes":  9581
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "d3372592afce0c931a02f471c09cfae8115a6911c87d2f6dc28f27b4d0338ad8",
+                      "bytes":  310512
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "4a433149d1a90454e79b63a2af544f3debc5d8bcc192b7ba972973c329f1bcc8",
+                      "bytes":  79483
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "7171cb7d9088f54e03a4b1c83dd17a79760e5f83a96af23549a79424e3402d86",
+                      "bytes":  24142
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_JAVA_TECH_STACK_AUDIT_20260608.md",
+                      "sha256":  "92072ad2ab525c5404b5490e7a53e2285815542a544ecef0bb1198852bfabd4e",
+                      "bytes":  18401
+                  }
+              ]
+}

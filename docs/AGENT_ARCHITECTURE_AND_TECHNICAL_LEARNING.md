@@ -237,6 +237,37 @@ M5.30-3 同时收紧了风险元数据：
 
 学习重点：顶级 Agent 的持久审计不是“事后补日志”。对危险动作来说，审计证据必须成为执行许可链条的一部分。readiness 只能说明系统大概可写，receipt 才能说明“这一次动作已经留下证据”。
 
+## M5.31-1 JSONL Durable Audit Query
+
+M5.31-1 把审计读侧从“只查内存窗口”推进到“可以查持久 JSONL 证据”。
+
+```text
+ObservabilityController
+    |
+    v
+AgentAuditQueryService
+    |
+    v
+InMemoryAgentAuditRecorder (@Primary facade)
+    |
+    |-- durable JSONL available -> JsonlAgentAuditQueryService
+    |-- otherwise               -> recent in-memory ring buffer
+```
+
+关键设计：
+- `JsonlAgentAuditQueryService` 只读取 `JsonlAgentAuditDurableSink` 已写入的脱敏 durable record。
+- 查询顺序是 newest-first，方便管理员优先看到最新执行结果。
+- `auditId` 在 JSONL 后端里可能返回多条记录，因为同一个高风险动作会有 `PRE_EXECUTION/PREPARED` 和 `FINAL` 两个阶段。
+- `traceId` 查询可以返回一条 trace 下的多次 Tool / audit 证据，为后续前端 replay timeline 打底。
+- index metadata 明确返回 `backend=jsonl-reverse-scan`、`scanDirection`、`maxScanRecords`、`durableRetention`、`available` 和隐私标记。
+
+学习重点：审计写入和审计查询是两个不同模型。写入模型关注“动作发生时怎样留下证据”；查询模型关注“管理员、前端回放、红队评测怎样安全读取证据”。顶级 Agent 必须让证据跨进程恢复，否则只要服务重启，重要的安全链路就会断。
+
+当前边界：
+- JSONL scan 是第一阶段可验证读模型，不是最终大规模检索方案。
+- 后续仍需要 retention/export、数据库或搜索索引、前端 timeline DTO、Agent eval 报告和发布门禁。
+- 查询结果继续保持脱敏：不返回 raw principal、organization、conversation、endpoint、reason 或参数值。
+
 ## 一期与二期范围
 
 2026-06-08 用户明确调整优先级：HPC / Slurm / BCM 与 NIM 相关能力先暂停，统一作为二期项目再继续添加和真实化。

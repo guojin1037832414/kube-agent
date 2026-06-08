@@ -73,6 +73,58 @@ class JsonlAgentAuditDurableSinkTest {
     }
 
     @Test
+    void jsonlQueryService_shouldReadDurableRecordsWithoutRawEvidenceLeakage() {
+        Path auditFile = tempDir.resolve("audit").resolve("agent-audit-query.jsonl");
+        AgentAuditProperties properties = enabledProperties(auditFile, true);
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonlAgentAuditDurableSink sink = new JsonlAgentAuditDurableSink(properties, objectMapper);
+        JsonlAgentAuditQueryService queryService = new JsonlAgentAuditQueryService(properties, objectMapper);
+
+        sink.prewriteHighRisk(preparedSensitiveEvent());
+        sink.append(sensitiveEvent());
+
+        AgentAuditQueryResponse byAuditId =
+            queryService.findByAuditId("aud_0123456789abcdef0123456789abcdef");
+        AgentAuditQueryResponse byTraceId =
+            queryService.findByTraceId("trc_0123456789abcdef0123456789abcdef", 10);
+        String queryText = byAuditId.toString() + byTraceId.toString();
+
+        assertThat(queryService.available()).isTrue();
+        assertThat(byAuditId.index())
+            .containsEntry("backend", "jsonl-reverse-scan")
+            .containsEntry("containsRawEndpoints", false)
+            .containsEntry("containsRawParameterValues", false);
+        assertThat(byAuditId.events()).extracting(AgentAuditQueryEvent::outcome)
+            .containsExactly("BUSINESS_FAILURE", "PREPARED");
+        assertThat(byTraceId.events()).extracting(AgentAuditQueryEvent::outcome)
+            .containsExactly("BUSINESS_FAILURE", "PREPARED");
+        assertThat(queryText)
+            .contains("aud_0123456789abcdef0123456789abcdef", "trc_0123456789abcdef0123456789abcdef", "<protected>")
+            .doesNotContain("conv-secret", "user-secret", "org-secret", "secret-token-value", "/api/org-secret");
+    }
+
+    @Test
+    void recorderQuery_shouldPreferJsonlDurableReadModelWhenAvailable() {
+        Path auditFile = tempDir.resolve("audit").resolve("agent-audit-recorder-query.jsonl");
+        AgentAuditProperties properties = enabledProperties(auditFile, true);
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonlAgentAuditDurableSink sink = new JsonlAgentAuditDurableSink(properties, objectMapper);
+        JsonlAgentAuditQueryService queryService = new JsonlAgentAuditQueryService(properties, objectMapper);
+        InMemoryAgentAuditRecorder recorder = new InMemoryAgentAuditRecorder(null, sink, queryService);
+
+        recorder.prewriteHighRisk(preparedSensitiveEvent());
+        recorder.record(sensitiveEvent());
+
+        AgentAuditQueryResponse response =
+            recorder.findByTraceId("trc_0123456789abcdef0123456789abcdef", 10);
+
+        assertThat(response.index()).containsEntry("backend", "jsonl-reverse-scan");
+        assertThat(response.events()).extracting(AgentAuditQueryEvent::outcome)
+            .containsExactly("BUSINESS_FAILURE", "PREPARED");
+        assertThat(recorder.recentEvents()).hasSize(1);
+    }
+
+    @Test
     void append_shouldKeepJsonlLineIntegrityUnderConcurrentWrites() throws Exception {
         Path auditFile = tempDir.resolve("audit").resolve("agent-audit-concurrent.jsonl");
         AgentAuditProperties properties = enabledProperties(auditFile, true);

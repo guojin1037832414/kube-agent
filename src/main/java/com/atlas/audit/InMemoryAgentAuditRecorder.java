@@ -1,6 +1,8 @@
 package com.atlas.audit;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 
 import java.time.Clock;
@@ -21,6 +23,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * can be swapped later without changing SafeToolExecutor audit semantics.</p>
  */
 @Service
+@Primary
 public class InMemoryAgentAuditRecorder implements AgentAuditRecorder, AgentAuditSnapshotProvider, AgentAuditQueryService {
 
     private static final String SNAPSHOT_SCHEMA_VERSION = "agent-audit-snapshot.v1";
@@ -33,16 +36,34 @@ public class InMemoryAgentAuditRecorder implements AgentAuditRecorder, AgentAudi
     private final AtomicLong errorEvents = new AtomicLong();
     private final AgentAuditTelemetryPublisher telemetryPublisher;
     private final AgentAuditDurableSink durableSink;
+    private final JsonlAgentAuditQueryService jsonlQueryService;
 
     public InMemoryAgentAuditRecorder() {
-        this(null, AgentAuditDurableSink.noop());
+        this(null, AgentAuditDurableSink.noop(), (JsonlAgentAuditQueryService) null);
     }
 
     @Autowired
     public InMemoryAgentAuditRecorder(AgentAuditTelemetryPublisher telemetryPublisher,
+                                      AgentAuditDurableSink durableSink,
+                                      ObjectProvider<JsonlAgentAuditQueryService> jsonlQueryServiceProvider) {
+        this(
+            telemetryPublisher,
+            durableSink,
+            jsonlQueryServiceProvider != null ? jsonlQueryServiceProvider.getIfAvailable() : null
+        );
+    }
+
+    public InMemoryAgentAuditRecorder(AgentAuditTelemetryPublisher telemetryPublisher,
                                       AgentAuditDurableSink durableSink) {
+        this(telemetryPublisher, durableSink, (JsonlAgentAuditQueryService) null);
+    }
+
+    InMemoryAgentAuditRecorder(AgentAuditTelemetryPublisher telemetryPublisher,
+                               AgentAuditDurableSink durableSink,
+                               JsonlAgentAuditQueryService jsonlQueryService) {
         this.telemetryPublisher = telemetryPublisher;
         this.durableSink = durableSink != null ? durableSink : AgentAuditDurableSink.noop();
+        this.jsonlQueryService = jsonlQueryService;
     }
 
     public InMemoryAgentAuditRecorder(AgentAuditTelemetryPublisher telemetryPublisher) {
@@ -108,6 +129,9 @@ public class InMemoryAgentAuditRecorder implements AgentAuditRecorder, AgentAudi
 
     @Override
     public AgentAuditQueryResponse findByAuditId(String auditId) {
+        if (jsonlQueryAvailable()) {
+            return jsonlQueryService.findByAuditId(auditId);
+        }
         String normalizedAuditId = safeText(auditId);
         List<AgentAuditQueryEvent> matches = recentEvents().stream()
             .filter(event -> normalizedAuditId.equals(event.auditId()))
@@ -125,6 +149,9 @@ public class InMemoryAgentAuditRecorder implements AgentAuditRecorder, AgentAudi
 
     @Override
     public AgentAuditQueryResponse findByTraceId(String traceId, int maxResults) {
+        if (jsonlQueryAvailable()) {
+            return jsonlQueryService.findByTraceId(traceId, maxResults);
+        }
         String normalizedTraceId = safeText(traceId);
         int boundedMaxResults = Math.max(1, Math.min(maxResults, MAX_RECENT_EVENTS));
         List<AgentAuditQueryEvent> matches = recentEvents().stream()
@@ -148,6 +175,9 @@ public class InMemoryAgentAuditRecorder implements AgentAuditRecorder, AgentAudi
 
     @Override
     public Map<String, Object> indexMetadata() {
+        if (jsonlQueryAvailable()) {
+            return jsonlQueryService.indexMetadata();
+        }
         AgentAuditDurabilityStatus durabilityStatus = durabilityStatus();
         return Map.of(
             "schemaVersion", "agent-audit-index.v1",
@@ -161,6 +191,10 @@ public class InMemoryAgentAuditRecorder implements AgentAuditRecorder, AgentAudi
             "containsRawParameterValues", false,
             "containsRawEndpoints", false
         );
+    }
+
+    private boolean jsonlQueryAvailable() {
+        return jsonlQueryService != null && jsonlQueryService.available();
     }
 
     private Map<String, Object> replayCapabilities() {
