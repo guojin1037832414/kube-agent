@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * can be swapped later without changing SafeToolExecutor audit semantics.</p>
  */
 @Service
-public class InMemoryAgentAuditRecorder implements AgentAuditRecorder, AgentAuditSnapshotProvider {
+public class InMemoryAgentAuditRecorder implements AgentAuditRecorder, AgentAuditSnapshotProvider, AgentAuditQueryService {
 
     private static final String SNAPSHOT_SCHEMA_VERSION = "agent-audit-snapshot.v1";
     private static final int MAX_RECENT_EVENTS = 200;
@@ -99,6 +99,63 @@ public class InMemoryAgentAuditRecorder implements AgentAuditRecorder, AgentAudi
 
     public AgentAuditDurabilityStatus durabilityStatus() {
         return durableSink.status();
+    }
+
+    @Override
+    public AgentAuditQueryResponse findByAuditId(String auditId) {
+        String normalizedAuditId = safeText(auditId);
+        List<AgentAuditQueryEvent> matches = recentEvents().stream()
+            .filter(event -> normalizedAuditId.equals(event.auditId()))
+            .map(AgentAuditQueryEvent::from)
+            .toList();
+        return AgentAuditQueryResponse.of(
+            "auditId",
+            normalizedAuditId,
+            1,
+            false,
+            indexMetadata(),
+            matches
+        );
+    }
+
+    @Override
+    public AgentAuditQueryResponse findByTraceId(String traceId, int maxResults) {
+        String normalizedTraceId = safeText(traceId);
+        int boundedMaxResults = Math.max(1, Math.min(maxResults, MAX_RECENT_EVENTS));
+        List<AgentAuditQueryEvent> matches = recentEvents().stream()
+            .filter(event -> normalizedTraceId.equals(event.traceId()))
+            .limit(boundedMaxResults + 1L)
+            .map(AgentAuditQueryEvent::from)
+            .toList();
+        boolean truncated = matches.size() > boundedMaxResults;
+        List<AgentAuditQueryEvent> visibleMatches = truncated
+            ? matches.subList(0, boundedMaxResults)
+            : matches;
+        return AgentAuditQueryResponse.of(
+            "traceId",
+            normalizedTraceId,
+            boundedMaxResults,
+            truncated,
+            indexMetadata(),
+            visibleMatches
+        );
+    }
+
+    @Override
+    public Map<String, Object> indexMetadata() {
+        AgentAuditDurabilityStatus durabilityStatus = durabilityStatus();
+        return Map.of(
+            "schemaVersion", "agent-audit-index.v1",
+            "backend", "in-memory-ring-buffer",
+            "lookupFields", List.of("auditId", "traceId"),
+            "maxRecentEvents", MAX_RECENT_EVENTS,
+            "durableRetention", durabilityStatus.durableRetention(),
+            "durableStorageType", durabilityStatus.storageType(),
+            "containsRawPrincipal", false,
+            "containsRawReason", false,
+            "containsRawParameterValues", false,
+            "containsRawEndpoints", false
+        );
     }
 
     private Map<String, Object> replayCapabilities() {
@@ -191,6 +248,10 @@ public class InMemoryAgentAuditRecorder implements AgentAuditRecorder, AgentAudi
             "present", true,
             "length", reason.length()
         );
+    }
+
+    private String safeText(String value) {
+        return value != null ? value : "";
     }
 
     private void appendDurable(AgentAuditEvent event) {

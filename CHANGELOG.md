@@ -6,6 +6,22 @@
 
 ---
 
+## [M5.30-2] - Admin durable audit query API foundation
+
+**Delivery**: Added the first admin-only redacted audit query API so durable audit evidence can be safely looked up by `auditId` or `traceId` before a database/search-backed store is introduced.
+**Changes**
+- Added `AgentAuditQueryService`, `AgentAuditQueryResponse`, and `AgentAuditQueryEvent` as the read-side contract.
+- Extended `InMemoryAgentAuditRecorder` with the current in-memory `auditId` / `traceId` lookup implementation and index metadata.
+- Added `/api/agent/observability/audit/index`, `/api/agent/observability/audit/id/{auditId}`, and `/api/agent/observability/audit/trace/{traceId}`.
+- Kept the new audit query endpoints behind URL-level admin security plus method-level `@PreAuthorize`.
+**Verification**
+- `mvn -q "-Dtest=AgentAuditRecorderTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed.
+- `mvn -q "-DskipTests" validate` passed.
+- `git diff --check` passed.
+**Security**
+- Query DTOs are redacted: no raw principal, organization, conversation, endpoint string, reason text, or parameter value is returned.
+- The current index is an in-memory ring buffer view; future JSONL/database/search stores can replace it behind `AgentAuditQueryService`.
+
 ## [M5.30-1] - Durable audit storage foundation
 
 **Delivery**: Added the first durable audit foundation for top-tier Agent evidence: an optional redacted JSONL sink, explicit durability status, and a pre-execution fail-closed gate for high-risk Tool operations when durable audit is configured as mandatory.

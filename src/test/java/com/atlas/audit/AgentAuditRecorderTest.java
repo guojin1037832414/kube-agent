@@ -156,6 +156,69 @@ class AgentAuditRecorderTest {
             .containsEntry("storageType", "jsonl");
     }
 
+    @Test
+    void query_shouldFindByAuditIdAndTraceIdWithoutRawEvidenceLeakage() {
+        InMemoryAgentAuditRecorder recorder = new InMemoryAgentAuditRecorder();
+        recorder.record(new AgentAuditEvent(
+            "aud_query_sensitive",
+            java.time.Instant.EPOCH,
+            "trc_query_sensitive",
+            "conv-sensitive",
+            "user-sensitive",
+            "org-sensitive",
+            "intent",
+            "tool",
+            SafeToolExecutionSource.REACT_ENGINE,
+            "POST",
+            java.util.List.of("/api/org-sensitive/pod?token=secret-token-value"),
+            null,
+            true,
+            AgentAuditOutcome.BLOCKED,
+            false,
+            false,
+            "blocked because token=secret-token-value",
+            Map.of("count", 2, "keys", java.util.List.of(Map.of(
+                "name", "namespace",
+                "protected", false,
+                "type", "string",
+                "present", true
+            ), Map.of(
+                "name", "token",
+                "protected", true,
+                "type", "string",
+                "present", true
+            )))
+        ));
+
+        AgentAuditQueryResponse byAuditId = recorder.findByAuditId("aud_query_sensitive");
+        AgentAuditQueryResponse byTraceId = recorder.findByTraceId("trc_query_sensitive", 10);
+        String queryText = byAuditId.toString() + byTraceId.toString();
+
+        assertThat(byAuditId.schemaVersion()).isEqualTo("agent-audit-query.v1");
+        assertThat(byAuditId.events()).hasSize(1);
+        assertThat(byTraceId.events()).hasSize(1);
+        assertThat(byTraceId.index())
+            .containsEntry("backend", "in-memory-ring-buffer")
+            .containsEntry("containsRawPrincipal", false)
+            .containsEntry("containsRawEndpoints", false);
+        assertThat(queryText)
+            .contains("aud_query_sensitive", "trc_query_sensitive", "reasonSummary", "parameterSummary", "namespace", "<protected>")
+            .doesNotContain("conv-sensitive", "user-sensitive", "org-sensitive", "secret-token-value", "/api/org-sensitive");
+    }
+
+    @Test
+    void query_shouldBoundTraceResults() {
+        InMemoryAgentAuditRecorder recorder = new InMemoryAgentAuditRecorder();
+        recorder.record(event("aud_one", AgentAuditOutcome.SUCCESS));
+        recorder.record(event("aud_two", AgentAuditOutcome.BLOCKED));
+
+        AgentAuditQueryResponse response = recorder.findByTraceId("trc_test", 1);
+
+        assertThat(response.resultCount()).isEqualTo(1);
+        assertThat(response.maxResults()).isEqualTo(1);
+        assertThat(response.truncated()).isTrue();
+    }
+
     private AgentAuditEvent event(String auditId, AgentAuditOutcome outcome) {
         return new AgentAuditEvent(
             auditId,

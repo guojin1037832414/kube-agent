@@ -174,6 +174,27 @@ InMemoryAgentAuditRecorder
 - 管理员查询 API、索引、保留策略、导出和数据库/搜索存储仍是后续 Phase 1 切片。
 - 这一版的门禁发生在高风险 Tool 执行前：它能证明“没有可写持久审计时不执行危险动作”。未来若要释放真实写操作，还必须叠加 durable pre-write receipt、idempotency key、post-write readback 和管理员可查询索引，不能只依赖执行后的日志 append。
 
+M5.30-2 把持久审计从“能写入证据”推进到“管理员能安全查询证据”：
+
+```text
+ObservabilityController
+    |
+    |-- /audit/index
+    |-- /audit/id/{auditId}
+    |-- /audit/trace/{traceId}
+    v
+AgentAuditQueryService
+    |
+    v
+InMemoryAgentAuditRecorder
+    |
+    v
+AgentAuditQueryEvent / AgentAuditQueryResponse
+    (redacted read model)
+```
+
+学习重点：审计的读模型要独立设计。写入事件里可能持有原始 principal、organization、conversation、endpoint 或 reason；管理员查询接口不能把这些字段原样抛给前端，而要返回可回放、可定位、可解释、但不泄漏租户和敏感值的证据摘要。M5.30-2 当前查询最近内存事件，后续 JSONL、PostgreSQL、Elasticsearch 或安全日志后端只需要替换 `AgentAuditQueryService`。
+
 ## 一期与二期范围
 
 2026-06-08 用户明确调整优先级：HPC / Slurm / BCM 与 NIM 相关能力先暂停，统一作为二期项目再继续添加和真实化。

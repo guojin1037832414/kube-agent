@@ -85,7 +85,33 @@ After each completed chunk of meaningful work:
 
 Do not revert unrelated dirty worktree changes. If the worktree contains unrelated existing changes, only stage/commit the files belonging to the completed chunk.
 
-## Latest Phase 1 Memory - 2026-06-09 M5.30-1
+## Latest Phase 1 Memory - 2026-06-09 M5.30-2
+
+- Latest completed wave: M5.30-2 admin durable audit query API foundation.
+- M5.30-2 delivered:
+  - `AgentAuditQueryService`
+  - `AgentAuditQueryResponse`
+  - `AgentAuditQueryEvent`
+  - redacted in-memory lookup by `auditId` and `traceId`
+  - admin-only query endpoints under `/api/agent/observability/audit/**`
+  - index metadata for backend type, lookup fields, retention capability, and privacy flags
+- Security boundary:
+  - Query APIs are admin-only at both URL and method levels.
+  - Query DTOs do not return raw principal, organization, conversation, endpoint strings, reason text, or parameter values.
+  - The current query backend is still the in-memory ring buffer; durable JSONL/database/search query backends remain follow-up work.
+- Verification:
+  - `mvn -q "-Dtest=AgentAuditRecorderTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+  - `mvn -q "-DskipTests" validate`
+  - `git diff --check`
+- Next recommended Phase 1 slices:
+  - JSONL/database/search-backed audit query adapter with retention metadata;
+  - frontend replay timeline DTOs;
+  - Agent eval reports and must-block red-team suite;
+  - persistent Memory/RAG;
+  - read-only MCP schema adapter;
+  - complete OTel span/timeline mapping.
+
+## Previous Phase 1 Memory - 2026-06-09 M5.30-1
 
 - Latest completed wave: M5.30-1 durable audit storage foundation.
 - Mainline technology decision:

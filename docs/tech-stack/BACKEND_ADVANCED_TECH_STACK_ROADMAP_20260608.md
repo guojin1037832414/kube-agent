@@ -252,3 +252,15 @@ Archimedes 复核后的结论与当前路线一致：一期主线不应该把“
 - 任何失败都可恢复；
 - 任何能力都能解释它为什么安全；
 - 任何新技术都服务于 Agent 的可靠性、可控性和学习价值。
+
+## M5.30-2 Update - Admin Audit Query Read Model
+
+M5.30-2 adds the first admin-only redacted audit query read model:
+
+- `AgentAuditQueryService` is the replaceable read boundary for audit lookup.
+- `AgentAuditQueryEvent` and `AgentAuditQueryResponse` are the redacted DTO contract.
+- Current lookup supports `auditId` and `traceId` against the in-memory ring buffer.
+- `/api/agent/observability/audit/index`, `/api/agent/observability/audit/id/{auditId}`, and `/api/agent/observability/audit/trace/{traceId}` are protected by observability admin URL rules and method-level `@PreAuthorize`.
+- Query responses intentionally omit raw principal, organization, conversation, endpoint strings, reason text, and parameter values.
+
+Next audit storage upgrades should replace the in-memory query backend with JSONL scan, PostgreSQL/search index, retention metadata, export controls, and frontend replay timeline DTOs.

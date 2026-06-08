@@ -27,6 +27,7 @@ class ObservabilityControllerTest {
     private final ObservabilityController controller = new ObservabilityController(
         new AgentMetricsService(new SimpleMeterRegistry()),
         auditRecorder,
+        auditRecorder,
         new AgentPrincipalResolver(userPermissionContext)
     );
 
@@ -81,5 +82,77 @@ class ObservabilityControllerTest {
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().isSuccess()).isTrue();
         assertThat(response.getBody().getData()).containsKeys("metrics", "audit");
+    }
+
+    @Test
+    void auditQuery_shouldRequireAdminUser() {
+        ResponseEntity<ApiResponse<com.atlas.audit.AgentAuditQueryResponse>> anonymous =
+            controller.auditByAuditId("aud_missing");
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<com.atlas.audit.AgentAuditQueryResponse>> user =
+            controller.auditByTraceId("trc_missing", 10);
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void auditQuery_shouldReturnRedactedAdminResults() {
+        auditRecorder.record(new com.atlas.audit.AgentAuditEvent(
+            "aud_admin_query",
+            java.time.Instant.EPOCH,
+            "trc_admin_query",
+            "conv-sensitive",
+            "user-sensitive",
+            "org-sensitive",
+            "intent",
+            "tool",
+            com.atlas.tool.execution.SafeToolExecutionSource.GRAPH_TOOL_CALL,
+            "GET",
+            java.util.List.of("/api/org-sensitive/pod?token=secret-token-value"),
+            null,
+            false,
+            com.atlas.audit.AgentAuditOutcome.SUCCESS,
+            true,
+            true,
+            "ok token=secret-token-value",
+            java.util.Map.of("count", 1, "keys", java.util.List.of(java.util.Map.of(
+                "name", "token",
+                "protected", true,
+                "type", "string",
+                "present", true
+            )))
+        ));
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<com.atlas.audit.AgentAuditQueryResponse>> response =
+            controller.auditByTraceId("trc_admin_query", 10);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().isSuccess()).isTrue();
+        String bodyText = response.getBody().getData().toString();
+        assertThat(bodyText)
+            .contains("aud_admin_query", "trc_admin_query", "<protected>")
+            .doesNotContain("conv-sensitive", "user-sensitive", "org-sensitive", "secret-token-value", "/api/org-sensitive");
+    }
+
+    @Test
+    void auditIndex_shouldReturnMetadataForAdminUser() {
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<Map<String, Object>>> response = controller.auditIndex();
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getData())
+            .containsEntry("backend", "in-memory-ring-buffer")
+            .containsEntry("containsRawEndpoints", false);
     }
 }

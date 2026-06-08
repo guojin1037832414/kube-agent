@@ -6,7 +6,7 @@
 - Primary workspace recovery folder: `F:\gitProject\kube-agent\codex-memory\kube-agent\current`
 - Historical external memory folder: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.30-1, durable audit storage foundation.
+- Current latest wave: M5.30-2, admin durable audit query API foundation.
 - Phase update: HPC / Slurm / BCM and NIM are paused and moved to Phase 2 by user direction.
 - Phase 1 focus: deliver the top-tier Agent core through generic manager Agent foundations, safe read/query validation, non-HPC/NIM manager function coverage, Tool metadata quality, HITL/audit execution boundary, traceability, recovery, evaluation, teaching documentation, and vue-kube-manager workflow integration.
 - Phase boundary clarification: moving NIM / HPC / Slurm / BCM to Phase 2 postpones specialist domain plugins only; it does not reduce Phase 1 standards.
@@ -55,6 +55,33 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.30-2 admin durable audit query API foundation is implemented:
+  - Added the read-side audit query contract:
+    - `AgentAuditQueryService`
+    - `AgentAuditQueryResponse`
+    - `AgentAuditQueryEvent`
+  - `InMemoryAgentAuditRecorder` now supports redacted lookup by:
+    - `auditId`
+    - `traceId`
+  - Added admin-only endpoints under `/api/agent/observability/audit/**`:
+    - `GET /api/agent/observability/audit/index`
+    - `GET /api/agent/observability/audit/id/{auditId}`
+    - `GET /api/agent/observability/audit/trace/{traceId}`
+  - Security:
+    - URL-level admin matcher still protects `/api/agent/observability/**`.
+    - Each query method also has method-level `@PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")`.
+    - Query DTOs do not return raw principal, organization, conversation, endpoint string, reason text, or parameter values.
+  - Verification passed:
+    - `mvn -q "-Dtest=AgentAuditRecorderTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+    - `mvn -q "-DskipTests" validate`
+    - `git diff --check`
+  - Learning result:
+    - Top-tier Agent audit is a queryable evidence system, not a log dump. The read model must be separately designed so admins can replay evidence without leaking tenants, users, raw prompts, endpoints, or secrets.
+  - Intentional migration boundary:
+    - This slice still uses the in-memory ring buffer as the current query backend.
+    - JSONL file scan, database/search-backed index, retention jobs, export controls, and frontend replay UI remain follow-ups.
+    - No real kube-manager write/create/delete/state-changing call was enabled.
 
 - M5.30-1 durable audit storage foundation is implemented:
   - Added a small durable audit boundary:

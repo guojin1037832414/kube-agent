@@ -73,6 +73,27 @@ class AgentSecurityConfigWebMvcTest {
     }
 
     @Test
+    void observabilityAuditQueryShouldRequireAdminRole() throws Exception {
+        mockMvc.perform(get("/api/agent/observability/audit/index"))
+            .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/agent/observability/audit/id/aud_123"))
+            .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/agent/observability/audit/trace/trc_123")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
+            .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/agent/observability/audit/index")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token"))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/agent/observability/audit/id/aud_123")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token"))
+            .andExpect(status().isOk());
+    }
+
+    @Test
     void actuatorHealthIsOpenButOtherActuatorEndpointsRequireAdminRole() throws Exception {
         mockMvc.perform(get("/actuator/health"))
             .andExpect(status().isOk());
@@ -170,6 +191,21 @@ class AgentSecurityConfigWebMvcTest {
         @GetMapping("/api/agent/observability/snapshot")
         String observabilitySnapshot() {
             return "diagnostic";
+        }
+
+        @GetMapping("/api/agent/observability/audit/index")
+        String observabilityAuditIndex() {
+            return "audit-index";
+        }
+
+        @GetMapping("/api/agent/observability/audit/id/{id}")
+        String observabilityAuditId(@PathVariable String id) {
+            return id;
+        }
+
+        @GetMapping("/api/agent/observability/audit/trace/{id}")
+        String observabilityAuditTrace(@PathVariable String id) {
+            return id;
         }
 
         @GetMapping("/actuator/health")
