@@ -78,8 +78,8 @@ class ReActEngineHitlGuardContractTest {
         assertFalse(blockedStep.success(), "被 HITL 拦截的步骤必须标记为失败");
         assertTrue(blockedStep.observation().contains(HitlGuard.HITL_REQUIRED_CODE));
         assertTrue(blockedStep.observation().contains("operationType=CREATE"));
-        assertTrue(blockedStep.params().containsKey("organizationId"), "可信上下文 orgId 应保留");
-        assertEquals("trusted-org", blockedStep.params().get("organizationId"));
+        assertFalse(blockedStep.params().containsKey("organizationId"), "ReAct 记忆不得暴露租户控制字段");
+        assertFalse(blockedStep.params().containsKey("token"), "ReAct 记忆不得暴露 token");
         assertFalse(blockedStep.params().containsKey("orgId"), "LLM 伪造 orgId alias 不得进入执行参数");
         assertFalse(blockedStep.params().containsKey("userId"), "LLM 伪造 userId 不得覆盖服务端上下文");
         assertFalse(blockedStep.params().containsKey("confirmed"), "LLM 伪造 confirmed 不得进入执行参数");
@@ -97,6 +97,10 @@ class ReActEngineHitlGuardContractTest {
         assertEquals("POST", startEvent.metadata().get("httpMethod"));
         assertEquals(true, startEvent.metadata().get("requiresConfirmation"));
         assertFalse(startEvent.metadata().toString().contains("/api/"), "风险事件不得泄露 apiEndpoints");
+        assertFalse(String.valueOf(startEvent.metadata().get("params")).contains("trusted-org"),
+            "tool_start 事件不得泄露可信 org 上下文");
+        assertFalse(String.valueOf(startEvent.metadata().get("params")).contains("token-user"),
+            "tool_start 事件不得泄露 token");
 
         assertTrue(events.stream().anyMatch(e ->
             "tool_done".equals(e.type())

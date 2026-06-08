@@ -1,11 +1,16 @@
 package com.atlas.react;
 
+import com.atlas.auth.UserPermissionContext;
 import com.atlas.observability.AgentMetricsService;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.hitl.HitlGuard;
 import com.atlas.tool.core.ProtectedToolParameterFilter;
 import com.atlas.tool.core.ToolParameterNormalizer;
 import com.atlas.tool.core.ToolRegistry;
+import com.atlas.tool.execution.SafeToolExecutionRequest;
+import com.atlas.tool.execution.SafeToolExecutionResult;
+import com.atlas.tool.execution.SafeToolExecutionSource;
+import com.atlas.tool.execution.SafeToolExecutor;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -39,7 +44,7 @@ import java.util.regex.Pattern;
  *   <li>初始化 {@link ReActMemory} 与 {@link ReActPromptBuilder} 系统提示词</li>
  *   <li>while 循环驱动 LLM 推理</li>
  *   <li>每轮 LLM 输出通过正则解析为 Thought +（Action 或 Final Answer）</li>
- *   <li>若 Action：调用 {@link ToolRegistry#resolve} 执行工具，结果 JSON 序列化后作为 Observation 回注</li>
+ *   <li>若 Action：解析 Tool 风险元数据，并委托 {@link SafeToolExecutor} 安全执行，结果 JSON 序列化后作为 Observation 回注</li>
  *   <li>若 Final Answer：直接返回 {@link ReActResult}</li>
  *   <li>循环终止条件：Final Answer / 最大步数 / 重复动作 / LLM 超时</li>
  * </ol>
@@ -93,6 +98,7 @@ public class ReActEngine {
     private final ReActPromptBuilder promptBuilder;
     private final ToolParameterNormalizer parameterNormalizer;
     private final HitlGuard hitlGuard;
+    private final SafeToolExecutor safeToolExecutor;
     private final AgentMetricsService metricsService;
 
     /** LLM 超时调用专用后台线程池（daemon，避免阻塞 JVM 退出） */
@@ -102,7 +108,8 @@ public class ReActEngine {
                        ObjectMapper objectMapper,
                        ToolRegistry toolRegistry,
                        ReActPromptBuilder promptBuilder) {
-        this(chatModel, objectMapper, toolRegistry, promptBuilder, new ToolParameterNormalizer(), new HitlGuard(), null);
+        this(chatModel, objectMapper, toolRegistry, promptBuilder, new ToolParameterNormalizer(toolRegistry),
+            new HitlGuard(), new SafeToolExecutor(toolRegistry, new HitlGuard()), null);
     }
 
     @Autowired
@@ -112,6 +119,7 @@ public class ReActEngine {
                        ReActPromptBuilder promptBuilder,
                        ToolParameterNormalizer parameterNormalizer,
                        HitlGuard hitlGuard,
+                       SafeToolExecutor safeToolExecutor,
                        AgentMetricsService metricsService) {
         this.chatClient = ChatClient.builder(chatModel).build();
         this.objectMapper = objectMapper;
@@ -119,6 +127,7 @@ public class ReActEngine {
         this.promptBuilder = promptBuilder;
         this.parameterNormalizer = parameterNormalizer != null ? parameterNormalizer : new ToolParameterNormalizer();
         this.hitlGuard = hitlGuard != null ? hitlGuard : new HitlGuard();
+        this.safeToolExecutor = safeToolExecutor != null ? safeToolExecutor : new SafeToolExecutor(toolRegistry, this.hitlGuard);
         this.metricsService = metricsService;
         this.llmExecutor = Executors.newCachedThreadPool(r -> {
             Thread t = new Thread(r);
@@ -136,7 +145,8 @@ public class ReActEngine {
                 ToolRegistry toolRegistry,
                 ReActPromptBuilder promptBuilder,
                 ToolParameterNormalizer parameterNormalizer) {
-        this(chatModel, objectMapper, toolRegistry, promptBuilder, parameterNormalizer, new HitlGuard(), null);
+        this(chatModel, objectMapper, toolRegistry, promptBuilder, parameterNormalizer,
+            new HitlGuard(), new SafeToolExecutor(toolRegistry, new HitlGuard()), null);
     }
 
     /**
@@ -224,25 +234,26 @@ public class ReActEngine {
                 }
 
                 String toolName = action.toolName();
-                Map<String, Object> params = mergeInitialAndActionParams(toolName, initialParams, action.params());
+                Map<String, Object> executionParams = mergeInitialAndActionParams(toolName, initialParams, action.params());
+                Map<String, Object> timelineParams = buildTimelineParams(executionParams);
                 emitEvent(sink, ReActEvent.thinking(steps, thought));
 
                 // 5. 工具可见性检查
                 if (!toolRegistry.isVisible(toolName)) {
                     String obs = "工具 '" + toolName + "' 对当前用户不可见或不存在。请只调用可见工具列表中的工具。";
-                    memory.addStep(thought, toolName, params, obs, false, 0);
+                    memory.addStep(thought, toolName, timelineParams, obs, false, 0);
                     emitEvent(sink, ReActEvent.error(steps, obs));
                     log.warn("[ReActEngine] 调用不可见工具: {}", toolName);
                     continue;
                 }
 
                 // 6. 重复动作检测
-                if (memory.isDuplicateAction(toolName, params)) {
+                if (memory.isDuplicateAction(toolName, timelineParams)) {
                     log.warn("[ReActEngine] 检测到重复 Action: {}，强制终止循环", toolName);
                     stopReason = "duplicate_action";
                     finalAnswer = "检测到重复调用工具 '" + toolName + "'，基于已有观测结果作答。\n\n"
                         + memory.formatSummary();
-                    memory.addStep(thought, toolName, params,
+                    memory.addStep(thought, toolName, timelineParams,
                         "[重复动作，循环终止]", false, 0);
                     emitEvent(sink, ReActEvent.error(steps, "检测到重复工具调用，已终止循环并基于现有结果作答"));
                     break;
@@ -256,23 +267,34 @@ public class ReActEngine {
                 try {
                     ToolRegistry.ToolMetadata meta = toolRegistry.resolve(toolName);
                     riskMetadata = buildToolRiskMetadata(meta);
-                    emitEvent(sink, ReActEvent.toolStart(steps, toolName, params, riskMetadata));
-                    HitlGuard.Decision hitlDecision = hitlGuard.verify(toolName, meta, null);
-                    if (!hitlDecision.allowed()) {
-                        Map<String, Object> blockedResult = hitlGuard.toBlockedToolResult(hitlDecision);
+                    emitEvent(sink, ReActEvent.toolStart(steps, toolName, timelineParams, riskMetadata));
+                    SafeToolExecutionRequest request = new SafeToolExecutionRequest(
+                        meta.intentId(),
+                        executionParams,
+                        trustedString(executionParams, "userId", "anonymous"),
+                        trustedString(executionParams, "token", ""),
+                        trustedString(executionParams, "organizationId", UserPermissionContext.getCurrentOrgId()),
+                        trustedString(executionParams, "conversationId", ""),
+                        null,
+                        SafeToolExecutionSource.REACT_ENGINE
+                    );
+                    SafeToolExecutionResult executionResult = safeToolExecutor.executeIntent(request);
+                    if (!executionResult.executed()) {
+                        Map<String, Object> blockedResult = buildBlockedToolResult(executionResult);
                         observation = serializeToolResult(blockedResult);
                         toolSuccess = false;
-                        memory.addStep(thought, toolName, params, observation, false, 0);
+                        memory.addStep(thought, toolName, timelineParams, observation, false, 0);
                         emitEvent(sink, ReActEvent.toolDone(steps, toolName, false, 0, riskMetadata));
                         emitEvent(sink, ReActEvent.observation(steps, toolName, observation, false));
-                        emitEvent(sink, ReActEvent.error(steps, hitlDecision.message()));
-                        recordHitlBlockMetric(toolName, hitlDecision.message());
-                        log.warn("[ReActEngine] HITL 守卫阻止高风险工具执行: tool={}", toolName);
+                        emitEvent(sink, ReActEvent.error(steps, executionResult.answer()));
+                        recordHitlBlockMetric(toolName, executionResult.answer());
+                        log.warn("[ReActEngine] SafeToolExecutor 阻止工具执行: tool={}, reason={}", toolName, executionResult.answer());
                         continue;
                     }
-                    Map<String, Object> toolResult = meta.instance().execute(params);
+                    Map<String, Object> toolResult = executionResult.toolResult() != null
+                        ? executionResult.toolResult() : Map.of();
                     observation = serializeToolResult(toolResult);
-                    toolSuccess = isToolResultSuccess(toolResult);
+                    toolSuccess = executionResult.success();
                 } catch (Exception e) {
                     log.error("[ReActEngine] 工具执行异常: tool={}, error={}", toolName, e.getMessage(), e);
                     observation = "工具执行异常: " + e.getMessage();
@@ -290,7 +312,7 @@ public class ReActEngine {
                 emitEvent(sink, ReActEvent.observation(steps, toolName, observation, observationTruncated));
 
                 // 9. 记录记忆
-                memory.addStep(thought, toolName, params, observation, toolSuccess, toolCostMs);
+                memory.addStep(thought, toolName, timelineParams, observation, toolSuccess, toolCostMs);
                 log.info("[ReActEngine] 第 {} 轮完成，tool={}, success={}, costMs={}",
                     steps, toolName, toolSuccess, toolCostMs);
 
@@ -552,6 +574,39 @@ public class ReActEngine {
             });
         }
         return parameterNormalizer.normalize(toolName, merged);
+    }
+
+    /**
+     * 构建 ReAct 事件/记忆可展示参数。
+     *
+     * <p>执行请求可以携带 token 等可信上下文给 {@link SafeToolExecutor} 绑定 ThreadLocal，
+     * 但这些字段不应该出现在 SSE 时间线、Observation 记忆或调试面板中。这里使用同一个
+     * 受保护参数过滤器，确保“展示安全”和“执行安全”不会各自维护一份黑名单。</p>
+     */
+    private Map<String, Object> buildTimelineParams(Map<String, Object> executionParams) {
+        return ProtectedToolParameterFilter.copyWithoutProtected(executionParams);
+    }
+
+    private String trustedString(Map<String, Object> params, String key, String fallback) {
+        Object value = params != null ? params.get(key) : null;
+        if (value != null && !value.toString().isBlank()) {
+            return value.toString();
+        }
+        return fallback != null ? fallback : "";
+    }
+
+    private Map<String, Object> buildBlockedToolResult(SafeToolExecutionResult executionResult) {
+        Map<String, Object> blocked = AtlasToolResult.fail(
+            executionResult.answer() != null ? executionResult.answer() : "SafeToolExecutor 已阻止工具执行",
+            "SAFE_TOOL_EXECUTION_BLOCKED",
+            java.util.List.of("请检查登录上下文、权限、HITL 确认或 Tool 风险策略")
+        );
+        if (executionResult.answer() != null
+            && (executionResult.answer().contains(HitlGuard.HITL_REQUIRED_CODE)
+                || executionResult.answer().contains("已阻止高风险操作"))) {
+            blocked.put("errorCode", HitlGuard.HITL_REQUIRED_CODE);
+        }
+        return blocked;
     }
 
     /**

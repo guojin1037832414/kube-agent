@@ -6,6 +6,25 @@
 
 ---
 
+## [M5.22-3] - ReActEngine safe execution kernel
+
+**Delivery**: Migrated the hand-written ReAct loop from direct Tool execution into the shared `SafeToolExecutor` kernel.
+**Changes**
+- `ReActEngine` now builds `SafeToolExecutionRequest` and executes actions through `SafeToolExecutor` with `SafeToolExecutionSource.REACT_ENGINE`.
+- ReAct execution keeps trusted `token`, `organizationId`, `userId`, and `conversationId` available to the safe executor, while SSE `tool_start` events and ReAct memory store only `ProtectedToolParameterFilter`-sanitized display parameters.
+- HITL/security blocks now return structured `SAFE_TOOL_EXECUTION_BLOCKED` observations without calling the business Tool.
+- Removed `ReActEngine` from the temporary direct execute allowlist; remaining direct execution debt is now the legacy core callback and `AtlasOrchestrator` fallback.
+- Added `docs/tech-stack/BACKEND_JAVA_TECH_STACK_AUDIT_20260608.md` to answer the Java/Spring backend technology-selection audit with current official-version evidence.
+**Verification**
+- `mvn -q "-Dtest=ReActEngineHitlGuardContractTest,ReActEngineMultiStepE2ETest,ReActEngineParamMergeTest,ReActEnginePolicyTest,ReActEventRiskMetadataTest,M513HitlFailClosedContractTest,M4Px4ToolExecuteEntrypointContractTest" test` passed.
+- `mvn -q "-Dtest=SafeToolExecutorTest,M42PlanExecuteSafetyContractTest,M4Px4ToolParameterAliasContractTest,ProtectedToolParameterFilterTest,ProtectedToolParameterFilterUsageContractTest,AtlasToolCallbackTest" test` passed.
+- `mvn -q -DskipTests validate` passed.
+- `git diff --check` passed.
+**Security**
+- ReAct no longer calls `meta.instance().execute(...)` directly.
+- LLM Action JSON cannot forge trusted tenant/user/token/HITL/audit/release/write-control fields into ReAct memory, SSE events, or business Tool parameters.
+- No new real write/create/delete/state-changing kube-manager call was opened.
+
 ## [M5.22-2] - ToolCallback safe execution kernel
 
 **Delivery**: Migrated the Graph Bridge `AtlasToolCallback` path into the shared `SafeToolExecutor` kernel.

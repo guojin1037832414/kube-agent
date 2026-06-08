@@ -16,8 +16,8 @@ import static org.mockito.Mockito.mock;
 /**
  * ReActEngine 参数合并契约测试。
  *
- * <p>锁定会话级上下文（token/orgId/conversationId）能够被稳定透传到每轮 Action 参数，
- * 同时允许本轮 Action 参数覆盖同名字段。参数别名归一化本身由
+ * <p>锁定会话级上下文（token/orgId/conversationId）能够进入 SafeToolExecutor 请求，
+ * 同时不允许本轮 Action 参数覆盖受保护字段。参数别名归一化本身由
  * {@link ToolParameterNormalizer} 负责，本测试只验证 ReActEngine 在合并后会调用统一归一化器。</p>
  */
 class ReActEngineParamMergeTest {
@@ -69,6 +69,30 @@ class ReActEngineParamMergeTest {
         assertEquals("100002", merged.get("organizationId"));
         assertFalse(merged.containsKey("orgId"), "LLM Action 注入的 orgId 别名不应继续向下游传播");
         assertEquals("nginx-1", merged.get("podName"));
+    }
+
+    @Test
+    void buildTimelineParams_shouldRemoveTrustedContextBeforeEventsAndMemory() throws Exception {
+        Method method = ReActEngine.class.getDeclaredMethod("buildTimelineParams", Map.class);
+        method.setAccessible(true);
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> timeline = (Map<String, Object>) method.invoke(
+            newEngine(),
+            Map.of(
+                "token", "t1",
+                "organizationId", "100002",
+                "conversationId", "c1",
+                "userId", "u1",
+                "podName", "nginx-1"
+            )
+        );
+
+        assertEquals("nginx-1", timeline.get("podName"));
+        assertFalse(timeline.containsKey("token"));
+        assertFalse(timeline.containsKey("organizationId"));
+        assertFalse(timeline.containsKey("conversationId"));
+        assertFalse(timeline.containsKey("userId"));
     }
 
     @Test

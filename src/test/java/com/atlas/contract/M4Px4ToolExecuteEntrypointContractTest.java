@@ -93,15 +93,6 @@ class M4Px4ToolExecuteEntrypointContractTest {
      */
     private static final List<TemporaryAllowedExecuteCall> TEMPORARY_DIRECT_EXECUTE_ALLOWLIST = List.of(
         new TemporaryAllowedExecuteCall(
-            "ReActEngine 手写多步推理入口",
-            "src/main/java/com/atlas/react/ReActEngine.java",
-            "meta.instance().execute(params)",
-            "手写 ReAct 多步循环历史上直接执行 Tool，当前还承担 observation 序列化和事件流输出，直接迁移需先锁定行为基线。",
-            "注入 SafeToolExecutor，构造 SafeToolExecutionRequest，并使用 SafeToolExecutionSource.REACT_ENGINE。",
-            "P0",
-            "绕过受保护上下文字段过滤、统一 ThreadLocal 恢复和 SafeToolExecutor 的异常 notExecuted 语义。"
-        ),
-        new TemporaryAllowedExecuteCall(
             "Core AtlasToolCallback 旧入口",
             "src/main/java/com/atlas/tool/core/AtlasToolCallback.java",
             "tool.execute(params)",
@@ -207,8 +198,8 @@ class M4Px4ToolExecuteEntrypointContractTest {
     @Test
     void temporaryAllowlist_shouldDocumentReasonAndMigrationTarget() {
         assertThat(TEMPORARY_DIRECT_EXECUTE_ALLOWLIST)
-            .as("Graph Bridge AtlasToolCallback 已迁移到 SafeToolExecutor；剩余历史直接执行入口必须继续收敛")
-            .hasSize(3);
+            .as("Graph Bridge AtlasToolCallback 与 ReActEngine 已迁移到 SafeToolExecutor；剩余历史直接执行入口必须继续收敛")
+            .hasSize(2);
 
         for (TemporaryAllowedExecuteCall allowed : TEMPORARY_DIRECT_EXECUTE_ALLOWLIST) {
             assertThat(allowed.entranceName()).as(allowed.file() + " 必须说明入口名称").isNotBlank();

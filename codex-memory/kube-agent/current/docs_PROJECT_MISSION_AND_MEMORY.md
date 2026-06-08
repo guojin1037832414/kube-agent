@@ -93,10 +93,34 @@ Current track:
 
 Recently completed:
 
-`M5.22-2 ToolCallback safe execution kernel`
+`M5.22-3 ReActEngine safe execution kernel`
 
 Latest checkpoint:
 
+- Date: 2026-06-08 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.22-3 implemented:
+  - Migrated `src/main/java/com/atlas/react/ReActEngine.java` from direct `meta.instance().execute(...)` to `SafeToolExecutor`.
+  - ReAct actions now construct `SafeToolExecutionRequest` with `SafeToolExecutionSource.REACT_ENGINE`.
+  - ReAct separates trusted `executionParams` from sanitized `timelineParams`; token/org/user/conversation/HITL/audit/release/write-control fields are not exposed through ReAct memory or SSE `tool_start` metadata.
+  - Removed `ReActEngine` from the temporary direct execute allowlist.
+  - Added Java backend technology stack audit documentation at `docs/tech-stack/BACKEND_JAVA_TECH_STACK_AUDIT_20260608.md`.
+- Verification:
+  - `mvn -q "-Dtest=ReActEngineHitlGuardContractTest,ReActEngineMultiStepE2ETest,ReActEngineParamMergeTest,ReActEnginePolicyTest,ReActEventRiskMetadataTest,M513HitlFailClosedContractTest,M4Px4ToolExecuteEntrypointContractTest" test`
+  - `mvn -q "-Dtest=SafeToolExecutorTest,M42PlanExecuteSafetyContractTest,M4Px4ToolParameterAliasContractTest,ProtectedToolParameterFilterTest,ProtectedToolParameterFilterUsageContractTest,AtlasToolCallbackTest" test`
+  - `mvn -q -DskipTests validate`
+  - `git diff --check`
+- Scope boundary:
+  - Phase 1 Agent Core safety hardening only.
+  - No NIM/HPC/Slurm/BCM Phase 2 implementation was resumed.
+  - No new real write/create/delete/state-changing kube-manager call was opened.
+- Remaining direct execution debt:
+  - legacy `com.atlas.tool.core.AtlasToolCallback`.
+  - `AtlasOrchestrator` legacy fallback.
+- Next technical follow-up:
+  - Migrate the two remaining direct execution paths to `SafeToolExecutor`, then add end-to-end traceId propagation.
+
+- Previous checkpoint:
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
 - M5.22-2 implemented:

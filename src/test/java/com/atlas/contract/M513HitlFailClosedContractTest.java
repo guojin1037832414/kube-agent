@@ -120,10 +120,13 @@ class M513HitlFailClosedContractTest {
      */
     @Test
     void allKnownToolExecuteEntrances_shouldUseHitlGuardBeforeExecute() throws IOException {
-        assertGuardBeforeExecute(read(REACT_ENGINE),
-            "hitlGuard.verify(toolName, meta, null)",
-            "meta.instance().execute(params)",
-            "ReActEngine.runWithEvents");
+        String reactEngine = read(REACT_ENGINE);
+        assertThat(reactEngine)
+            .as("ReActEngine 必须委托 SafeToolExecutor，不能直接执行 BaseTool")
+            .contains("new SafeToolExecutionRequest(")
+            .contains("SafeToolExecutionSource.REACT_ENGINE")
+            .contains("safeToolExecutor.executeIntent(request)")
+            .doesNotContain("meta.instance().execute(");
 
         assertGuardBeforeExecute(read(ORCHESTRATOR),
             "hitlGuard.verifyByIntentId(toolRegistry, result.intentId(), null)",

@@ -1,0 +1,87 @@
+﻿{
+    "project":  "kube-agent",
+    "wave":  "M5.22-3",
+    "title":  "ReActEngine safe execution kernel",
+    "generatedAt":  "2026-06-08 Asia/Shanghai",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "implementationCommit":  "pending local commit for M5.22-3",
+    "pushed":  false,
+    "files":  [
+                  {
+                      "path":  "CHANGELOG.md",
+                      "sha256":  "e8d41c81bd9c7d4a1762ab9d09871746311e6a0423e43631e62a4311f598d182"
+                  },
+                  {
+                      "path":  "docs\\AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "8fa90ec8c0645754d347e799041bda6e1a78ec02ba0fc7adb3a0d3b7b4856cb4"
+                  },
+                  {
+                      "path":  "docs\\PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "c234560a4ba8b11bb4d2c35411e385cbf33cec059ee4d6f12d153969c1c15b38"
+                  },
+                  {
+                      "path":  "docs\\SESSION_PROGRESS_20260606_M521_29.md",
+                      "sha256":  "4d6803a869f87e4520ce0ebf455d9cd27a49090922c78e2deb3cc2a8bb21ff49"
+                  },
+                  {
+                      "path":  "docs\\tech-stack\\BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "cc8593c0fd1bcf82d50337587558514fbdde3cc80eccfc6e5036574eed1d5157"
+                  },
+                  {
+                      "path":  "docs\\tech-stack\\BACKEND_JAVA_TECH_STACK_AUDIT_20260608.md",
+                      "sha256":  "c9ddd7509b3da7149c095d885a86d2529d0ecb6c3ca8c52412589b941f4880e9"
+                  },
+                  {
+                      "path":  "codex-memory\\kube-agent\\current\\CHANGELOG.md",
+                      "sha256":  "e8d41c81bd9c7d4a1762ab9d09871746311e6a0423e43631e62a4311f598d182"
+                  },
+                  {
+                      "path":  "codex-memory\\kube-agent\\current\\docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "8fa90ec8c0645754d347e799041bda6e1a78ec02ba0fc7adb3a0d3b7b4856cb4"
+                  },
+                  {
+                      "path":  "codex-memory\\kube-agent\\current\\docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "c234560a4ba8b11bb4d2c35411e385cbf33cec059ee4d6f12d153969c1c15b38"
+                  },
+                  {
+                      "path":  "codex-memory\\kube-agent\\current\\docs_SESSION_PROGRESS_20260606_M521_29.md",
+                      "sha256":  "4d6803a869f87e4520ce0ebf455d9cd27a49090922c78e2deb3cc2a8bb21ff49"
+                  },
+                  {
+                      "path":  "codex-memory\\kube-agent\\current\\docs_tech-stack_BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "cc8593c0fd1bcf82d50337587558514fbdde3cc80eccfc6e5036574eed1d5157"
+                  },
+                  {
+                      "path":  "codex-memory\\kube-agent\\current\\docs_tech-stack_BACKEND_JAVA_TECH_STACK_AUDIT_20260608.md",
+                      "sha256":  "c9ddd7509b3da7149c095d885a86d2529d0ecb6c3ca8c52412589b941f4880e9"
+                  },
+                  {
+                      "path":  "codex-memory\\kube-agent\\current\\RECOVERY_STATUS.md",
+                      "sha256":  "9f4e62d4c62c0f555e6f93de77f7f5f6249d921cedac90ce3e11b08f436c83e8"
+                  },
+                  {
+                      "path":  "src\\main\\java\\com\\atlas\\react\\ReActEngine.java",
+                      "sha256":  "f24e6855cee6b2316676a01b84cf41a8a2eaf9c4f21d9cf768434ade32d8a8df"
+                  },
+                  {
+                      "path":  "src\\test\\java\\com\\atlas\\contract\\M4Px4ToolExecuteEntrypointContractTest.java",
+                      "sha256":  "788693e3053298d38d47a6388e92c706e82a6964f5c2f562bb016a565e9b5e44"
+                  },
+                  {
+                      "path":  "src\\test\\java\\com\\atlas\\contract\\M513HitlFailClosedContractTest.java",
+                      "sha256":  "7773953c4a0deedf4fff61213166a0dc09b837b864a945d135485cecaf9ccad6"
+                  },
+                  {
+                      "path":  "src\\test\\java\\com\\atlas\\react\\ReActEngineHitlGuardContractTest.java",
+                      "sha256":  "dc291ffa053857c5db41b20ec6e1a04bb8977feb35939232c90b5e53b891dfcf"
+                  },
+                  {
+                      "path":  "src\\test\\java\\com\\atlas\\react\\ReActEngineMultiStepE2ETest.java",
+                      "sha256":  "041b3c4d7a3bf39c4ff8c2faf1f2a204c8f1ecb909a2f3cd6a1eb43025e8ef88"
+                  },
+                  {
+                      "path":  "src\\test\\java\\com\\atlas\\react\\ReActEngineParamMergeTest.java",
+                      "sha256":  "a85a6db8dd972614cf2d4e6c16db8627d0376900182a1a5bf6f3519f7f161cbb"
+                  }
+              ]
+}

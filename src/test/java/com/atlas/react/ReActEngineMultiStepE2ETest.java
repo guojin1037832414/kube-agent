@@ -90,12 +90,23 @@ class ReActEngineMultiStepE2ETest {
 
         assertEquals(1, podTool.callCount(), "pod_status 应只调用一次");
         assertEquals(1, eventTool.callCount(), "event_query 应只调用一次");
-        assertEquals("test-token", podTool.lastParams().get("token"), "会话 token 必须透传到工具参数");
-        assertEquals("100002", eventTool.lastParams().get("organizationId"), "orgId 必须透传到后续工具参数");
+        assertFalse(podTool.lastParams().containsKey("token"), "token 只用于 SafeToolExecutor 绑定 ThreadLocal，不得透传给业务 Tool");
+        assertEquals("100002", eventTool.lastParams().get("organizationId"), "orgId 必须由 SafeToolExecutor 作为可信上下文补齐");
+        assertEquals("conv-1", eventTool.lastParams().get("conversationId"), "conversationId 必须由 SafeToolExecutor 作为可信上下文补齐");
         assertEquals("nginx-1", eventTool.lastParams().get("podName"));
         assertEquals("default", eventTool.lastParams().get("namespace"));
+        assertFalse(result.steps().get(0).params().containsKey("token"), "ReAct 记忆不得暴露 token");
+        assertFalse(result.steps().get(0).params().containsKey("organizationId"), "ReAct 记忆不得暴露租户控制字段");
 
         assertTrue(events.stream().anyMatch(e -> "tool_start".equals(e.type()) && "pod_status".equals(e.tool())));
+        ReActEvent podStart = events.stream()
+            .filter(e -> "tool_start".equals(e.type()) && "pod_status".equals(e.tool()))
+            .findFirst()
+            .orElseThrow();
+        assertFalse(String.valueOf(podStart.metadata().get("params")).contains("test-token"),
+            "ReAct tool_start 事件不得泄露 token");
+        assertFalse(String.valueOf(podStart.metadata().get("params")).contains("organizationId"),
+            "ReAct tool_start 事件不得泄露租户控制字段");
         assertTrue(events.stream().anyMatch(e -> "tool_done".equals(e.type()) && "event_query".equals(e.tool())));
         assertTrue(events.stream().anyMatch(e -> "observation".equals(e.type()) && e.content().contains("Back-off")));
         assertTrue(events.stream().anyMatch(e -> "content".equals(e.type()) && e.content().contains("应用进程启动后反复退出")));

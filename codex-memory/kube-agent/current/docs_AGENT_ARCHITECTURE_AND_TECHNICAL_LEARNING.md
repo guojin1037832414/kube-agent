@@ -235,6 +235,36 @@ M5.22-2 收口了 Spring AI / Graph Bridge `AtlasToolCallback` 入口：
 
 学习重点：多 Agent 架构不是“子 Agent 越多越强”。如果每个子 Agent 都能绕过统一执行边界直接调 Tool，系统会变成多个安全语义不一致的入口。顶级 Agent 的正确做法是：所有入口共享同一个执行内核，只把来源作为审计和策略扩展信息。
 
+M5.22-3 继续收口手写 `ReActEngine`：
+
+- ReAct Action 不再直接调用 `meta.instance().execute(...)`；
+- 每轮 Action 构造 `SafeToolExecutionRequest`，通过 `SafeToolExecutor` 执行，来源标记为 `REACT_ENGINE`；
+- `executionParams` 保留服务端可信上下文，供执行器绑定 ThreadLocal、补齐 `organizationId/userId/conversationId`；
+- `timelineParams` 使用 `ProtectedToolParameterFilter.copyWithoutProtected(...)` 生成，只进入 ReAct 记忆和 SSE `tool_start` 事件；
+- LLM 伪造的 `orgId/userId/token/confirmed/hitlConfirmed/auditReceipt/releaseDecision/writePermitted` 等字段不会进入业务 Tool，也不会泄露到前端时间线。
+
+学习重点：Agent 的“行动”和“展示”必须分开。执行层需要可信上下文才能访问后端，但前端时间线和 LLM 后续 Observation 不应该看到 token、租户控制字段和发布/审计控制字段。顶级 Agent 不是把所有上下文都塞给模型，而是让模型只看到完成任务所需的最小证据。
+
+当前剩余直接执行债务：
+
+- legacy `com.atlas.tool.core.AtlasToolCallback`
+- `AtlasOrchestrator` legacy fallback
+
+这两个入口收口后，`SafeToolExecutor` 才能成为一期 Agent Core 中唯一永久真实 `BaseTool.execute(...)` 边界。
+
+### Java 后端技术栈审计
+
+2026-06-08 针对“后端 Java 是否仍是最先进主语言”做了技术栈审计，结论是：Java / Spring 继续作为一期主线是合理且先进的，但升级方式必须是兼容矩阵，而不是盲目追主版本。
+
+- 当前稳定主线：`Spring Boot 3.5.14 + Spring AI 1.1.7 + Java 17`；
+- 已进入项目底座：Resilience4j、Micrometer Tracing、OpenTelemetry OTLP、Testcontainers、Maven Enforcer、Surefire/Failsafe、JaCoCo、CycloneDX SBOM、SpotBugs、GitHub Actions；
+- 兼容矩阵目标：Java 21/25、Spring Boot 4、Spring AI 2；
+- 不能直接强切的原因：当前开发机和验证主线是 Java 17，Spring Boot 4 会引入 Spring Framework 7 / Tomcat 11 / Servlet 6.1 等生态跃迁，Spring AI 2 仍需候选线兼容验证。
+
+详细审计文档：`docs/tech-stack/BACKEND_JAVA_TECH_STACK_AUDIT_20260608.md`。
+
+学习重点：顶级 Agent 的“先进”不是版本号最大，而是每个技术选择都能被测试、观测、审计、回滚和教学解释。对控制面 Agent 来说，统一执行边界、trace/audit/eval、HTTP 韧性和发布门禁，比换语言更接近真正的先进性。
+
 ### Fail-Closed
 
 当证据缺失、来源不可信、格式不完整、digest 不匹配、词表扩展未审查时，系统必须拒绝，而不是降级为“试试看”。
