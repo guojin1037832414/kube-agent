@@ -15,6 +15,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Set;
@@ -92,6 +93,12 @@ class AgentSecurityConfigWebMvcTest {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
             .andExpect(status().isForbidden());
 
+        mockMvc.perform(post("/api/agent/observability/eval/suite")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer user-token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"traceIds\":[\"trc_123\"]}"))
+            .andExpect(status().isForbidden());
+
         mockMvc.perform(get("/api/agent/observability/audit/index")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token"))
             .andExpect(status().isOk());
@@ -106,6 +113,12 @@ class AgentSecurityConfigWebMvcTest {
 
         mockMvc.perform(get("/api/agent/observability/eval/trace/trc_123")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token"))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/agent/observability/eval/suite")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"traceIds\":[\"trc_123\"]}"))
             .andExpect(status().isOk());
     }
 
@@ -232,6 +245,11 @@ class AgentSecurityConfigWebMvcTest {
         @GetMapping("/api/agent/observability/eval/trace/{id}")
         String observabilityEvalTrace(@PathVariable String id) {
             return id;
+        }
+
+        @PostMapping("/api/agent/observability/eval/suite")
+        String observabilityEvalSuite(@RequestBody String body) {
+            return body;
         }
 
         @GetMapping("/actuator/health")

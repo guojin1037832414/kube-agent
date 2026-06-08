@@ -56,6 +56,33 @@ public class AgentEvalReportService {
         );
     }
 
+    public AgentEvalSuiteResponse evaluateSuite(List<String> traceIds,
+                                                int maxResults,
+                                                int minimumScore,
+                                                boolean failOnWarnings) {
+        List<String> normalizedTraceIds = normalizeTraceIds(traceIds);
+        List<AgentEvalReportResponse> reports = normalizedTraceIds.stream()
+            .map(traceId -> evaluateTrace(traceId, maxResults))
+            .toList();
+        SuiteSummary summary = summarizeSuite(reports, normalizedTraceIds.isEmpty());
+        int boundedMinimumScore = Math.max(0, Math.min(100, minimumScore));
+        boolean pass = !normalizedTraceIds.isEmpty()
+            && summary.failedReports == 0
+            && summary.minimumScore >= boundedMinimumScore
+            && (!failOnWarnings || summary.warningReports == 0);
+        return AgentEvalSuiteResponse.of(
+            pass ? "PASS" : "FAIL",
+            pass,
+            boundedMinimumScore,
+            failOnWarnings,
+            maxResults,
+            normalizedTraceIds,
+            summary.toMap(),
+            suitePrivacy(reports),
+            reports
+        );
+    }
+
     private List<AgentEvalCheck> checks(AgentReplayTimelineResponse replay, Summary summary) {
         List<AgentEvalCheck> checks = new ArrayList<>();
         checks.add(tracePresenceCheck(replay));
@@ -69,6 +96,83 @@ public class AgentEvalReportService {
         checks.add(outcomeCheck(summary));
         checks.add(limitCheck(replay));
         return checks;
+    }
+
+    private List<String> normalizeTraceIds(List<String> traceIds) {
+        if (traceIds == null || traceIds.isEmpty()) {
+            return List.of();
+        }
+        LinkedHashSet<String> uniqueTraceIds = new LinkedHashSet<>();
+        for (String traceId : traceIds) {
+            String normalized = safeText(traceId).trim();
+            if (!normalized.isBlank()) {
+                uniqueTraceIds.add(normalized);
+            }
+        }
+        return List.copyOf(uniqueTraceIds);
+    }
+
+    private SuiteSummary summarizeSuite(List<AgentEvalReportResponse> reports, boolean emptyInput) {
+        SuiteSummary summary = new SuiteSummary();
+        summary.caseCount = reports.size();
+        summary.emptyInput = emptyInput;
+        int scoreTotal = 0;
+        int minimumScore = reports.isEmpty() ? 0 : 100;
+        for (AgentEvalReportResponse report : reports) {
+            scoreTotal += report.score();
+            minimumScore = Math.min(minimumScore, report.score());
+            if (report.pass()) {
+                summary.passedReports++;
+            } else {
+                summary.failedReports++;
+                summary.failedTraceIds.add(report.traceId());
+            }
+            if ("PASS_WITH_WARNINGS".equals(report.verdict())) {
+                summary.warningReports++;
+                summary.warningTraceIds.add(report.traceId());
+            }
+            for (AgentEvalCheck check : report.checks()) {
+                if ("FAIL".equals(check.status())) {
+                    summary.failedChecks++;
+                }
+                if ("WARN".equals(check.status())) {
+                    summary.warningChecks++;
+                }
+            }
+        }
+        summary.minimumScore = minimumScore;
+        summary.averageScore = reports.isEmpty() ? 0.0 : Math.round((scoreTotal * 100.0 / reports.size())) / 100.0;
+        return summary;
+    }
+
+    private Map<String, Object> suitePrivacy(List<AgentEvalReportResponse> reports) {
+        boolean containsRawPrincipal = reports.stream().anyMatch(report -> truthy(report.privacy(), "containsRawPrincipal"));
+        boolean containsRawOrganization = reports.stream().anyMatch(report -> truthy(report.privacy(), "containsRawOrganization"));
+        boolean containsRawConversation = reports.stream().anyMatch(report -> truthy(report.privacy(), "containsRawConversation"));
+        boolean containsRawEndpoints = reports.stream().anyMatch(report -> truthy(report.privacy(), "containsRawEndpoints"));
+        boolean containsRawReason = reports.stream().anyMatch(report -> truthy(report.privacy(), "containsRawReason"));
+        boolean containsRawParameterValues = reports.stream().anyMatch(report -> truthy(report.privacy(), "containsRawParameterValues"));
+        Map<String, Object> proof = new LinkedHashMap<>();
+        proof.put("redactedOnly", !(containsRawPrincipal
+            || containsRawOrganization
+            || containsRawConversation
+            || containsRawEndpoints
+            || containsRawReason
+            || containsRawParameterValues));
+        proof.put("containsRawPrincipal", containsRawPrincipal);
+        proof.put("containsRawOrganization", containsRawOrganization);
+        proof.put("containsRawConversation", containsRawConversation);
+        proof.put("containsRawEndpoints", containsRawEndpoints);
+        proof.put("containsRawReason", containsRawReason);
+        proof.put("containsRawParameterValues", containsRawParameterValues);
+        proof.put("deterministic", true);
+        proof.put("llmUsed", false);
+        proof.put("externalCalls", false);
+        return proof;
+    }
+
+    private boolean truthy(Map<String, Object> data, String key) {
+        return data != null && Boolean.TRUE.equals(data.get(key));
     }
 
     private AgentEvalCheck tracePresenceCheck(AgentReplayTimelineResponse replay) {
@@ -366,6 +470,36 @@ public class AgentEvalReportService {
             data.put("highRiskFinalMissingPreExecutionAuditIds", List.copyOf(highRiskFinalMissingPreExecutionAuditIds));
             data.put("executedHighRiskMissingConfirmationAuditIds", List.copyOf(executedHighRiskMissingConfirmationAuditIds));
             data.put("finalBeforePreExecutionAuditIds", List.copyOf(finalBeforePreExecutionAuditIds));
+            return data;
+        }
+    }
+
+    private static final class SuiteSummary {
+        private int caseCount;
+        private int passedReports;
+        private int failedReports;
+        private int warningReports;
+        private int failedChecks;
+        private int warningChecks;
+        private int minimumScore;
+        private double averageScore;
+        private boolean emptyInput;
+        private final List<String> failedTraceIds = new ArrayList<>();
+        private final List<String> warningTraceIds = new ArrayList<>();
+
+        private Map<String, Object> toMap() {
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("caseCount", caseCount);
+            data.put("passedReports", passedReports);
+            data.put("failedReports", failedReports);
+            data.put("warningReports", warningReports);
+            data.put("failedChecks", failedChecks);
+            data.put("warningChecks", warningChecks);
+            data.put("minimumScore", minimumScore);
+            data.put("averageScore", averageScore);
+            data.put("emptyInput", emptyInput);
+            data.put("failedTraceIds", List.copyOf(failedTraceIds));
+            data.put("warningTraceIds", List.copyOf(warningTraceIds));
             return data;
         }
     }

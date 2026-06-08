@@ -351,4 +351,71 @@ class ObservabilityControllerTest {
             .contains("aud_eval", "trc_eval", "<protected>", "confirmation:required")
             .doesNotContain("conv-sensitive", "user-sensitive", "org-sensitive", "secret-token-value", "/api/org-sensitive");
     }
+
+    @Test
+    void evalSuite_shouldRequireAdminUser() {
+        ResponseEntity<ApiResponse<AgentEvalSuiteResponse>> anonymous =
+            controller.evalSuite(new AgentEvalSuiteRequest(java.util.List.of("trc_missing"), 10, 80, true));
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentEvalSuiteResponse>> user =
+            controller.evalSuite(new AgentEvalSuiteRequest(java.util.List.of("trc_missing"), 10, 80, true));
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void evalSuite_shouldReturnRedactedGateReportForAdminUser() {
+        auditRecorder.record(new com.atlas.audit.AgentAuditEvent(
+            "aud_eval_suite",
+            java.time.Instant.parse("2026-06-09T00:00:00Z"),
+            "trc_eval_suite",
+            "conv-sensitive",
+            "user-sensitive",
+            "org-sensitive",
+            "intent",
+            "tool",
+            com.atlas.tool.execution.SafeToolExecutionSource.REACT_ENGINE,
+            "GET",
+            java.util.List.of("/api/org-sensitive/pod?token=secret-token-value"),
+            com.atlas.tool.annotation.AtlasToolMapping.OperationType.READ,
+            false,
+            com.atlas.audit.AgentAuditOutcome.SUCCESS,
+            true,
+            true,
+            "ok token=secret-token-value",
+            java.util.Map.of("count", 1, "keys", java.util.List.of(java.util.Map.of(
+                "name", "token",
+                "protected", true,
+                "type", "string",
+                "present", true
+            )))
+        ));
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentEvalSuiteResponse>> response =
+            controller.evalSuite(new AgentEvalSuiteRequest(java.util.List.of("trc_eval_suite"), 10, 80, true));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        AgentEvalSuiteResponse suite = response.getBody().getData();
+        assertThat(suite.schemaVersion()).isEqualTo("agent-eval-suite.v1");
+        assertThat(suite.gateVerdict()).isEqualTo("PASS");
+        assertThat(suite.pass()).isTrue();
+        assertThat(suite.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("deterministic", true)
+            .containsEntry("llmUsed", false)
+            .containsEntry("externalCalls", false);
+        assertThat(suite.reports()).hasSize(1);
+        String bodyText = suite.toString();
+        assertThat(bodyText)
+            .contains("aud_eval_suite", "trc_eval_suite", "<protected>")
+            .doesNotContain("conv-sensitive", "user-sensitive", "org-sensitive", "secret-token-value", "/api/org-sensitive");
+    }
 }

@@ -11,6 +11,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -127,6 +129,28 @@ public class ObservabilityController {
             return guard;
         }
         return ResponseEntity.ok(ApiResponse.ok(evalReportService.evaluateTrace(traceId, limit)));
+    }
+
+    /** Evaluate a deterministic release-gate style suite from redacted replay evidence. */
+    @PostMapping("/eval/suite")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentEvalSuiteResponse>> evalSuite(@RequestBody AgentEvalSuiteRequest request) {
+        ResponseEntity<ApiResponse<AgentEvalSuiteResponse>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        AgentEvalSuiteRequest safeRequest = request != null
+            ? request
+            : new AgentEvalSuiteRequest(java.util.List.of(), 50, 80, true);
+        int limit = safeRequest.limit() != null ? safeRequest.limit() : 50;
+        int minimumScore = safeRequest.minimumScore() != null ? safeRequest.minimumScore() : 80;
+        boolean failOnWarnings = safeRequest.failOnWarnings() == null || safeRequest.failOnWarnings();
+        return ResponseEntity.ok(ApiResponse.ok(evalReportService.evaluateSuite(
+            safeRequest.traceIds(),
+            limit,
+            minimumScore,
+            failOnWarnings
+        )));
     }
 
     private <T> ResponseEntity<ApiResponse<T>> requireAdmin() {

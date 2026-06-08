@@ -10,7 +10,31 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.33-1
+## Latest Phase 1 Core Memory - M5.34-1
+
+M5.34-1 upgrades single-trace eval into a deterministic suite-level release-gate foundation.
+
+Delivered:
+
+- Added `AgentEvalSuiteRequest` and `AgentEvalSuiteResponse`.
+- Added admin-only `POST /api/agent/observability/eval/suite`.
+- `AgentEvalReportService#evaluateSuite(...)` deduplicates trace ids, evaluates each trace through the M5.33 deterministic report path, and aggregates pass/fail/warning report counts, failed/warning check counts, minimum score, average score, failed trace ids, warning trace ids, and privacy proof.
+- Suite gates support `minimumScore` and `failOnWarnings`.
+
+Security boundary:
+
+- Suite eval is admin-only at URL and method levels.
+- Suite eval is deterministic and local: `llmUsed=false`, `externalCalls=false`.
+- Suite eval remains redacted-only and does not expose raw principal, organization, conversation, endpoint strings, reason text, or parameter values.
+- This slice adds no kube-manager write/create/delete/state-changing behavior.
+
+Learning point: a top-tier Agent needs more than a single eval report. Release readiness requires suites: many traces, consistent scoring, warning policy, minimum score, and deterministic summaries that CI or a release gate can consume without giving the evaluator any execution authority.
+
+Latest verified command:
+
+- `mvn -q "-Dtest=AgentEvalReportServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+## Previous Phase 1 Core Memory - M5.33-1
 
 M5.33-1 introduces the first deterministic Agent eval report foundation.
 

@@ -1,0 +1,77 @@
+﻿{
+    "schemaVersion":  "kube-agent-recovery-sha256.v1",
+    "generatedAt":  "2026-06-08T22:43:41.1365360Z",
+    "milestone":  "M5.34-1",
+    "title":  "Agent eval suite release-gate foundation",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "files":  [
+                  {
+                      "path":  "CHANGELOG.md",
+                      "sha256":  "4bdeef76497f6694bf519f5c4e9dcd4e36dbcea7c87ac62a5384080948df5c24"
+                  },
+                  {
+                      "path":  "docs/PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "d49ab09c65f1a7eb51b50bc1203205ba8e754de7b12e7f4b729a82e4cb3d050a"
+                  },
+                  {
+                      "path":  "docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "d2177a76745659ffc77261dc67c3358de8eb3f1fda8bb4c3e577206617609500"
+                  },
+                  {
+                      "path":  "docs/tech-stack/BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "dab1d6a2a571defe91315634dd92677e893f6975ad67b068167e8985043c2904"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentEvalReportService.java",
+                      "sha256":  "3b78255f364fab2664702a67b72433a7174ece9f14eab4e7a363c79bde6a4b4d"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentEvalSuiteRequest.java",
+                      "sha256":  "a2472aca0641eb45da5f2e83b8113c50e0d0ed603144d2ff90dbdde06c4af5c9"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentEvalSuiteResponse.java",
+                      "sha256":  "9798a9129e3b36a928d635b994932f2b2b8e00b1427ee6ea275b3dcfce1eae3a"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/ObservabilityController.java",
+                      "sha256":  "796de3aa495a69b9d85790846c7325dfcb8a9b66eed1705e505fac3b3ba9670b"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/AgentEvalReportServiceTest.java",
+                      "sha256":  "e09a61dfc04fb294ec484d63736ac37618befdce1136d45063d4885afd2dc47c"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/ObservabilityControllerTest.java",
+                      "sha256":  "6141234824f7e9b0fa224d3800b9e8298597918f7c4e54710b622fe2e6adeb62"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/ObservabilityControllerSecurityContractTest.java",
+                      "sha256":  "ceb5634a5549c2ec666fae10907d75ce44a3bde08b7584df49e1ee51c306ce91"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/auth/AgentSecurityConfigWebMvcTest.java",
+                      "sha256":  "f77fc3b4f9b5b66a2cb522f90e4b2c208f1e8d184719892355cec1e324f57e15"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/CHANGELOG.md",
+                      "sha256":  "4bdeef76497f6694bf519f5c4e9dcd4e36dbcea7c87ac62a5384080948df5c24"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "d49ab09c65f1a7eb51b50bc1203205ba8e754de7b12e7f4b729a82e4cb3d050a"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "d2177a76745659ffc77261dc67c3358de8eb3f1fda8bb4c3e577206617609500"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "dab1d6a2a571defe91315634dd92677e893f6975ad67b068167e8985043c2904"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/RECOVERY_STATUS.md",
+                      "sha256":  "ea6e49230a85534217af40ae247977dc4d390a4d90a31ccb79a66f1e48bd29f1"
+                  }
+              ]
+}

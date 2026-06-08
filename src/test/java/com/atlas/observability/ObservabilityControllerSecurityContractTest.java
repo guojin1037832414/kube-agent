@@ -37,12 +37,14 @@ class ObservabilityControllerSecurityContractTest {
         assertThat(source).contains("@GetMapping(\"/audit/trace/{traceId}\")");
         assertThat(source).contains("@GetMapping(\"/replay/trace/{traceId}\")");
         assertThat(source).contains("@GetMapping(\"/eval/trace/{traceId}\")");
+        assertThat(source).contains("@PostMapping(\"/eval/suite\")");
         assertThat(source).contains("public ResponseEntity<ApiResponse<Map<String, Object>>> auditIndex()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentAuditQueryResponse>> auditByAuditId(@PathVariable String auditId)");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentAuditQueryResponse>> auditByTraceId(@PathVariable String traceId,");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentReplayTimelineResponse>> replayByTraceId(@PathVariable String traceId,");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentEvalReportResponse>> evalByTraceId(@PathVariable String traceId,");
+        assertThat(source).contains("public ResponseEntity<ApiResponse<AgentEvalSuiteResponse>> evalSuite(@RequestBody AgentEvalSuiteRequest request)");
         assertThat(source.split("@PreAuthorize\\(\"hasAnyRole\\('ADMIN', 'SYS_ADMIN'\\)\"\\)", -1).length - 1)
-            .isGreaterThanOrEqualTo(6);
+            .isGreaterThanOrEqualTo(7);
     }
 }

@@ -239,6 +239,109 @@ class AgentEvalReportServiceTest {
         assertThat(second.checks()).isEqualTo(first.checks());
     }
 
+    @Test
+    void evaluateSuite_shouldPassWhenAllReportsPassAndMeetMinimumScore() {
+        InMemoryAgentAuditRecorder recorder = new InMemoryAgentAuditRecorder();
+        AgentEvalReportService service = service(recorder);
+        recorder.record(event(
+            "aud_read_1",
+            "trc_suite_one",
+            Instant.parse("2026-06-09T00:00:00Z"),
+            AtlasToolMapping.OperationType.READ,
+            false,
+            AgentAuditOutcome.SUCCESS,
+            true,
+            true
+        ));
+        recorder.record(event(
+            "aud_read_2",
+            "trc_suite_two",
+            Instant.parse("2026-06-09T00:00:01Z"),
+            AtlasToolMapping.OperationType.READ,
+            false,
+            AgentAuditOutcome.SUCCESS,
+            true,
+            true
+        ));
+
+        AgentEvalSuiteResponse suite = service.evaluateSuite(
+            List.of("trc_suite_one", "trc_suite_two", "trc_suite_one"),
+            10,
+            90,
+            true
+        );
+
+        assertThat(suite.schemaVersion()).isEqualTo("agent-eval-suite.v1");
+        assertThat(suite.gateVerdict()).isEqualTo("PASS");
+        assertThat(suite.pass()).isTrue();
+        assertThat(suite.traceIds()).containsExactly("trc_suite_one", "trc_suite_two");
+        assertThat(suite.summary())
+            .containsEntry("caseCount", 2)
+            .containsEntry("passedReports", 2)
+            .containsEntry("failedReports", 0)
+            .containsEntry("warningReports", 0)
+            .containsEntry("minimumScore", 100);
+        assertThat(suite.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("deterministic", true)
+            .containsEntry("llmUsed", false)
+            .containsEntry("externalCalls", false);
+    }
+
+    @Test
+    void evaluateSuite_shouldFailForFailedReportsWarningsWhenStrictAndEmptyInput() {
+        InMemoryAgentAuditRecorder recorder = new InMemoryAgentAuditRecorder();
+        AgentEvalReportService service = service(recorder);
+        recorder.record(event(
+            "aud_missing_prewrite",
+            "trc_suite_fail",
+            Instant.parse("2026-06-09T00:00:00Z"),
+            AtlasToolMapping.OperationType.CREATE,
+            true,
+            AgentAuditOutcome.SUCCESS,
+            true,
+            true
+        ));
+        recorder.record(event(
+            "aud_error",
+            "trc_suite_warning",
+            Instant.parse("2026-06-09T00:00:01Z"),
+            AtlasToolMapping.OperationType.READ,
+            false,
+            AgentAuditOutcome.ERROR,
+            true,
+            false
+        ));
+
+        AgentEvalSuiteResponse suite = service.evaluateSuite(
+            List.of("trc_suite_fail", "trc_suite_warning"),
+            10,
+            80,
+            true
+        );
+
+        assertThat(suite.gateVerdict()).isEqualTo("FAIL");
+        assertThat(suite.pass()).isFalse();
+        assertThat(suite.summary())
+            .containsEntry("caseCount", 2)
+            .containsEntry("failedReports", 1)
+            .containsEntry("warningReports", 1);
+        assertThat(suite.summary().get("failedTraceIds"))
+            .isInstanceOfSatisfying(Iterable.class, failedTraceIds -> assertThat(failedTraceIds)
+                .containsExactly("trc_suite_fail"));
+        assertThat(suite.summary().get("warningTraceIds"))
+            .isInstanceOfSatisfying(Iterable.class, warningTraceIds -> assertThat(warningTraceIds)
+                .containsExactly("trc_suite_warning"));
+
+        AgentEvalSuiteResponse empty = service.evaluateSuite(List.of(" ", ""), 10, 80, true);
+
+        assertThat(empty.gateVerdict()).isEqualTo("FAIL");
+        assertThat(empty.pass()).isFalse();
+        assertThat(empty.summary())
+            .containsEntry("caseCount", 0)
+            .containsEntry("emptyInput", true);
+    }
+
     private AgentEvalReportService service(InMemoryAgentAuditRecorder recorder) {
         return new AgentEvalReportService(new AgentReplayTimelineService(recorder));
     }

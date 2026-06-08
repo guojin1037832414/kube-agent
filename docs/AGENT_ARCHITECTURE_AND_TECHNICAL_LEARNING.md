@@ -101,6 +101,35 @@ AgentAuditQueryService
 
 学习重点：Replay timeline 是“可解释的执行语言”，Agent eval report 是“可验证的质量语言”。顶级 Agent 不是只会回答问题，而是能证明自己在身份、工具选择、HITL、审计、回放、脱敏和结果健康上都经得起回归检查。
 
+## 2026-06-09 M5.34-1 Eval Suite 发布门禁基础
+
+M5.34-1 把单条 trace eval 升级为“批量 suite”。这一步的目标是让评测不再只是管理员看一条 trace，而是能逐步成为 CI、灰度发布、红队回归和前端工作台共同使用的 release-gate 输入。
+
+```text
+Admin / Future CI
+    |
+    | POST /api/agent/observability/eval/suite
+    | { traceIds, limit, minimumScore, failOnWarnings }
+    v
+AgentEvalReportService.evaluateSuite(...)
+    |
+    |-- normalize and deduplicate traceIds
+    |-- evaluateTrace(...) for each trace
+    |-- aggregate scores/checks/privacy
+    v
+AgentEvalSuiteResponse
+```
+
+关键设计：
+
+- suite 不重新实现规则，而是复用 M5.33 的单 trace eval report，避免两套评测语义漂移。
+- `minimumScore` 让 suite 可以表达“低于多少分不允许发布”。
+- `failOnWarnings` 让团队能选择 warning 是否阻断发布；早期可以宽松，越接近生产越严格。
+- `failedTraceIds` / `warningTraceIds` 给前端和 CI 定位失败用例，不需要复制 raw audit。
+- suite 继续声明 `deterministic=true`、`llmUsed=false`、`externalCalls=false`，避免把评测器变成另一个不稳定执行体。
+
+学习重点：顶级 Agent 的 eval 要从“单点诊断”走向“套件回归”。单条 trace 能解释一次行为，suite 才能证明一批关键行为在版本演进后仍然安全、可回放、可脱敏、可评分。
+
 ## 项目定位
 
 `kube-agent` 不只是把 `kube-manager` / `vue-kube-manager` 的功能包成一个 Agent。它的目标是建设一个顶级 Kubernetes / Cloud / HPC Agent，并且把建设过程本身变成可学习、可复盘、可继续演进的教材。

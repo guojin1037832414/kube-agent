@@ -6,6 +6,21 @@
 
 ---
 
+## [M5.34-1] - Agent eval suite release-gate foundation
+
+**Delivery**: Added the first deterministic Agent eval suite API so multiple trace eval reports can become a future CI/release-gate input.
+**Changes**
+- Added `AgentEvalSuiteRequest` and `AgentEvalSuiteResponse`.
+- Added `POST /api/agent/observability/eval/suite`.
+- `AgentEvalReportService#evaluateSuite(...)` normalizes trace ids, deduplicates them, runs deterministic per-trace eval, and aggregates pass/fail/warning counts, check counts, minimum score, average score, and privacy proof.
+- Suite gate supports `minimumScore` and `failOnWarnings`.
+**Verification**
+- `mvn -q "-Dtest=AgentEvalReportServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed.
+**Security**
+- The endpoint is protected by observability admin URL rules plus method-level `@PreAuthorize`.
+- Suite eval remains read-only, deterministic, redacted-only, `llmUsed=false`, and `externalCalls=false`.
+- This slice adds no kube-manager write/create/delete/state-changing behavior and no raw audit export/download endpoint.
+
 ## [M5.33-1] - Agent eval report foundation
 
 **Delivery**: Added the first admin-only deterministic Agent eval report API built from redacted replay evidence.

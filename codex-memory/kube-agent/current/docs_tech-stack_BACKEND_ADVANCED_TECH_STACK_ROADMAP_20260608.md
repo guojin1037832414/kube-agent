@@ -350,3 +350,13 @@ References:
 - [OpenTelemetry GenAI semantic conventions](https://opentelemetry.io/docs/specs/semconv/gen-ai/)
 - [OpenAI Agents guide](https://platform.openai.com/docs/guides/agents)
 - [OpenAI trace grading](https://platform.openai.com/docs/guides/trace-grading)
+
+## M5.34-1 Update - Eval Suite As Release-Gate Input
+
+M5.34-1 turns eval into a suite-level gate foundation:
+
+- `AgentEvalSuiteRequest` accepts trace ids plus gate policy (`minimumScore`, `failOnWarnings`).
+- `AgentEvalSuiteResponse` returns aggregate pass/fail/warning counts, failed/warning trace ids, minimum score, average score, privacy proof, and embedded per-trace reports.
+- The suite reuses deterministic single-trace eval reports instead of inventing a second scoring path.
+
+This matches the current advanced Agent engineering direction: eval should be part of the control plane, not an offline afterthought. The next steps are to add curated golden cases, must-block red-team suites, CI JSON export, and eventually frontend replay/eval workbench integration.
