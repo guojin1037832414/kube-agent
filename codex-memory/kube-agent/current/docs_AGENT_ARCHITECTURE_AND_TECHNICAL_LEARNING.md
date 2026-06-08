@@ -215,6 +215,23 @@ NIM 链路明确禁止真实 Authorization、token、password、secret、NGC/NIM
 
 学习重点：对于长期 Agent 项目，文档不是附属物。文档是架构记忆、教学材料和恢复机制的一部分。
 
+## M5.21-128 最新学习笔记
+
+本轮关闭的是 code release switch contract 输出并被两个下游共同消费的两类词表：
+
+- `codeReleaseSwitchContract.failureContract.failureStatuses`
+- `codeReleaseSwitchContract.forbiddenShortcuts`
+
+关键收获：
+
+- code release switch 比 release decision 更接近真实写放行，它描述未来“代码级开关是否打开”。因此它的失败状态和禁止捷径是高权限协议词表。
+- 同一个 proof object 如果有多个当前消费者，不能只修其中一个。`NimCreateStateMachineSupport` 和 `NimCreateDurableWriteExecutorSupport` 都会消费 code switch contract，所以两边都必须做 exact equality。
+- `codeReleaseSwitchContractDigest` 仍然只是完整性绑定。攻击者或未审查代码可以追加 JSON 字段并重算 digest，因此下游还必须校验 source-owned closed vocabulary。
+- forbidden shortcut 是负面授权协议。它告诉未来实现“哪些路径永远不能当成 release approval”，不能被当作普通说明文本。
+- 本轮的测试继续使用 digest-consistent forgery：追加 fake future failure/shortcut 值，重新计算 `codeReleaseSwitchContractDigest`，仍然要求状态机和 durable executor 拒绝。
+
+学习总结：顶级 Agent 的安全链路常常不是单生产者单消费者，而是一份 proof object 被多个边界共同消费。闭合协议时要问：“当前谁会读它？”而不是只问“最重要的消费者是谁？”安全性最终由最宽松的当前消费者决定。
+
 ## M5.21-127 最新学习笔记
 
 本轮关闭的是 state-machine release requirement 自己输出的两类词表：

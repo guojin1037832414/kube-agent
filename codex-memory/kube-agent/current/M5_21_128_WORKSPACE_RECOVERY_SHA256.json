@@ -1,0 +1,59 @@
+﻿{
+    "project":  "kube-agent",
+    "wave":  "M5.21-128",
+    "title":  "NIM code switch failure/shortcut lists closed",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "head":  "93cff0d1895b4a680ef69a202da358cd56cad7e1",
+    "recoveryHome":  "codex-memory/kube-agent/current",
+    "pushed":  true,
+    "generatedAt":  "2026-06-08T16:44:27.1774364+08:00",
+    "teachingMap":  "docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+    "nextPriority":  "Scan shared proof objects with multiple consumers for subset, non-empty, or missing exact key/list validation, especially openPrerequisites, currentTemplate, and binding maps once they become release criteria.",
+    "files":  [
+                  {
+                      "source":  "CHANGELOG.md",
+                      "savedAs":  "CHANGELOG.md",
+                      "sha256":  "2396462A34B93A068CCCBB9C03E680103610FE8C88AF6DCEAFB51A68BF12C29E"
+                  },
+                  {
+                      "source":  "docs\\INDEX.md",
+                      "savedAs":  "docs_INDEX.md",
+                      "sha256":  "D37839DE71FCB099F78EBE970D76026BA8141AC790E5753493185D49CFBE87A7"
+                  },
+                  {
+                      "source":  "docs\\AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "savedAs":  "docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "619B6255A330BEBB87E4E833D45FCB174549DAD613F2AC4B7E545173149A74CC"
+                  },
+                  {
+                      "source":  "docs\\M5_21_WAVE_INDEX_20260606.md",
+                      "savedAs":  "docs_M5_21_WAVE_INDEX_20260606.md",
+                      "sha256":  "7DEAA1AD5816EE3E9B2A32CD1F4FE8872F9AF48D2F2807E0DF3B3C17E8147608"
+                  },
+                  {
+                      "source":  "docs\\PROJECT_MISSION_AND_MEMORY.md",
+                      "savedAs":  "docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "830D79EA301E822E2B7BB53104B75D9E2314E300F7B353879D4E54CE105EC181"
+                  },
+                  {
+                      "source":  "docs\\SESSION_PROGRESS_20260606_M521_29.md",
+                      "savedAs":  "docs_SESSION_PROGRESS_20260606_M521_29.md",
+                      "sha256":  "C6BE9CEEA5D2E6F028EE4C8049F1B3909F614AAF066EB65739D9EC7F75B0D94F"
+                  },
+                  {
+                      "source":  "docs\\v3.1\\DEVELOPMENT_GUIDE.md",
+                      "savedAs":  "docs_v3.1_DEVELOPMENT_GUIDE.md",
+                      "sha256":  "8D69CFEFCD4CE96B6228C2CDE70B4875175FAFB41AE141B8807F8108238E4B7C"
+                  },
+                  {
+                      "source":  "docs\\M5_21_ONE_HUNDRED_TWENTY_EIGHTH_WAVE_NIM_CODE_SWITCH_FAILURE_SHORTCUT_LISTS_CLOSED_AUDIT_20260608.md",
+                      "savedAs":  "docs_M5_21_ONE_HUNDRED_TWENTY_EIGHTH_WAVE_NIM_CODE_SWITCH_FAILURE_SHORTCUT_LISTS_CLOSED_AUDIT_20260608.md",
+                      "sha256":  "CBEB25EE531213E22066692B7D6B61E30EF889B267AD3F1BE476289530881B00"
+                  },
+                  {
+                      "source":  "codex-memory\\kube-agent\\current\\RECOVERY_STATUS.md",
+                      "savedAs":  "RECOVERY_STATUS.md",
+                      "sha256":  "182C673CBD7B53C07D73E4C6006A5C018829401EB62B02FDE190F897014FC6EE"
+                  }
+              ]
+}

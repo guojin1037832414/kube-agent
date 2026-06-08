@@ -663,6 +663,13 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - No downstream release authority is added; this prepares future state-machine or durable-executor consumers to validate the same source-owned vocabulary when they start consuming `stateMachineRequirementPlan`.
 - Learning distinction: producer-side closed lists are valuable before downstream consumption exists. They keep future release-proof protocol vocabulary from starting life as private inline strings.
 
+### M5.21-128 code switch failure/shortcut lists closed note
+
+- Code release switch contract generation now exposes source-owned closed lists for code-switch failure statuses and forbidden shortcuts.
+- State-machine and durable executor validation both require exact equality for those code-switch-owned lists.
+- Extra future failure or shortcut values are rejected even when `codeReleaseSwitchContractDigest` is recomputed.
+- Learning distinction: shared proof objects must be closed across all current consumers. A release protocol is only as strict as the loosest consumer that accepts it.
+
 ### Architecture and technical learning map note
 
 - Maintain `docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md` as the long-lived architecture and technical-learning map.
