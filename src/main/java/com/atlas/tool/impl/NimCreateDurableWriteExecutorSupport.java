@@ -510,9 +510,12 @@ final class NimCreateDurableWriteExecutorSupport {
         Map<String, Object> acceptanceRules = objectMap(contract.get("acceptanceRules"));
         Map<String, Object> failure = objectMap(contract.get("failureContract"));
         List<Map<String, Object>> matrix = listOfMaps(report.get("sourceGuardMatrix"));
+        List<Map<String, Object>> contractMatrix = listOfMaps(contract.get("sourceGuardMatrix"));
         List<String> planningSources = stringList(report.get("contractShapeSourcesAcceptedForPlanning"));
+        List<String> contractPlanningSources = stringList(contract.get("contractShapeSourcesAcceptedForPlanning"));
         List<String> forbiddenSources = stringList(report.get("forbiddenReleaseSources"));
         List<String> dangerousFields = stringList(report.get("dangerousReleaseCredentialFieldNames"));
+        List<String> contractDangerousFields = stringList(contract.get("dangerousReleaseCredentialFieldNames"));
 
         boolean valid = NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport.SOURCE_GUARD_CONTRACT_NAME.equals(
                 text(report.get("codeReleaseSwitchRuntimeSourceGuard")))
@@ -567,15 +570,29 @@ final class NimCreateDurableWriteExecutorSupport {
             && text(codeSwitchReport.get("codeReleaseSwitchContractDigest")).equals(
                 text(report.get("sourceCodeReleaseSwitchContractDigest")))
             && text(codeSwitchReport.get("sourceAuditEventDigest")).equals(text(report.get("sourceAuditEventDigest")))
+            && text(codeSwitchReport.get("trustedPrincipalDigest")).equals(text(report.get("trustedPrincipalDigest")))
+            && text(report.get("sourceRuntimeBindingContractDigest")).matches("[a-f0-9]{64}")
             && text(report.get("sourceGuardMatrixDigest")).matches("[a-f0-9]{64}")
             && text(report.get("sourceGuardMatrixDigest")).equals(digestFor(contract))
             && hasOnlyBlockerCode(report.get("blockedBy"),
                 "CODE_RELEASE_SWITCH_RUNTIME_SOURCE_GUARD_IMPLEMENTATION_HOLD")
             && "CODE_RELEASE_SWITCH_RUNTIME_SOURCE_GUARD_REQUIRED".equals(text(contract.get("contractBoundary")))
+            && NimCreateStateMachineSupport.TARGET_TOOL.equals(text(contract.get("targetTool")))
             && Boolean.TRUE.equals(contract.get("futureOnly"))
             && Boolean.FALSE.equals(contract.get("instanceAllowedNow"))
+            && NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport.BINDING_CONTRACT_NAME.equals(
+                text(contract.get("sourceRuntimeBindingContract")))
+            && text(report.get("sourceRuntimeBindingContractDigest")).equals(
+                text(contract.get("sourceRuntimeBindingContractDigest")))
+            && text(report.get("sourceCodeReleaseSwitchContractDigest")).equals(
+                text(contract.get("sourceCodeReleaseSwitchContractDigest")))
+            && text(report.get("sourceAuditEventDigest")).equals(text(contract.get("sourceAuditEventDigest")))
+            && text(report.get("trustedPrincipalDigest")).equals(text(contract.get("trustedPrincipalDigest")))
             && "PLANNING_AND_GUARD_ONLY".equals(text(contract.get("currentAcceptedSourceScope")))
             && listIsEmpty(contract.get("acceptedSourcesForCurrentRelease"))
+            && matrix.equals(contractMatrix)
+            && planningSources.equals(contractPlanningSources)
+            && dangerousFields.equals(contractDangerousFields)
             && Boolean.TRUE.equals(acceptanceRules.get("failClosed"))
             && Integer.valueOf(0).equals(acceptanceRules.get("currentReleaseSourceCount"))
             && Boolean.FALSE.equals(acceptanceRules.get("contractReportAcceptedForRelease"))

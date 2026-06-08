@@ -861,6 +861,96 @@ class NimCreateStateMachineSupportTest {
     }
 
     @Test
+    void stateMachine_shouldRejectDigestConsistentRuntimeSourceGuardMatrixDrift() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> receipt = completeAuditReceipt();
+        Map<String, Object> bodyReport = completeWriteBodyRebuildReport(audit, receipt);
+        Map<String, Object> requestSpecReport = completeWriteRequestSpecReport(audit, receipt, bodyReport);
+        Map<String, Object> handoffReport = completeWriteExecutionHandoffReport(audit, receipt, bodyReport, requestSpecReport);
+        Map<String, Object> codeSwitchReport = completeCodeReleaseSwitchContractReport(audit);
+        Map<String, Object> sourceGuardReport = withDigestConsistentRuntimeSourceGuardMatrixDrift(
+            completeCodeReleaseSwitchRuntimeSourceGuardReport(audit)
+        );
+        Map<String, Object> executorReport = completeDurableWriteExecutorReport(
+            handoffReport,
+            requestSpecReport,
+            codeSwitchReport,
+            completeCodeReleaseSwitchRuntimeSourceGuardReport(audit)
+        );
+
+        Map<String, Object> guard = NimCreateStateMachineSupport.evaluate(new NimCreateStateMachineSupport.ReadinessRequest(
+            Map.of("name", "nim-source-guard-matrix-drift"),
+            openGate(),
+            completePreview(),
+            HitlConfirmation.human("thread-1", "nim_create"),
+            audit,
+            receipt,
+            bodyReport,
+            requestSpecReport,
+            handoffReport,
+            codeSwitchReport,
+            sourceGuardReport,
+            executorReport,
+            completeReadinessPlan(),
+            completeReadinessExecutionReport(),
+            NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
+            true
+        ));
+
+        assertEquals("HELD", guard.get("state"));
+        assertEquals(false, guard.get("writePermitted"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) guard.get("blockedBy");
+        assertHasBlocker(blockers, "CODE_RELEASE_SWITCH_RUNTIME_SOURCE_GUARD_REPORT_CONTRACT_INVALID");
+        assertHasBlocker(blockers, "DURABLE_WRITE_EXECUTOR_REPORT_CONTRACT_INVALID");
+    }
+
+    @Test
+    void stateMachine_shouldRejectDigestConsistentRuntimeSourceGuardContractSourceDigestDrift() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> receipt = completeAuditReceipt();
+        Map<String, Object> bodyReport = completeWriteBodyRebuildReport(audit, receipt);
+        Map<String, Object> requestSpecReport = completeWriteRequestSpecReport(audit, receipt, bodyReport);
+        Map<String, Object> handoffReport = completeWriteExecutionHandoffReport(audit, receipt, bodyReport, requestSpecReport);
+        Map<String, Object> codeSwitchReport = completeCodeReleaseSwitchContractReport(audit);
+        Map<String, Object> sourceGuardReport = withDigestConsistentRuntimeSourceGuardContractSourceDigestDrift(
+            completeCodeReleaseSwitchRuntimeSourceGuardReport(audit)
+        );
+        Map<String, Object> executorReport = completeDurableWriteExecutorReport(
+            handoffReport,
+            requestSpecReport,
+            codeSwitchReport,
+            completeCodeReleaseSwitchRuntimeSourceGuardReport(audit)
+        );
+
+        Map<String, Object> guard = NimCreateStateMachineSupport.evaluate(new NimCreateStateMachineSupport.ReadinessRequest(
+            Map.of("name", "nim-source-guard-contract-digest-drift"),
+            openGate(),
+            completePreview(),
+            HitlConfirmation.human("thread-1", "nim_create"),
+            audit,
+            receipt,
+            bodyReport,
+            requestSpecReport,
+            handoffReport,
+            codeSwitchReport,
+            sourceGuardReport,
+            executorReport,
+            completeReadinessPlan(),
+            completeReadinessExecutionReport(),
+            NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
+            true
+        ));
+
+        assertEquals("HELD", guard.get("state"));
+        assertEquals(false, guard.get("writePermitted"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) guard.get("blockedBy");
+        assertHasBlocker(blockers, "CODE_RELEASE_SWITCH_RUNTIME_SOURCE_GUARD_REPORT_CONTRACT_INVALID");
+        assertHasBlocker(blockers, "DURABLE_WRITE_EXECUTOR_REPORT_CONTRACT_INVALID");
+    }
+
+    @Test
     void stateMachine_shouldRejectForgedRuntimeSourceGuardReleaseClaims() {
         Map<String, Object> audit = completeAuditContext();
         Map<String, Object> receipt = completeAuditReceipt();
@@ -1292,6 +1382,40 @@ class NimCreateStateMachineSupportTest {
                 Map.of()
             )
         );
+    }
+
+    private Map<String, Object> withDigestConsistentRuntimeSourceGuardMatrixDrift(Map<String, Object> sourceGuardReport) {
+        Map<String, Object> forgedReport = new java.util.LinkedHashMap<>(sourceGuardReport);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> contract = new java.util.LinkedHashMap<>(
+            (Map<String, Object>) forgedReport.get("sourceGuardContract")
+        );
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> contractMatrix = (List<Map<String, Object>>) contract.get("sourceGuardMatrix");
+        List<Map<String, Object>> forgedContractMatrix = new java.util.ArrayList<>();
+        for (Map<String, Object> row : contractMatrix) {
+            forgedContractMatrix.add(new java.util.LinkedHashMap<>(row));
+        }
+        forgedContractMatrix.removeIf(row -> "BACKEND_QUERY_OR_READBACK_RESULT".equals(row.get("source")));
+        contract.put("sourceGuardMatrix", forgedContractMatrix);
+        forgedReport.put("sourceGuardContract", contract);
+        forgedReport.put("sourceGuardMatrixDigest", sha256(contract));
+        return forgedReport;
+    }
+
+    private Map<String, Object> withDigestConsistentRuntimeSourceGuardContractSourceDigestDrift(
+        Map<String, Object> sourceGuardReport
+    ) {
+        Map<String, Object> forgedReport = new java.util.LinkedHashMap<>(sourceGuardReport);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> contract = new java.util.LinkedHashMap<>(
+            (Map<String, Object>) forgedReport.get("sourceGuardContract")
+        );
+        contract.put("sourceRuntimeBindingContractDigest", "c".repeat(64));
+        contract.put("trustedPrincipalDigest", "d".repeat(64));
+        forgedReport.put("sourceGuardContract", contract);
+        forgedReport.put("sourceGuardMatrixDigest", sha256(contract));
+        return forgedReport;
     }
 
     private Map<String, Object> completeCodeReleaseSwitchRuntimeBindingReport(Map<String, Object> audit,

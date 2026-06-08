@@ -6,6 +6,18 @@
 
 ---
 
+## [M5.21-110] - NIM runtime source guard matrix digest binding contract
+
+**Delivery**: Hardened downstream runtime source guard validation so top-level source guard mirrors, nested source guard contracts, matrix rows, and source digest fields must remain bound to the same trusted runtime source evidence.
+**Changes**
+- `NimCreateStateMachineSupport` now validates `sourceGuardContract` mirror fields for `sourceGuardMatrix`, `sourceRuntimeBindingContractDigest`, `sourceCodeReleaseSwitchContractDigest`, `sourceAuditEventDigest`, and `trustedPrincipalDigest`.
+- `NimCreateDurableWriteExecutorSupport` now applies the same source guard mirror binding before accepting future executor handoff evidence.
+- Added digest-consistent forged source guard regressions that drift nested matrix rows and nested source digests, recompute `sourceGuardMatrixDigest`, and still expect state-machine / durable-executor rejection.
+**Security**
+- This is source-governance proof hardening only; it does not open runtime writes or a real code release switch.
+- No real `8100`, real NIM service HTTP call, Authorization header sending, durable audit write, deployment POST, state-machine release binding implementation, durable executor release binding implementation, validation result signer, release decision signer, code release switch implementation, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-109] - NIM runtime source guard nested switch digest binding contract
 
 **Delivery**: Hardened runtime source guard validation so nested state-machine and durable-executor runtime bindings must point to the same code release switch contract digest as the trusted runtime binding report.

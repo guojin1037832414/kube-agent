@@ -533,3 +533,11 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - The regression mutates both nested runtime binding switch digests and recomputes `runtimeBindingContractDigest`; source guard still rejects the report because the nested consumers no longer point at the same switch proof.
 - This remains source-governance only: no candidate source is accepted for release, no state-machine write permission is enabled, and no durable executor POST is opened.
 - Learning distinction: a source guard is not just a list of forbidden sources. It also binds every future consumer path to the exact same reviewed switch digest, so state-machine and executor gates cannot drift apart.
+
+### M5.21-110 runtime source guard matrix digest binding note
+
+- `NimCreateStateMachineSupport` and `NimCreateDurableWriteExecutorSupport` now validate top-level source guard mirrors against the nested `sourceGuardContract`.
+- `sourceGuardMatrix` must match `sourceGuardContract.sourceGuardMatrix`, and planning-source / dangerous-field mirror lists must remain identical.
+- Top-level and nested `sourceRuntimeBindingContractDigest`, `sourceCodeReleaseSwitchContractDigest`, `sourceAuditEventDigest`, and `trustedPrincipalDigest` must match before the source guard is accepted as HOLD evidence.
+- The regressions mutate nested matrix rows or nested source digests and recompute `sourceGuardMatrixDigest`; both downstream consumers still reject the forged reports.
+- Learning distinction: a digest over a nested contract proves that nested object was recomputed. It does not prove the top-level mirror fields seen by downstream gates tell the same story; mirror binding closes that semantic gap.
