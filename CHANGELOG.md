@@ -6,6 +6,26 @@
 
 ---
 
+## [M5.29-4] - Session bridge endpoint authorization
+
+**Delivery**: Bridged frontend `X-Session-Id` sessions into Spring Security and moved the first authenticated non-chat Agent surfaces, `/api/agent/memory/**` and `/api/agent/mcp/**`, behind explicit `authenticated()` rules without breaking existing Bearer-token compatibility.
+**Changes**
+- Extended `AuthTokenFilter` with optional `SessionStore` support so requests without `Authorization: Bearer` can resolve `X-Session-Id` to a server-side `SessionData` snapshot and populate `SecurityContext`.
+- Preserved Bearer-token precedence: if a Bearer header is present, it remains the identity source and the filter does not fall back to `X-Session-Id`.
+- Registered the session-aware filter from `AgentSecurityConfig` and protected `/api/agent/memory/**` plus `/api/agent/mcp/**` as the first authenticated non-chat endpoints.
+- Migrated `MemoryController` identity selection to require `AgentPrincipalResolver` username instead of using raw `X-Session-Id` as the memory owner.
+- Added unit and MockMvc tests for session bridging, Bearer precedence, authenticated memory/mcp rules, and memory storage under the trusted principal instead of the raw session id.
+**Verification**
+- `mvn -q "-Dtest=AuthTokenFilterSecurityContextTest,AgentSecurityConfigContractTest,AgentSecurityConfigWebMvcTest,AgentPrincipalResolverTest,MemoryControllerTest" test` passed.
+- `mvn -q -DskipTests validate` passed.
+- `mvn -q test` passed.
+- `git diff --check` passed.
+**Security**
+- `X-Session-Id` is treated as a lookup key into server-side session state, not as a self-authorizing identity claim.
+- Invalid Bearer headers do not fall back to `X-Session-Id`, preserving a single identity authority for each request.
+- Chat/SSE/conversation endpoints remain on the incremental compatibility path until their raw session-id user binding is migrated to `AgentPrincipalResolver`.
+- Raw kube-manager tokens remain outside `Authentication.credentials` and continue to live only in the legacy compatibility context for downstream forwarding.
+
 ## [M5.29-3] - Principal-bound audit actor
 
 **Delivery**: Bound SafeToolExecutor audit actor extraction to the unified `AgentPrincipalResolver`, so audit `userId` / `organizationId` now prefer a trusted Spring Security or legacy permission snapshot instead of caller-supplied request fields.

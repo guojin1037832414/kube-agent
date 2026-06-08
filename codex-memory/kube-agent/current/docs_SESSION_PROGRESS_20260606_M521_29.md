@@ -6,7 +6,7 @@
 - Primary workspace recovery folder: `F:\gitProject\kube-agent\codex-memory\kube-agent\current`
 - Historical external memory folder: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.29-3, principal-bound audit actor.
+- Current latest wave: M5.29-4, X-Session-Id security bridge and first authenticated non-chat endpoints.
 - Phase update: HPC / Slurm / BCM and NIM are paused and moved to Phase 2 by user direction.
 - Phase 1 focus: deliver the top-tier Agent core through generic manager Agent foundations, safe read/query validation, non-HPC/NIM manager function coverage, Tool metadata quality, HITL/audit execution boundary, traceability, recovery, evaluation, teaching documentation, and vue-kube-manager workflow integration.
 - Phase boundary clarification: moving NIM / HPC / Slurm / BCM to Phase 2 postpones specialist domain plugins only; it does not reduce Phase 1 standards.
@@ -55,6 +55,34 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.29-4 X-Session-Id security bridge and first authenticated non-chat endpoints is implemented:
+  - `AuthTokenFilter` now optionally receives `SessionStore` and can bridge frontend `X-Session-Id` into Spring Security `Authentication` when no Bearer header is present.
+  - Bearer remains the higher-priority identity source. If `Authorization: Bearer ...` exists, the filter uses the Bearer path and does not silently fall back to `X-Session-Id`, even when the Bearer token is unknown.
+  - `AgentSecurityConfig` now registers `new AuthTokenFilter(userPermissionContext, sessionStore)`.
+  - `/api/agent/memory/**` and `/api/agent/mcp/**` are now explicitly `.authenticated()` as the first non-chat Agent endpoints moved behind Spring Security.
+  - `MemoryController` now requires `AgentPrincipalResolver` username for memory ownership and no longer treats raw `X-Session-Id` as an owner identity.
+  - Added/extended tests:
+    - `AuthTokenFilterSecurityContextTest` for session bridge, blank-session rejection, Bearer precedence, and invalid-Bearer no-fallback behavior.
+    - `AgentSecurityConfigWebMvcTest` for authenticated memory/mcp endpoints with Bearer and `X-Session-Id`.
+    - `AgentSecurityConfigContractTest` for source-level security matcher and filter constructor contract.
+    - `MemoryControllerTest` for trusted principal memory ownership.
+  - Verification passed:
+    - `mvn -q "-Dtest=AuthTokenFilterSecurityContextTest,AgentSecurityConfigContractTest,AgentSecurityConfigWebMvcTest,AgentPrincipalResolverTest,MemoryControllerTest" test`
+    - `mvn -q -DskipTests validate`
+    - `mvn -q test`
+    - `git diff --check`
+  - Security result:
+    - `X-Session-Id` is used only to look up server-side `SessionData`; it is not treated as a trusted username by itself.
+    - Raw kube-manager token is still not copied into `Authentication.credentials`.
+    - Existing frontend login flow remains compatible because the frontend already sends `X-Session-Id`.
+  - Intentional migration boundary:
+    - Chat/SSE/conversation endpoints are not locked in this slice because conversation ownership still uses raw `X-Session-Id` and needs a separate `AgentPrincipalResolver` migration.
+    - This keeps the app usable while endpoint authorization is moved behind Spring Security step by step.
+  - Next Phase 1 technical slices:
+    - migrate `ConversationController` and chat/SSE identity ownership from raw session id to `AgentPrincipalResolver` / server-side session data;
+    - add method-level authorization for sensitive memory, MCP, observability, and future write-adjacent operations;
+    - continue durable audit / frontend replay DTO / RAG Memory / read-only MCP / Agent eval.
 
 - M5.29-3 principal-bound audit actor is implemented:
   - `SafeToolExecutor` now optionally receives `AgentPrincipalResolver` through the Spring constructor while preserving older constructors for direct tests and legacy compatibility.

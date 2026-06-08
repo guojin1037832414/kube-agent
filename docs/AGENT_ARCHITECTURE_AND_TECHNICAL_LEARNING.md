@@ -482,6 +482,31 @@ M5.29-3 把统一 principal 真正接入 `SafeToolExecutor` 的审计事件。�
 
 学习重点：审计不是日志拼字段，而是证据链。顶级 Agent 的审计 actor 必须来自服务端可信主体快照；LLM、Graph、前端或外部协议传入的 `userId` 最多是兼容 fallback，不能成为长期权威。
 
+### M5.29-4 X-Session-Id 安全桥接与首批端点授权
+
+M5.29-1 到 M5.29-3 已经完成 Bearer -> `SecurityContext`、统一 `AgentPrincipalResolver`、审计 actor 可信快照。M5.29-4 解决另一个现实问题：现有 `vue-kube-manager` 登录后主要把 `sessionId` 放进 `X-Session-Id` header。如果直接把更多端点改成 `.authenticated()`，Spring Security 只认识 Bearer，不认识 `X-Session-Id`，前端就会被误伤。
+
+本轮做的是“会话桥接”，不是“相信 sessionId 字符串本身”：
+
+- `AuthTokenFilter` 在没有 Bearer header 时读取 `X-Session-Id`；
+- 通过 `SessionStore.findById(...)` 反查服务端 `SessionData`；
+- 用 `SessionData.username/role/permissions` 生成 `Authentication`；
+- 继续把真实 kube-manager token/orgId 绑定到 legacy `UserPermissionContext`，供 HTTP outlet 兼容转发；
+- raw token 仍不放进 `Authentication.credentials`。
+
+Bearer 优先级必须高于 `X-Session-Id`。如果请求同时带了 Bearer 和 SessionId，系统使用 Bearer 路径；如果 Bearer 无效，也不会悄悄降级成 SessionId。原因是客户端同时携带多个身份来源时，必须有清晰、可测试的权威顺序，否则会出现“某条路径按 A 用户鉴权，另一条路径按 B 用户审计”的分裂。更保守的做法是：一旦请求声明了 Bearer，就由 Bearer 决定本次请求是否认证成功。
+
+本轮首批锁定的端点是：
+
+- `/api/agent/memory/**`
+- `/api/agent/mcp/**`
+
+它们属于非聊天、非 SSE、非会话 bootstrap 的 Agent 支撑端点，比较适合作为第一批 `.authenticated()` 迁移对象。`chat/SSE/conversation` 暂不一起锁，是因为 `ConversationController` 仍把原始 `X-Session-Id` 当作 userId 分桶；直接锁 endpoint 不能解决数据归属语义，反而可能让前端流式聊天链路先坏掉。正确顺序是先桥接身份，再逐个 controller 把“谁拥有数据”迁移到 `AgentPrincipalResolver`。
+
+`MemoryController` 已经完成这个方向的第一步：长期记忆只使用 `AgentPrincipalResolver` 的 username 分桶，不再把 raw session id 当作 owner。这样同一个用户换 session 后，未来可以逐步进入“按服务端用户身份管理记忆”，而不是“按临时 session 字符串管理记忆”。
+
+学习重点：`X-Session-Id` 是客户端持有的会话索引，不是权限事实。顶级 Agent 要把它还原成服务端会话快照，再交给 Spring Security / `AgentPrincipalResolver` 使用。Web 入口授权、业务数据归属、Tool 执行边界、审计 actor 是四件不同但相互绑定的事，不能只改其中一层就宣称安全迁移完成。
+
 ### Fail-Closed
 
 当证据缺失、来源不可信、格式不完整、digest 不匹配、词表扩展未审查时，系统必须拒绝，而不是降级为“试试看”。

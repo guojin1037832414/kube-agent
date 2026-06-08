@@ -1,5 +1,6 @@
 package com.atlas.auth;
 
+import com.atlas.store.SessionStore;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -32,17 +33,19 @@ public class AgentSecurityConfig {
 
     @Bean
     SecurityFilterChain agentSecurityFilterChain(HttpSecurity http,
-                                                 UserPermissionContext userPermissionContext) throws Exception {
+                                                 UserPermissionContext userPermissionContext,
+                                                 SessionStore sessionStore) throws Exception {
         return http
             .csrf(AbstractHttpConfigurer::disable)
             .httpBasic(AbstractHttpConfigurer::disable)
             .formLogin(AbstractHttpConfigurer::disable)
             .logout(AbstractHttpConfigurer::disable)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .addFilterBefore(new AuthTokenFilter(userPermissionContext), AnonymousAuthenticationFilter.class)
+            .addFilterBefore(new AuthTokenFilter(userPermissionContext, sessionStore), AnonymousAuthenticationFilter.class)
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/agent/login", "/api/agent/logout", "/api/agent/me", "/api/agent/health").permitAll()
                 .requestMatchers("/api/agent/observability/**").hasAnyRole("ADMIN", "SYS_ADMIN")
+                .requestMatchers("/api/agent/memory/**", "/api/agent/mcp/**").authenticated()
                 .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                 .requestMatchers("/actuator/**").hasAnyRole("ADMIN", "SYS_ADMIN")
                 .anyRequest().permitAll()

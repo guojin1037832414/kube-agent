@@ -1,6 +1,7 @@
 package com.atlas.auth;
 
 import jakarta.servlet.FilterChain;
+import com.atlas.store.SessionStore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,12 +24,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 class AuthTokenFilterSecurityContextTest {
 
     private UserPermissionContext userPermissionContext;
+    private SessionStore sessionStore;
     private AuthTokenFilter filter;
 
     @BeforeEach
     void setUp() {
         userPermissionContext = new UserPermissionContext();
-        filter = new AuthTokenFilter(userPermissionContext);
+        sessionStore = new SessionStore();
+        filter = new AuthTokenFilter(userPermissionContext, sessionStore);
         clearThreadContext();
     }
 
@@ -72,6 +75,126 @@ class AuthTokenFilterSecurityContextTest {
         FilterChain chain = (servletRequest, servletResponse) -> {
             assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
             assertThat(UserPermissionContext.CURRENT_TOKEN.get()).isEqualTo("missing-token");
+        };
+
+        filter.doFilter(request, response, chain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        assertThat(UserPermissionContext.CURRENT_TOKEN.get()).isNull();
+        assertThat(UserPermissionContext.CURRENT_ORG_ID.get()).isNull();
+    }
+
+    @Test
+    void shouldBridgeSessionIdToSecurityContextWhenBearerHeaderIsMissing() throws Exception {
+        String sessionId = sessionStore.createSession(
+            "session-token",
+            "session-user",
+            "100002",
+            "admin",
+            Set.of("agent:memory:read")
+        );
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/agent/memory/summaries");
+        request.addHeader("X-Session-Id", sessionId);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        FilterChain chain = (servletRequest, servletResponse) -> {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+            assertThat(authentication).isNotNull();
+            assertThat(authentication.getName()).isEqualTo("session-user");
+            assertThat(authentication.getCredentials()).isNull();
+            assertThat(authentication.getAuthorities())
+                .extracting("authority")
+                .contains("ROLE_ADMIN", "agent:memory:read");
+            assertThat(UserPermissionContext.CURRENT_TOKEN.get()).isEqualTo("session-token");
+            assertThat(UserPermissionContext.CURRENT_ORG_ID.get()).isEqualTo("100002");
+        };
+
+        filter.doFilter(request, response, chain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        assertThat(UserPermissionContext.CURRENT_TOKEN.get()).isNull();
+        assertThat(UserPermissionContext.CURRENT_ORG_ID.get()).isNull();
+    }
+
+    @Test
+    void shouldNotAuthenticateSessionWithoutTrustedUsername() throws Exception {
+        String sessionId = sessionStore.createSession(
+            "session-token",
+            " ",
+            "100002",
+            "admin",
+            Set.of("agent:memory:read")
+        );
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/agent/memory/summaries");
+        request.addHeader("X-Session-Id", sessionId);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        FilterChain chain = (servletRequest, servletResponse) -> {
+            assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+            assertThat(UserPermissionContext.CURRENT_TOKEN.get()).isNull();
+            assertThat(UserPermissionContext.CURRENT_ORG_ID.get()).isNull();
+        };
+
+        filter.doFilter(request, response, chain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        assertThat(UserPermissionContext.CURRENT_TOKEN.get()).isNull();
+        assertThat(UserPermissionContext.CURRENT_ORG_ID.get()).isNull();
+    }
+
+    @Test
+    void bearerHeaderShouldTakePrecedenceOverSessionId() throws Exception {
+        userPermissionContext.onLogin("bearer-token", "bearer-user", "sys_admin", Set.of("agent:observe"));
+        String sessionId = sessionStore.createSession(
+            "session-token",
+            "session-user",
+            "100002",
+            "user",
+            Set.of()
+        );
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/agent/observability/snapshot");
+        request.addHeader("Authorization", "Bearer bearer-token");
+        request.addHeader("X-Session-Id", sessionId);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        FilterChain chain = (servletRequest, servletResponse) -> {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+            assertThat(authentication).isNotNull();
+            assertThat(authentication.getName()).isEqualTo("bearer-user");
+            assertThat(authentication.getAuthorities())
+                .extracting("authority")
+                .contains("ROLE_SYS_ADMIN");
+            assertThat(UserPermissionContext.CURRENT_TOKEN.get()).isEqualTo("bearer-token");
+            assertThat(UserPermissionContext.CURRENT_ORG_ID.get()).isNull();
+        };
+
+        filter.doFilter(request, response, chain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        assertThat(UserPermissionContext.CURRENT_TOKEN.get()).isNull();
+        assertThat(UserPermissionContext.CURRENT_ORG_ID.get()).isNull();
+    }
+
+    @Test
+    void invalidBearerHeaderShouldNotFallbackToSessionId() throws Exception {
+        String sessionId = sessionStore.createSession(
+            "session-token",
+            "session-user",
+            "100002",
+            "admin",
+            Set.of("agent:memory:read")
+        );
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/agent/memory/summaries");
+        request.addHeader("Authorization", "Bearer missing-token");
+        request.addHeader("X-Session-Id", sessionId);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        FilterChain chain = (servletRequest, servletResponse) -> {
+            assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+            assertThat(UserPermissionContext.CURRENT_TOKEN.get()).isEqualTo("missing-token");
+            assertThat(UserPermissionContext.CURRENT_ORG_ID.get()).isNull();
         };
 
         filter.doFilter(request, response, chain);

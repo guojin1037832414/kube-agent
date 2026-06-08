@@ -68,10 +68,11 @@ M5.28-1 完成后，后端主语言审计结论进一步明确：`Java + Spring`
 - M5.29-1 已接入 Spring Security `SecurityFilterChain`，把 kube-manager Bearer session 桥接为标准 `Authentication`，并保护 observability/actuator 诊断面。
 - M5.29-2 已新增 `AgentPrincipalResolver`，让 controller / audit / method security 后续可以统一读取当前主体，而不是各自读 `SecurityContext` 或 ThreadLocal。
 - M5.29-3 已把 `AgentPrincipalResolver` 接入 `SafeToolExecutor` 审计链路，审计 actor 优先来自服务端可信 principal 快照，而不是 caller-supplied request 字段。
+- M5.29-4 已把前端 `X-Session-Id` 通过 `SessionStore` 桥接到 Spring Security，并将 `/api/agent/memory/**`、`/api/agent/mcp/**` 作为首批非聊天端点迁移到 `.authenticated()`。
 
 仍需要升级的部分：
 
-- Spring Security 主线仍在迁移：M5.29-1 已完成身份桥接和诊断面保护，M5.29-2 已完成统一 principal resolver，M5.29-3 已完成审计 actor 可信快照；普通 Agent API 仍为兼容迁移保留 `permitAll`，后续需要 endpoint/method authorization 和 controller guard 去重；
+- Spring Security 主线仍在迁移：M5.29-1 已完成 Bearer 身份桥接和诊断面保护，M5.29-2 已完成统一 principal resolver，M5.29-3 已完成审计 actor 可信快照，M5.29-4 已完成 `X-Session-Id` 会话桥接和 memory/mcp 首批端点授权；chat/SSE/conversation 仍为兼容迁移保留，后续需要身份归属迁移、endpoint/method authorization 和 controller guard 去重；
 - 审计仍是 `InMemoryAgentAuditRecorder` 诊断实现，`durableRetention=false`，不能替代可查询、可保留、可权限控制的持久审计；
 - SpotBugs / SBOM / coverage / secret scan / Agent eval 还没有全部变成失败即阻断的硬门禁；
 - Resilience4j read retry 还应继续细分异常和状态码：网络异常、超时、429、502、503、504 可考虑重试，400、401、403、404 不应重试；
@@ -104,7 +105,8 @@ M5.28-1 完成后，后端主语言审计结论进一步明确：`Java + Spring`
 6. 标准安全入口主线化。
    - 已完成第一层：M5.29-1 引入 Spring Security `SecurityFilterChain`，保护 `/api/agent/observability/**` 和 `/actuator/**` 管理面。
    - 已完成身份消费层：M5.29-2 引入 `AgentPrincipalResolver`，M5.29-3 将审计 actor 绑定到可信 principal 快照。
-   - 下一步：把剩余 `/api/agent/**` 从兼容放行迁移到显式 endpoint/method authorization。
+   - 已完成会话兼容层：M5.29-4 将前端 `X-Session-Id` 反查为服务端 `SessionData` 后桥接到 `Authentication`，并保护 memory/mcp 首批非聊天端点。
+   - 下一步：把 conversation/chat/SSE 的 raw session-id 数据归属迁移到可信 principal，再把剩余 `/api/agent/**` 从兼容放行迁移到显式 endpoint/method authorization。
    - `AuthTokenFilter` 可以保留为兼容桥，但生产鉴权、角色和端点策略应由 Spring Security 承担。
 
 7. 持久审计主线化。
@@ -116,6 +118,7 @@ M5.28-1 完成后，后端主语言审计结论进一步明确：`Java + Spring`
 1. Spring Security 身份事实迁移。
    - M5.29-1 已把缓存 Bearer session 桥接到 `SecurityContext` / `Authentication`。
    - M5.29-2 / M5.29-3 已把 controller guard 与 audit actor 的读取入口逐步迁入 `AgentPrincipalResolver`。
+   - M5.29-4 已把 `X-Session-Id` 会话桥接到 `SecurityContext`，并让长期记忆只按 trusted principal 分桶。
    - ThreadLocal 可保留为 legacy bridge，但权限事实不能长期散落。
 
 2. OpenTelemetry / audit 主线化。

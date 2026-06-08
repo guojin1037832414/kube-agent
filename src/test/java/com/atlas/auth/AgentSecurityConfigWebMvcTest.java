@@ -1,5 +1,6 @@
 package com.atlas.auth;
 
+import com.atlas.store.SessionStore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,6 +39,9 @@ class AgentSecurityConfigWebMvcTest {
 
     @Autowired
     private UserPermissionContext userPermissionContext;
+
+    @Autowired
+    private SessionStore sessionStore;
 
     @BeforeEach
     void setUp() {
@@ -83,6 +87,24 @@ class AgentSecurityConfigWebMvcTest {
             .andExpect(status().isOk());
     }
 
+    @Test
+    void memoryAndMcpEndpointsRequireAuthenticatedPrincipal() throws Exception {
+        mockMvc.perform(get("/api/agent/memory/summaries"))
+            .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/agent/mcp/manifest"))
+            .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/agent/memory/summaries")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
+            .andExpect(status().isOk());
+
+        String sessionId = sessionStore.createSession("session-token", "session-user", "100002", "user", Set.of());
+        mockMvc.perform(get("/api/agent/mcp/manifest")
+                .header("X-Session-Id", sessionId))
+            .andExpect(status().isOk());
+    }
+
     @RestController
     public static class TestController {
 
@@ -105,6 +127,16 @@ class AgentSecurityConfigWebMvcTest {
         String chat() {
             return "chat";
         }
+
+        @GetMapping("/api/agent/memory/summaries")
+        String memorySummaries() {
+            return "memory";
+        }
+
+        @GetMapping("/api/agent/mcp/manifest")
+        String mcpManifest() {
+            return "mcp";
+        }
     }
 
     @Configuration
@@ -113,6 +145,11 @@ class AgentSecurityConfigWebMvcTest {
         @Bean
         UserPermissionContext userPermissionContext() {
             return new UserPermissionContext();
+        }
+
+        @Bean
+        SessionStore sessionStore() {
+            return new SessionStore();
         }
     }
 }

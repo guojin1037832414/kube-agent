@@ -93,10 +93,33 @@ Current track:
 
 Recently completed:
 
-`M5.29-3 principal-bound audit actor`
+`M5.29-4 X-Session-Id security bridge and first authenticated non-chat endpoints`
 
 Latest checkpoint:
 
+- Date: 2026-06-09 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.29-4 implemented:
+  - `AuthTokenFilter` now bridges frontend `X-Session-Id` to Spring Security by looking up server-side `SessionStore` data when no Bearer header is present.
+  - Bearer identity remains higher priority and never silently falls back to `X-Session-Id` when a Bearer header exists, including the unknown-Bearer case.
+  - `AgentSecurityConfig` now protects `/api/agent/memory/**` and `/api/agent/mcp/**` with `.authenticated()`.
+  - `MemoryController` now requires `AgentPrincipalResolver` username for long-term memory ownership and no longer accepts raw `X-Session-Id` as an owner identity.
+  - Added tests for session bridge, Bearer precedence, memory/mcp endpoint authentication, and trusted-principal memory ownership.
+- Verification:
+  - `mvn -q "-Dtest=AuthTokenFilterSecurityContextTest,AgentSecurityConfigContractTest,AgentSecurityConfigWebMvcTest,AgentPrincipalResolverTest,MemoryControllerTest" test`
+- Scope boundary:
+  - Phase 1 generic Agent Core security-mainline migration only.
+  - Chat/SSE/conversation endpoint locking is intentionally deferred until their raw session-id ownership is migrated.
+  - No NIM/HPC/Slurm/BCM Phase 2 implementation was resumed.
+  - No real write/create/delete/state-changing kube-manager call was opened.
+- Security result:
+  - Frontend `X-Session-Id` is treated as an opaque server-side session lookup key, not as a self-authorizing user claim.
+  - Invalid Bearer headers do not downgrade to SessionId identity, preserving one request authority for audit and authorization.
+  - The first non-chat Agent surfaces are now under Spring Security authentication while existing frontend login remains compatible.
+- Next technical follow-up:
+  - Migrate conversation/chat/SSE identity ownership to `AgentPrincipalResolver`, then continue method-level authorization, durable audit, replay timeline DTOs, RAG/Memory, read-only MCP schema adapter, and Agent eval.
+
+- Previous checkpoint:
 - Date: 2026-06-09 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
 - M5.29-3 implemented:

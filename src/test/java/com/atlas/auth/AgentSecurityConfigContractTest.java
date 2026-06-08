@@ -31,7 +31,7 @@ class AgentSecurityConfigContractTest {
         assertThat(source).contains("httpBasic(AbstractHttpConfigurer::disable)");
         assertThat(source).contains("formLogin(AbstractHttpConfigurer::disable)");
         assertThat(source).contains("logout(AbstractHttpConfigurer::disable)");
-        assertThat(source).contains("new AuthTokenFilter(userPermissionContext)");
+        assertThat(source).contains("new AuthTokenFilter(userPermissionContext, sessionStore)");
     }
 
     @Test
@@ -39,6 +39,7 @@ class AgentSecurityConfigContractTest {
         String source = Files.readString(SOURCE);
 
         assertThat(source).contains(".requestMatchers(\"/api/agent/observability/**\").hasAnyRole(\"ADMIN\", \"SYS_ADMIN\")");
+        assertThat(source).contains(".requestMatchers(\"/api/agent/memory/**\", \"/api/agent/mcp/**\").authenticated()");
         assertThat(source).contains(".requestMatchers(\"/actuator/health\", \"/actuator/info\").permitAll()");
         assertThat(source).contains(".requestMatchers(\"/actuator/**\").hasAnyRole(\"ADMIN\", \"SYS_ADMIN\")");
         assertThat(source).contains(".anyRequest().permitAll()");

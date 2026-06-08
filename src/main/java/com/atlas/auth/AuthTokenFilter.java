@@ -1,5 +1,7 @@
 package com.atlas.auth;
 
+import com.atlas.dto.SessionData;
+import com.atlas.store.SessionStore;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -12,6 +14,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Spring Security 请求过滤器 — 每请求自动提取 Bearer Token 并绑定到标准安全上下文。
@@ -26,9 +29,15 @@ import java.util.List;
 public class AuthTokenFilter extends OncePerRequestFilter {
 
     private final UserPermissionContext userPermissionContext;
+    private final SessionStore sessionStore;
 
     public AuthTokenFilter(UserPermissionContext userPermissionContext) {
+        this(userPermissionContext, null);
+    }
+
+    public AuthTokenFilter(UserPermissionContext userPermissionContext, SessionStore sessionStore) {
         this.userPermissionContext = userPermissionContext;
+        this.sessionStore = sessionStore;
     }
 
     @Override
@@ -49,6 +58,8 @@ public class AuthTokenFilter extends OncePerRequestFilter {
                 .map(this::toAuthentication)
                 .ifPresent(authentication ->
                     SecurityContextHolder.getContext().setAuthentication(authentication));
+        } else {
+            bindSessionAuthentication(request);
         }
 
         try {
@@ -59,20 +70,49 @@ public class AuthTokenFilter extends OncePerRequestFilter {
         }
     }
 
+    private void bindSessionAuthentication(HttpServletRequest request) {
+        if (sessionStore == null) {
+            return;
+        }
+        String sessionId = request.getHeader("X-Session-Id");
+        if (sessionId == null || sessionId.isBlank()) {
+            return;
+        }
+        sessionStore.findById(sessionId.trim())
+            .filter(this::hasAuthenticatedUsername)
+            .ifPresent(session -> {
+                userPermissionContext.bind(session.token(), session.organizationId());
+                SecurityContextHolder.getContext().setAuthentication(toAuthentication(session));
+            });
+    }
+
+    private boolean hasAuthenticatedUsername(SessionData session) {
+        return session != null && session.username() != null && !session.username().isBlank();
+    }
+
     private Authentication toAuthentication(UserPermissionContext.UserPermission permission) {
-        String role = permission.role() != null && !permission.role().isBlank()
-            ? permission.role().trim().toUpperCase(java.util.Locale.ROOT)
+        return toAuthentication(permission.username(), permission.role(), permission.permissions());
+    }
+
+    private Authentication toAuthentication(SessionData session) {
+        return toAuthentication(session.username(), session.role(), session.permissions());
+    }
+
+    private Authentication toAuthentication(String username, String roleValue, Set<String> permissions) {
+        String role = roleValue != null && !roleValue.isBlank()
+            ? roleValue.trim().toUpperCase(java.util.Locale.ROOT)
             : "USER";
         if (!role.startsWith("ROLE_")) {
             role = "ROLE_" + role;
         }
         List<SimpleGrantedAuthority> authorities = new java.util.ArrayList<>();
         authorities.add(new SimpleGrantedAuthority(role));
-        permission.permissions().stream()
+        Set<String> safePermissions = permissions != null ? permissions : Set.of();
+        safePermissions.stream()
             .filter(item -> item != null && !item.isBlank())
             .map(item -> new SimpleGrantedAuthority(item.trim()))
             .forEach(authorities::add);
         // SecurityContext 只承载身份和权限；真实 Bearer Token 仍由 ThreadLocal 兼容层负责向 kube-manager 透传。
-        return new UsernamePasswordAuthenticationToken(permission.username(), null, authorities);
+        return new UsernamePasswordAuthenticationToken(username, null, authorities);
     }
 }

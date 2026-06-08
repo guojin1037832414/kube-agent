@@ -94,6 +94,14 @@ M5.29-3 已把统一 principal 推进到审计 actor 证据层：
 - `AgentAuditEventFactory` 优先使用可信 principal 的 username / organizationId，避免 caller-supplied `SafeToolExecutionRequest.userId()` 成为审计权威；
 - SecurityContext 主路径和 legacy UserPermissionContext 回落路径都有契约测试，保证迁移期间不打断 SSE/Tool 兼容入口。
 
+M5.29-4 已把前端 `X-Session-Id` 会话推进到 Spring Security，并开启首批非聊天端点授权：
+
+- `AuthTokenFilter` 在无 Bearer header 时通过 `SessionStore` 将 `X-Session-Id` 解析为服务端 `SessionData`，再生成标准 `Authentication`；
+- Bearer header 继续作为优先身份来源；即使 Bearer 未知，也不自动降级到 `X-Session-Id`，避免多身份来源的权限/审计分裂；
+- `/api/agent/memory/**` 与 `/api/agent/mcp/**` 已进入 `.authenticated()`；
+- `MemoryController` 使用 `AgentPrincipalResolver` 的 username 作为长期记忆 owner，不再把 raw session id 作为身份；
+- chat/SSE/conversation 暂不一起锁定，后续必须先迁移它们的数据归属语义，再进入 endpoint/method authorization。
+
 ## 最新 Agent 标准的落地顺序
 
 以下技术代表 2026 年 Agent 工程的先进方向，但必须按可验证顺序接入：
@@ -156,7 +164,7 @@ Spring Boot 4.0.x 官方系统要求是 Java 17+，但它会同时带来 Spring 
 - OpenTelemetry：M5.23/M5.24/M5.25/M5.26/M5.27 已完成 traceId 内核、HTTP 出口传播、审计事件模型、审计 telemetry projection 和审计 Observation 发布；后续要把 intent、plan、tool、HTTP、HITL、audit、final answer 映射为 span/timeline/audit 统一证据链。
 - 审计持久化：M5.25 已完成内存诊断 recorder；下一步要把敏感读、高风险写、HITL 阻断、Tool 异常接入可查询、可保留、可权限控制的脱敏持久化审计存储。
 - CI 门禁：SBOM、SCA、SpotBugs、覆盖率、secret scan、Agent eval 必须进入发布流程。
-- 安全主干：M5.29-1 已引入 Spring Security `SecurityFilterChain` 并完成 observability/actuator 第一层保护；M5.29-2 已新增 `AgentPrincipalResolver` 统一当前主体解析；M5.29-3 已让 SafeToolExecutor 审计 actor 绑定统一 principal 快照；后续把剩余 API、controller guard 和方法级授权逐步迁移到标准 `Authentication`。
+- 安全主干：M5.29-1 已引入 Spring Security `SecurityFilterChain` 并完成 observability/actuator 第一层保护；M5.29-2 已新增 `AgentPrincipalResolver` 统一当前主体解析；M5.29-3 已让 SafeToolExecutor 审计 actor 绑定统一 principal 快照；M5.29-4 已桥接前端 `X-Session-Id` 并把 memory/mcp 首批非聊天端点迁移到 `.authenticated()`；后续把 conversation/chat/SSE 身份归属、剩余 API、controller guard 和方法级授权逐步迁移到标准 `Authentication`。
 
 ## 多专家审计后的 Phase 1 技术优先级
 
@@ -170,7 +178,7 @@ Spring Boot 4.0.x 官方系统要求是 Java 17+，但它会同时带来 Spring 
 | P0 | CI 从报告生成升级为硬门禁 | SpotBugs/SCA/secret scan/coverage/Agent eval 失败能阻断合并或发布 |
 | P0 | `SafeToolExecutor` 唯一真实执行边界持续守护 | 新增 Graph/ReAct/ToolCallback/插件入口不能直调 `BaseTool.execute(...)` |
 | P1 | Micrometer + OpenTelemetry span 化 | request、intent、plan、LLM、tool、HTTP、HITL、audit、final answer 能在同一 trace 下回放 |
-| P1 | Spring Security 主线化 | M5.29-1 已完成第一层身份桥接和诊断面保护；M5.29-2 已完成 principal resolver；M5.29-3 已完成审计 actor 可信快照；下一步迁移剩余 `/api/agent/**` 授权与方法级授权 |
+| P1 | Spring Security 主线化 | M5.29-1 已完成 Bearer 身份桥接和诊断面保护；M5.29-2 已完成 principal resolver；M5.29-3 已完成审计 actor 可信快照；M5.29-4 已完成 `X-Session-Id` 会话桥接和 memory/mcp 首批 authenticated 端点；下一步迁移 conversation/chat/SSE 身份归属、剩余 `/api/agent/**` 授权与方法级授权 |
 | P1 | Testcontainers 真实集成测试 | 覆盖 kube-manager HTTP contract、鉴权失败、trace header、重试/熔断边界 |
 | P2 | Java 21/25 与 Spring Boot 4 / Spring AI 2 兼容矩阵 | 先在 CI matrix 或试验分支验证，不破坏当前可恢复主线 |
 
