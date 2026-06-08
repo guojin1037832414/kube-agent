@@ -1,0 +1,136 @@
+﻿{
+    "project":  "kube-agent",
+    "wave":  "M5.23-1",
+    "title":  "Agent trace context kernel",
+    "generatedAt":  "2026-06-08T23:07:30+08:00",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "implementationCommit":  "ac1a856654c9b6b43c646ac009248977b49c54e5",
+    "pushed":  false,
+    "traceScope":  [
+                       "AgentTraceContext",
+                       "SafeToolExecutor",
+                       "AtlasOrchestrator",
+                       "/chat/graph",
+                       "HITLController resume",
+                       "ReActEngine",
+                       "Graph tool_call/execute_node",
+                       "Graph Bridge AtlasToolCallback",
+                       "legacy core AtlasToolCallback"
+                   ],
+    "verification":  [
+                         "mvn -q \"-Dtest=AgentTraceContextTest,SafeToolExecutorTest,ReActEngineMultiStepE2ETest,M523TracePropagationContractTest,M513HitlFailClosedContractTest,AtlasOrchestratorJsonTest\" test",
+                         "mvn -q -DskipTests validate",
+                         "git diff --check",
+                         "rg direct BaseTool.execute scan: only SafeToolExecutor"
+                     ],
+    "blockedRealWrites":  [
+                              "no NIM/HPC/Slurm/BCM Phase 2 implementation resumed",
+                              "no real kube-manager write/create/delete/state-changing call opened"
+                          ],
+    "files":  [
+                  {
+                      "path":  "CHANGELOG.md",
+                      "sha256":  "f6049d977f8f6c17313a293a889847d7897fe667bc018ca7db75e58105cd3e18"
+                  },
+                  {
+                      "path":  "docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "f6412e6f9839a185d2ae08957bed5a05618305476b21649fc8118258a3cb42d3"
+                  },
+                  {
+                      "path":  "docs/PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "d5df92299096722e151a943e8afd00b0055a557b176f5e211edbdda704e84ee8"
+                  },
+                  {
+                      "path":  "docs/SESSION_PROGRESS_20260606_M521_29.md",
+                      "sha256":  "26179889b7a27263d81aa57dd153bcc7ae23c9b0bd3ee1301f9eb7de9f17d1fb"
+                  },
+                  {
+                      "path":  "docs/tech-stack/BACKEND_JAVA_TECH_STACK_AUDIT_20260608.md",
+                      "sha256":  "0407812eb4da3a9adbc46860306d0067302ae06da6d16d2dd49fb50688925aaf"
+                  },
+                  {
+                      "path":  "docs/tech-stack/BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "35460a7d2f1ea263b67e6807cfd94bc44010ed381322b3e8a79cae11796a6422"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentTraceContext.java",
+                      "sha256":  "72925ea0e6a265f31385e6b90db949333286ead2415bf9066b611dcd2741ef8e"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/tool/execution/SafeToolExecutionRequest.java",
+                      "sha256":  "0f3533b3234f4c758cbbbacc09e7a0992d91d3630b8da4f30da2e216057170cb"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/tool/execution/SafeToolExecutionResult.java",
+                      "sha256":  "e7d729e000e6892a19acdd8a52a72f7ff34280fa15049d2712157f7c63175cb6"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/tool/execution/SafeToolExecutor.java",
+                      "sha256":  "c233658ca98e8855c68c55a3ea61430e9e4145832d13f6fc41754b2c81fb472f"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/controller/HITLController.java",
+                      "sha256":  "e089fefcf4f7cd1f33588530846a87714e0ab7575fdefbaf1d9ffb17db218c07"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/orchestrator/AtlasOrchestrator.java",
+                      "sha256":  "53e962c5f365a4b33b20cba1ae4e71982d2a5720c16157ead5055e785be7e481"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/react/ReActEngine.java",
+                      "sha256":  "4eec26f755a35ed66d484bcf8532958fdb28f0560560ca8980ee50056065bbe8"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/react/ReActEvent.java",
+                      "sha256":  "ba50825713f2c0cdb4f49f78e24bf65a6e4d7cf5a456be81453fa83c3d6e708a"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/tool/core/ProtectedToolParameterFilter.java",
+                      "sha256":  "34a0b5919e899b45e860f6f1f78d82d5f704b06f66e3741d7794d3f262ffa2f2"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/AgentTraceContextTest.java",
+                      "sha256":  "460bfc3e2e415085211fcf0790d56288203ec921ce38976c3a207496cfb0945e"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/contract/M523TracePropagationContractTest.java",
+                      "sha256":  "bc50f741221cb4df2aa7f4cab71c07a10d80e59c7fee919e79926a16707807a8"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/tool/execution/SafeToolExecutorTest.java",
+                      "sha256":  "8e7a0e686c75e2f3aa312182ef2d1704fd313b6e0708e54f1d855613f60742e6"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/react/ReActEngineMultiStepE2ETest.java",
+                      "sha256":  "d68cae0e9c61b9bd683da7dfaa9e70a4f7d3a7e718d9d48f2fc2d9c53385f853"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/RECOVERY_STATUS.md",
+                      "sha256":  "7d8a38e7f70e425a52a585b2082ce4dabea8cd313fed20a3d6fc450cea3855d0"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/CHANGELOG.md",
+                      "sha256":  "f6049d977f8f6c17313a293a889847d7897fe667bc018ca7db75e58105cd3e18"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "f6412e6f9839a185d2ae08957bed5a05618305476b21649fc8118258a3cb42d3"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "d5df92299096722e151a943e8afd00b0055a557b176f5e211edbdda704e84ee8"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_SESSION_PROGRESS_20260606_M521_29.md",
+                      "sha256":  "26179889b7a27263d81aa57dd153bcc7ae23c9b0bd3ee1301f9eb7de9f17d1fb"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_JAVA_TECH_STACK_AUDIT_20260608.md",
+                      "sha256":  "0407812eb4da3a9adbc46860306d0067302ae06da6d16d2dd49fb50688925aaf"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "35460a7d2f1ea263b67e6807cfd94bc44010ed381322b3e8a79cae11796a6422"
+                  }
+              ]
+}

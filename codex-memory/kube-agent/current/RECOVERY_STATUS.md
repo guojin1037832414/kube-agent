@@ -4,15 +4,15 @@
 - Recovery home: F:\gitProject\kube-agent\codex-memory\kube-agent\current
 - Previous external backup: H:\codex重要文件\kube-agent
 - Branch: codex/m521-29-top-agent-mission
-- Latest completed wave: M5.22-5
-- Latest completed title: Orchestrator fallback safe execution closure
+- Latest completed wave: M5.23-1
+- Latest completed title: Agent trace context kernel
 - Workspace: F:\gitProject\kube-agent
 - Last synchronized: 2026-06-08 Asia/Shanghai
-- Latest implementation commit: aee2b1e fix(M5.22): route orchestrator fallback through safe executor
-- Pushed to remote: yes, origin/codex/m521-29-top-agent-mission includes aee2b1e
+- Latest implementation commit: ac1a856 feat(M5.23): add agent trace context kernel
+- Pushed to remote: pending recovery sync push
 - Recovery policy: new progress and memory files are written to this workspace-local directory first to avoid external filesystem approval prompts.
-- Verification: M5.22-5 targeted Orchestrator/execute-entrypoint tests passed after documentation sync; SafeToolExecutor/callback/ReAct regressions passed; mvn -q -DskipTests validate passed; git diff --check passed. M5.22-4 targeted legacy callback/execute-entrypoint tests passed after documentation sync; SafeToolExecutor/Bridge callback/ProtectedToolParameterFilter regressions passed; mvn -q -DskipTests validate passed; git diff --check passed. M5.22-3 targeted ReAct/contract tests passed after documentation sync; SafeToolExecutor/Plan/ProtectedToolParameterFilter callback regression tests passed; mvn -q -DskipTests validate passed; git diff --check passed.
-- Security invariant: Graph Bridge ToolCallback, ReActEngine, legacy core AtlasToolCallback, and AtlasOrchestrator fallback no longer directly call BaseTool.execute; they delegate to SafeToolExecutor with source-specific audit markers. Production code now has exactly one permanent real BaseTool.execute boundary: SafeToolExecutor. LLM JSON cannot forge token/orgId/userId/HITL/audit/release/write-control params into business Tool, ReAct memory, or SSE tool_start events. nim_create remains HOLD/mock-first and is now Phase 2; no real 8100 write, NIM HTTP call, Authorization header sending, durable audit write, deployment POST, validation result signer, release decision signer, code switch implementation, runtime write behavior, Elasticsearch, ISysLogService, or sys_log write was added.
+- Verification: M5.23-1 targeted trace/security tests passed: `mvn -q "-Dtest=AgentTraceContextTest,SafeToolExecutorTest,ReActEngineMultiStepE2ETest,M523TracePropagationContractTest,M513HitlFailClosedContractTest,AtlasOrchestratorJsonTest" test`. Earlier M5.22-5 Orchestrator/execute-entrypoint tests, SafeToolExecutor/callback/ReAct regressions, mvn -q -DskipTests validate, and git diff --check passed.
+- Security invariant: Graph Bridge ToolCallback, ReActEngine, legacy core AtlasToolCallback, and AtlasOrchestrator fallback no longer directly call BaseTool.execute; they delegate to SafeToolExecutor with source-specific audit markers. Production code now has exactly one permanent real BaseTool.execute boundary: SafeToolExecutor. M5.23-1 adds a shared traceId kernel across Orchestrator, `/chat/graph`, HITL resume, ReAct, Graph state, SafeToolExecutor, ToolCallbacks, SSE timeline metadata, and Graph updates. External `X-Trace-Id` and LLM/action `traceId` values are validated and treated as control-plane data, not business Tool params. nim_create remains HOLD/mock-first and is now Phase 2; no real 8100 write, NIM HTTP call, Authorization header sending, durable audit write, deployment POST, validation result signer, release decision signer, code switch implementation, runtime write behavior, Elasticsearch, ISysLogService, or sys_log write was added.
 - Teaching map: docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md is now the long-lived overall architecture and technical-learning document.
 - Goal truth source: Phase 1 must deliver the full top-tier kube-manager Agent Core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones specialist domain plugins; it must not reduce Phase 1 standards for orchestration, Tool governance, safe execution, frontend workflow, observability, evaluation, documentation, and recovery memory.
 - M5.22-1 learning note: advanced engineering means verified upgrade paths, not unbuildable version chasing. Java 17 remains the current verified baseline; Java 21/25, Spring Boot 4, and Spring AI 2 are compatibility-matrix follow-ups.
@@ -21,7 +21,8 @@
 - M5.22-3 delivered: ReActEngine safe execution migration, SafeToolExecutionSource.REACT_ENGINE request construction, trusted execution/display timeline parameter separation, sanitized ReAct memory/SSE event tests, HITL fail-closed ReAct contract updates, and direct-execute allowlist shrink from 3 to 2 entries.
 - M5.22-4 delivered: legacy core AtlasToolCallback safe execution migration, injectable compatibility runtime, forged protected/control param regression, missing trusted org fail-closed regression, and direct-execute allowlist shrink from 2 to 1 entry.
 - M5.22-5 delivered: AtlasOrchestrator fallback safe execution migration, SafeToolExecutionSource.ORCHESTRATOR_FALLBACK marker, direct-execute allowlist shrink from 1 to 0, and production SafeToolExecutor-only real execution boundary.
-- Resume hint: continue Phase 1 generic manager Agent Core. Next technical slice should add traceId propagation through intent, plan, tool, HTTP, HITL, audit, and final answer. Do not start new NIM/HPC/Slurm/BCM implementation slices unless the user explicitly reopens Phase 2 scope.
+- M5.23-1 delivered: AgentTraceContext trace kernel, safe external trace candidate validation, traceId propagation through SafeToolExecutionRequest/Result, SafeToolExecutor, Orchestrator, `/chat/graph`, HITL resume, ReAct timeline events, Graph tool/execute nodes, Graph Bridge callback, legacy core callback, and protected trace control-plane filtering.
+- Resume hint: continue Phase 1 generic manager Agent Core. Next technical slice should connect traceId to kube-manager HTTP outlet, audit event model, OpenTelemetry span mapping, frontend replay contracts, and Agent eval reports. Do not start new NIM/HPC/Slurm/BCM implementation slices unless the user explicitly reopens Phase 2 scope.
 
 
 
