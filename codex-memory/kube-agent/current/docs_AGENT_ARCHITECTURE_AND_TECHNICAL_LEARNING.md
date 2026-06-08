@@ -215,7 +215,23 @@ NIM 链路明确禁止真实 Authorization、token、password、secret、NGC/NIM
 
 学习重点：对于长期 Agent 项目，文档不是附属物。文档是架构记忆、教学材料和恢复机制的一部分。
 
-## M5.21-130 最新学习笔记
+## M5.21-131 最新学习笔记
+
+本轮关闭的是 runtime binding contract 的两个运行时绑定 map：
+
+- `runtimeBindingContract.stateMachineRuntimeBinding`
+- `runtimeBindingContract.durableExecutorRuntimeBinding`
+
+关键收获：
+
+- runtime binding map 是 runtime source guard 的输入协议，不是普通说明性 metadata。
+- source guard 不能只逐字段确认几个已知字段正确；如果 map 里多出一个未来授权 key，且调用方重新计算了 `runtimeBindingContractDigest`，逐字段校验仍可能放过它。
+- `NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport` 现在拥有标准 helper maps，`NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport` 只接受这些 helper 的 exact equality。
+- 本轮新增 digest-consistent forgery：给 state-machine / durable-executor runtime binding 追加 fake fallback key，重算 digest 后仍要求 source guard fail closed。
+
+学习总结：顶级 Agent 的运行时安全不是等真实 runtime binding 安装后才开始防护。越靠近未来写放行路径的 HOLD contract，越要提前把 map 的 key-set、值、digest 和下游消费者一致性锁死。
+
+## M5.21-130 学习笔记
 
 本轮关闭的是 code release switch contract 的 binding maps：
 

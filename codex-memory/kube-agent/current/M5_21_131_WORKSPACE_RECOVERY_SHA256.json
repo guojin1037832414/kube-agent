@@ -1,0 +1,58 @@
+﻿{
+    "project":  "kube-agent",
+    "wave":  "M5.21-131",
+    "title":  "NIM runtime binding maps closed",
+    "generatedAt":  "2026-06-08 Asia/Shanghai",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "head":  "7ebd82c121c4b4e4734276545d4a3d2bb0c69ee2",
+    "verification":  [
+                         "git diff --check",
+                         "mvn -q \"-Dtest=NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupportTest,NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupportTest\" test",
+                         "mvn -q \"-Dtest=NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupportTest,NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupportTest,NimCreateStateMachineSupportTest,NimCreateDurableWriteExecutorSupportTest\" test",
+                         "mvn -q test"
+                     ],
+    "securityInvariant":  "nim_create remains HOLD/mock-first; no real 8100, NIM HTTP call, Authorization header sending, durable audit write, deployment POST, release signer, code switch implementation, Elasticsearch, ISysLogService, or sys_log write was added.",
+    "nextPriority":  "Continue closing release decision contract binding maps and validation result evidence binding maps with producer-owned exact key-set or exact map validation.",
+    "files":  [
+                  {
+                      "file":  "CHANGELOG.md",
+                      "sha256":  "F34A6A4759A35AF4328ED730FBD721E2CD6B65C6F415C1F5181E1C1B6F5D04F4",
+                      "length":  237940
+                  },
+                  {
+                      "file":  "RECOVERY_STATUS.md",
+                      "sha256":  "66F3F9677DF73F1097DB066F73732CC1E84C6FB953BA0C2F0C7763300E557E66",
+                      "length":  1666
+                  },
+                  {
+                      "file":  "docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "808EDC2064062D5D4091426B67B704430783358CC0FE09977F6B9C4E23633E0E",
+                      "length":  18175
+                  },
+                  {
+                      "file":  "docs_M5_21_WAVE_INDEX_20260606.md",
+                      "sha256":  "BF8D0CD92C18401E44EDD282AE2AC1CE7CECA48AAD390F0559D2107124D49967",
+                      "length":  21427
+                  },
+                  {
+                      "file":  "docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "215B2C7F53B0B19333CC2B9A911B35889B7F6002A92C654C499C852D45DB8D46",
+                      "length":  248271
+                  },
+                  {
+                      "file":  "docs_SESSION_PROGRESS_20260606_M521_29.md",
+                      "sha256":  "E1EDD211C0CD51ABB79A1DFB8EDF091D7DA1C633FE7713E385BA578D446CF26F",
+                      "length":  250782
+                  },
+                  {
+                      "file":  "docs_v3.1_DEVELOPMENT_GUIDE.md",
+                      "sha256":  "16C2E770C6B9968386F93B2E175CC0DEB33B07ED05A094700F697A4BC9EFB59A",
+                      "length":  73606
+                  },
+                  {
+                      "file":  "docs_M5_21_ONE_HUNDRED_THIRTY_FIRST_WAVE_NIM_RUNTIME_BINDING_MAPS_CLOSED_AUDIT_20260608.md",
+                      "sha256":  "9D2EB596922FDF3BB91645F4C379BA5B8ED03DCDB16FB3D40EF5B681391F62BA",
+                      "length":  3891
+                  }
+              ]
+}

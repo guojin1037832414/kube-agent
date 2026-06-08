@@ -6,6 +6,23 @@
 
 ---
 
+## [M5.21-131] - NIM runtime binding maps closed
+
+**Delivery**: Closed runtime binding map shapes between runtime binding and runtime source guard.
+**Changes**
+- `NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport` now owns source-controlled helper maps for state-machine and durable-executor runtime bindings.
+- `NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport` now requires exact runtime binding-map equality instead of partial field checks.
+- Added a digest-consistent forged runtime binding-map regression that appends authority-shaped fake keys, recomputes `runtimeBindingContractDigest`, and still expects fail-closed source-guard rejection.
+**Verification**
+- `git diff --check` passed.
+- Targeted runtime binding/source guard tests passed.
+- Targeted runtime binding/source guard plus state-machine and durable executor consumer tests passed.
+- Full `mvn -q test` passed; full Maven degraded to L1 embedding mode after local `model.onnx` download timeout but exited 0.
+**Security**
+- This is runtime binding proof-schema hardening only; it does not open runtime writes, real audit writes, real readiness polling, source guard installation, or a real code release switch.
+- No real `8100`, real NIM service HTTP call, Authorization header sending, durable audit write, deployment POST, state-machine release binding implementation, durable executor release binding implementation, validation result signer, release decision signer, code release switch implementation, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-130] - NIM code switch binding maps closed
 
 **Delivery**: Closed code release switch binding map shapes across current downstream consumers.

@@ -91,10 +91,30 @@ Current track:
 
 Recently completed:
 
-`M5.21-130 NIM code switch binding maps closed`
+`M5.21-131 NIM runtime binding maps closed`
 
 Latest checkpoint:
 
+- Date: 2026-06-08 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- Teaching principle:
+  - This project is not only delivering software. It is also a teaching system for mastering Agent engineering.
+  - Maintain `docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md` as the long-lived architecture and technical-learning map.
+- M5.21-131 implemented:
+  - Hardened `NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport` so state-machine and durable-executor runtime binding maps are source-owned helpers.
+  - Hardened `NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport` so it requires exact runtime binding-map equality instead of partial field checks.
+  - Added a digest-consistent forged runtime binding-map regression that appends authority-shaped fake keys, recomputes `runtimeBindingContractDigest`, and still expects fail-closed source-guard rejection.
+  - Added `docs/M5_21_ONE_HUNDRED_THIRTY_FIRST_WAVE_NIM_RUNTIME_BINDING_MAPS_CLOSED_AUDIT_20260608.md`.
+  - Updated the long-lived teaching map with the M5.21-131 lesson: runtime binding maps are release-adjacent protocol maps and must be producer-owned exact maps.
+  - Targeted verification passed:
+    - `git diff --check`
+    - `mvn -q "-Dtest=NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupportTest,NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupportTest,NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupportTest,NimCreateStateMachineSupportTest,NimCreateDurableWriteExecutorSupportTest" test`
+    - `mvn -q test`
+    - Full Maven note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - Security invariant: no real `8100`, no real NIM service HTTP call, no Authorization header sending, no durable audit write, no deployment POST, no runtime write behavior, no source guard installation, no state-machine release binding implementation, no durable executor release binding implementation, no validation result signer, no release decision signer, no code release switch implementation, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Recommended next slice: continue scanning release decision contract binding maps and validation result evidence bindings for subset, non-empty, or missing exact key-set validation.
+- Previous checkpoint:
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
 - Teaching principle:
