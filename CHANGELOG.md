@@ -6,6 +6,23 @@
 
 ---
 
+## [M5.21-120] - NIM receipt schema required fields closed list
+
+**Delivery**: Hardened durable audit typed schema `requiredFields` validation for storage probe, pre-write ack, post-write ack, and final receipt schemas.
+**Changes**
+- `NimCreateDurableAuditReceiptSchemaSupport` now owns source-controlled closed `requiredFields` lists for storage probe receipts, durable ack schemas, and final durable audit receipts.
+- `NimCreateDurableAuditReceiptValidationGateSupport` now requires all four nested schema `requiredFields` lists to exactly match the source-owned lists.
+- `NimCreateDurableAuditStorageProbeResultSupport` now rejects digest-consistent storage probe schema supersets before producing probe result contracts.
+- Added regressions that append forged future evidence fields, recompute `schemaDigest`, and still expect validation/probe-result rejection.
+**Verification**
+- `git diff --check` passed.
+- Targeted durable receipt schema, validation gate, and storage probe result tests passed.
+- Full `mvn -q test` passed; full Maven degraded to L1 embedding mode after local `model.onnx` download timeout but exited 0.
+**Security**
+- This is durable receipt schema proof-list hardening only; it does not open runtime writes, real audit writes, real readiness polling, or a real code release switch.
+- No real `8100`, real NIM service HTTP call, Authorization header sending, durable audit write, deployment POST, state-machine release binding implementation, durable executor release binding implementation, validation result signer, release decision signer, code release switch implementation, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-119] - NIM readiness target taxonomy closed list
 
 **Delivery**: Hardened readiness plan target taxonomy validation across the executor, HTTP adapter, and state-machine consumers.

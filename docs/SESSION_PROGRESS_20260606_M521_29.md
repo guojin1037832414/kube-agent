@@ -2098,6 +2098,30 @@
 
 ## Final M5.21-29 Decisions
 
+## Latest M5.21-120 Progress
+
+- Date: 2026-06-08 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-120 implemented and verified:
+  - `NimCreateDurableAuditReceiptSchemaSupport` now owns closed `requiredFields` helpers for storage probe receipts, durable ack schemas, and final durable receipts.
+  - `NimCreateDurableAuditReceiptValidationGateSupport` now rejects digest-consistent typed schema reports whose nested `requiredFields` lists contain extra future evidence fields.
+  - `NimCreateDurableAuditStorageProbeResultSupport` now rejects storage probe schema `requiredFields` supersets before producing probe result contracts.
+  - Tests forge `requiredFields` supersets, recompute `schemaDigest`, and still expect fail-closed rejection.
+  - Added `docs/M5_21_ONE_HUNDRED_TWENTIETH_WAVE_NIM_RECEIPT_SCHEMA_REQUIRED_FIELDS_CLOSED_LIST_AUDIT_20260608.md`.
+- Verification passed:
+  - `git diff --check`
+  - `mvn -q "-Dtest=NimCreateDurableAuditReceiptSchemaSupportTest,NimCreateDurableAuditReceiptValidationGateSupportTest,NimCreateDurableAuditStorageProbeResultSupportTest" test`
+  - `mvn -q test`
+  - Full Maven note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+- HOLD:
+  - No real `8100` access.
+  - No real NIM service HTTP call.
+  - No Authorization header sending.
+  - No durable audit write, Elasticsearch write, `ISysLogService`, or `sys_log` write.
+  - No deployment `POST /api/{orgId}/deployment`.
+  - No state-machine release binding, durable executor release binding, validation result signer, release decision signer, or code release switch implementation.
+  - `nim_create` remains HOLD/mock-first.
+
 - `DataSetListTool`, `FileListTool`, `DownloadTaskListTool`, `FileMaterialListTool`, and `InboxMessageListTool` are `SENSITIVE_READ + requiresConfirmation=true`.
 - `ImageQueryTool` and `PytorchJobListTool` are plain `READ`.
 - Mature path fixes:

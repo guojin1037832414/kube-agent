@@ -2,9 +2,15 @@ package com.atlas.tool.impl;
 
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import static java.util.Map.entry;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -233,6 +239,43 @@ class NimCreateDurableAuditReceiptValidationGateSupportTest {
     }
 
     @Test
+    void validationGate_shouldRejectDigestConsistentTypedSchemaExtraRequiredFields() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+
+        for (String schemaKey : List.of(
+            "storageAvailabilityProbeReceiptSchema",
+            "preWriteDurableAckSchema",
+            "postWriteDurableAckSchema",
+            "durableAuditReceiptSchema"
+        )) {
+            Map<String, Object> forgedSchemaReport = withDigestConsistentExtraRequiredField(
+                receiptSchemaReport(audit, principal),
+                schemaKey,
+                "forgedFutureReceiptEvidenceDigest"
+            );
+
+            Map<String, Object> report = NimCreateDurableAuditReceiptValidationGateSupport.plan(
+                new NimCreateDurableAuditReceiptValidationGateSupport.DurableAuditReceiptValidationGateInput(
+                    audit,
+                    principal,
+                    forgedSchemaReport
+                )
+            );
+
+            assertEquals(NimCreateDurableAuditReceiptValidationGateSupport.REJECTED_STATE,
+                report.get("gateState"), "schemaKey=" + schemaKey);
+            assertEquals(false, report.get("inputAccepted"), "schemaKey=" + schemaKey);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> plan = (Map<String, Object>) report.get("validationPlan");
+            assertTrue(plan.isEmpty(), "schemaKey=" + schemaKey);
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+            assertHasBlocker(blockers, "DURABLE_AUDIT_RECEIPT_ACK_SCHEMA_REPORT_INVALID_FOR_VALIDATION_GATE");
+        }
+    }
+
+    @Test
     void validationGate_shouldRejectSecretLeakageBeforeAnyPlan() {
         Map<String, Object> audit = new LinkedHashMap<>(completeAuditContext());
         audit.put("Authorization", "redacted-test-value");
@@ -365,6 +408,71 @@ class NimCreateDurableAuditReceiptValidationGateSupportTest {
                 principal
             )
         );
+    }
+
+    private Map<String, Object> withDigestConsistentExtraRequiredField(Map<String, Object> schemaReport,
+                                                                       String schemaKey,
+                                                                       String forgedField) {
+        Map<String, Object> forgedReport = new LinkedHashMap<>(schemaReport);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> typedSchema = new LinkedHashMap<>((Map<String, Object>) forgedReport.get("typedSchema"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> nestedSchema = new LinkedHashMap<>((Map<String, Object>) typedSchema.get(schemaKey));
+        @SuppressWarnings("unchecked")
+        List<String> requiredFields = new ArrayList<>((List<String>) nestedSchema.get("requiredFields"));
+        requiredFields.add(forgedField);
+        nestedSchema.put("requiredFields", requiredFields);
+        typedSchema.put(schemaKey, nestedSchema);
+        forgedReport.put("typedSchema", typedSchema);
+        forgedReport.put("schemaDigest", sha256(typedSchema));
+        return forgedReport;
+    }
+
+    private String sha256(Map<String, Object> value) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(canonical(value).getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IllegalStateException(ex);
+        }
+    }
+
+    private String canonical(Object value) {
+        if (value == null) {
+            return "null";
+        }
+        if (value instanceof Map<?, ?> map) {
+            Map<String, Object> sorted = new TreeMap<>();
+            map.forEach((key, item) -> sorted.put(String.valueOf(key), item));
+            StringBuilder builder = new StringBuilder("{");
+            boolean first = true;
+            for (Map.Entry<String, Object> entry : sorted.entrySet()) {
+                if (!first) {
+                    builder.append(",");
+                }
+                first = false;
+                builder.append(escape(entry.getKey())).append("=").append(canonical(entry.getValue()));
+            }
+            return builder.append("}").toString();
+        }
+        if (value instanceof List<?> list) {
+            StringBuilder builder = new StringBuilder("[");
+            for (int i = 0; i < list.size(); i++) {
+                if (i > 0) {
+                    builder.append(",");
+                }
+                builder.append(canonical(list.get(i)));
+            }
+            return builder.append("]").toString();
+        }
+        return escape(value.toString());
+    }
+
+    private String escape(String value) {
+        return value.replace("\\", "\\\\")
+            .replace("\n", "\\n")
+            .replace("\r", "\\r")
+            .replace("\t", "\\t");
     }
 
     private Map<String, Object> completeAuditContext() {

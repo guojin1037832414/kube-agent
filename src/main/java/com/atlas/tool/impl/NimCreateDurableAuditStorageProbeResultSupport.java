@@ -374,6 +374,7 @@ final class NimCreateDurableAuditStorageProbeResultSupport {
                                                     Map<String, Object> typedSchema) {
         Map<String, Object> identity = objectMap(typedSchema.get("trustedIdentityBinding"));
         Map<String, Object> probeReceiptSchema = objectMap(typedSchema.get("storageAvailabilityProbeReceiptSchema"));
+        List<String> requiredFields = stringList(probeReceiptSchema.get("requiredFields"));
         return !typedSchema.isEmpty()
             && "FUTURE_TYPED_DURABLE_ACK_RECEIPT_ONLY".equals(text(typedSchema.get("schemaBoundary")))
             && NimCreateDurableAuditWriterInterfaceSpecSupport.FUTURE_INTERFACE.equals(text(typedSchema.get("futureInterface")))
@@ -393,7 +394,8 @@ final class NimCreateDurableAuditStorageProbeResultSupport {
             && Boolean.TRUE.equals(probeReceiptSchema.get("futureOnly"))
             && Boolean.FALSE.equals(probeReceiptSchema.get("instanceAllowedNow"))
             && Boolean.FALSE.equals(probeReceiptSchema.get("sideEffectAllowedNow"))
-            && FUTURE_AVAILABLE_STATUS.equals(text(probeReceiptSchema.get("requiredFutureStatus")));
+            && FUTURE_AVAILABLE_STATUS.equals(text(probeReceiptSchema.get("requiredFutureStatus")))
+            && requiredFields.equals(NimCreateDurableAuditReceiptSchemaSupport.storageProbeRequiredFields());
     }
 
     private static Map<String, Object> resultContract(Map<String, Object> auditContext,
@@ -697,6 +699,17 @@ final class NimCreateDurableAuditStorageProbeResultSupport {
         Map<String, Object> copy = new LinkedHashMap<>();
         map.forEach((key, item) -> copy.put(String.valueOf(key), item));
         return copy;
+    }
+
+    private static List<String> stringList(Object value) {
+        if (!(value instanceof List<?> list)) {
+            return List.of();
+        }
+        List<String> result = new ArrayList<>();
+        for (Object item : list) {
+            result.add(text(item));
+        }
+        return result;
     }
 
     private static Map<String, Object> blocker(String code, String message, String source) {

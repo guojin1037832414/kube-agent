@@ -600,3 +600,10 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Readiness executor, readiness HTTP adapter, and state-machine validation now require readiness plan `targets` to exactly match `deployment/service/nim-health/nim-models`.
 - Extra readiness target names such as `nim-chat` are rejected even if all audited readiness steps remain valid and unchanged.
 - Learning distinction: `containsAll` is useful for optional capability sets, but release-proof taxonomies should usually be exact source-owned protocols. Metadata-only expansion can become future authority if downstream code starts reading it.
+
+### M5.21-120 receipt schema required fields closed list note
+
+- Durable audit receipt schema generation now exposes source-owned closed `requiredFields` helpers for storage probe receipts, durable ack schemas, and final durable receipts.
+- Validation gate and storage probe result validation require exact list equality, not subset or superset acceptance.
+- Extra future receipt evidence field names are rejected even when `schemaDigest` is recomputed.
+- Learning distinction: digest consistency proves a schema object was re-hashed, not that new evidence slots are reviewed. Typed receipt schemas are release-proof protocols, so new required fields need reviewed code, tests, and documentation before downstream gates may accept them.

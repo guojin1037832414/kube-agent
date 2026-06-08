@@ -38,6 +38,51 @@ final class NimCreateDurableAuditReceiptSchemaSupport {
     private NimCreateDurableAuditReceiptSchemaSupport() {
     }
 
+    static List<String> storageProbeRequiredFields() {
+        return List.of(
+            "receiptType",
+            "auditEventDigest",
+            "interfaceSpecDigest",
+            "storageTarget",
+            "probeAttemptId",
+            "probeStatus",
+            "available",
+            "observedAt",
+            "issuedBy"
+        );
+    }
+
+    static List<String> durableAckRequiredFields(String requiredPreviousDigestField) {
+        return List.of(
+            "ackType",
+            "auditEventDigest",
+            "interfaceSpecDigest",
+            "recordDigest",
+            requiredPreviousDigestField,
+            "writeAttemptId",
+            "ackStatus",
+            "durable",
+            "observedAt",
+            "issuedBy"
+        );
+    }
+
+    static List<String> durableReceiptRequiredFields() {
+        return List.of(
+            "receiptType",
+            "auditEventDigest",
+            "interfaceSpecDigest",
+            "storageProbeReceiptDigest",
+            "preWriteDurableAckDigest",
+            "postWriteDurableAckDigest",
+            "trustedPrincipalDigest",
+            "receiptStatus",
+            "storageMode",
+            "issuedAt",
+            "issuedBy"
+        );
+    }
+
     static Map<String, Object> plan(DurableAuditReceiptSchemaInput input) {
         DurableAuditReceiptSchemaInput safeInput = input == null
             ? DurableAuditReceiptSchemaInput.empty()
@@ -422,17 +467,7 @@ final class NimCreateDurableAuditReceiptSchemaSupport {
         schema.put("sourceAuditEventDigest", digestFor(auditContext));
         schema.put("sourceInterfaceSpecDigest", text(interfaceSpecReport.get("interfaceSpecDigest")));
         schema.put("requiredFutureStatus", STORAGE_AVAILABLE_STATUS);
-        schema.put("requiredFields", List.of(
-            "receiptType",
-            "auditEventDigest",
-            "interfaceSpecDigest",
-            "storageTarget",
-            "probeAttemptId",
-            "probeStatus",
-            "available",
-            "observedAt",
-            "issuedBy"
-        ));
+        schema.put("requiredFields", storageProbeRequiredFields());
         schema.put("currentTemplate", Map.of(
             "receiptType", STORAGE_PROBE_RECEIPT_TYPE,
             "probeExecuted", false,
@@ -458,18 +493,7 @@ final class NimCreateDurableAuditReceiptSchemaSupport {
         schema.put("targetStorage", NimCreateDurableAuditStorageSupport.CANDIDATE_INDEX);
         schema.put("requiredFutureAckStatus", futureStatus);
         schema.put("requiredPreviousDigestField", requiredPreviousDigestField);
-        schema.put("requiredFields", List.of(
-            "ackType",
-            "auditEventDigest",
-            "interfaceSpecDigest",
-            "recordDigest",
-            requiredPreviousDigestField,
-            "writeAttemptId",
-            "ackStatus",
-            "durable",
-            "observedAt",
-            "issuedBy"
-        ));
+        schema.put("requiredFields", durableAckRequiredFields(requiredPreviousDigestField));
         schema.put("currentTemplate", Map.of(
             "ackType", type,
             "ackIssued", false,
@@ -488,19 +512,7 @@ final class NimCreateDurableAuditReceiptSchemaSupport {
         schema.put("sideEffectAllowedNow", false);
         schema.put("requiredFutureReceiptStatus", NimCreateStateMachineSupport.REQUIRED_AUDIT_RECEIPT_STATUS);
         schema.put("requiredFutureStorageMode", NimCreateStateMachineSupport.REQUIRED_AUDIT_STORAGE_MODE);
-        schema.put("requiredFields", List.of(
-            "receiptType",
-            "auditEventDigest",
-            "interfaceSpecDigest",
-            "storageProbeReceiptDigest",
-            "preWriteDurableAckDigest",
-            "postWriteDurableAckDigest",
-            "trustedPrincipalDigest",
-            "receiptStatus",
-            "storageMode",
-            "issuedAt",
-            "issuedBy"
-        ));
+        schema.put("requiredFields", durableReceiptRequiredFields());
         schema.put("prerequisites", Map.of(
             "storageAvailableRequired", true,
             "preWriteDurableAckRequired", true,

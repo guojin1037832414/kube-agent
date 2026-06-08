@@ -82,12 +82,26 @@ Current track:
 
 Recently completed:
 
-`M5.21-119 NIM readiness target taxonomy closed list`
+`M5.21-120 NIM receipt schema required fields closed list`
 
 Latest checkpoint:
 
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-120 implemented:
+  - Hardened `NimCreateDurableAuditReceiptSchemaSupport` so storage probe receipt, durable ack, and final durable receipt `requiredFields` lists are source-owned helpers.
+  - Hardened `NimCreateDurableAuditReceiptValidationGateSupport` so all four nested receipt/ack schema `requiredFields` lists must exactly match the source-owned lists.
+  - Hardened `NimCreateDurableAuditStorageProbeResultSupport` so digest-consistent storage probe schema supersets are rejected before probe result contracts are produced.
+  - Added digest-consistent forged schema regressions that append fake future evidence fields, recompute `schemaDigest`, and still expect validation/probe-result rejection.
+  - Added `docs/M5_21_ONE_HUNDRED_TWENTIETH_WAVE_NIM_RECEIPT_SCHEMA_REQUIRED_FIELDS_CLOSED_LIST_AUDIT_20260608.md`.
+  - Verification passed:
+    - `git diff --check`
+    - `mvn -q "-Dtest=NimCreateDurableAuditReceiptSchemaSupportTest,NimCreateDurableAuditReceiptValidationGateSupportTest,NimCreateDurableAuditStorageProbeResultSupportTest" test`
+    - `mvn -q test`
+    - Full Maven note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - Security invariant: no real `8100`, no real NIM service HTTP call, no Authorization header sending, no durable audit write, no deployment POST, no runtime write behavior, no state-machine release binding implementation, no durable executor release binding implementation, no validation result signer, no release decision signer, no code release switch implementation, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Recommended next slice: continue scanning remaining proof lists that still accept supersets, especially durable writer interface request/response contract lists, or proceed to another release-binding proof slice without opening writes.
+- Previous checkpoint:
 - M5.21-119 implemented:
   - Hardened `NimCreateReadinessExecutorSupport` so readiness plan `targets` must exactly match `deployment/service/nim-health/nim-models` before offline readiness execution can proceed.
   - Hardened `NimCreateReadinessHttpAdapterSupport` with the same exact target taxonomy validation before request specs are compiled.
