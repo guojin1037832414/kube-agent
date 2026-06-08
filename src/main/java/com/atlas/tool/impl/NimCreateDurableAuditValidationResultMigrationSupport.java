@@ -274,7 +274,8 @@ final class NimCreateDurableAuditValidationResultMigrationSupport {
             && requiredEvidenceValid(validationGateReport, objectMap(validationPlan.get("requiredEvidence")))
             && releaseDecisionTemplateValid(objectMap(validationPlan.get("releaseDecisionTemplate")))
             && validationFailureContractValid(objectMap(validationPlan.get("failureContract")))
-            && !stringList(validationPlan.get("forbiddenShortcuts")).isEmpty();
+            && stringList(validationPlan.get("forbiddenShortcuts")).equals(
+                NimCreateDurableAuditReceiptValidationGateSupport.validationForbiddenShortcuts());
     }
 
     private static boolean validationSequenceValid(Object rawSequence) {
@@ -341,9 +342,7 @@ final class NimCreateDurableAuditValidationResultMigrationSupport {
             && Boolean.FALSE.equals(failureContract.get("fallbackToMockReceiptAllowed"))
             && Boolean.FALSE.equals(failureContract.get("fallbackToSchemaOnlyAllowed"))
             && Boolean.FALSE.equals(failureContract.get("fallbackToCallerReceiptAllowed"))
-            && statuses.contains("RECEIPT_VALIDATION_NOT_IMPLEMENTED")
-            && statuses.contains("SCHEMA_DIGEST_MISMATCH")
-            && statuses.contains("TRUSTED_PRINCIPAL_MISMATCH");
+            && statuses.equals(NimCreateDurableAuditReceiptValidationGateSupport.validationFailureStatuses());
     }
 
     private static Map<String, Object> migrationPlan(Map<String, Object> auditContext,

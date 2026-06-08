@@ -6,6 +6,22 @@
 
 ---
 
+## [M5.21-124] - NIM validation gate failure/shortcut lists closed
+
+**Delivery**: Hardened durable audit validation gate failure and forbidden-shortcut proof-list validation at validation result migration.
+**Changes**
+- `NimCreateDurableAuditReceiptValidationGateSupport` now owns source-controlled helper lists for `validationPlan.failureContract.failureStatuses` and `validationPlan.forbiddenShortcuts`.
+- `NimCreateDurableAuditValidationResultMigrationSupport` now requires both validation-gate-owned lists to exactly match those helpers before migration planning can proceed.
+- Added a digest-consistent forged validation gate regression that appends future failure/shortcut values, recomputes `validationPlanDigest`, and still expects rejection.
+**Verification**
+- `git diff --check` passed.
+- Targeted durable receipt validation gate and validation result migration tests passed.
+- Full `mvn -q test` passed; full Maven degraded to L1 embedding mode after local `model.onnx` download timeout but exited 0.
+**Security**
+- This is validation gate failure/shortcut proof-list hardening only; it does not open runtime writes, real audit writes, real readiness polling, or a real code release switch.
+- No real `8100`, real NIM service HTTP call, Authorization header sending, durable audit write, deployment POST, state-machine release binding implementation, durable executor release binding implementation, validation result signer, release decision signer, code release switch implementation, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-123] - NIM receipt schema failure/test-double lists closed
 
 **Delivery**: Hardened durable audit typed receipt schema failure and test-double proof-list validation at the validation gate.

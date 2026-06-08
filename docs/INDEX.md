@@ -26,6 +26,7 @@
 | `CHANGELOG.md` | ✅ 有效 | 按里程碑分组的变更日志 | 与 M2 同步 |
 | `TOOL_DEV_SPEC.md` | ✅ 有效 | DomainTool 开发规范（BaseTool + 注解 + defaults.yml） | 与 v3.1.0 同步 |
 | `ARCHITECTURE_AUDIT_20260518.md` | ✅ 有效 | 一次性架构审计与行业调研报告 | 2026-05-18 生成，长期参考 |
+| `docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md` | ✅ 有效 | 顶级 Agent 总体架构、技术点与学习地图 | M5.21 起持续维护 |
 | `DOCUMENTATION_GOVERNANCE_REPORT.md` | ✅ 有效 | 文档治理方案与里程碑重对齐建议 | 2026-05-18 生成，长期参考 |
 | `pom.xml` | ✅ 有效 | Maven 构建配置 | 与代码实时同步 |
 

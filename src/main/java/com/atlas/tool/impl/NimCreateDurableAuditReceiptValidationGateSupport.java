@@ -33,6 +33,32 @@ final class NimCreateDurableAuditReceiptValidationGateSupport {
     private NimCreateDurableAuditReceiptValidationGateSupport() {
     }
 
+    static List<String> validationFailureStatuses() {
+        return List.of(
+            "IMPLEMENTATION_HOLD",
+            "RECEIPT_VALIDATION_NOT_IMPLEMENTED",
+            "SCHEMA_DIGEST_MISMATCH",
+            "STORAGE_PROBE_RECEIPT_INVALID",
+            "PRE_WRITE_ACK_INVALID",
+            "POST_WRITE_ACK_INVALID",
+            "DIGEST_CHAIN_MISMATCH",
+            "TRUSTED_PRINCIPAL_MISMATCH",
+            "FORGED_VALIDATION_PASS_CLAIM",
+            "SECRET_MATERIAL_REJECTED"
+        );
+    }
+
+    static List<String> validationForbiddenShortcuts() {
+        return List.of(
+            "accepting schema report as validation pass",
+            "accepting test double receipt or ack instance",
+            "accepting caller-supplied validationStatus=PASS",
+            "accepting releaseEligible=true from upstream input",
+            "accepting receiptStatus=DURABLE_RECORDED without validating all ack digests",
+            "allowing write execution before receipt validation gate passes"
+        );
+    }
+
     static Map<String, Object> plan(DurableAuditReceiptValidationGateInput input) {
         DurableAuditReceiptValidationGateInput safeInput = input == null
             ? DurableAuditReceiptValidationGateInput.empty()
@@ -412,7 +438,7 @@ final class NimCreateDurableAuditReceiptValidationGateSupport {
         plan.put("requiredEvidence", requiredEvidence(schemaReport));
         plan.put("releaseDecisionTemplate", releaseDecisionTemplate());
         plan.put("failureContract", validationFailureContract());
-        plan.put("forbiddenShortcuts", forbiddenShortcuts());
+        plan.put("forbiddenShortcuts", validationForbiddenShortcuts());
         return plan;
     }
 
@@ -516,30 +542,8 @@ final class NimCreateDurableAuditReceiptValidationGateSupport {
         contract.put("fallbackToMockReceiptAllowed", false);
         contract.put("fallbackToSchemaOnlyAllowed", false);
         contract.put("fallbackToCallerReceiptAllowed", false);
-        contract.put("failureStatuses", List.of(
-            "IMPLEMENTATION_HOLD",
-            "RECEIPT_VALIDATION_NOT_IMPLEMENTED",
-            "SCHEMA_DIGEST_MISMATCH",
-            "STORAGE_PROBE_RECEIPT_INVALID",
-            "PRE_WRITE_ACK_INVALID",
-            "POST_WRITE_ACK_INVALID",
-            "DIGEST_CHAIN_MISMATCH",
-            "TRUSTED_PRINCIPAL_MISMATCH",
-            "FORGED_VALIDATION_PASS_CLAIM",
-            "SECRET_MATERIAL_REJECTED"
-        ));
+        contract.put("failureStatuses", validationFailureStatuses());
         return contract;
-    }
-
-    private static List<String> forbiddenShortcuts() {
-        return List.of(
-            "accepting schema report as validation pass",
-            "accepting test double receipt or ack instance",
-            "accepting caller-supplied validationStatus=PASS",
-            "accepting releaseEligible=true from upstream input",
-            "accepting receiptStatus=DURABLE_RECORDED without validating all ack digests",
-            "allowing write execution before receipt validation gate passes"
-        );
     }
 
     private static boolean hasOnlyExpectedSchemaHold(Object rawBlockers) {
