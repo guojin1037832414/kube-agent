@@ -4,8 +4,8 @@
     "title":  "Legacy core ToolCallback safe execution",
     "generatedAt":  "2026-06-08 Asia/Shanghai",
     "branch":  "codex/m521-29-top-agent-mission",
-    "implementationCommit":  "pending local commit for M5.22-4",
-    "pushed":  false,
+    "implementationCommit":  "756acb8 fix(M5.22): route legacy callback through safe executor",
+    "pushed":  true,
     "files":  [
                   {
                       "path":  "CHANGELOG.md",
