@@ -4,8 +4,8 @@
     "title":  "Orchestrator fallback safe execution closure",
     "generatedAt":  "2026-06-08 Asia/Shanghai",
     "branch":  "codex/m521-29-top-agent-mission",
-    "implementationCommit":  "pending local commit for M5.22-5",
-    "pushed":  false,
+    "implementationCommit":  "aee2b1e fix(M5.22): route orchestrator fallback through safe executor",
+    "pushed":  true,
     "files":  [
                   {
                       "path":  "CHANGELOG.md",
