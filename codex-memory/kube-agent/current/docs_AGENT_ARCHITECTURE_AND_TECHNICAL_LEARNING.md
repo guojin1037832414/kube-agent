@@ -222,6 +222,19 @@ M5.22-1 引入的是一期顶级 Agent Core 的第一批先进工程底座：
 
 学习重点：顶级 Agent 的“先进”不等于把版本号推到最高，而是让每次升级都可构建、可测试、可审计、可回滚。Java 21/25、Spring Boot 4 与 Spring AI 2 应通过兼容矩阵逐步验证，不能破坏当前 Java 17 + Spring AI 1.1 稳定主线的恢复能力。
 
+### 统一 Tool 执行内核
+
+M5.22-2 收口了 Spring AI / Graph Bridge `AtlasToolCallback` 入口：
+
+- `AtlasToolCallback` 不再直接调用 `BaseTool.execute(...)`；
+- callback 只做 JSON 解析、ToolParameterSpec/alias 归一化和 JSON 序列化；
+- 真正执行统一进入 `SafeToolExecutor`，来源标记为 `TOOL_CALLBACK`；
+- 可信 `token/orgId/userId` 来自服务端 ThreadLocal / `UserPermissionContext`，不是 LLM JSON；
+- 缺少可信 org 上下文时 fail-closed；
+- 源码契约测试已把 Graph Bridge 从临时裸执行白名单移除。
+
+学习重点：多 Agent 架构不是“子 Agent 越多越强”。如果每个子 Agent 都能绕过统一执行边界直接调 Tool，系统会变成多个安全语义不一致的入口。顶级 Agent 的正确做法是：所有入口共享同一个执行内核，只把来源作为审计和策略扩展信息。
+
 ### Fail-Closed
 
 当证据缺失、来源不可信、格式不完整、digest 不匹配、词表扩展未审查时，系统必须拒绝，而不是降级为“试试看”。

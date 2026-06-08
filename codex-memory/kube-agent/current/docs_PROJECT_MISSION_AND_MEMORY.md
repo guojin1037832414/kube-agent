@@ -93,10 +93,36 @@ Current track:
 
 Recently completed:
 
-`M5.22-1 advanced backend engineering baseline`
+`M5.22-2 ToolCallback safe execution kernel`
 
 Latest checkpoint:
 
+- Date: 2026-06-08 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- M5.22-2 implemented:
+  - Migrated `src/main/java/com/atlas/graph/bridge/AtlasToolCallback.java` from local HITL + direct `baseTool.execute(...)` to `SafeToolExecutor`.
+  - `AtlasToolCallback` now constructs `SafeToolExecutionRequest` with `SafeToolExecutionSource.TOOL_CALLBACK`.
+  - `AtlasToolCallbackFactory` now injects `SafeToolExecutor` and `UserPermissionContext` into every callback.
+  - Callback JSON output now keeps Tool result compatibility and adds `source=TOOL_CALLBACK`; blocked executions return `SAFE_TOOL_EXECUTION_BLOCKED`.
+  - Removed Graph Bridge `AtlasToolCallback` from `M4Px4ToolExecuteEntrypointContractTest` temporary direct execute allowlist.
+  - Added callback tests proving alias normalization survives the migration, forged protected/control params are removed, trusted org/user context wins, and missing trusted org fail-closes before Tool execution.
+- Verification:
+  - `mvn -q "-Dtest=AtlasToolCallbackTest,M513HitlFailClosedContractTest,M4Px4ToolExecuteEntrypointContractTest" test`
+  - `mvn -q "-Dtest=SafeToolExecutorTest,M42PlanExecuteSafetyContractTest,M4Px4ToolParameterAliasContractTest,ProtectedToolParameterFilterTest,ProtectedToolParameterFilterUsageContractTest" test`
+  - `mvn -q -DskipTests validate`
+  - `git diff --check`
+- Scope boundary:
+  - Phase 1 Agent Core safety hardening only.
+  - No NIM/HPC/Slurm/BCM Phase 2 implementation was resumed.
+  - No new real write/create/delete/state-changing kube-manager call was opened.
+- Remaining direct execution debt:
+  - `ReActEngine` direct `meta.instance().execute(params)` path.
+  - legacy `com.atlas.tool.core.AtlasToolCallback`.
+  - `AtlasOrchestrator` legacy fallback.
+- Next technical follow-up:
+  - Migrate `ReActEngine` to `SafeToolExecutor` while preserving ReAct observation/event semantics.
+
+- Previous checkpoint:
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
 - User goal update:

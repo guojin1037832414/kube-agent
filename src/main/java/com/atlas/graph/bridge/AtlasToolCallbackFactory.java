@@ -1,9 +1,10 @@
 package com.atlas.graph.bridge;
 
+import com.atlas.auth.UserPermissionContext;
 import com.atlas.tool.core.BaseTool;
-import com.atlas.hitl.HitlGuard;
 import com.atlas.tool.core.ToolParameterNormalizer;
 import com.atlas.tool.core.ToolRegistry;
+import com.atlas.tool.execution.SafeToolExecutor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.stereotype.Component;
@@ -30,16 +31,19 @@ public class AtlasToolCallbackFactory {
     private final ToolRegistry toolRegistry;
     private final ObjectMapper objectMapper;
     private final ToolParameterNormalizer parameterNormalizer;
-    private final HitlGuard hitlGuard;
+    private final SafeToolExecutor safeToolExecutor;
+    private final UserPermissionContext userPermissionContext;
 
     public AtlasToolCallbackFactory(ToolRegistry toolRegistry,
                                     ObjectMapper objectMapper,
                                     ToolParameterNormalizer parameterNormalizer,
-                                    HitlGuard hitlGuard) {
+                                    SafeToolExecutor safeToolExecutor,
+                                    UserPermissionContext userPermissionContext) {
         this.toolRegistry = toolRegistry;
         this.objectMapper = objectMapper;
         this.parameterNormalizer = parameterNormalizer;
-        this.hitlGuard = hitlGuard;
+        this.safeToolExecutor = safeToolExecutor;
+        this.userPermissionContext = userPermissionContext;
     }
 
     /**
@@ -48,7 +52,8 @@ public class AtlasToolCallbackFactory {
     public List<ToolCallback> buildForAgent(String agentCode) {
         return toolRegistry.listByAgent(agentCode).stream()
                 .filter(meta -> meta.instance() instanceof BaseTool)
-                .map(meta -> new AtlasToolCallback((BaseTool) meta.instance(), objectMapper, parameterNormalizer, hitlGuard, meta))
+                .map(meta -> new AtlasToolCallback((BaseTool) meta.instance(), objectMapper, parameterNormalizer,
+                    safeToolExecutor, userPermissionContext, meta))
                 .collect(Collectors.toList());
     }
 
@@ -58,7 +63,8 @@ public class AtlasToolCallbackFactory {
     public List<ToolCallback> buildAllVisible() {
         return toolRegistry.getAllTools().stream()
                 .filter(tool -> toolRegistry.isVisible(tool.getToolName()))
-                .map(tool -> new AtlasToolCallback(tool, objectMapper, parameterNormalizer, hitlGuard, toolRegistry.resolve(tool.getToolName())))
+                .map(tool -> new AtlasToolCallback(tool, objectMapper, parameterNormalizer,
+                    safeToolExecutor, userPermissionContext, toolRegistry.resolve(tool.getToolName())))
                 .collect(Collectors.toList());
     }
 

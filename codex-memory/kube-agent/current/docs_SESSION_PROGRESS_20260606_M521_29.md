@@ -6,7 +6,7 @@
 - Primary workspace recovery folder: `F:\gitProject\kube-agent\codex-memory\kube-agent\current`
 - Historical external memory folder: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.22-1, advanced backend engineering baseline.
+- Current latest wave: M5.22-2, ToolCallback safe execution kernel.
 - Phase update: HPC / Slurm / BCM and NIM are paused and moved to Phase 2 by user direction.
 - Phase 1 focus: deliver the top-tier Agent core through generic manager Agent foundations, safe read/query validation, non-HPC/NIM manager function coverage, Tool metadata quality, HITL/audit execution boundary, traceability, recovery, evaluation, teaching documentation, and vue-kube-manager workflow integration.
 - Phase boundary clarification: moving NIM / HPC / Slurm / BCM to Phase 2 postpones specialist domain plugins only; it does not reduce Phase 1 standards.
@@ -55,6 +55,22 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.22-2 ToolCallback safe execution kernel is implemented:
+  - `src/main/java/com/atlas/graph/bridge/AtlasToolCallback.java` now delegates actual Tool execution to `SafeToolExecutor` instead of directly calling `baseTool.execute(...)`.
+  - `AtlasToolCallbackFactory` now injects `SafeToolExecutor` and `UserPermissionContext`.
+  - The callback path uses `SafeToolExecutionSource.TOOL_CALLBACK`.
+  - LLM ToolCallback JSON can no longer forge trusted `token`, `orgId`, `organizationId`, `userId`, HITL, audit, release, or write-control parameters into the business Tool.
+  - Callback execution fail-closes when trusted org context is missing.
+  - `M4Px4ToolExecuteEntrypointContractTest` removed Graph Bridge `AtlasToolCallback` from the temporary direct execute allowlist.
+  - Verification passed:
+    - `mvn -q "-Dtest=AtlasToolCallbackTest,M513HitlFailClosedContractTest,M4Px4ToolExecuteEntrypointContractTest" test`
+    - `mvn -q "-Dtest=SafeToolExecutorTest,M42PlanExecuteSafetyContractTest,M4Px4ToolParameterAliasContractTest,ProtectedToolParameterFilterTest,ProtectedToolParameterFilterUsageContractTest" test`
+    - `mvn -q -DskipTests validate`
+    - `git diff --check`
+  - No NIM/HPC/Slurm/BCM Phase 2 implementation was resumed and no new write path was opened.
+  - Remaining direct Tool execution debt: ReActEngine, legacy core `AtlasToolCallback`, and AtlasOrchestrator legacy fallback.
+  - Next Phase 1 technical slice: migrate `ReActEngine` to `SafeToolExecutor` while preserving ReAct observation/event semantics.
 
 - M5.22-1 advanced backend engineering baseline is implemented:
   - Upgraded Spring Boot to `3.5.14` and Spring AI to `1.1.7`.

@@ -102,15 +102,6 @@ class M4Px4ToolExecuteEntrypointContractTest {
             "绕过受保护上下文字段过滤、统一 ThreadLocal 恢复和 SafeToolExecutor 的异常 notExecuted 语义。"
         ),
         new TemporaryAllowedExecuteCall(
-            "Graph Bridge AtlasToolCallback",
-            "src/main/java/com/atlas/graph/bridge/AtlasToolCallback.java",
-            "baseTool.execute(normalizedParams)",
-            "Spring AI Graph bridge 入口当前保留参数归一化和 JSON 转换行为，迁移时需要保持 normalizedParams 语义不漂移。",
-            "保留 normalizedParams，委托 SafeToolExecutor.executeIntent，并使用 SafeToolExecutionSource.TOOL_CALLBACK。",
-            "P1",
-            "LLM ToolCallback 路径可能绕过统一受保护参数覆盖和 SafeToolExecutionResult 审计语义。"
-        ),
-        new TemporaryAllowedExecuteCall(
             "Core AtlasToolCallback 旧入口",
             "src/main/java/com/atlas/tool/core/AtlasToolCallback.java",
             "tool.execute(params)",
@@ -216,8 +207,8 @@ class M4Px4ToolExecuteEntrypointContractTest {
     @Test
     void temporaryAllowlist_shouldDocumentReasonAndMigrationTarget() {
         assertThat(TEMPORARY_DIRECT_EXECUTE_ALLOWLIST)
-            .as("当前阶段必须显式登记 4 个历史直接执行入口，后续迁移完成后只能减少不能无理由增加")
-            .hasSize(4);
+            .as("Graph Bridge AtlasToolCallback 已迁移到 SafeToolExecutor；剩余历史直接执行入口必须继续收敛")
+            .hasSize(3);
 
         for (TemporaryAllowedExecuteCall allowed : TEMPORARY_DIRECT_EXECUTE_ALLOWLIST) {
             assertThat(allowed.entranceName()).as(allowed.file() + " 必须说明入口名称").isNotBlank();

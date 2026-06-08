@@ -1,0 +1,48 @@
+﻿{
+    "project":  "kube-agent",
+    "wave":  "M5.22-2",
+    "title":  "ToolCallback safe execution kernel",
+    "phaseGoal":  "Phase 1 delivers the full top-tier kube-manager Agent Core; NIM/HPC/Slurm/BCM are Phase 2 specialist plugins.",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "implementationCommit":  "pending for M5.22-2",
+    "pushedToRemote":  "pending for M5.22-2",
+    "recoveryHome":  "F:\\gitProject\\kube-agent\\codex-memory\\kube-agent\\current",
+    "generatedAt":  "2026-06-08 Asia/Shanghai",
+    "files":  [
+                  {
+                      "file":  "RECOVERY_STATUS.md",
+                      "sha256":  "c9ffb661471d46fddaaecafc1363adb6712d7c79104630645fb4128a15f22015",
+                      "length":  3422
+                  },
+                  {
+                      "file":  "CHANGELOG.md",
+                      "sha256":  "ef0edb4fb55a5b6a79f3b7a900c1e38d4541bc5685adb55e4df1c0703b2fb1b5",
+                      "length":  254751
+                  },
+                  {
+                      "file":  "docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "6ef038916c7dd371bd438035078717e6a2f4df1510d67d44d6c1c9562a22d6d8",
+                      "length":  40121
+                  },
+                  {
+                      "file":  "docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "c97e0cea2d7a455068942aaaee915c11cefcab9d42e9c218f1cc7b881997e050",
+                      "length":  276360
+                  },
+                  {
+                      "file":  "docs_SESSION_PROGRESS_20260606_M521_29.md",
+                      "sha256":  "fdb2f7c5af4629788adad43e1eb9175cc65a460fdb6b82bd2b62951f31cf4527",
+                      "length":  276326
+                  },
+                  {
+                      "file":  "docs_v3.1_DEVELOPMENT_GUIDE.md",
+                      "sha256":  "b731f98854b7913e63195cf2f9981f98c3ffb96346c507ce4f7e5bc009f227f4",
+                      "length":  81325
+                  },
+                  {
+                      "file":  "docs_tech-stack_BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "cc8593c0fd1bcf82d50337587558514fbdde3cc80eccfc6e5036574eed1d5157",
+                      "length":  4829
+                  }
+              ]
+}

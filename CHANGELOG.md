@@ -6,6 +6,24 @@
 
 ---
 
+## [M5.22-2] - ToolCallback safe execution kernel
+
+**Delivery**: Migrated the Graph Bridge `AtlasToolCallback` path into the shared `SafeToolExecutor` kernel.
+**Changes**
+- `graph.bridge.AtlasToolCallback` now parses/normalizes JSON input only, then delegates actual Tool execution to `SafeToolExecutor` with `SafeToolExecutionSource.TOOL_CALLBACK`.
+- `AtlasToolCallbackFactory` now injects `SafeToolExecutor` and `UserPermissionContext`, preserving Tool metadata while removing the direct `baseTool.execute(...)` path.
+- Callback results now include a stable `source=TOOL_CALLBACK` marker and blocked executions return a structured `SAFE_TOOL_EXECUTION_BLOCKED` payload.
+- Removed Graph Bridge `AtlasToolCallback` from the temporary direct execute allowlist; remaining direct execution debt is now ReActEngine, legacy core callback, and AtlasOrchestrator fallback.
+**Verification**
+- `mvn -q "-Dtest=AtlasToolCallbackTest,M513HitlFailClosedContractTest,M4Px4ToolExecuteEntrypointContractTest" test` passed.
+- `mvn -q "-Dtest=SafeToolExecutorTest,M42PlanExecuteSafetyContractTest,M4Px4ToolParameterAliasContractTest,ProtectedToolParameterFilterTest,ProtectedToolParameterFilterUsageContractTest" test` passed.
+- `mvn -q -DskipTests validate` passed.
+- `git diff --check` passed.
+**Security**
+- LLM ToolCallback JSON can no longer supply trusted `token`, `orgId`, `organizationId`, `userId`, HITL, audit, release, or write-control parameters to the business Tool.
+- The callback path now fail-closes when the delegate thread lacks a trusted org context.
+- No new real write/create/delete/state-changing kube-manager call was opened.
+
 ## [M5.22-1] - Advanced backend engineering baseline
 
 **Delivery**: Introduced the first safe batch of advanced backend engineering foundations for the top-tier Phase 1 Agent Core.

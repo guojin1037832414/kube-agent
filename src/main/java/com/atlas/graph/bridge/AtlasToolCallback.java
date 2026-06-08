@@ -1,9 +1,13 @@
 package com.atlas.graph.bridge;
 
-import com.atlas.hitl.HitlGuard;
+import com.atlas.auth.UserPermissionContext;
 import com.atlas.tool.core.BaseTool;
 import com.atlas.tool.core.ToolInputSchemaBuilder;
 import com.atlas.tool.core.ToolParameterNormalizer;
+import com.atlas.tool.execution.SafeToolExecutionRequest;
+import com.atlas.tool.execution.SafeToolExecutionResult;
+import com.atlas.tool.execution.SafeToolExecutionSource;
+import com.atlas.tool.execution.SafeToolExecutor;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -12,7 +16,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.definition.ToolDefinition;
 
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Atlas BaseTool → Spring AI ToolCallback 桥接器。
@@ -21,9 +27,10 @@ import java.util.Map;
  * 桥接到 Spring AI 的 {@link ToolCallback}（参数为 JSON 字符串，返回 JSON 字符串），
  * 使 {@link com.alibaba.cloud.ai.graph.agent.ReactAgent} 能够直接调用 Atlas Tool 体系。</p>
  *
- * <p><b>权限感知：</b>桥接层内部调用 {@link BaseTool#execute(Map)}，而该方法内部
- * 已包含参数校验和异常兜底，权限校验由 {@link com.atlas.tool.core.ToolRegistry}
- * 在构建 AtlasToolCallback 时通过过滤可见 Tool 来保证。</p>
+ * <p><b>执行边界：</b>桥接层只负责 JSON 解析、参数 alias 归一化和结果序列化；
+ * 真正的 Tool 调用必须委托 {@link SafeToolExecutor}。这样 Spring AI / ReactAgent
+ * 子图路径与主 Graph {@code tool_call}、Plan {@code execute_node} 共享同一套权限、
+ * HITL、租户上下文、受保护参数过滤和 ThreadLocal 恢复语义。</p>
  *
  * <p><b>参数契约：</b>桥接层会根据 {@link BaseTool#getParameterSpecs()} 生成
  * ToolDefinition.inputSchema，让 LLM 优先输出 canonical 参数名；同时调用
@@ -39,24 +46,29 @@ public class AtlasToolCallback implements ToolCallback {
     private final BaseTool baseTool;
     private final ObjectMapper objectMapper;
     private final ToolParameterNormalizer parameterNormalizer;
-    private final HitlGuard hitlGuard;
+    private final SafeToolExecutor safeToolExecutor;
+    private final UserPermissionContext userPermissionContext;
     private final com.atlas.tool.core.ToolRegistry.ToolMetadata atlasMetadata;
 
     public AtlasToolCallback(BaseTool baseTool,
                              ObjectMapper objectMapper,
-                             ToolParameterNormalizer parameterNormalizer) {
-        this(baseTool, objectMapper, parameterNormalizer, new HitlGuard(), null);
+                             ToolParameterNormalizer parameterNormalizer,
+                             SafeToolExecutor safeToolExecutor,
+                             UserPermissionContext userPermissionContext) {
+        this(baseTool, objectMapper, parameterNormalizer, safeToolExecutor, userPermissionContext, null);
     }
 
     public AtlasToolCallback(BaseTool baseTool,
                              ObjectMapper objectMapper,
                              ToolParameterNormalizer parameterNormalizer,
-                             HitlGuard hitlGuard,
+                             SafeToolExecutor safeToolExecutor,
+                             UserPermissionContext userPermissionContext,
                              com.atlas.tool.core.ToolRegistry.ToolMetadata atlasMetadata) {
-        this.baseTool = baseTool;
-        this.objectMapper = objectMapper;
+        this.baseTool = Objects.requireNonNull(baseTool, "baseTool cannot be null");
+        this.objectMapper = Objects.requireNonNull(objectMapper, "objectMapper cannot be null");
         this.parameterNormalizer = parameterNormalizer != null ? parameterNormalizer : new ToolParameterNormalizer();
-        this.hitlGuard = hitlGuard != null ? hitlGuard : new HitlGuard();
+        this.safeToolExecutor = Objects.requireNonNull(safeToolExecutor, "safeToolExecutor cannot be null");
+        this.userPermissionContext = Objects.requireNonNull(userPermissionContext, "userPermissionContext cannot be null");
         this.atlasMetadata = atlasMetadata;
     }
 
@@ -76,7 +88,7 @@ public class AtlasToolCallback implements ToolCallback {
     }
 
     /**
-     * Spring AI 调用入口：JSON 字符串 → Map → 参数归一化 → BaseTool.execute → Map → JSON 字符串。
+     * Spring AI 调用入口：JSON 字符串 → Map → 参数归一化 → SafeToolExecutor → JSON 字符串。
      */
     @Override
     public String call(String toolInput) {
@@ -89,19 +101,22 @@ public class AtlasToolCallback implements ToolCallback {
             // 2. 统一参数归一化：只补齐 canonical 字段，不覆盖、不删除原始字段。
             Map<String, Object> normalizedParams = parameterNormalizer.normalize(baseTool.getToolName(), params);
 
-            // 3. HITL fail-closed 守卫：ReactAgent/ToolCallback 路径没有 Graph State 确认 marker，
-            // 高风险 Tool 必须在这里拒绝，避免绕过主 Graph tool_call 的执行前拦截。
-            HitlGuard.Decision hitlDecision = hitlGuard.verify(baseTool.getToolName(), atlasMetadata, null);
-            if (!hitlDecision.allowed()) {
-                log.warn("[AtlasToolCallback] HITL 守卫阻止高风险工具执行: tool={}", baseTool.getToolName());
-                return objectMapper.writeValueAsString(hitlGuard.toBlockedToolResult(hitlDecision));
-            }
+            // 3. 委托统一安全执行器。ToolCallback 只能读取 delegate 节点提前绑定的 ThreadLocal，
+            // 不能相信 LLM JSON 里的 token/orgId/userId/HITL/审计/发布/写入控制字段。
+            SafeToolExecutionRequest request = new SafeToolExecutionRequest(
+                resolveIntentId(),
+                normalizedParams,
+                resolveTrustedUserId(),
+                UserPermissionContext.CURRENT_TOKEN.get(),
+                UserPermissionContext.getCurrentOrgId(),
+                "",
+                null,
+                SafeToolExecutionSource.TOOL_CALLBACK
+            );
+            SafeToolExecutionResult result = safeToolExecutor.executeIntent(request);
 
-            // 4. 执行业务 Tool
-            Map<String, Object> result = baseTool.execute(normalizedParams);
-
-            // 5. Map → JSON
-            String output = objectMapper.writeValueAsString(result);
+            // 4. Map → JSON
+            String output = objectMapper.writeValueAsString(toCallbackPayload(result));
             log.debug("[AtlasToolCallback] {} 结果: {}", baseTool.getToolName(), output);
             return output;
 
@@ -112,6 +127,43 @@ public class AtlasToolCallback implements ToolCallback {
             log.error("[AtlasToolCallback] {} 执行异常", baseTool.getToolName(), e);
             return jsonError("TOOL_EXECUTION_ERROR", "工具执行异常: " + e.getMessage());
         }
+    }
+
+    private String resolveIntentId() {
+        if (atlasMetadata != null && atlasMetadata.intentId() != null && !atlasMetadata.intentId().isBlank()) {
+            return atlasMetadata.intentId();
+        }
+        return baseTool.getToolName();
+    }
+
+    private String resolveTrustedUserId() {
+        return userPermissionContext.current()
+            .map(UserPermissionContext.UserPermission::username)
+            .filter(username -> !username.isBlank())
+            .orElse("anonymous");
+    }
+
+    private Map<String, Object> toCallbackPayload(SafeToolExecutionResult result) {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("source", SafeToolExecutionSource.TOOL_CALLBACK.name());
+        if (result == null) {
+            payload.put("success", false);
+            payload.put("executed", false);
+            payload.put("error", "SAFE_TOOL_EXECUTION_RESULT_MISSING");
+            payload.put("message", "SafeToolExecutor 未返回执行结果");
+            return payload;
+        }
+        payload.put("executed", result.executed());
+        if (result.toolResult() != null) {
+            payload.putAll(result.toolResult());
+            payload.put("executed", result.executed());
+            payload.put("source", SafeToolExecutionSource.TOOL_CALLBACK.name());
+            return payload;
+        }
+        payload.put("success", false);
+        payload.put("error", "SAFE_TOOL_EXECUTION_BLOCKED");
+        payload.put("message", result.answer() != null ? result.answer() : "ToolCallback 已被安全执行器阻断");
+        return payload;
     }
 
     @SuppressWarnings("unchecked")

@@ -130,15 +130,19 @@ class M513HitlFailClosedContractTest {
             "tool.execute(toolParams)",
             "AtlasOrchestrator legacy fallback");
 
-        assertGuardBeforeExecute(read(BRIDGE_CALLBACK),
-            "hitlGuard.verify(baseTool.getToolName(), atlasMetadata, null)",
-            "baseTool.execute(normalizedParams)",
-            "Spring AI AtlasToolCallback");
+        String bridgeCallback = read(BRIDGE_CALLBACK);
+        assertThat(bridgeCallback)
+            .as("Spring AI AtlasToolCallback 必须委托 SafeToolExecutor，不能直接执行 BaseTool")
+            .contains("new SafeToolExecutionRequest(")
+            .contains("SafeToolExecutionSource.TOOL_CALLBACK")
+            .contains("safeToolExecutor.executeIntent(request)")
+            .doesNotContain("baseTool.execute(");
 
         assertThat(read(BRIDGE_FACTORY))
-            .as("ToolCallbackFactory 必须向 callback 传入真实 ToolMetadata，避免 READ 查询被 metadata=null 误拦截")
-            .contains("HitlGuard hitlGuard")
-            .contains("new AtlasToolCallback((BaseTool) meta.instance(), objectMapper, parameterNormalizer, hitlGuard, meta)")
+            .as("ToolCallbackFactory 必须向 callback 传入 SafeToolExecutor 和真实 ToolMetadata")
+            .contains("SafeToolExecutor safeToolExecutor")
+            .contains("UserPermissionContext userPermissionContext")
+            .contains("new AtlasToolCallback((BaseTool) meta.instance(), objectMapper, parameterNormalizer,")
             .contains("toolRegistry.resolve(tool.getToolName())");
     }
 
