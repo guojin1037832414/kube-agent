@@ -69,10 +69,17 @@ class NimCreateDurableAuditReceiptValidationGateSupportTest {
         assertEquals(false, report.get("writeExecutionAllowed"));
         assertEquals(schemaReport.get("schemaDigest"), report.get("sourceReceiptSchemaDigest"));
         assertEquals(schemaReport.get("sourceInterfaceSpecDigest"), report.get("sourceInterfaceSpecDigest"));
+        assertEquals(audit.get("organizationId"), report.get("sourceOrganizationId"));
+        assertEquals(audit.get("userId"), report.get("sourceUserId"));
+        assertEquals(principal.get("username"), report.get("sourceUsername"));
         assertTrue(report.get("validationPlanDigest").toString().matches("[a-f0-9]{64}"));
 
         @SuppressWarnings("unchecked")
         Map<String, Object> plan = (Map<String, Object>) report.get("validationPlan");
+        assertEquals(
+            NimCreateDurableAuditReceiptValidationGateSupport.validationPlanFromReport(report),
+            plan
+        );
         assertEquals("SERVER_SIDE_DURABLE_RECEIPT_VALIDATION_GATE_REQUIRED",
             plan.get("validationBoundary"));
         assertEquals(NimCreateDurableAuditReceiptValidationGateSupport.FUTURE_VALIDATOR,

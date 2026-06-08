@@ -413,42 +413,30 @@ final class NimCreateDurableAuditReceiptValidationProbeResultBindingSupport {
                                                        Map<String, Object> principal,
                                                        Map<String, Object> validationGateReport,
                                                        Map<String, Object> validationPlan) {
-        Map<String, Object> identity = objectMap(validationPlan.get("trustedIdentityBinding"));
-        Map<String, Object> evidence = objectMap(validationPlan.get("requiredEvidence"));
-        Map<String, Object> storageProbe = objectMap(evidence.get("storageProbeReceipt"));
-        Map<String, Object> failure = objectMap(validationPlan.get("failureContract"));
         return !validationPlan.isEmpty()
-            && "SERVER_SIDE_DURABLE_RECEIPT_VALIDATION_GATE_REQUIRED".equals(
-                text(validationPlan.get("validationBoundary")))
-            && NimCreateDurableAuditReceiptValidationGateSupport.FUTURE_VALIDATOR.equals(
-                text(validationPlan.get("futureValidator")))
-            && text(validationGateReport.get("sourceReceiptSchemaDigest")).equals(
-                text(validationPlan.get("sourceReceiptSchemaDigest")))
-            && text(validationGateReport.get("sourceInterfaceSpecDigest")).equals(
-                text(validationPlan.get("sourceInterfaceSpecDigest")))
-            && text(validationGateReport.get("sourceBoundaryPlanDigest")).equals(
-                text(validationPlan.get("sourceBoundaryPlanDigest")))
-            && text(validationGateReport.get("sourceWriterPlanDigest")).equals(
-                text(validationPlan.get("sourceWriterPlanDigest")))
-            && text(validationGateReport.get("sourceAvailabilityPlanDigest")).equals(
-                text(validationPlan.get("sourceAvailabilityPlanDigest")))
+            && validationPlanSourceDigestsMatch(validationGateReport, validationPlan)
             && digestFor(auditContext).equals(text(validationPlan.get("sourceAuditEventDigest")))
-            && NimCreateAuditWriterSupport.DIGEST_ALGORITHM.equals(text(validationPlan.get("digestAlgorithm")))
-            && text(auditContext.get("organizationId")).equals(text(identity.get("organizationId")))
-            && text(auditContext.get("userId")).equals(text(identity.get("userId")))
-            && text(principal.get("username")).equals(text(identity.get("username")))
-            && "SERVER_SESSION_CONTEXT".equals(text(identity.get("source")))
-            && Boolean.TRUE.equals(identity.get("protectedFromCallerParams"))
-            && NimCreateDurableAuditReceiptSchemaSupport.STORAGE_PROBE_RECEIPT_TYPE.equals(
-                text(storageProbe.get("requiredType")))
-            && NimCreateDurableAuditStorageProbeResultSupport.FUTURE_AVAILABLE_STATUS.equals(
-                text(storageProbe.get("requiredStatus")))
-            && Boolean.TRUE.equals(storageProbe.get("mustBindAuditEventDigest"))
-            && Boolean.TRUE.equals(storageProbe.get("mustBeServerIssued"))
-            && Boolean.TRUE.equals(failure.get("failClosed"))
-            && Boolean.FALSE.equals(failure.get("fallbackToMockReceiptAllowed"))
-            && Boolean.FALSE.equals(failure.get("fallbackToSchemaOnlyAllowed"))
-            && Boolean.FALSE.equals(failure.get("fallbackToCallerReceiptAllowed"));
+            && text(auditContext.get("organizationId")).equals(text(validationGateReport.get("sourceOrganizationId")))
+            && text(auditContext.get("userId")).equals(text(validationGateReport.get("sourceUserId")))
+            && text(principal.get("username")).equals(text(validationGateReport.get("sourceUsername")))
+            && validationPlan.equals(
+                NimCreateDurableAuditReceiptValidationGateSupport.validationPlanFromReport(validationGateReport));
+    }
+
+    private static boolean validationPlanSourceDigestsMatch(Map<String, Object> validationGateReport,
+                                                            Map<String, Object> validationPlan) {
+        for (String field : List.of(
+            "sourceReceiptSchemaDigest",
+            "sourceInterfaceSpecDigest",
+            "sourceBoundaryPlanDigest",
+            "sourceWriterPlanDigest",
+            "sourceAvailabilityPlanDigest"
+        )) {
+            if (!text(validationGateReport.get(field)).equals(text(validationPlan.get(field)))) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static void validateCrossBinding(Map<String, Object> probeResultReport,

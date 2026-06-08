@@ -719,6 +719,13 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Extra top-level keys, identity-binding keys, evidence-map keys, nested probe-contract keys, template drift, failure-contract drift, and forbidden-shortcut drift are rejected even when `bindingPlanDigest` is recomputed.
 - Learning distinction: intermediate proof bridges are still protocol objects. A digest-consistent `bindingPlan` superset can become future migration authority unless the consumer accepts only the producer-owned exact shape.
 
+### M5.21-136 validation plan maps closed note
+
+- Receipt validation gate generation now exposes `validationPlanFromReport(...)` as the producer-owned canonical reconstruction helper.
+- Validation-result migration and receipt-validation probe-result binding both require the whole `validationPlan` to equal that canonical proof object instead of re-checking only known nested map fields.
+- Extra top-level keys, identity-binding keys, evidence-map keys, all four nested evidence maps, validation-sequence drift, template drift, failure-contract drift, and forbidden-shortcut drift are rejected even when `validationPlanDigest` is recomputed.
+- Learning distinction: when one proof object has multiple current consumers, every consumer must validate the same producer-owned exact shape. The strictest consumer does not protect the system if another consumer still accepts a digest-consistent superset.
+
 ### Architecture and technical learning map note
 
 - Maintain `docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md` as the long-lived architecture and technical-learning map.

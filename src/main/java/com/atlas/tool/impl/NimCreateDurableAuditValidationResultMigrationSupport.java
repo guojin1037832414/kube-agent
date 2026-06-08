@@ -273,102 +273,30 @@ final class NimCreateDurableAuditValidationResultMigrationSupport {
                                                        Map<String, Object> principal,
                                                        Map<String, Object> validationGateReport,
                                                        Map<String, Object> validationPlan) {
-        Map<String, Object> identity = objectMap(validationPlan.get("trustedIdentityBinding"));
         return !validationPlan.isEmpty()
-            && "SERVER_SIDE_DURABLE_RECEIPT_VALIDATION_GATE_REQUIRED".equals(
-                text(validationPlan.get("validationBoundary")))
-            && NimCreateDurableAuditReceiptValidationGateSupport.FUTURE_VALIDATOR.equals(
-                text(validationPlan.get("futureValidator")))
-            && text(validationGateReport.get("sourceReceiptSchemaDigest")).equals(
-                text(validationPlan.get("sourceReceiptSchemaDigest")))
-            && text(validationGateReport.get("sourceInterfaceSpecDigest")).equals(
-                text(validationPlan.get("sourceInterfaceSpecDigest")))
-            && text(validationGateReport.get("sourceBoundaryPlanDigest")).equals(
-                text(validationPlan.get("sourceBoundaryPlanDigest")))
-            && text(validationGateReport.get("sourceWriterPlanDigest")).equals(
-                text(validationPlan.get("sourceWriterPlanDigest")))
-            && text(validationGateReport.get("sourceAvailabilityPlanDigest")).equals(
-                text(validationPlan.get("sourceAvailabilityPlanDigest")))
+            && validationPlanSourceDigestsMatch(validationGateReport, validationPlan)
             && digestFor(auditContext).equals(text(validationPlan.get("sourceAuditEventDigest")))
-            && NimCreateAuditWriterSupport.DIGEST_ALGORITHM.equals(text(validationPlan.get("digestAlgorithm")))
-            && text(auditContext.get("organizationId")).equals(text(identity.get("organizationId")))
-            && text(auditContext.get("userId")).equals(text(identity.get("userId")))
-            && text(principal.get("username")).equals(text(identity.get("username")))
-            && "SERVER_SESSION_CONTEXT".equals(text(identity.get("source")))
-            && Boolean.TRUE.equals(identity.get("protectedFromCallerParams"))
-            && validationSequenceValid(validationPlan.get("validationSequence"))
-            && requiredEvidenceValid(validationGateReport, objectMap(validationPlan.get("requiredEvidence")))
-            && releaseDecisionTemplateValid(objectMap(validationPlan.get("releaseDecisionTemplate")))
-            && validationFailureContractValid(objectMap(validationPlan.get("failureContract")))
-            && stringList(validationPlan.get("forbiddenShortcuts")).equals(
-                NimCreateDurableAuditReceiptValidationGateSupport.validationForbiddenShortcuts());
+            && text(auditContext.get("organizationId")).equals(text(validationGateReport.get("sourceOrganizationId")))
+            && text(auditContext.get("userId")).equals(text(validationGateReport.get("sourceUserId")))
+            && text(principal.get("username")).equals(text(validationGateReport.get("sourceUsername")))
+            && validationPlan.equals(
+                NimCreateDurableAuditReceiptValidationGateSupport.validationPlanFromReport(validationGateReport));
     }
 
-    private static boolean validationSequenceValid(Object rawSequence) {
-        List<Map<String, Object>> sequence = listOfMaps(rawSequence);
-        return sequence.size() == 5
-            && "validate-schema-digest".equals(text(sequence.get(0).get("id")))
-            && "validate-storage-probe-receipt".equals(text(sequence.get(1).get("id")))
-            && "validate-pre-write-durable-ack".equals(text(sequence.get(2).get("id")))
-            && "validate-post-write-durable-ack".equals(text(sequence.get(3).get("id")))
-            && "validate-final-durable-receipt".equals(text(sequence.get(4).get("id")))
-            && sequence.stream().allMatch(step -> Boolean.TRUE.equals(step.get("futureOnly")))
-            && sequence.stream().allMatch(step -> Boolean.FALSE.equals(step.get("sideEffectAllowedNow")))
-            && sequence.stream().allMatch(step -> Boolean.TRUE.equals(step.get("failClosed")));
-    }
-
-    private static boolean requiredEvidenceValid(Map<String, Object> validationGateReport,
-                                                 Map<String, Object> requiredEvidence) {
-        Map<String, Object> storageProbe = objectMap(requiredEvidence.get("storageProbeReceipt"));
-        Map<String, Object> preAck = objectMap(requiredEvidence.get("preWriteDurableAck"));
-        Map<String, Object> postAck = objectMap(requiredEvidence.get("postWriteDurableAck"));
-        Map<String, Object> receipt = objectMap(requiredEvidence.get("durableReceipt"));
-        return text(validationGateReport.get("sourceReceiptSchemaDigest")).equals(
-                text(requiredEvidence.get("sourceReceiptSchemaDigest")))
-            && NimCreateDurableAuditReceiptSchemaSupport.STORAGE_PROBE_RECEIPT_TYPE.equals(
-                text(storageProbe.get("requiredType")))
-            && Boolean.TRUE.equals(storageProbe.get("mustBindAuditEventDigest"))
-            && Boolean.TRUE.equals(storageProbe.get("mustBeServerIssued"))
-            && NimCreateDurableAuditReceiptSchemaSupport.PRE_WRITE_ACK_TYPE.equals(
-                text(preAck.get("requiredType")))
-            && "PRE_WRITE_INTENT".equals(text(preAck.get("requiredPhase")))
-            && Boolean.TRUE.equals(preAck.get("mustBindStorageProbeReceiptDigest"))
-            && NimCreateDurableAuditReceiptSchemaSupport.POST_WRITE_ACK_TYPE.equals(
-                text(postAck.get("requiredType")))
-            && "POST_WRITE_RESULT".equals(text(postAck.get("requiredPhase")))
-            && Boolean.TRUE.equals(postAck.get("mustBindPreWriteDurableAckDigest"))
-            && NimCreateDurableAuditReceiptSchemaSupport.DURABLE_RECEIPT_TYPE.equals(
-                text(receipt.get("requiredType")))
-            && NimCreateStateMachineSupport.REQUIRED_AUDIT_RECEIPT_STATUS.equals(
-                text(receipt.get("requiredReceiptStatus")))
-            && NimCreateStateMachineSupport.REQUIRED_AUDIT_STORAGE_MODE.equals(
-                text(receipt.get("requiredStorageMode")))
-            && Boolean.TRUE.equals(receipt.get("mustIncludeAllAckDigests"))
-            && Boolean.TRUE.equals(receipt.get("mustBindTrustedPrincipalDigest"));
-    }
-
-    private static boolean releaseDecisionTemplateValid(Map<String, Object> decision) {
-        return !decision.isEmpty()
-            && VALIDATION_NOT_RUN.equals(text(decision.get("validationStatus")))
-            && Boolean.FALSE.equals(decision.get("storageProbeReceiptValidated"))
-            && Boolean.FALSE.equals(decision.get("preWriteDurableAckValidated"))
-            && Boolean.FALSE.equals(decision.get("postWriteDurableAckValidated"))
-            && Boolean.FALSE.equals(decision.get("digestChainValidated"))
-            && Boolean.FALSE.equals(decision.get("trustedPrincipalValidated"))
-            && Boolean.FALSE.equals(decision.get("durableReceiptValidated"))
-            && Boolean.FALSE.equals(decision.get("releaseEligible"))
-            && Boolean.FALSE.equals(decision.get("writeExecutionAllowed"))
-            && "NOT_ISSUED".equals(text(decision.get("receiptStatus")))
-            && "NONE".equals(text(decision.get("storageMode")));
-    }
-
-    private static boolean validationFailureContractValid(Map<String, Object> failureContract) {
-        List<String> statuses = stringList(failureContract.get("failureStatuses"));
-        return Boolean.TRUE.equals(failureContract.get("failClosed"))
-            && Boolean.FALSE.equals(failureContract.get("fallbackToMockReceiptAllowed"))
-            && Boolean.FALSE.equals(failureContract.get("fallbackToSchemaOnlyAllowed"))
-            && Boolean.FALSE.equals(failureContract.get("fallbackToCallerReceiptAllowed"))
-            && statuses.equals(NimCreateDurableAuditReceiptValidationGateSupport.validationFailureStatuses());
+    private static boolean validationPlanSourceDigestsMatch(Map<String, Object> validationGateReport,
+                                                            Map<String, Object> validationPlan) {
+        for (String field : List.of(
+            "sourceReceiptSchemaDigest",
+            "sourceInterfaceSpecDigest",
+            "sourceBoundaryPlanDigest",
+            "sourceWriterPlanDigest",
+            "sourceAvailabilityPlanDigest"
+        )) {
+            if (!text(validationGateReport.get(field)).equals(text(validationPlan.get(field)))) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static Map<String, Object> migrationPlan(Map<String, Object> auditContext,
@@ -800,17 +728,6 @@ final class NimCreateDurableAuditValidationResultMigrationSupport {
             if (!map.isEmpty()) {
                 items.add(map);
             }
-        }
-        return items;
-    }
-
-    private static List<String> stringList(Object value) {
-        if (!(value instanceof List<?> list)) {
-            return List.of();
-        }
-        List<String> items = new ArrayList<>();
-        for (Object item : list) {
-            items.add(text(item));
         }
         return items;
     }

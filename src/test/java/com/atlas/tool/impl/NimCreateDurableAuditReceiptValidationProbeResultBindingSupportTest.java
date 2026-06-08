@@ -4,9 +4,16 @@ import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
+import java.util.function.Consumer;
 
 import static java.util.Map.entry;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -280,6 +287,63 @@ class NimCreateDurableAuditReceiptValidationProbeResultBindingSupportTest {
     }
 
     @Test
+    void binding_shouldRejectDigestConsistentValidationPlanTopLevelExtraKey() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+        Map<String, Object> forgedGateReport = withDigestConsistentValidationPlanMutation(
+            validationGateReport(audit, principal),
+            validationPlan -> validationPlan.put("probeBindingCanTrustDigestOnly", false)
+        );
+
+        assertRejectsDigestConsistentValidationPlanDrift(audit, principal, forgedGateReport);
+    }
+
+    @Test
+    void binding_shouldRejectDigestConsistentValidationPlanNestedMapAndListDrift() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+
+        List<Consumer<Map<String, Object>>> mutations = new ArrayList<>();
+        mutations.add(validationPlan -> objectMap(validationPlan.get("trustedIdentityBinding"))
+            .put("callerPrincipalCanSatisfyValidation", false));
+        mutations.add(validationPlan -> objectMap(validationPlan.get("requiredEvidence"))
+            .put("probeBindingDigestCanSatisfyValidation", false));
+        for (EvidenceMutation evidenceMutation : List.of(
+            new EvidenceMutation("storageProbeReceipt", "probeResultContractDigestCanReplaceReceipt"),
+            new EvidenceMutation("preWriteDurableAck", "preWriteAckDigestCanReplaceProbeReceipt"),
+            new EvidenceMutation("postWriteDurableAck", "postWriteAckCanSkipPreWriteAckDigest"),
+            new EvidenceMutation("durableReceipt", "durableReceiptCanOmitTrustedPrincipalDigest")
+        )) {
+            mutations.add(validationPlan -> objectMap(objectMap(validationPlan.get("requiredEvidence"))
+                .get(evidenceMutation.evidenceKey()))
+                .put(evidenceMutation.forgedKey(), false));
+        }
+        mutations.add(validationPlan -> objectList(validationPlan.get("validationSequence"))
+            .add(Map.of(
+                "id", "bind-probe-result-before-validation-plan",
+                "requirement", "Do not accept a mutated validation sequence",
+                "evidenceType", "FORGED_VALIDATION_SEQUENCE",
+                "futureOnly", true,
+                "sideEffectAllowedNow", false,
+                "failClosed", true
+            )));
+        mutations.add(validationPlan -> objectMap(validationPlan.get("releaseDecisionTemplate"))
+            .put("probeBindingCanIssueReleaseCredential", false));
+        mutations.add(validationPlan -> objectMap(validationPlan.get("failureContract"))
+            .put("fallbackToProbeBindingOnlyAllowed", false));
+        mutations.add(validationPlan -> objectList(validationPlan.get("forbiddenShortcuts"))
+            .add("accepting validationPlanDigest without canonical validation plan maps"));
+        for (Consumer<Map<String, Object>> mutation : mutations) {
+            Map<String, Object> forgedGateReport = withDigestConsistentValidationPlanMutation(
+                validationGateReport(audit, principal),
+                mutation
+            );
+
+            assertRejectsDigestConsistentValidationPlanDrift(audit, principal, forgedGateReport);
+        }
+    }
+
+    @Test
     void binding_shouldRejectCallerSuppliedEvidenceAndSecretLeakage() {
         Map<String, Object> audit = completeAuditContext();
         Map<String, Object> principal = trustedPrincipalSnapshot();
@@ -383,6 +447,119 @@ class NimCreateDurableAuditReceiptValidationProbeResultBindingSupportTest {
                 Map.of()
             )
         );
+    }
+
+    private Map<String, Object> withDigestConsistentValidationPlanMutation(Map<String, Object> gateReport,
+                                                                          Consumer<Map<String, Object>> mutator) {
+        Map<String, Object> forgedReport = new LinkedHashMap<>(gateReport);
+        Map<String, Object> validationPlan = objectMap(deepMutableCopy(forgedReport.get("validationPlan")));
+        mutator.accept(validationPlan);
+        forgedReport.put("validationPlan", validationPlan);
+        forgedReport.put("validationPlanDigest", sha256(validationPlan));
+        return forgedReport;
+    }
+
+    private void assertRejectsDigestConsistentValidationPlanDrift(Map<String, Object> audit,
+                                                                 Map<String, Object> principal,
+                                                                 Map<String, Object> validationGateReport) {
+        Map<String, Object> report = NimCreateDurableAuditReceiptValidationProbeResultBindingSupport.plan(
+            new NimCreateDurableAuditReceiptValidationProbeResultBindingSupport
+                .ReceiptValidationProbeResultBindingInput(
+                audit,
+                principal,
+                storageProbeResultReport(audit, principal),
+                validationGateReport,
+                Map.of()
+            )
+        );
+
+        assertEquals(NimCreateDurableAuditReceiptValidationProbeResultBindingSupport.REJECTED_STATE,
+            report.get("bindingState"));
+        assertEquals(false, report.get("inputAccepted"));
+        assertSuccessStatesRemainFalse(report);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> plan = (Map<String, Object>) report.get("bindingPlan");
+        assertTrue(plan.isEmpty());
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+        assertHasBlocker(blockers,
+            "DURABLE_AUDIT_RECEIPT_VALIDATION_GATE_REPORT_INVALID_FOR_PROBE_RESULT_BINDING");
+    }
+
+    private Object deepMutableCopy(Object value) {
+        if (value instanceof Map<?, ?> map) {
+            Map<String, Object> copy = new LinkedHashMap<>();
+            map.forEach((key, item) -> copy.put(String.valueOf(key), deepMutableCopy(item)));
+            return copy;
+        }
+        if (value instanceof List<?> list) {
+            List<Object> copy = new ArrayList<>();
+            for (Object item : list) {
+                copy.add(deepMutableCopy(item));
+            }
+            return copy;
+        }
+        return value;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> objectMap(Object value) {
+        return (Map<String, Object>) value;
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Object> objectList(Object value) {
+        return (List<Object>) value;
+    }
+
+    private record EvidenceMutation(String evidenceKey, String forgedKey) {
+    }
+
+    private String sha256(Map<String, Object> value) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(canonical(value).getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IllegalStateException(ex);
+        }
+    }
+
+    private String canonical(Object value) {
+        if (value == null) {
+            return "null";
+        }
+        if (value instanceof Map<?, ?> map) {
+            Map<String, Object> sorted = new TreeMap<>();
+            map.forEach((key, item) -> sorted.put(String.valueOf(key), item));
+            StringBuilder builder = new StringBuilder("{");
+            boolean first = true;
+            for (Map.Entry<String, Object> entry : sorted.entrySet()) {
+                if (!first) {
+                    builder.append(",");
+                }
+                first = false;
+                builder.append(escape(entry.getKey())).append("=").append(canonical(entry.getValue()));
+            }
+            return builder.append("}").toString();
+        }
+        if (value instanceof List<?> list) {
+            StringBuilder builder = new StringBuilder("[");
+            for (int i = 0; i < list.size(); i++) {
+                if (i > 0) {
+                    builder.append(",");
+                }
+                builder.append(canonical(list.get(i)));
+            }
+            return builder.append("]").toString();
+        }
+        return escape(value.toString());
+    }
+
+    private String escape(String value) {
+        return value.replace("\\", "\\\\")
+            .replace("\n", "\\n")
+            .replace("\r", "\\r")
+            .replace("\t", "\\t");
     }
 
     private Map<String, Object> validationGateReport(Map<String, Object> audit,

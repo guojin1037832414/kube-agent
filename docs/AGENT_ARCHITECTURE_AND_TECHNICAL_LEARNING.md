@@ -215,7 +215,33 @@ NIM 链路明确禁止真实 Authorization、token、password、secret、NGC/NIM
 
 学习重点：对于长期 Agent 项目，文档不是附属物。文档是架构记忆、教学材料和恢复机制的一部分。
 
-## M5.21-135 最新学习笔记
+## M5.21-136 最新学习笔记
+
+本轮关闭的是 `NimCreateDurableAuditReceiptValidationGateSupport` 输出、并被两个下游共同消费的完整 `validationPlan`：
+
+- 顶层 validation plan 字段
+- `trustedIdentityBinding`
+- `validationSequence`
+- `requiredEvidence`
+- `storageProbeReceipt`
+- `preWriteDurableAck`
+- `postWriteDurableAck`
+- `durableReceipt`
+- `releaseDecisionTemplate`
+- `failureContract`
+- `forbiddenShortcuts`
+
+关键收获：
+
+- `validationPlanDigest` 只能证明 validation plan 对象自洽，不能证明新增 key 已经被评审为合法验证语义。
+- `validationPlan` 被 validation-result migration 和 probe-result binding 两个边界消费，所以不能只修其中一个 consumer。
+- `NimCreateDurableAuditReceiptValidationGateSupport` 现在提供 `validationPlanFromReport(...)` 作为 producer-owned canonical proof object。
+- 下游现在只接受完整 canonical validation plan exact equality，同时校验 source digest、source audit digest 和 source identity。
+- 本轮新增 digest-consistent forgery：篡改顶层 key、identity map、required evidence map、四段 nested evidence、validation sequence、release decision template、failure contract 和 forbidden shortcut list，重算 `validationPlanDigest` 后仍要求 fail closed。
+
+学习总结：顶级 Agent 的 proof object 一旦被多个边界消费，就要从 producer 处统一拥有完整协议形状。下游不应该各自“理解一部分 JSON”，因为最宽松的 consumer 会决定整条安全链路的实际强度。
+
+## M5.21-135 学习笔记
 
 本轮关闭的是 validation-result probe-binding migration 消费上游 probe binding report 时的完整 `bindingPlan`：
 

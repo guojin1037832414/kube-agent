@@ -11,6 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.function.Consumer;
 
 import static java.util.Map.entry;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -358,6 +359,125 @@ class NimCreateDurableAuditValidationResultMigrationSupportTest {
     }
 
     @Test
+    void migrationPlan_shouldRejectDigestConsistentValidationPlanTopLevelExtraKey() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+        Map<String, Object> forgedGateReport = withDigestConsistentValidationPlanMutation(
+            validationGateReport(audit, principal),
+            validationPlan -> validationPlan.put("futureValidationPassPreviewAllowed", false)
+        );
+
+        assertRejectsDigestConsistentValidationPlanDrift(audit, principal, forgedGateReport);
+    }
+
+    @Test
+    void migrationPlan_shouldRejectDigestConsistentValidationPlanIdentityExtraKey() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+        Map<String, Object> forgedGateReport = withDigestConsistentValidationPlanMutation(
+            validationGateReport(audit, principal),
+            validationPlan -> objectMap(validationPlan.get("trustedIdentityBinding"))
+                .put("callerPrincipalCanSatisfyValidation", false)
+        );
+
+        assertRejectsDigestConsistentValidationPlanDrift(audit, principal, forgedGateReport);
+    }
+
+    @Test
+    void migrationPlan_shouldRejectDigestConsistentValidationPlanEvidenceExtraKey() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+        Map<String, Object> forgedGateReport = withDigestConsistentValidationPlanMutation(
+            validationGateReport(audit, principal),
+            validationPlan -> objectMap(validationPlan.get("requiredEvidence"))
+                .put("legacyAuditReceiptCanSatisfyValidation", false)
+        );
+
+        assertRejectsDigestConsistentValidationPlanDrift(audit, principal, forgedGateReport);
+    }
+
+    @Test
+    void migrationPlan_shouldRejectDigestConsistentValidationPlanNestedEvidenceExtraKey() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+
+        for (EvidenceMutation mutation : List.of(
+            new EvidenceMutation("storageProbeReceipt", "probeResultDigestAloneCanSatisfyValidation"),
+            new EvidenceMutation("preWriteDurableAck", "preWriteAckDigestCanReplaceProbeReceipt"),
+            new EvidenceMutation("postWriteDurableAck", "postWriteAckCanSkipPreWriteAckDigest"),
+            new EvidenceMutation("durableReceipt", "durableReceiptCanOmitTrustedPrincipalDigest")
+        )) {
+            Map<String, Object> forgedGateReport = withDigestConsistentValidationPlanMutation(
+                validationGateReport(audit, principal),
+                validationPlan -> objectMap(objectMap(validationPlan.get("requiredEvidence"))
+                    .get(mutation.evidenceKey()))
+                    .put(mutation.forgedKey(), false)
+            );
+
+            assertRejectsDigestConsistentValidationPlanDrift(audit, principal, forgedGateReport);
+        }
+    }
+
+    @Test
+    void migrationPlan_shouldRejectDigestConsistentValidationPlanSequenceDrift() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+        Map<String, Object> forgedGateReport = withDigestConsistentValidationPlanMutation(
+            validationGateReport(audit, principal),
+            validationPlan -> objectList(validationPlan.get("validationSequence"))
+                .add(Map.of(
+                    "id", "accept-validation-plan-digest",
+                    "requirement", "Do not accept digest-only validation proof",
+                    "evidenceType", "FORGED_DIGEST_ONLY",
+                    "futureOnly", true,
+                    "sideEffectAllowedNow", false,
+                    "failClosed", true
+                ))
+        );
+
+        assertRejectsDigestConsistentValidationPlanDrift(audit, principal, forgedGateReport);
+    }
+
+    @Test
+    void migrationPlan_shouldRejectDigestConsistentValidationPlanTemplateExtraKey() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+        Map<String, Object> forgedGateReport = withDigestConsistentValidationPlanMutation(
+            validationGateReport(audit, principal),
+            validationPlan -> objectMap(validationPlan.get("releaseDecisionTemplate"))
+                .put("validationPlanCanIssueReleaseCredential", false)
+        );
+
+        assertRejectsDigestConsistentValidationPlanDrift(audit, principal, forgedGateReport);
+    }
+
+    @Test
+    void migrationPlan_shouldRejectDigestConsistentValidationPlanFailureContractExtraKey() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+        Map<String, Object> forgedGateReport = withDigestConsistentValidationPlanMutation(
+            validationGateReport(audit, principal),
+            validationPlan -> objectMap(validationPlan.get("failureContract"))
+                .put("fallbackToDigestConsistentValidationPlanAllowed", false)
+        );
+
+        assertRejectsDigestConsistentValidationPlanDrift(audit, principal, forgedGateReport);
+    }
+
+    @Test
+    void migrationPlan_shouldRejectDigestConsistentValidationPlanForbiddenShortcutsListDrift() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+        Map<String, Object> forgedGateReport = withDigestConsistentValidationPlanMutation(
+            validationGateReport(audit, principal),
+            validationPlan -> objectList(validationPlan.get("forbiddenShortcuts"))
+                .add("accepting validationPlanDigest without canonical validation plan maps")
+        );
+
+        assertRejectsDigestConsistentValidationPlanDrift(audit, principal, forgedGateReport);
+    }
+
+    @Test
     void migrationPlan_shouldRejectTrustedPrincipalMismatch() {
         Map<String, Object> audit = completeAuditContext();
         Map<String, Object> gatePrincipal = trustedPrincipalSnapshot();
@@ -564,6 +684,65 @@ class NimCreateDurableAuditValidationResultMigrationSupportTest {
         return forgedReport;
     }
 
+    private Map<String, Object> withDigestConsistentValidationPlanMutation(Map<String, Object> gateReport,
+                                                                          Consumer<Map<String, Object>> mutator) {
+        Map<String, Object> forgedReport = new LinkedHashMap<>(gateReport);
+        Map<String, Object> validationPlan = objectMap(deepMutableCopy(forgedReport.get("validationPlan")));
+        mutator.accept(validationPlan);
+        forgedReport.put("validationPlan", validationPlan);
+        forgedReport.put("validationPlanDigest", sha256(validationPlan));
+        return forgedReport;
+    }
+
+    private void assertRejectsDigestConsistentValidationPlanDrift(Map<String, Object> audit,
+                                                                 Map<String, Object> principal,
+                                                                 Map<String, Object> gateReport) {
+        Map<String, Object> report = NimCreateDurableAuditValidationResultMigrationSupport.plan(
+            new NimCreateDurableAuditValidationResultMigrationSupport.DurableAuditValidationResultMigrationInput(
+                audit,
+                principal,
+                gateReport
+            )
+        );
+
+        assertEquals(NimCreateDurableAuditValidationResultMigrationSupport.REJECTED_STATE,
+            report.get("migrationPlanState"));
+        assertEquals(false, report.get("inputAccepted"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> plan = (Map<String, Object>) report.get("migrationPlan");
+        assertTrue(plan.isEmpty());
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+        assertHasBlocker(blockers,
+            "DURABLE_AUDIT_RECEIPT_VALIDATION_GATE_REPORT_INVALID_FOR_MIGRATION_PLAN");
+    }
+
+    private Object deepMutableCopy(Object value) {
+        if (value instanceof Map<?, ?> map) {
+            Map<String, Object> copy = new LinkedHashMap<>();
+            map.forEach((key, item) -> copy.put(String.valueOf(key), deepMutableCopy(item)));
+            return copy;
+        }
+        if (value instanceof List<?> list) {
+            List<Object> copy = new ArrayList<>();
+            for (Object item : list) {
+                copy.add(deepMutableCopy(item));
+            }
+            return copy;
+        }
+        return value;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> objectMap(Object value) {
+        return (Map<String, Object>) value;
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Object> objectList(Object value) {
+        return (List<Object>) value;
+    }
+
     private String sha256(Map<String, Object> value) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
@@ -612,6 +791,9 @@ class NimCreateDurableAuditValidationResultMigrationSupportTest {
     }
 
     private record ListMutation(String contractKey, String listKey, String forgedValue) {
+    }
+
+    private record EvidenceMutation(String evidenceKey, String forgedKey) {
     }
 
     private Map<String, Object> completeAuditContext() {

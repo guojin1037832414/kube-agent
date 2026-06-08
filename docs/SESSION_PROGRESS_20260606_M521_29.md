@@ -6,7 +6,7 @@
 - Primary workspace recovery folder: `F:\gitProject\kube-agent\codex-memory\kube-agent\current`
 - Historical external memory folder: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-135, NIM probe binding plan maps closed.
+- Current latest wave: M5.21-136, NIM validation plan maps closed.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -50,6 +50,22 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-136 NIM validation plan maps closed is implemented:
+  - Hardened `src/main/java/com/atlas/tool/impl/NimCreateDurableAuditReceiptValidationGateSupport.java`.
+  - Hardened `src/main/java/com/atlas/tool/impl/NimCreateDurableAuditValidationResultMigrationSupport.java`.
+  - Hardened `src/main/java/com/atlas/tool/impl/NimCreateDurableAuditReceiptValidationProbeResultBindingSupport.java`.
+  - Validation gate reports now include `sourceOrganizationId`, `sourceUserId`, and `sourceUsername`.
+  - `NimCreateDurableAuditReceiptValidationGateSupport` now exposes producer-owned `validationPlanFromReport(...)`.
+  - Validation-result migration and receipt-validation probe-result binding now require exact `validationPlan` equality against that producer-owned canonical helper instead of locally hand-interpreting nested maps.
+  - Added digest-consistent forged validation-plan drift regressions that append fake top-level/nested/list proof fields, recompute `validationPlanDigest`, and still expect rejection.
+  - Added `docs/M5_21_ONE_HUNDRED_THIRTY_SIXTH_WAVE_NIM_VALIDATION_PLAN_MAPS_CLOSED_AUDIT_20260608.md`.
+  - Updated `docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md` with the M5.21-136 learning note.
+  - Targeted verification passed:
+    - `git diff --check`
+    - `mvn -q "-Dtest=NimCreateDurableAuditReceiptValidationGateSupportTest,NimCreateDurableAuditValidationResultMigrationSupportTest,NimCreateDurableAuditReceiptValidationProbeResultBindingSupportTest" test`
+  - No real `8100` access; no real NIM service HTTP call; no Authorization header sending; no durable audit write; no deployment POST; no runtime write behavior opened; no source guard installation; no state-machine release binding implementation; no durable executor release binding implementation; no validation result signer; no release decision signer; no code release switch implementation; no Elasticsearch; no `ISysLogService`; no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Multi-expert follow-up: continue scanning earlier receipt-validation inputs, especially `probeResultContract` consumers, for remaining local nested-map interpretation that should become producer-owned canonical equality.
 
 - M5.21-135 NIM probe binding plan maps closed is implemented:
   - Hardened `src/main/java/com/atlas/tool/impl/NimCreateDurableAuditReceiptValidationProbeResultBindingSupport.java`.

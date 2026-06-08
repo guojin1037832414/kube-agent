@@ -124,6 +124,9 @@ final class NimCreateDurableAuditReceiptValidationGateSupport {
         result.put("sourceBoundaryPlanDigest", text(schemaReport.get("sourceBoundaryPlanDigest")));
         result.put("sourceWriterPlanDigest", text(schemaReport.get("sourceWriterPlanDigest")));
         result.put("sourceAvailabilityPlanDigest", text(schemaReport.get("sourceAvailabilityPlanDigest")));
+        result.put("sourceOrganizationId", text(auditContext.get("organizationId")));
+        result.put("sourceUserId", text(auditContext.get("userId")));
+        result.put("sourceUsername", text(principal.get("username")));
         result.put("validationPlanDigestAlgorithm", NimCreateAuditWriterSupport.DIGEST_ALGORITHM);
         result.put("validationPlanDigest", inputAccepted ? digestFor(validationPlan) : "");
         result.put("validationPlan", validationPlan);
@@ -417,29 +420,68 @@ final class NimCreateDurableAuditReceiptValidationGateSupport {
     private static Map<String, Object> validationPlan(Map<String, Object> auditContext,
                                                       Map<String, Object> principal,
                                                       Map<String, Object> schemaReport) {
+        return validationPlanForDigests(
+            validationPlanSourceDigests(schemaReport),
+            digestFor(auditContext),
+            text(auditContext.get("organizationId")),
+            text(auditContext.get("userId")),
+            text(principal.get("username"))
+        );
+    }
+
+    static Map<String, Object> validationPlanFromReport(Map<String, Object> validationGateReport) {
+        return validationPlanForDigests(
+            validationGateReport,
+            text(validationGateReport.get("sourceAuditEventDigest")),
+            text(validationGateReport.get("sourceOrganizationId")),
+            text(validationGateReport.get("sourceUserId")),
+            text(validationGateReport.get("sourceUsername"))
+        );
+    }
+
+    private static Map<String, Object> validationPlanForDigests(Map<String, Object> sourceDigests,
+                                                                String sourceAuditEventDigest,
+                                                                String organizationId,
+                                                                String userId,
+                                                                String username) {
         Map<String, Object> plan = new LinkedHashMap<>();
         plan.put("validationBoundary", "SERVER_SIDE_DURABLE_RECEIPT_VALIDATION_GATE_REQUIRED");
         plan.put("futureValidator", FUTURE_VALIDATOR);
-        plan.put("sourceReceiptSchemaDigest", text(schemaReport.get("schemaDigest")));
-        plan.put("sourceInterfaceSpecDigest", text(schemaReport.get("sourceInterfaceSpecDigest")));
-        plan.put("sourceBoundaryPlanDigest", text(schemaReport.get("sourceBoundaryPlanDigest")));
-        plan.put("sourceWriterPlanDigest", text(schemaReport.get("sourceWriterPlanDigest")));
-        plan.put("sourceAvailabilityPlanDigest", text(schemaReport.get("sourceAvailabilityPlanDigest")));
-        plan.put("sourceAuditEventDigest", digestFor(auditContext));
+        putValidationPlanSourceDigests(plan, sourceDigests);
+        plan.put("sourceAuditEventDigest", sourceAuditEventDigest);
         plan.put("digestAlgorithm", NimCreateAuditWriterSupport.DIGEST_ALGORITHM);
         plan.put("trustedIdentityBinding", Map.of(
-            "organizationId", text(auditContext.get("organizationId")),
-            "userId", text(auditContext.get("userId")),
-            "username", text(principal.get("username")),
+            "organizationId", organizationId,
+            "userId", userId,
+            "username", username,
             "source", "SERVER_SESSION_CONTEXT",
             "protectedFromCallerParams", true
         ));
         plan.put("validationSequence", validationSequence());
-        plan.put("requiredEvidence", requiredEvidence(schemaReport));
+        plan.put("requiredEvidence", requiredEvidence(text(sourceDigests.get("sourceReceiptSchemaDigest"))));
         plan.put("releaseDecisionTemplate", releaseDecisionTemplate());
         plan.put("failureContract", validationFailureContract());
         plan.put("forbiddenShortcuts", validationForbiddenShortcuts());
         return plan;
+    }
+
+    private static Map<String, Object> validationPlanSourceDigests(Map<String, Object> schemaReport) {
+        Map<String, Object> source = new LinkedHashMap<>();
+        source.put("sourceReceiptSchemaDigest", text(schemaReport.get("schemaDigest")));
+        source.put("sourceInterfaceSpecDigest", text(schemaReport.get("sourceInterfaceSpecDigest")));
+        source.put("sourceBoundaryPlanDigest", text(schemaReport.get("sourceBoundaryPlanDigest")));
+        source.put("sourceWriterPlanDigest", text(schemaReport.get("sourceWriterPlanDigest")));
+        source.put("sourceAvailabilityPlanDigest", text(schemaReport.get("sourceAvailabilityPlanDigest")));
+        return source;
+    }
+
+    private static void putValidationPlanSourceDigests(Map<String, Object> target,
+                                                       Map<String, Object> sourceDigests) {
+        target.put("sourceReceiptSchemaDigest", text(sourceDigests.get("sourceReceiptSchemaDigest")));
+        target.put("sourceInterfaceSpecDigest", text(sourceDigests.get("sourceInterfaceSpecDigest")));
+        target.put("sourceBoundaryPlanDigest", text(sourceDigests.get("sourceBoundaryPlanDigest")));
+        target.put("sourceWriterPlanDigest", text(sourceDigests.get("sourceWriterPlanDigest")));
+        target.put("sourceAvailabilityPlanDigest", text(sourceDigests.get("sourceAvailabilityPlanDigest")));
     }
 
     private static List<Map<String, Object>> validationSequence() {
@@ -483,9 +525,9 @@ final class NimCreateDurableAuditReceiptValidationGateSupport {
         return step;
     }
 
-    private static Map<String, Object> requiredEvidence(Map<String, Object> schemaReport) {
+    private static Map<String, Object> requiredEvidence(String sourceReceiptSchemaDigest) {
         Map<String, Object> evidence = new LinkedHashMap<>();
-        evidence.put("sourceReceiptSchemaDigest", text(schemaReport.get("schemaDigest")));
+        evidence.put("sourceReceiptSchemaDigest", sourceReceiptSchemaDigest);
         evidence.put("storageProbeReceipt", Map.of(
             "requiredType", NimCreateDurableAuditReceiptSchemaSupport.STORAGE_PROBE_RECEIPT_TYPE,
             "requiredStatus", "STORAGE_AVAILABLE_CONFIRMED",
