@@ -173,9 +173,12 @@ class NimCreateDurableAuditValidationResultMigrationSupportTest {
         assertEquals(false, failure.get("fallbackToLegacyAuditReceiptFlagAllowed"));
         @SuppressWarnings("unchecked")
         List<String> failureStatuses = (List<String>) failure.get("failureStatuses");
-        assertTrue(failureStatuses.contains("VALIDATION_RESULT_NOT_IMPLEMENTED"));
-        assertTrue(failureStatuses.contains("RELEASE_DECISION_NOT_IMPLEMENTED"));
-        assertTrue(failureStatuses.contains("LEGACY_AUDIT_RECEIPT_RELEASE_FLAG_NOT_TRUSTED"));
+        assertEquals(NimCreateDurableAuditValidationResultMigrationSupport.migrationFailureStatuses(),
+            failureStatuses);
+        @SuppressWarnings("unchecked")
+        List<String> forbiddenShortcuts = (List<String>) plan.get("forbiddenShortcuts");
+        assertEquals(NimCreateDurableAuditValidationResultMigrationSupport.migrationForbiddenShortcuts(),
+            forbiddenShortcuts);
 
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");

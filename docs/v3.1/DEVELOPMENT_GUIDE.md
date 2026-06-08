@@ -642,6 +642,13 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Extra future failure or shortcut values are rejected even when `validationPlanDigest` is recomputed.
 - Learning distinction: forbidden shortcuts are negative release protocol, not explanatory prose. They must evolve through reviewed source code, tests, and documentation.
 
+### M5.21-125 validation result migration failure/shortcut lists closed note
+
+- Durable audit validation result migration generation now exposes source-owned closed lists for migration failure statuses and forbidden shortcuts.
+- Release decision gate and validation result probe-binding migration require exact equality for both M5.21-58 migration-plan-owned lists.
+- Extra future failure or shortcut values are rejected even when `migrationPlanDigest` is recomputed.
+- Learning distinction: if multiple downstream consumers accept the same proof object, every current consumer must validate the same closed protocol vocabulary. A digest-consistent JSON append is still unsafe unless reviewed source code owns the new vocabulary.
+
 ### Architecture and technical learning map note
 
 - Maintain `docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md` as the long-lived architecture and technical-learning map.

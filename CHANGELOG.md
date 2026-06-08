@@ -6,6 +6,23 @@
 
 ---
 
+## [M5.21-125] - NIM validation result migration failure/shortcut lists closed
+
+**Delivery**: Hardened validation result migration failure and forbidden-shortcut proof-list validation across current migration-plan consumers.
+**Changes**
+- `NimCreateDurableAuditValidationResultMigrationSupport` now owns source-controlled helper lists for `migrationPlan.failureContract.failureStatuses` and `migrationPlan.forbiddenShortcuts`.
+- `NimCreateDurableAuditReleaseDecisionGateSupport` now requires both migration-plan-owned lists to exactly match those helpers before release gate planning can proceed.
+- `NimCreateDurableAuditValidationResultProbeBindingMigrationSupport` now applies the same exact checks, closing the adjacent M5.21-69 migration-plan consumer.
+- Added digest-consistent forged migration plan regressions that append future failure/shortcut values, recompute `migrationPlanDigest`, and still expect fail-closed rejection.
+**Verification**
+- `git diff --check` passed.
+- Targeted durable validation result migration, release decision gate, and probe-binding migration tests passed.
+- Full `mvn -q test` passed; full Maven degraded to L1 embedding mode after local `model.onnx` download timeout but exited 0.
+**Security**
+- This is validation result migration failure/shortcut proof-list hardening only; it does not open runtime writes, real audit writes, real readiness polling, or a real code release switch.
+- No real `8100`, real NIM service HTTP call, Authorization header sending, durable audit write, deployment POST, state-machine release binding implementation, durable executor release binding implementation, validation result signer, release decision signer, code release switch implementation, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-124] - NIM validation gate failure/shortcut lists closed
 
 **Delivery**: Hardened durable audit validation gate failure and forbidden-shortcut proof-list validation at validation result migration.

@@ -35,6 +35,32 @@ final class NimCreateDurableAuditValidationResultMigrationSupport {
     private NimCreateDurableAuditValidationResultMigrationSupport() {
     }
 
+    static List<String> migrationFailureStatuses() {
+        return List.of(
+            "IMPLEMENTATION_HOLD",
+            "VALIDATION_RESULT_NOT_IMPLEMENTED",
+            "RELEASE_DECISION_NOT_IMPLEMENTED",
+            "VALIDATION_GATE_REPORT_INVALID",
+            "VALIDATION_PLAN_DIGEST_MISMATCH",
+            "VALIDATION_RESULT_DIGEST_MISSING",
+            "RELEASE_DECISION_DIGEST_MISSING",
+            "LEGACY_AUDIT_RECEIPT_RELEASE_FLAG_NOT_TRUSTED",
+            "FORGED_RELEASE_DECISION_CLAIM",
+            "SECRET_MATERIAL_REJECTED"
+        );
+    }
+
+    static List<String> migrationForbiddenShortcuts() {
+        return List.of(
+            "accepting validation gate report as validation result",
+            "accepting migration plan as release decision",
+            "accepting caller-supplied validationResult or releaseDecision",
+            "accepting legacy auditReceipt.releaseEligible=true as write permission",
+            "accepting validationStatus=PASS without recomputing all typed evidence digests",
+            "allowing durable write executor to POST before a server-issued release decision exists"
+        );
+    }
+
     static Map<String, Object> plan(DurableAuditValidationResultMigrationInput input) {
         DurableAuditValidationResultMigrationInput safeInput = input == null
             ? DurableAuditValidationResultMigrationInput.empty()
@@ -510,30 +536,12 @@ final class NimCreateDurableAuditValidationResultMigrationSupport {
         contract.put("fallbackToCallerDecisionAllowed", false);
         contract.put("fallbackToLegacyAuditReceiptFlagAllowed", false);
         contract.put("fallbackToMigrationPlanAllowed", false);
-        contract.put("failureStatuses", List.of(
-            "IMPLEMENTATION_HOLD",
-            "VALIDATION_RESULT_NOT_IMPLEMENTED",
-            "RELEASE_DECISION_NOT_IMPLEMENTED",
-            "VALIDATION_GATE_REPORT_INVALID",
-            "VALIDATION_PLAN_DIGEST_MISMATCH",
-            "VALIDATION_RESULT_DIGEST_MISSING",
-            "RELEASE_DECISION_DIGEST_MISSING",
-            "LEGACY_AUDIT_RECEIPT_RELEASE_FLAG_NOT_TRUSTED",
-            "FORGED_RELEASE_DECISION_CLAIM",
-            "SECRET_MATERIAL_REJECTED"
-        ));
+        contract.put("failureStatuses", migrationFailureStatuses());
         return contract;
     }
 
     private static List<String> forbiddenShortcuts() {
-        return List.of(
-            "accepting validation gate report as validation result",
-            "accepting migration plan as release decision",
-            "accepting caller-supplied validationResult or releaseDecision",
-            "accepting legacy auditReceipt.releaseEligible=true as write permission",
-            "accepting validationStatus=PASS without recomputing all typed evidence digests",
-            "allowing durable write executor to POST before a server-issued release decision exists"
-        );
+        return migrationForbiddenShortcuts();
     }
 
     private static boolean hasOnlyExpectedValidationGateHold(Object rawBlockers) {

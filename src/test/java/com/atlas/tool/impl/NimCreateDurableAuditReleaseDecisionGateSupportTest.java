@@ -2,9 +2,15 @@ package com.atlas.tool.impl;
 
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import static java.util.Map.entry;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -280,6 +286,47 @@ class NimCreateDurableAuditReleaseDecisionGateSupportTest {
     }
 
     @Test
+    void releaseDecisionGate_shouldRejectDigestConsistentMigrationPlanExtraFailureOrShortcutLists() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+
+        for (ListMutation mutation : List.of(
+            new ListMutation("failureContract", "failureStatuses", "FUTURE_RELEASE_SIGNER_NOT_READY"),
+            new ListMutation(null, "forbiddenShortcuts", "accepting migrationPlanDigest as release credential")
+        )) {
+            Map<String, Object> forgedMigrationReport = withDigestConsistentExtraMigrationPlanListField(
+                migrationReport(audit, principal),
+                mutation.contractKey(),
+                mutation.listKey(),
+                mutation.forgedValue()
+            );
+
+            Map<String, Object> report = NimCreateDurableAuditReleaseDecisionGateSupport.plan(
+                new NimCreateDurableAuditReleaseDecisionGateSupport.DurableAuditReleaseDecisionGateInput(
+                    audit,
+                    principal,
+                    forgedMigrationReport
+                )
+            );
+
+            String scenario = mutation.contractKey() == null
+                ? mutation.listKey()
+                : mutation.contractKey() + "." + mutation.listKey();
+            assertEquals(NimCreateDurableAuditReleaseDecisionGateSupport.REJECTED_STATE,
+                report.get("gateState"), scenario);
+            assertEquals(false, report.get("inputAccepted"), scenario);
+            assertEquals(false, report.get("writeExecutionAllowed"), scenario);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> plan = (Map<String, Object>) report.get("releaseDecisionGatePlan");
+            assertTrue(plan.isEmpty(), scenario);
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+            assertHasBlocker(blockers,
+                "DURABLE_AUDIT_VALIDATION_RESULT_MIGRATION_REPORT_INVALID_FOR_RELEASE_GATE");
+        }
+    }
+
+    @Test
     void releaseDecisionGate_shouldRejectTrustedPrincipalMismatch() {
         Map<String, Object> audit = completeAuditContext();
         Map<String, Object> migrationPrincipal = trustedPrincipalSnapshot();
@@ -488,6 +535,83 @@ class NimCreateDurableAuditReleaseDecisionGateSupportTest {
                 principal
             )
         );
+    }
+
+    private Map<String, Object> withDigestConsistentExtraMigrationPlanListField(Map<String, Object> migrationReport,
+                                                                               String contractKey,
+                                                                               String listKey,
+                                                                               String forgedValue) {
+        Map<String, Object> forgedReport = new LinkedHashMap<>(migrationReport);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> migrationPlan =
+            new LinkedHashMap<>((Map<String, Object>) forgedReport.get("migrationPlan"));
+        if (contractKey == null) {
+            @SuppressWarnings("unchecked")
+            List<String> list = new ArrayList<>((List<String>) migrationPlan.get(listKey));
+            list.add(forgedValue);
+            migrationPlan.put(listKey, list);
+        } else {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> contract = new LinkedHashMap<>((Map<String, Object>) migrationPlan.get(contractKey));
+            @SuppressWarnings("unchecked")
+            List<String> list = new ArrayList<>((List<String>) contract.get(listKey));
+            list.add(forgedValue);
+            contract.put(listKey, list);
+            migrationPlan.put(contractKey, contract);
+        }
+        forgedReport.put("migrationPlan", migrationPlan);
+        forgedReport.put("migrationPlanDigest", sha256(migrationPlan));
+        return forgedReport;
+    }
+
+    private String sha256(Map<String, Object> value) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(canonical(value).getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IllegalStateException(ex);
+        }
+    }
+
+    private String canonical(Object value) {
+        if (value == null) {
+            return "null";
+        }
+        if (value instanceof Map<?, ?> map) {
+            Map<String, Object> sorted = new TreeMap<>();
+            map.forEach((key, item) -> sorted.put(String.valueOf(key), item));
+            StringBuilder builder = new StringBuilder("{");
+            boolean first = true;
+            for (Map.Entry<String, Object> entry : sorted.entrySet()) {
+                if (!first) {
+                    builder.append(",");
+                }
+                first = false;
+                builder.append(escape(entry.getKey())).append("=").append(canonical(entry.getValue()));
+            }
+            return builder.append("}").toString();
+        }
+        if (value instanceof List<?> list) {
+            StringBuilder builder = new StringBuilder("[");
+            for (int i = 0; i < list.size(); i++) {
+                if (i > 0) {
+                    builder.append(",");
+                }
+                builder.append(canonical(list.get(i)));
+            }
+            return builder.append("]").toString();
+        }
+        return escape(value.toString());
+    }
+
+    private String escape(String value) {
+        return value.replace("\\", "\\\\")
+            .replace("\n", "\\n")
+            .replace("\r", "\\r")
+            .replace("\t", "\\t");
+    }
+
+    private record ListMutation(String contractKey, String listKey, String forgedValue) {
     }
 
     private Map<String, Object> completeAuditContext() {

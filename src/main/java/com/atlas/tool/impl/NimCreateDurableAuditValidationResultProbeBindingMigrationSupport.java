@@ -469,7 +469,11 @@ final class NimCreateDurableAuditValidationResultProbeBindingMigrationSupport {
             && Boolean.TRUE.equals(failure.get("failClosed"))
             && Boolean.FALSE.equals(failure.get("fallbackToValidationGateAllowed"))
             && Boolean.FALSE.equals(failure.get("fallbackToCallerDecisionAllowed"))
-            && Boolean.FALSE.equals(failure.get("fallbackToLegacyAuditReceiptFlagAllowed"));
+            && Boolean.FALSE.equals(failure.get("fallbackToLegacyAuditReceiptFlagAllowed"))
+            && stringList(failure.get("failureStatuses")).equals(
+                NimCreateDurableAuditValidationResultMigrationSupport.migrationFailureStatuses())
+            && stringList(migrationPlan.get("forbiddenShortcuts")).equals(
+                NimCreateDurableAuditValidationResultMigrationSupport.migrationForbiddenShortcuts());
     }
 
     private static boolean migrationSequenceValid(Object rawSequence) {
@@ -981,6 +985,17 @@ final class NimCreateDurableAuditValidationResultProbeBindingMigrationSupport {
             if (!map.isEmpty()) {
                 items.add(map);
             }
+        }
+        return items;
+    }
+
+    private static List<String> stringList(Object value) {
+        if (!(value instanceof List<?> list)) {
+            return List.of();
+        }
+        List<String> items = new ArrayList<>();
+        for (Object item : list) {
+            items.add(text(item));
         }
         return items;
     }

@@ -49,6 +49,24 @@
 
 ## Current Status
 
+- M5.21-125 NIM validation result migration failure/shortcut lists closed is implemented:
+  - Hardened `src/main/java/com/atlas/tool/impl/NimCreateDurableAuditValidationResultMigrationSupport.java`.
+  - Hardened `src/main/java/com/atlas/tool/impl/NimCreateDurableAuditReleaseDecisionGateSupport.java`.
+  - Hardened `src/main/java/com/atlas/tool/impl/NimCreateDurableAuditValidationResultProbeBindingMigrationSupport.java`.
+  - `migrationPlan.failureContract.failureStatuses` and `migrationPlan.forbiddenShortcuts` are now source-owned helper lists.
+  - Release decision gate and probe-binding migration now require exact equality for those M5.21-58 migration-plan-owned lists.
+  - Added digest-consistent forged migration-plan regressions that append `FUTURE_RELEASE_SIGNER_NOT_READY` or `accepting migrationPlanDigest as release credential`, recompute `migrationPlanDigest`, and still expect rejection.
+  - Added `docs/M5_21_ONE_HUNDRED_TWENTY_FIFTH_WAVE_NIM_VALIDATION_RESULT_MIGRATION_FAILURE_SHORTCUT_LISTS_CLOSED_AUDIT_20260608.md`.
+  - Updated `docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md` with the M5.21-125 learning note.
+  - Targeted verification passed:
+    - `git diff --check`
+    - `mvn -q "-Dtest=NimCreateDurableAuditValidationResultMigrationSupportTest,NimCreateDurableAuditReleaseDecisionGateSupportTest,NimCreateDurableAuditValidationResultProbeBindingMigrationSupportTest" test`
+  - Final verification passed:
+    - `mvn -q test`
+    - Full Maven note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - No real `8100` access; no real NIM service HTTP call; no Authorization header sending; no durable audit write; no deployment POST; no runtime write behavior opened; no state-machine release binding implementation; no durable executor release binding implementation; no validation result signer; no release decision signer; no code release switch implementation; no Elasticsearch; no `ISysLogService`; no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Next recommended slice: keep scanning M5.21-58/M5.21-69 migration and release proof fields for remaining subset/non-empty acceptance, or close exact rule-row validation if rule rows become release criteria.
+
 - M5.21-119 NIM readiness target taxonomy closed list is implemented:
   - Hardened `src/main/java/com/atlas/tool/impl/NimCreateReadinessExecutorSupport.java`.
   - Hardened `src/main/java/com/atlas/tool/impl/NimCreateReadinessHttpAdapterSupport.java`.

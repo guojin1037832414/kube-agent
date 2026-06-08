@@ -91,10 +91,31 @@ Current track:
 
 Recently completed:
 
-`M5.21-124 NIM validation gate failure/shortcut lists closed`
+`M5.21-125 NIM validation result migration failure/shortcut lists closed`
 
 Latest checkpoint:
 
+- Date: 2026-06-08 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- Teaching principle:
+  - This project is not only delivering software. It is also a teaching system for mastering Agent engineering.
+  - Maintain `docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md` as the long-lived architecture and technical-learning map.
+- M5.21-125 implemented:
+  - Hardened `NimCreateDurableAuditValidationResultMigrationSupport` so `migrationPlan.failureContract.failureStatuses` and `migrationPlan.forbiddenShortcuts` are source-owned helper lists.
+  - Hardened `NimCreateDurableAuditReleaseDecisionGateSupport` so release gate planning rejects digest-consistent migration plans with extra failure status or forbidden-shortcut values.
+  - Hardened `NimCreateDurableAuditValidationResultProbeBindingMigrationSupport` with the same exact checks, closing the adjacent M5.21-69 migration-plan consumer.
+  - Added regressions that append fake future values, recompute `migrationPlanDigest`, and still expect fail-closed rejection.
+  - Added `docs/M5_21_ONE_HUNDRED_TWENTY_FIFTH_WAVE_NIM_VALIDATION_RESULT_MIGRATION_FAILURE_SHORTCUT_LISTS_CLOSED_AUDIT_20260608.md`.
+  - Updated the long-lived teaching map with the M5.21-125 lesson: digest binding is not semantic approval, and every current consumer of a proof object must validate the same source-owned vocabulary.
+  - Targeted verification passed:
+    - `git diff --check`
+    - `mvn -q "-Dtest=NimCreateDurableAuditValidationResultMigrationSupportTest,NimCreateDurableAuditReleaseDecisionGateSupportTest,NimCreateDurableAuditValidationResultProbeBindingMigrationSupportTest" test`
+  - Final verification passed:
+    - `mvn -q test`
+    - Full Maven note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - Security invariant: no real `8100`, no real NIM service HTTP call, no Authorization header sending, no durable audit write, no deployment POST, no runtime write behavior, no state-machine release binding implementation, no durable executor release binding implementation, no validation result signer, no release decision signer, no code release switch implementation, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Recommended next slice: continue scanning migration/release proof fields for remaining subset or non-empty list checks, or move to exact validation of rule-row lists if they become release criteria.
+- Previous checkpoint:
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
 - Teaching principle:

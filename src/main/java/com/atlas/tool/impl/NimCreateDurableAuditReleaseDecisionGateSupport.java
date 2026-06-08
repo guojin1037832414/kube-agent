@@ -287,7 +287,8 @@ final class NimCreateDurableAuditReleaseDecisionGateSupport {
             && releaseDecisionContractValid(migrationReport, objectMap(migrationPlan.get("releaseDecisionContract")))
             && legacyCompatibilityPolicyValid(objectMap(migrationPlan.get("legacyCompatibilityPolicy")))
             && releaseCredentialRulesValid(objectMap(migrationPlan.get("releaseCredentialRules")))
-            && migrationFailureContractValid(objectMap(migrationPlan.get("failureContract")));
+            && migrationFailureContractValid(objectMap(migrationPlan.get("failureContract")))
+            && migrationForbiddenShortcutsValid(migrationPlan.get("forbiddenShortcuts"));
     }
 
     private static boolean migrationSequenceValid(Object rawSequence) {
@@ -386,9 +387,12 @@ final class NimCreateDurableAuditReleaseDecisionGateSupport {
             && Boolean.FALSE.equals(failureContract.get("fallbackToCallerDecisionAllowed"))
             && Boolean.FALSE.equals(failureContract.get("fallbackToLegacyAuditReceiptFlagAllowed"))
             && Boolean.FALSE.equals(failureContract.get("fallbackToMigrationPlanAllowed"))
-            && statuses.contains("VALIDATION_RESULT_NOT_IMPLEMENTED")
-            && statuses.contains("RELEASE_DECISION_NOT_IMPLEMENTED")
-            && statuses.contains("LEGACY_AUDIT_RECEIPT_RELEASE_FLAG_NOT_TRUSTED");
+            && statuses.equals(NimCreateDurableAuditValidationResultMigrationSupport.migrationFailureStatuses());
+    }
+
+    private static boolean migrationForbiddenShortcutsValid(Object rawShortcuts) {
+        return stringList(rawShortcuts).equals(
+            NimCreateDurableAuditValidationResultMigrationSupport.migrationForbiddenShortcuts());
     }
 
     private static Map<String, Object> releaseGatePlan(Map<String, Object> auditContext,
