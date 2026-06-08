@@ -657,41 +657,18 @@ final class NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport {
 
     private static boolean stateMachineRuntimeBindingValid(Map<String, Object> report,
                                                            Map<String, Object> binding) {
-        return NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport.TARGET_STATE_MACHINE.equals(
-                text(binding.get("target")))
-            && "codeReleaseSwitchContractReport".equals(text(binding.get("futureReadinessRequestField")))
-            && text(report.get("sourceCodeReleaseSwitchContractDigest")).equals(
-                text(binding.get("sourceCodeReleaseSwitchContractDigest")))
-            && Boolean.TRUE.equals(binding.get("codeReleaseSwitchContractReportRequired"))
-            && Boolean.TRUE.equals(binding.get("codeReleaseSwitchContractDigestRequired"))
-            && Boolean.TRUE.equals(binding.get("mustRecomputeCodeReleaseSwitchContractDigest"))
-            && Boolean.TRUE.equals(binding.get("mustRequireServerOwnedOpenSwitch"))
-            && Boolean.TRUE.equals(binding.get("mustBindServerIssuedReleaseDecisionDigest"))
-            && Boolean.TRUE.equals(binding.get("mustBindServerIssuedValidationResultDigest"))
-            && Boolean.TRUE.equals(binding.get("mustBindWriteChainDigests"))
-            && Boolean.FALSE.equals(binding.get("legacyNimCreateReleasedBooleanAuthoritative"))
-            && Boolean.FALSE.equals(binding.get("fallbackToRuntimeFlagAllowed"))
-            && Boolean.FALSE.equals(binding.get("fallbackToEnvironmentVariableAllowed"))
-            && Boolean.FALSE.equals(binding.get("fallbackToReleaseDecisionContractAllowed"))
-            && Boolean.FALSE.equals(binding.get("writePermittedCanBeTrueNow"));
+        return binding.equals(
+            NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport
+                .codeReleaseSwitchStateMachineRuntimeBindingFromRuntimeReport(report)
+        );
     }
 
     private static boolean durableExecutorRuntimeBindingValid(Map<String, Object> report,
                                                               Map<String, Object> binding) {
-        return NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport.TARGET_DURABLE_EXECUTOR.equals(
-                text(binding.get("target")))
-            && text(report.get("sourceCodeReleaseSwitchContractDigest")).equals(
-                text(binding.get("sourceCodeReleaseSwitchContractDigest")))
-            && Boolean.TRUE.equals(binding.get("codeReleaseSwitchDigestRequired"))
-            && Boolean.TRUE.equals(binding.get("mustRecheckImmediatelyBeforePost"))
-            && Boolean.TRUE.equals(binding.get("mustBindSameHandoffDigest"))
-            && Boolean.TRUE.equals(binding.get("mustBindSameRequestSpecDigest"))
-            && Boolean.TRUE.equals(binding.get("mustBindSameBodyDigest"))
-            && Boolean.TRUE.equals(binding.get("mustBindServerDerivedIdempotencyKey"))
-            && Boolean.FALSE.equals(binding.get("fallbackToStateMachineWritePermittedAllowed"))
-            && Boolean.FALSE.equals(binding.get("fallbackToStateMachineFlagOnlyAllowed"))
-            && Boolean.FALSE.equals(binding.get("fallbackToExecutorSuccessAllowed"))
-            && Boolean.FALSE.equals(binding.get("writeExecutionAllowedNow"));
+        return binding.equals(
+            NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport
+                .codeReleaseSwitchDurableExecutorRuntimeBindingFromRuntimeReport(report)
+        );
     }
 
     private static boolean runtimeStatesRemainFalse(Map<String, Object> report) {

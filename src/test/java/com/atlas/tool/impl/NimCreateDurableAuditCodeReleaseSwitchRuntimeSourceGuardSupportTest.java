@@ -262,6 +262,32 @@ class NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupportTest {
     }
 
     @Test
+    void sourceGuard_shouldRejectDigestConsistentRuntimeBindingMapExtensions() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+        Map<String, Object> forgedReport = withDigestConsistentRuntimeBindingMapExtensions(
+            runtimeBindingReport(audit, principal)
+        );
+
+        Map<String, Object> report = NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport.plan(
+            new NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport.RuntimeSourceGuardInput(
+                audit,
+                principal,
+                forgedReport,
+                Map.of()
+            )
+        );
+
+        assertEquals(NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupport.REJECTED_STATE,
+            report.get("guardState"));
+        assertEquals(false, report.get("inputAccepted"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+        assertHasBlocker(blockers,
+            "CODE_RELEASE_SWITCH_RUNTIME_BINDING_REPORT_INVALID_FOR_SOURCE_GUARD");
+    }
+
+    @Test
     void sourceGuard_shouldRejectForgedCandidateSourceEvidence() {
         Map<String, Object> audit = completeAuditContext();
         Map<String, Object> principal = trustedPrincipalSnapshot();
@@ -489,6 +515,31 @@ class NimCreateDurableAuditCodeReleaseSwitchRuntimeSourceGuardSupportTest {
         );
         requiredFields.add("forgedFutureRuntimeEvidenceDigest");
         contract.put("requiredFutureRuntimeEvidenceDigestFields", requiredFields);
+        forgedReport.put("runtimeBindingContract", contract);
+        forgedReport.put("runtimeBindingContractDigest", digestFor(contract));
+        return forgedReport;
+    }
+
+    private Map<String, Object> withDigestConsistentRuntimeBindingMapExtensions(
+        Map<String, Object> runtimeBindingReport
+    ) {
+        Map<String, Object> forgedReport = new LinkedHashMap<>(runtimeBindingReport);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> contract = new LinkedHashMap<>(
+            (Map<String, Object>) forgedReport.get("runtimeBindingContract")
+        );
+        @SuppressWarnings("unchecked")
+        Map<String, Object> stateMachineBinding = new LinkedHashMap<>(
+            (Map<String, Object>) contract.get("stateMachineRuntimeBinding")
+        );
+        @SuppressWarnings("unchecked")
+        Map<String, Object> durableExecutorBinding = new LinkedHashMap<>(
+            (Map<String, Object>) contract.get("durableExecutorRuntimeBinding")
+        );
+        stateMachineBinding.put("fallbackToRuntimeBindingReportAcceptedAllowed", false);
+        durableExecutorBinding.put("fallbackToStateMachineRuntimeBindingInstalledAllowed", false);
+        contract.put("stateMachineRuntimeBinding", stateMachineBinding);
+        contract.put("durableExecutorRuntimeBinding", durableExecutorBinding);
         forgedReport.put("runtimeBindingContract", contract);
         forgedReport.put("runtimeBindingContractDigest", digestFor(contract));
         return forgedReport;

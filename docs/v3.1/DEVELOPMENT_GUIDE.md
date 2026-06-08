@@ -684,6 +684,13 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Extra future authority-shaped binding keys are rejected even when `codeReleaseSwitchContractDigest` is recomputed.
 - Learning distinction: binding maps are inter-component authorization contracts. They must be source-owned and exact before future release wiring can trust them.
 
+### M5.21-131 runtime binding maps closed note
+
+- Runtime binding contract generation now exposes source-owned closed maps for state-machine and durable-executor runtime bindings.
+- Runtime source guard validation requires exact runtime binding-map equality instead of partial field checks.
+- Extra future authority-shaped runtime binding keys are rejected even when `runtimeBindingContractDigest` is recomputed.
+- Learning distinction: runtime binding maps are release-adjacent protocol maps. A source guard should trust only the producer-owned exact map, not a digest-consistent superset.
+
 ### Architecture and technical learning map note
 
 - Maintain `docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md` as the long-lived architecture and technical-learning map.

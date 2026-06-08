@@ -116,6 +116,11 @@ class NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupportTest {
         @SuppressWarnings("unchecked")
         Map<String, Object> stateMachine =
             (Map<String, Object>) contract.get("stateMachineRuntimeBinding");
+        assertEquals(
+            NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport
+                .codeReleaseSwitchStateMachineRuntimeBinding(switchReport),
+            stateMachine
+        );
         assertEquals(NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport.TARGET_STATE_MACHINE,
             stateMachine.get("target"));
         assertEquals("codeReleaseSwitchContractReport",
@@ -136,6 +141,11 @@ class NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupportTest {
         @SuppressWarnings("unchecked")
         Map<String, Object> executor =
             (Map<String, Object>) contract.get("durableExecutorRuntimeBinding");
+        assertEquals(
+            NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport
+                .codeReleaseSwitchDurableExecutorRuntimeBinding(switchReport),
+            executor
+        );
         assertEquals(NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport.TARGET_DURABLE_EXECUTOR,
             executor.get("target"));
         assertEquals(true, executor.get("codeReleaseSwitchDigestRequired"));

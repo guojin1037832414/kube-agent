@@ -172,8 +172,8 @@ final class NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport {
         contract.put("sourceAuditEventDigest", digestFor(auditContext));
         contract.put("trustedPrincipalDigest", digestFor(principal));
         contract.put("digestAlgorithm", NimCreateAuditWriterSupport.DIGEST_ALGORITHM);
-        contract.put("stateMachineRuntimeBinding", stateMachineRuntimeBinding(switchReport));
-        contract.put("durableExecutorRuntimeBinding", durableExecutorRuntimeBinding(switchReport));
+        contract.put("stateMachineRuntimeBinding", codeReleaseSwitchStateMachineRuntimeBinding(switchReport));
+        contract.put("durableExecutorRuntimeBinding", codeReleaseSwitchDurableExecutorRuntimeBinding(switchReport));
         contract.put("requiredFutureRuntimeEvidenceDigestFields", requiredFutureRuntimeDigestFields());
         contract.put("currentRuntimeTemplate", currentRuntimeTemplate());
         contract.put("failureContract", failureContract());
@@ -181,12 +181,27 @@ final class NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport {
         return contract;
     }
 
-    private static Map<String, Object> stateMachineRuntimeBinding(Map<String, Object> switchReport) {
+    static Map<String, Object> codeReleaseSwitchStateMachineRuntimeBinding(Map<String, Object> switchReport) {
+        return codeReleaseSwitchStateMachineRuntimeBindingForDigest(
+            text(switchReport.get("codeReleaseSwitchContractDigest"))
+        );
+    }
+
+    static Map<String, Object> codeReleaseSwitchStateMachineRuntimeBindingFromRuntimeReport(
+        Map<String, Object> runtimeBindingReport
+    ) {
+        return codeReleaseSwitchStateMachineRuntimeBindingForDigest(
+            text(runtimeBindingReport.get("sourceCodeReleaseSwitchContractDigest"))
+        );
+    }
+
+    private static Map<String, Object> codeReleaseSwitchStateMachineRuntimeBindingForDigest(
+        String sourceCodeReleaseSwitchContractDigest
+    ) {
         Map<String, Object> binding = new LinkedHashMap<>();
         binding.put("target", TARGET_STATE_MACHINE);
         binding.put("futureReadinessRequestField", "codeReleaseSwitchContractReport");
-        binding.put("sourceCodeReleaseSwitchContractDigest",
-            text(switchReport.get("codeReleaseSwitchContractDigest")));
+        binding.put("sourceCodeReleaseSwitchContractDigest", sourceCodeReleaseSwitchContractDigest);
         binding.put("codeReleaseSwitchContractReportRequired", true);
         binding.put("codeReleaseSwitchContractDigestRequired", true);
         binding.put("mustRecomputeCodeReleaseSwitchContractDigest", true);
@@ -202,11 +217,26 @@ final class NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport {
         return binding;
     }
 
-    private static Map<String, Object> durableExecutorRuntimeBinding(Map<String, Object> switchReport) {
+    static Map<String, Object> codeReleaseSwitchDurableExecutorRuntimeBinding(Map<String, Object> switchReport) {
+        return codeReleaseSwitchDurableExecutorRuntimeBindingForDigest(
+            text(switchReport.get("codeReleaseSwitchContractDigest"))
+        );
+    }
+
+    static Map<String, Object> codeReleaseSwitchDurableExecutorRuntimeBindingFromRuntimeReport(
+        Map<String, Object> runtimeBindingReport
+    ) {
+        return codeReleaseSwitchDurableExecutorRuntimeBindingForDigest(
+            text(runtimeBindingReport.get("sourceCodeReleaseSwitchContractDigest"))
+        );
+    }
+
+    private static Map<String, Object> codeReleaseSwitchDurableExecutorRuntimeBindingForDigest(
+        String sourceCodeReleaseSwitchContractDigest
+    ) {
         Map<String, Object> binding = new LinkedHashMap<>();
         binding.put("target", TARGET_DURABLE_EXECUTOR);
-        binding.put("sourceCodeReleaseSwitchContractDigest",
-            text(switchReport.get("codeReleaseSwitchContractDigest")));
+        binding.put("sourceCodeReleaseSwitchContractDigest", sourceCodeReleaseSwitchContractDigest);
         binding.put("codeReleaseSwitchDigestRequired", true);
         binding.put("mustRecheckImmediatelyBeforePost", true);
         binding.put("mustBindSameHandoffDigest", true);
