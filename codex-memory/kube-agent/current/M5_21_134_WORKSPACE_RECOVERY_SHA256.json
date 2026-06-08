@@ -1,0 +1,51 @@
+﻿{
+    "project":  "kube-agent",
+    "wave":  "M5.21-134",
+    "title":  "NIM validation result contract maps closed",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "gitHead":  "dd7c558e0891fc5b7fcc3ce3c1c7a26cb886c93b",
+    "recoveryHome":  "F:\\gitProject\\kube-agent\\codex-memory\\kube-agent\\current",
+    "generatedAt":  "2026-06-08 Asia/Shanghai",
+    "files":  [
+                  {
+                      "file":  "RECOVERY_STATUS.md",
+                      "sha256":  "b1828da1809293c402f3c74c6771ebbf80435e2adb53fae167ffc8944239dcbb",
+                      "length":  1875
+                  },
+                  {
+                      "file":  "CHANGELOG.md",
+                      "sha256":  "7d6d3e71f78648e9f570cbe74c07524ea9b01bad6211a1abe2b9bdcc99cc78dd",
+                      "length":  242949
+                  },
+                  {
+                      "file":  "docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "b17eaf7c2522719725c1c0a26668799c765b23bb43611ac813f0bf12017fea75",
+                      "length":  22695
+                  },
+                  {
+                      "file":  "docs_M5_21_WAVE_INDEX_20260606.md",
+                      "sha256":  "e7f68afbd09d2ccbcc2005ecfe1e3056b9eb219b273d8611a861abc240b1103c",
+                      "length":  21912
+                  },
+                  {
+                      "file":  "docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "caff57e2eec9a9a19993e2ffc4661e3779b7bf405e7af967d6a6bb5a481a49a4",
+                      "length":  256554
+                  },
+                  {
+                      "file":  "docs_SESSION_PROGRESS_20260606_M521_29.md",
+                      "sha256":  "1cdc3a9c40af04b26e581d5fe7e8854e3f68805ac32c0ec84f4a3f9da0bf3053",
+                      "length":  260502
+                  },
+                  {
+                      "file":  "docs_v3.1_DEVELOPMENT_GUIDE.md",
+                      "sha256":  "da6e3f74c58ab5cd52db63ae4728a9285626f02caaeb769f98b6592372be09ac",
+                      "length":  75898
+                  },
+                  {
+                      "file":  "docs_M5_21_ONE_HUNDRED_THIRTY_FOURTH_WAVE_NIM_VALIDATION_RESULT_CONTRACT_MAPS_CLOSED_AUDIT_20260608.md",
+                      "sha256":  "b40a99e2aa24f224edc55f3fd4ab4124ae632080ba05ba6d87ef392166480839",
+                      "length":  4790
+                  }
+              ]
+}

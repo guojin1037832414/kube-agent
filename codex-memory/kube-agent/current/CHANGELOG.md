@@ -6,6 +6,23 @@
 
 ---
 
+## [M5.21-134] - NIM validation result contract maps closed
+
+**Delivery**: Closed `validationResultContract` consumption at the release decision contract boundary using producer-owned exact contract equality.
+**Changes**
+- `NimCreateDurableAuditReceiptValidationResultSupport` now emits trusted source identity fields and exposes `validationResultContractFromReport(...)` as the canonical producer helper.
+- `NimCreateDurableAuditReleaseDecisionContractSupport` now rejects any validation result contract that is not exactly equal to that producer-owned helper, rather than hand-interpreting nested maps.
+- Added digest-consistent forged contract-map regressions covering top-level keys, `trustedIdentityBinding`, `evidenceBinding`, `currentTemplate`, `passPrerequisites`, `failureContract`, `forbiddenShortcuts`, and future evidence fields.
+**Verification**
+- `git diff --check` passed.
+- Targeted validation result contract and release decision contract tests passed.
+- Targeted validation result/release decision plus release gate and code release switch contract tests passed.
+- Full `mvn -q test` passed; full Maven degraded to L1 embedding mode after local `model.onnx` download timeout but exited 0.
+**Security**
+- This is validation result proof-schema hardening only; it does not create real validation results, issue real release decisions, open a code switch, bind runtime writes, or execute NIM deployment writes.
+- No real `8100`, real NIM service HTTP call, Authorization header sending, durable audit write, deployment POST, validation result signer, release decision signer, code release switch implementation, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-133] - NIM release decision contract maps closed
 
 **Delivery**: Closed `releaseDecisionContract` consumption at the code release switch boundary using producer-owned exact contract equality.

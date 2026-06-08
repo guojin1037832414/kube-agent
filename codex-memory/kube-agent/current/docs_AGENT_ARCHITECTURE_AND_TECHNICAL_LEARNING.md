@@ -215,7 +215,30 @@ NIM 链路明确禁止真实 Authorization、token、password、secret、NGC/NIM
 
 学习重点：对于长期 Agent 项目，文档不是附属物。文档是架构记忆、教学材料和恢复机制的一部分。
 
-## M5.21-133 最新学习笔记
+## M5.21-134 最新学习笔记
+
+本轮关闭的是 release decision 消费 validation result report 时的完整 `validationResultContract`：
+
+- 顶层 validation result contract 字段
+- `trustedIdentityBinding`
+- `evidenceBinding`
+- `currentTemplate`
+- `passPrerequisites`
+- `failureContract`
+- `forbiddenShortcuts`
+- `requiredFutureEvidenceDigestFields`
+
+关键收获：
+
+- `validationResultContractDigest` 只能证明对象内容自洽，不能证明新增 key 已经被评审为合法验证语义。
+- validation result 是 release decision 的直接上游 proof。如果这里允许下游局部解释 map，未来新增字段可能被误读成 release 前置条件已经满足。
+- `NimCreateDurableAuditReceiptValidationResultSupport` 现在提供 `validationResultContractFromReport(...)` 作为 producer-owned canonical proof object。
+- `NimCreateDurableAuditReleaseDecisionContractSupport` 现在只接受完整 canonical contract exact equality，同时校验 source audit digest、trusted principal digest 和 source identity。
+- 本轮新增多组 digest-consistent forgery：篡改顶层 key、identity/evidence nested map、prerequisite 值、failure contract 和 forbidden shortcut list，重算 `validationResultContractDigest` 后仍要求 release decision fail closed。
+
+学习总结：顶级 Agent 的 release 链路不是“每层读懂上一层 JSON 的一部分”就够了。validation result 这种紧邻 release decision 的 proof object 必须由 producer 拥有完整协议形状；consumer 只接受 exact canonical equality。这样新增验证语义必须经过源码、测试、文档和审查，而不是靠 hash 自洽悄悄进入 release path。
+
+## M5.21-133 学习笔记
 
 本轮关闭的是 code release switch 消费 release decision report 时的完整 `releaseDecisionContract`：
 
