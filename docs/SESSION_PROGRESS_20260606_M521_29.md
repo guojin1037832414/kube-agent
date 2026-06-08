@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-128, NIM code switch failure/shortcut lists closed.
+- Current latest wave: M5.21-129, NIM code switch template/prerequisites closed.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -49,23 +49,31 @@
 
 ## Current Status
 
-- M5.21-128 NIM code switch failure/shortcut lists closed is implemented:
+- M5.21-129 NIM code switch template/prerequisites closed is implemented:
   - Hardened `src/main/java/com/atlas/tool/impl/NimCreateDurableAuditCodeReleaseSwitchContractSupport.java`.
   - Hardened `src/main/java/com/atlas/tool/impl/NimCreateStateMachineSupport.java`.
   - Hardened `src/main/java/com/atlas/tool/impl/NimCreateDurableWriteExecutorSupport.java`.
-  - `codeReleaseSwitchContract.failureContract.failureStatuses` and `codeReleaseSwitchContract.forbiddenShortcuts` are now source-owned helper lists.
-  - State-machine and durable executor validation now both require exact equality for those M5.21-72 code-switch-owned lists.
-  - Added digest-consistent forged code switch contract regressions that append `FUTURE_CODE_SWITCH_UI_APPROVED`, `FUTURE_DURABLE_EXECUTOR_SIGNED_OFF`, or forged shortcut text, recompute `codeReleaseSwitchContractDigest`, and still expect rejection.
-  - Added `docs/M5_21_ONE_HUNDRED_TWENTY_EIGHTH_WAVE_NIM_CODE_SWITCH_FAILURE_SHORTCUT_LISTS_CLOSED_AUDIT_20260608.md`.
-  - Updated `docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md` with the M5.21-128 learning note.
+  - Hardened `src/main/java/com/atlas/tool/impl/NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport.java`.
+  - `codeReleaseSwitchContract.currentTemplate` and `codeReleaseSwitchContract.openPrerequisites` are now source-owned helper maps.
+  - State-machine, durable executor, and runtime binding validation now require exact equality for both maps.
+  - Added digest-consistent forged nested-map regressions that append authority-shaped fake keys, recompute `codeReleaseSwitchContractDigest`, and still expect rejection.
+  - Added `docs/M5_21_ONE_HUNDRED_TWENTY_NINTH_WAVE_NIM_CODE_SWITCH_TEMPLATE_PREREQUISITES_CLOSED_AUDIT_20260608.md`.
+  - Updated `docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md` with the M5.21-129 learning note.
   - Targeted verification passed:
-    - `mvn -q "-Dtest=NimCreateDurableAuditCodeReleaseSwitchContractSupportTest,NimCreateStateMachineSupportTest,NimCreateDurableWriteExecutorSupportTest" test`
-  - Final verification passed:
     - `git diff --check`
+    - `mvn -q "-Dtest=NimCreateDurableAuditCodeReleaseSwitchContractSupportTest,NimCreateStateMachineSupportTest,NimCreateDurableWriteExecutorSupportTest,NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupportTest" test`
     - `mvn -q test`
     - Full Maven note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
   - No real `8100` access; no real NIM service HTTP call; no Authorization header sending; no durable audit write; no deployment POST; no runtime write behavior opened; no state-machine release binding implementation; no durable executor release binding implementation; no validation result signer; no release decision signer; no code release switch implementation; no Elasticsearch; no `ISysLogService`; no `sys_log`; `nim_create` remains HOLD/mock-first.
-  - Multi-expert follow-up: continue scanning shared proof objects with multiple consumers, especially maps that might need exact key-set closure once they become release criteria.
+  - Multi-expert follow-up: continue scanning shared proof objects with multiple consumers, especially binding maps that might need exact key-set closure once they become release criteria.
+
+- M5.21-128 NIM code switch failure/shortcut lists closed is implemented:
+  - `codeReleaseSwitchContract.failureContract.failureStatuses` and `codeReleaseSwitchContract.forbiddenShortcuts` are source-owned helper lists.
+  - State-machine and durable executor validation both require exact equality for those M5.21-72 code-switch-owned lists.
+  - Added digest-consistent forged list regressions that append fake future values, recompute `codeReleaseSwitchContractDigest`, and still expect rejection.
+  - Added `docs/M5_21_ONE_HUNDRED_TWENTY_EIGHTH_WAVE_NIM_CODE_SWITCH_FAILURE_SHORTCUT_LISTS_CLOSED_AUDIT_20260608.md`.
+  - Verification passed: targeted code switch/state-machine/durable executor tests, `git diff --check`, and full `mvn -q test`.
+  - No real `8100` access; no real NIM service HTTP call; no Authorization header sending; no durable audit write; no deployment POST; `nim_create` remains HOLD/mock-first.
 
 - M5.21-127 NIM state-machine requirement failure/shortcut lists closed is implemented:
   - Hardened `src/main/java/com/atlas/tool/impl/NimCreateStateMachineReleaseDecisionRequirementSupport.java`.

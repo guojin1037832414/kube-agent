@@ -307,6 +307,47 @@ class NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupportTest {
     }
 
     @Test
+    void runtimeBinding_shouldRejectDigestConsistentSwitchContractTemplateOrPrerequisiteExtensions() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+
+        for (Map<String, Object> switchReport : List.of(
+            withDigestConsistentSwitchContractNestedMapField(
+                codeReleaseSwitchContractReport(audit, principal),
+                "currentTemplate",
+                "forgedRuntimeBindingInstalled",
+                true
+            ),
+            withDigestConsistentSwitchContractNestedMapField(
+                codeReleaseSwitchContractReport(audit, principal),
+                "openPrerequisites",
+                "forgedRuntimeBindingCanSkipStateMachineRecheck",
+                true
+            )
+        )) {
+            Map<String, Object> report = NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport.plan(
+                new NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport
+                    .CodeReleaseSwitchRuntimeBindingInput(
+                    audit,
+                    principal,
+                    switchReport,
+                    Map.of(),
+                    Map.of()
+                )
+            );
+
+            assertEquals(NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport.REJECTED_STATE,
+                report.get("bindingState"), switchReport.toString());
+            assertEquals(false, report.get("inputAccepted"), switchReport.toString());
+            assertRuntimeStatesRemainFalse(report);
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+            assertHasBlocker(blockers,
+                "CODE_RELEASE_SWITCH_CONTRACT_REPORT_INVALID_FOR_RUNTIME_BINDING");
+        }
+    }
+
+    @Test
     void runtimeBinding_shouldRejectForgedRuntimeReleaseEvidence() {
         Map<String, Object> audit = completeAuditContext();
         Map<String, Object> principal = trustedPrincipalSnapshot();
@@ -512,6 +553,28 @@ class NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupportTest {
         );
         requiredFields.add("forgedSwitchFutureEvidenceDigest");
         contract.put("requiredFutureEvidenceDigestFields", requiredFields);
+        forgedReport.put("codeReleaseSwitchContract", contract);
+        forgedReport.put("codeReleaseSwitchContractDigest", digestFor(contract));
+        return forgedReport;
+    }
+
+    private Map<String, Object> withDigestConsistentSwitchContractNestedMapField(
+        Map<String, Object> switchReport,
+        String nestedKey,
+        String forgedKey,
+        Object forgedValue
+    ) {
+        Map<String, Object> forgedReport = new LinkedHashMap<>(switchReport);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> contract = new LinkedHashMap<>(
+            (Map<String, Object>) forgedReport.get("codeReleaseSwitchContract")
+        );
+        @SuppressWarnings("unchecked")
+        Map<String, Object> nested = new LinkedHashMap<>(
+            (Map<String, Object>) contract.get(nestedKey)
+        );
+        nested.put(forgedKey, forgedValue);
+        contract.put(nestedKey, nested);
         forgedReport.put("codeReleaseSwitchContract", contract);
         forgedReport.put("codeReleaseSwitchContractDigest", digestFor(contract));
         return forgedReport;

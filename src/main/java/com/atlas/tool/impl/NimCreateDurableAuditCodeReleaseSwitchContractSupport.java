@@ -63,6 +63,44 @@ final class NimCreateDurableAuditCodeReleaseSwitchContractSupport {
         );
     }
 
+    static Map<String, Object> codeReleaseSwitchCurrentTemplate() {
+        Map<String, Object> template = new LinkedHashMap<>();
+        template.put("switchState", SWITCH_LOCKED);
+        template.put("requiredSwitchState", REQUIRED_SWITCH_STATE);
+        template.put("codeReleaseSwitchDigestVerified", false);
+        template.put("codeReviewDigestVerified", false);
+        template.put("testEvidenceDigestVerified", false);
+        template.put("securityApprovalDigestVerified", false);
+        template.put("rollbackPlanDigestVerified", false);
+        template.put("changeWindowDigestVerified", false);
+        template.put("releaseDecisionDigestVerified", false);
+        template.put("validationResultDigestVerified", false);
+        template.put("trustedPrincipalValidated", false);
+        template.put("stateMachineReleaseBound", false);
+        template.put("durableExecutorReleaseBound", false);
+        template.put("releaseEligible", false);
+        template.put("writePermitted", false);
+        template.put("writeExecutionAllowed", false);
+        template.put("realHttpExecutionAllowed", false);
+        return template;
+    }
+
+    static Map<String, Object> codeReleaseSwitchOpenPrerequisites() {
+        Map<String, Object> prerequisites = new LinkedHashMap<>();
+        prerequisites.put("releaseDecisionContractDigestRequired", true);
+        prerequisites.put("serverIssuedReleaseDecisionDigestRequired", true);
+        prerequisites.put("serverIssuedValidationResultDigestRequired", true);
+        prerequisites.put("codeReviewDigestRequired", true);
+        prerequisites.put("testEvidenceDigestRequired", true);
+        prerequisites.put("securityApprovalDigestRequired", true);
+        prerequisites.put("rollbackPlanDigestRequired", true);
+        prerequisites.put("changeWindowDigestRequired", true);
+        prerequisites.put("stateMachineRecheckRequired", true);
+        prerequisites.put("durableExecutorRecheckRequired", true);
+        prerequisites.put("currentContractSatisfiesPrerequisites", false);
+        return prerequisites;
+    }
+
     static Map<String, Object> plan(CodeReleaseSwitchContractInput input) {
         CodeReleaseSwitchContractInput safeInput = input == null
             ? CodeReleaseSwitchContractInput.empty()
@@ -620,41 +658,11 @@ final class NimCreateDurableAuditCodeReleaseSwitchContractSupport {
     }
 
     private static Map<String, Object> currentSwitchTemplate() {
-        Map<String, Object> template = new LinkedHashMap<>();
-        template.put("switchState", SWITCH_LOCKED);
-        template.put("requiredSwitchState", REQUIRED_SWITCH_STATE);
-        template.put("codeReleaseSwitchDigestVerified", false);
-        template.put("codeReviewDigestVerified", false);
-        template.put("testEvidenceDigestVerified", false);
-        template.put("securityApprovalDigestVerified", false);
-        template.put("rollbackPlanDigestVerified", false);
-        template.put("changeWindowDigestVerified", false);
-        template.put("releaseDecisionDigestVerified", false);
-        template.put("validationResultDigestVerified", false);
-        template.put("trustedPrincipalValidated", false);
-        template.put("stateMachineReleaseBound", false);
-        template.put("durableExecutorReleaseBound", false);
-        template.put("releaseEligible", false);
-        template.put("writePermitted", false);
-        template.put("writeExecutionAllowed", false);
-        template.put("realHttpExecutionAllowed", false);
-        return template;
+        return codeReleaseSwitchCurrentTemplate();
     }
 
     private static Map<String, Object> openPrerequisites() {
-        Map<String, Object> prerequisites = new LinkedHashMap<>();
-        prerequisites.put("releaseDecisionContractDigestRequired", true);
-        prerequisites.put("serverIssuedReleaseDecisionDigestRequired", true);
-        prerequisites.put("serverIssuedValidationResultDigestRequired", true);
-        prerequisites.put("codeReviewDigestRequired", true);
-        prerequisites.put("testEvidenceDigestRequired", true);
-        prerequisites.put("securityApprovalDigestRequired", true);
-        prerequisites.put("rollbackPlanDigestRequired", true);
-        prerequisites.put("changeWindowDigestRequired", true);
-        prerequisites.put("stateMachineRecheckRequired", true);
-        prerequisites.put("durableExecutorRecheckRequired", true);
-        prerequisites.put("currentContractSatisfiesPrerequisites", false);
-        return prerequisites;
+        return codeReleaseSwitchOpenPrerequisites();
     }
 
     private static Map<String, Object> switchFailureContract() {

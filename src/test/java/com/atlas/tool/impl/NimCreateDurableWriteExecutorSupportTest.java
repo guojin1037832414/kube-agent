@@ -349,6 +349,50 @@ class NimCreateDurableWriteExecutorSupportTest {
     }
 
     @Test
+    void executorShell_shouldRejectDigestConsistentCodeSwitchTemplateOrPrerequisiteExtensions() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> receipt = durableAuditReceipt(audit);
+        Map<String, Object> bodyReport = writeBodyReport(audit, receipt);
+        Map<String, Object> requestSpecReport = writeRequestSpecReport(audit, receipt, bodyReport);
+        Map<String, Object> handoffReport = writeExecutionHandoffReport(audit, receipt, bodyReport, requestSpecReport);
+        Map<String, Object> sourceGuardReport = codeReleaseSwitchRuntimeSourceGuardReport(audit);
+
+        for (Map<String, Object> codeSwitchReport : List.of(
+            withDigestConsistentCodeSwitchNestedMapField(
+                codeReleaseSwitchContractReport(audit),
+                "currentTemplate",
+                "forgedDurableExecutorReleaseBound",
+                true
+            ),
+            withDigestConsistentCodeSwitchNestedMapField(
+                codeReleaseSwitchContractReport(audit),
+                "openPrerequisites",
+                "forgedDurableExecutorRecheckWaived",
+                true
+            )
+        )) {
+            Map<String, Object> report = NimCreateDurableWriteExecutorSupport.prepare(
+                new NimCreateDurableWriteExecutorSupport.WriteExecutionInput(
+                    handoffReport,
+                    requestSpecReport,
+                    codeSwitchReport,
+                    sourceGuardReport
+                )
+            );
+
+            assertEquals(NimCreateDurableWriteExecutorSupport.REJECTED_STATE,
+                report.get("executionState"), codeSwitchReport.toString());
+            assertEquals(false, report.get("inputAccepted"), codeSwitchReport.toString());
+            assertEquals(false, report.get("writeAttempted"), codeSwitchReport.toString());
+            assertEquals(false, report.get("writeExecuted"), codeSwitchReport.toString());
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+            assertHasBlocker(blockers,
+                "CODE_RELEASE_SWITCH_CONTRACT_REPORT_NOT_TRUSTED_FOR_DURABLE_EXECUTOR");
+        }
+    }
+
+    @Test
     void executorShell_shouldRejectForgedOpenCodeReleaseSwitchClaims() {
         Map<String, Object> audit = completeAuditContext();
         Map<String, Object> receipt = durableAuditReceipt(audit);
@@ -1303,6 +1347,28 @@ class NimCreateDurableWriteExecutorSupportTest {
             nested.put(listKey, list);
             contract.put(contractKey, nested);
         }
+        forgedReport.put("codeReleaseSwitchContract", contract);
+        forgedReport.put("codeReleaseSwitchContractDigest", sha256(contract));
+        return forgedReport;
+    }
+
+    private Map<String, Object> withDigestConsistentCodeSwitchNestedMapField(
+        Map<String, Object> codeSwitchReport,
+        String nestedKey,
+        String forgedKey,
+        Object forgedValue
+    ) {
+        Map<String, Object> forgedReport = new LinkedHashMap<>(codeSwitchReport);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> contract = new LinkedHashMap<>(
+            (Map<String, Object>) forgedReport.get("codeReleaseSwitchContract")
+        );
+        @SuppressWarnings("unchecked")
+        Map<String, Object> nested = new LinkedHashMap<>(
+            (Map<String, Object>) contract.get(nestedKey)
+        );
+        nested.put(forgedKey, forgedValue);
+        contract.put(nestedKey, nested);
         forgedReport.put("codeReleaseSwitchContract", contract);
         forgedReport.put("codeReleaseSwitchContractDigest", sha256(contract));
         return forgedReport;

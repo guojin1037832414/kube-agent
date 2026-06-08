@@ -180,6 +180,8 @@ class NimCreateDurableAuditCodeReleaseSwitchContractSupportTest {
 
         @SuppressWarnings("unchecked")
         Map<String, Object> template = (Map<String, Object>) contract.get("currentTemplate");
+        assertEquals(NimCreateDurableAuditCodeReleaseSwitchContractSupport.codeReleaseSwitchCurrentTemplate(),
+            template);
         assertEquals("LOCKED_UNTIL_REVIEWED_CODE_RELEASE_SWITCH", template.get("switchState"));
         assertEquals(false, template.get("codeReleaseSwitchDigestVerified"));
         assertEquals(false, template.get("codeReviewDigestVerified"));
@@ -191,6 +193,8 @@ class NimCreateDurableAuditCodeReleaseSwitchContractSupportTest {
 
         @SuppressWarnings("unchecked")
         Map<String, Object> prerequisites = (Map<String, Object>) contract.get("openPrerequisites");
+        assertEquals(NimCreateDurableAuditCodeReleaseSwitchContractSupport.codeReleaseSwitchOpenPrerequisites(),
+            prerequisites);
         assertEquals(false, prerequisites.get("currentContractSatisfiesPrerequisites"));
 
         @SuppressWarnings("unchecked")

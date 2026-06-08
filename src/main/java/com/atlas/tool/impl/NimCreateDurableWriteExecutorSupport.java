@@ -457,12 +457,10 @@ final class NimCreateDurableWriteExecutorSupport {
             && Boolean.FALSE.equals(contract.get("instanceAllowedNow"))
             && durableExecutorSwitchBindingValid(durableExecutorBinding)
             && fields.equals(requiredCodeReleaseSwitchDigestFields())
-            && Boolean.FALSE.equals(template.get("codeReleaseSwitchDigestVerified"))
-            && Boolean.FALSE.equals(template.get("durableExecutorReleaseBound"))
-            && Boolean.FALSE.equals(template.get("writeExecutionAllowed"))
-            && Boolean.FALSE.equals(template.get("realHttpExecutionAllowed"))
-            && Boolean.TRUE.equals(prerequisites.get("durableExecutorRecheckRequired"))
-            && Boolean.FALSE.equals(prerequisites.get("currentContractSatisfiesPrerequisites"))
+            && template.equals(
+                NimCreateDurableAuditCodeReleaseSwitchContractSupport.codeReleaseSwitchCurrentTemplate())
+            && prerequisites.equals(
+                NimCreateDurableAuditCodeReleaseSwitchContractSupport.codeReleaseSwitchOpenPrerequisites())
             && Boolean.TRUE.equals(failure.get("failClosed"))
             && Boolean.FALSE.equals(failure.get("fallbackToStateMachineBooleanAllowed"))
             && Boolean.FALSE.equals(failure.get("fallbackToExecutorSuccessAllowed"))
