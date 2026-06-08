@@ -6,6 +6,22 @@
 
 ---
 
+## [M5.21-118] - NIM code switch downstream required fields closed list
+
+**Delivery**: Hardened state-machine and durable-executor validation of the upstream code release switch required-evidence field list.
+**Changes**
+- `NimCreateStateMachineSupport` now requires M5.21-72 `codeReleaseSwitchContract.requiredFutureEvidenceDigestFields` to exactly match the source-owned switch evidence list before treating it as write-chain evidence.
+- `NimCreateDurableWriteExecutorSupport` now applies the same exact closed-list validation before accepting a code switch contract report for executor planning.
+- Added digest-consistent forged code switch regressions that append `forgedCodeSwitchFutureEvidenceDigest`, recompute `codeReleaseSwitchContractDigest`, and still expect both downstream consumers to reject the report.
+**Verification**
+- Targeted forged code switch regressions passed.
+- Full state-machine and durable executor test classes passed.
+- Final `git diff --check` and `mvn -q test` passed; full Maven degraded to L1 embedding mode after local `model.onnx` download timeout but exited 0.
+**Security**
+- This is downstream code-switch proof-list hardening only; it does not open runtime writes or a real code release switch.
+- No real `8100`, real NIM service HTTP call, Authorization header sending, durable audit write, deployment POST, state-machine release binding implementation, durable executor release binding implementation, validation result signer, release decision signer, code release switch implementation, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-117] - NIM validation result required fields closed list
 
 **Delivery**: Hardened release decision validation of the upstream validation result required-evidence field list.

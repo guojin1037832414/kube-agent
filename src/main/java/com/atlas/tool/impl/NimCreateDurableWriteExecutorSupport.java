@@ -454,16 +454,7 @@ final class NimCreateDurableWriteExecutorSupport {
             && Boolean.TRUE.equals(contract.get("futureOnly"))
             && Boolean.FALSE.equals(contract.get("instanceAllowedNow"))
             && durableExecutorSwitchBindingValid(durableExecutorBinding)
-            && fields.containsAll(List.of(
-                "codeReleaseSwitchDigest",
-                "releaseDecisionDigest",
-                "validationResultDigest",
-                "bodyDigest",
-                "requestSpecDigest",
-                "handoffDigest",
-                "auditReceiptId",
-                "serverDerivedIdempotencyKey"
-            ))
+            && fields.equals(requiredCodeReleaseSwitchDigestFields())
             && Boolean.FALSE.equals(template.get("codeReleaseSwitchDigestVerified"))
             && Boolean.FALSE.equals(template.get("durableExecutorReleaseBound"))
             && Boolean.FALSE.equals(template.get("writeExecutionAllowed"))
@@ -491,6 +482,28 @@ final class NimCreateDurableWriteExecutorSupport {
                 "code-release-switch-contract"
             ));
         }
+    }
+
+    private static List<String> requiredCodeReleaseSwitchDigestFields() {
+        return List.of(
+            "releaseDecisionContractDigest",
+            "validationResultContractDigest",
+            "validationResultDigest",
+            "releaseDecisionDigest",
+            "codeReleaseSwitchDigest",
+            "codeReviewDigest",
+            "testEvidenceDigest",
+            "securityApprovalDigest",
+            "rollbackPlanDigest",
+            "changeWindowDigest",
+            "bodyDigest",
+            "requestSpecDigest",
+            "handoffDigest",
+            "auditReceiptId",
+            "sourceAuditEventDigest",
+            "trustedPrincipalDigest",
+            "serverDerivedIdempotencyKey"
+        );
     }
 
     private static void validateCodeReleaseSwitchRuntimeSourceGuardReport(Map<String, Object> report,

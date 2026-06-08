@@ -588,3 +588,9 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Release decision contract validation now requires M5.21-70 `validationResultContract.requiredFutureEvidenceDigestFields` to exactly match the source-owned validation result evidence list.
 - Extra future validation result evidence field names are rejected even when `validationResultContractDigest` is recomputed.
 - Learning distinction: validation-result proof slots define future server-owned receipt checks. Digest consistency cannot authorize adding new proof slots without reviewed source code, tests, and documentation.
+
+### M5.21-118 code switch downstream required fields closed list note
+
+- State-machine and durable executor validation now require M5.21-72 `codeReleaseSwitchContract.requiredFutureEvidenceDigestFields` to exactly match the source-owned switch evidence list.
+- Extra future code-switch evidence field names are rejected even when `codeReleaseSwitchContractDigest` is recomputed.
+- Learning distinction: downstream runtime consumers must validate the whole proof protocol shape, not only the subset of fields they currently read.

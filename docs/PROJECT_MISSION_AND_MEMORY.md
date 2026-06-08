@@ -82,12 +82,27 @@ Current track:
 
 Recently completed:
 
-`M5.21-117 NIM validation result required fields closed list`
+`M5.21-118 NIM code switch downstream required fields closed list`
 
 Latest checkpoint:
 
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-118 implemented:
+  - Hardened `NimCreateStateMachineSupport` so M5.21-72 `codeReleaseSwitchContract.requiredFutureEvidenceDigestFields` must exactly match the source-owned switch evidence field list before state-machine planning treats the report as write-chain evidence.
+  - Hardened `NimCreateDurableWriteExecutorSupport` with the same exact closed-list validation before durable executor planning accepts the code switch contract report.
+  - Added digest-consistent forged code switch regressions that append `forgedCodeSwitchFutureEvidenceDigest`, recompute `codeReleaseSwitchContractDigest`, and still expect both downstream consumers to reject the report.
+  - Added `docs/M5_21_ONE_HUNDRED_EIGHTEENTH_WAVE_NIM_CODE_SWITCH_DOWNSTREAM_REQUIRED_FIELDS_CLOSED_LIST_AUDIT_20260608.md`.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimCreateStateMachineSupportTest#stateMachine_shouldRejectTamperedCodeReleaseSwitchContractDigest+stateMachine_shouldRejectDigestConsistentCodeSwitchExtraFutureEvidenceField,NimCreateDurableWriteExecutorSupportTest#executorShell_shouldRejectDigestConsistentCodeSwitchExtraFutureEvidenceField" test`
+    - `mvn -q "-Dtest=NimCreateStateMachineSupportTest,NimCreateDurableWriteExecutorSupportTest" test`
+  - Final verification passed:
+    - `git diff --check`
+    - `mvn -q test`
+    - Full Maven note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - Security invariant: no real `8100`, no real NIM service HTTP call, no Authorization header sending, no durable audit write, no deployment POST, no runtime write behavior, no state-machine release binding implementation, no durable executor release binding implementation, no validation result signer, no release decision signer, no code release switch implementation, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Recommended next slice: continue closing remaining runtime-source or readiness target lists that still use superset acceptance, or continue release-binding proof design without opening writes.
+- Previous checkpoint:
 - M5.21-117 implemented:
   - Hardened `NimCreateDurableAuditReleaseDecisionContractSupport` so M5.21-70 `validationResultContract.requiredFutureEvidenceDigestFields` must exactly match the source-owned validation result evidence field list before release decision planning accepts validation result evidence.
   - Added a digest-consistent forged validation result contract regression that appends `forgedValidationResultFutureEvidenceDigest`, recomputes `validationResultContractDigest`, and still expects release decision contract rejection.

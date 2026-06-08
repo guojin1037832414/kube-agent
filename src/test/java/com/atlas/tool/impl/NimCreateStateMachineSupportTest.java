@@ -733,6 +733,49 @@ class NimCreateStateMachineSupportTest {
     }
 
     @Test
+    void stateMachine_shouldRejectDigestConsistentCodeSwitchExtraFutureEvidenceField() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> receipt = completeAuditReceipt();
+        Map<String, Object> bodyReport = completeWriteBodyRebuildReport(audit, receipt);
+        Map<String, Object> requestSpecReport = completeWriteRequestSpecReport(audit, receipt, bodyReport);
+        Map<String, Object> handoffReport = completeWriteExecutionHandoffReport(audit, receipt, bodyReport, requestSpecReport);
+        Map<String, Object> codeSwitchReport =
+            withDigestConsistentCodeSwitchExtraFutureEvidenceField(completeCodeReleaseSwitchContractReport(audit));
+        Map<String, Object> sourceGuardReport = completeCodeReleaseSwitchRuntimeSourceGuardReport(audit);
+        Map<String, Object> executorReport = completeDurableWriteExecutorReport(
+            handoffReport,
+            requestSpecReport,
+            completeCodeReleaseSwitchContractReport(audit),
+            sourceGuardReport
+        );
+
+        Map<String, Object> guard = NimCreateStateMachineSupport.evaluate(new NimCreateStateMachineSupport.ReadinessRequest(
+            Map.of("name", "nim-forged-code-switch-required-fields"),
+            openGate(),
+            completePreview(),
+            HitlConfirmation.human("thread-1", "nim_create"),
+            audit,
+            receipt,
+            bodyReport,
+            requestSpecReport,
+            handoffReport,
+            codeSwitchReport,
+            sourceGuardReport,
+            executorReport,
+            completeReadinessPlan(),
+            completeReadinessExecutionReport(),
+            NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
+            true
+        ));
+
+        assertEquals("HELD", guard.get("state"));
+        assertEquals(false, guard.get("writePermitted"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) guard.get("blockedBy");
+        assertHasBlocker(blockers, "CODE_RELEASE_SWITCH_CONTRACT_WRITE_CHAIN_DIGEST_MISMATCH");
+    }
+
+    @Test
     void stateMachine_shouldRejectForgedOpenCodeReleaseSwitchClaims() {
         Map<String, Object> audit = completeAuditContext();
         Map<String, Object> receipt = completeAuditReceipt();
@@ -1514,6 +1557,25 @@ class NimCreateStateMachineSupportTest {
                 Map.of()
             )
         );
+    }
+
+    private Map<String, Object> withDigestConsistentCodeSwitchExtraFutureEvidenceField(
+        Map<String, Object> codeSwitchReport
+    ) {
+        Map<String, Object> forgedReport = new java.util.LinkedHashMap<>(codeSwitchReport);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> contract = new java.util.LinkedHashMap<>(
+            (Map<String, Object>) forgedReport.get("codeReleaseSwitchContract")
+        );
+        @SuppressWarnings("unchecked")
+        List<String> requiredFields = new java.util.ArrayList<>(
+            (List<String>) contract.get("requiredFutureEvidenceDigestFields")
+        );
+        requiredFields.add("forgedCodeSwitchFutureEvidenceDigest");
+        contract.put("requiredFutureEvidenceDigestFields", requiredFields);
+        forgedReport.put("codeReleaseSwitchContract", contract);
+        forgedReport.put("codeReleaseSwitchContractDigest", sha256(contract));
+        return forgedReport;
     }
 
     private Map<String, Object> withDigestConsistentRuntimeSourceGuardMatrixDrift(Map<String, Object> sourceGuardReport) {

@@ -273,6 +273,35 @@ class NimCreateDurableWriteExecutorSupportTest {
     }
 
     @Test
+    void executorShell_shouldRejectDigestConsistentCodeSwitchExtraFutureEvidenceField() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> receipt = durableAuditReceipt(audit);
+        Map<String, Object> bodyReport = writeBodyReport(audit, receipt);
+        Map<String, Object> requestSpecReport = writeRequestSpecReport(audit, receipt, bodyReport);
+        Map<String, Object> handoffReport = writeExecutionHandoffReport(audit, receipt, bodyReport, requestSpecReport);
+        Map<String, Object> codeSwitchReport =
+            withDigestConsistentCodeSwitchExtraFutureEvidenceField(codeReleaseSwitchContractReport(audit));
+        Map<String, Object> sourceGuardReport = codeReleaseSwitchRuntimeSourceGuardReport(audit);
+
+        Map<String, Object> report = NimCreateDurableWriteExecutorSupport.prepare(
+            new NimCreateDurableWriteExecutorSupport.WriteExecutionInput(
+                handoffReport,
+                requestSpecReport,
+                codeSwitchReport,
+                sourceGuardReport
+            )
+        );
+
+        assertEquals(NimCreateDurableWriteExecutorSupport.REJECTED_STATE, report.get("executionState"));
+        assertEquals(false, report.get("inputAccepted"));
+        assertEquals(false, report.get("writeAttempted"));
+        assertEquals(false, report.get("writeExecuted"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+        assertHasBlocker(blockers, "CODE_RELEASE_SWITCH_CONTRACT_REPORT_NOT_TRUSTED_FOR_DURABLE_EXECUTOR");
+    }
+
+    @Test
     void executorShell_shouldRejectForgedOpenCodeReleaseSwitchClaims() {
         Map<String, Object> audit = completeAuditContext();
         Map<String, Object> receipt = durableAuditReceipt(audit);
@@ -1178,6 +1207,25 @@ class NimCreateDurableWriteExecutorSupportTest {
                 Map.of()
             )
         );
+    }
+
+    private Map<String, Object> withDigestConsistentCodeSwitchExtraFutureEvidenceField(
+        Map<String, Object> codeSwitchReport
+    ) {
+        Map<String, Object> forgedReport = new LinkedHashMap<>(codeSwitchReport);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> contract = new LinkedHashMap<>(
+            (Map<String, Object>) forgedReport.get("codeReleaseSwitchContract")
+        );
+        @SuppressWarnings("unchecked")
+        List<String> requiredFields = new java.util.ArrayList<>(
+            (List<String>) contract.get("requiredFutureEvidenceDigestFields")
+        );
+        requiredFields.add("forgedCodeSwitchFutureEvidenceDigest");
+        contract.put("requiredFutureEvidenceDigestFields", requiredFields);
+        forgedReport.put("codeReleaseSwitchContract", contract);
+        forgedReport.put("codeReleaseSwitchContractDigest", sha256(contract));
+        return forgedReport;
     }
 
     private Map<String, Object> codeReleaseSwitchContractReport(Map<String, Object> audit,

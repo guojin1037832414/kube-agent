@@ -1597,16 +1597,32 @@ final class NimCreateStateMachineSupport {
                                                                            Map<String, Object> writeExecutionHandoffReport) {
         Map<String, Object> contract = objectMap(report.get("codeReleaseSwitchContract"));
         List<String> fields = stringList(contract.get("requiredFutureEvidenceDigestFields"));
-        return fields.containsAll(List.of(
+        return fields.equals(requiredCodeReleaseSwitchDigestFields())
+            && hasText(writeBodyRebuildReport.get("bodyDigest"))
+            && hasText(writeRequestSpecReport.get("requestSpecDigest"))
+            && hasText(writeExecutionHandoffReport.get("handoffDigest"));
+    }
+
+    private static List<String> requiredCodeReleaseSwitchDigestFields() {
+        return List.of(
+            "releaseDecisionContractDigest",
+            "validationResultContractDigest",
+            "validationResultDigest",
+            "releaseDecisionDigest",
+            "codeReleaseSwitchDigest",
+            "codeReviewDigest",
+            "testEvidenceDigest",
+            "securityApprovalDigest",
+            "rollbackPlanDigest",
+            "changeWindowDigest",
             "bodyDigest",
             "requestSpecDigest",
             "handoffDigest",
             "auditReceiptId",
+            "sourceAuditEventDigest",
+            "trustedPrincipalDigest",
             "serverDerivedIdempotencyKey"
-        ))
-            && hasText(writeBodyRebuildReport.get("bodyDigest"))
-            && hasText(writeRequestSpecReport.get("requestSpecDigest"))
-            && hasText(writeExecutionHandoffReport.get("handoffDigest"));
+        );
     }
 
     private static boolean codeReleaseSwitchContractClaimsRelease(Map<String, Object> report) {

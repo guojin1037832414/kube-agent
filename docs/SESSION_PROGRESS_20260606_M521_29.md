@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-117, NIM validation result required fields closed list.
+- Current latest wave: M5.21-118, NIM code switch downstream required fields closed list.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -48,6 +48,22 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-118 NIM code switch downstream required fields closed list is implemented:
+  - Hardened `src/main/java/com/atlas/tool/impl/NimCreateStateMachineSupport.java`.
+  - Hardened `src/main/java/com/atlas/tool/impl/NimCreateDurableWriteExecutorSupport.java`.
+  - M5.21-72 `codeReleaseSwitchContract.requiredFutureEvidenceDigestFields` must now exactly match the source-owned switch evidence field list before state-machine or durable-executor planning accepts the report as write-chain evidence.
+  - Added digest-consistent forged code switch regressions that append `forgedCodeSwitchFutureEvidenceDigest`, recompute `codeReleaseSwitchContractDigest`, and still expect both downstream consumers to reject the report.
+  - Added `docs/M5_21_ONE_HUNDRED_EIGHTEENTH_WAVE_NIM_CODE_SWITCH_DOWNSTREAM_REQUIRED_FIELDS_CLOSED_LIST_AUDIT_20260608.md`.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimCreateStateMachineSupportTest#stateMachine_shouldRejectTamperedCodeReleaseSwitchContractDigest+stateMachine_shouldRejectDigestConsistentCodeSwitchExtraFutureEvidenceField,NimCreateDurableWriteExecutorSupportTest#executorShell_shouldRejectDigestConsistentCodeSwitchExtraFutureEvidenceField" test`
+    - `mvn -q "-Dtest=NimCreateStateMachineSupportTest,NimCreateDurableWriteExecutorSupportTest" test`
+  - Final verification passed:
+    - `git diff --check`
+    - `mvn -q test`
+    - Full Maven note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - No real `8100` access; no real NIM service HTTP call; no Authorization header sending; no durable audit write; no deployment POST; no runtime write behavior opened; no state-machine release binding implementation; no durable executor release binding implementation; no validation result signer; no release decision signer; no code release switch implementation; no Elasticsearch; no `ISysLogService`; no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Next recommended slice: continue closing remaining runtime-source or readiness target lists that still use superset acceptance, or continue release-binding proof design without opening writes.
 
 - M5.21-117 NIM validation result required fields closed list is implemented:
   - Hardened `src/main/java/com/atlas/tool/impl/NimCreateDurableAuditReleaseDecisionContractSupport.java`.
