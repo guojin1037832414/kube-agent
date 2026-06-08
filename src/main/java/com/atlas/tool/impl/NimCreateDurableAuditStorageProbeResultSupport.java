@@ -95,6 +95,9 @@ final class NimCreateDurableAuditStorageProbeResultSupport {
         result.put("writePermitted", false);
         result.put("writeExecutionAllowed", false);
         result.put("realHttpExecutionAllowed", false);
+        result.put("sourceOrganizationId", text(auditContext.get("organizationId")));
+        result.put("sourceUserId", text(auditContext.get("userId")));
+        result.put("sourceUsername", text(principal.get("username")));
         result.put("durable", false);
         result.put("releaseEligible", false);
         result.put("durableReceiptCanBeIssued", false);
@@ -402,6 +405,30 @@ final class NimCreateDurableAuditStorageProbeResultSupport {
                                                       Map<String, Object> principal,
                                                       Map<String, Object> probeExecutorReport,
                                                       Map<String, Object> receiptSchemaReport) {
+        return resultContractForDigests(
+            resultSourceDigests(probeExecutorReport, receiptSchemaReport),
+            digestFor(auditContext),
+            text(auditContext.get("organizationId")),
+            text(auditContext.get("userId")),
+            text(principal.get("username"))
+        );
+    }
+
+    static Map<String, Object> probeResultContractFromReport(Map<String, Object> probeResultReport) {
+        return resultContractForDigests(
+            probeResultReport,
+            text(probeResultReport.get("sourceAuditEventDigest")),
+            text(probeResultReport.get("sourceOrganizationId")),
+            text(probeResultReport.get("sourceUserId")),
+            text(probeResultReport.get("sourceUsername"))
+        );
+    }
+
+    private static Map<String, Object> resultContractForDigests(Map<String, Object> sourceDigests,
+                                                                String sourceAuditEventDigest,
+                                                                String organizationId,
+                                                                String userId,
+                                                                String username) {
         Map<String, Object> contract = new LinkedHashMap<>();
         contract.put("contractBoundary", "SERVER_ISSUED_STORAGE_PROBE_RESULT_REQUIRED");
         contract.put("futureResultType", FUTURE_RESULT_TYPE);
@@ -413,11 +440,11 @@ final class NimCreateDurableAuditStorageProbeResultSupport {
         contract.put("currentProbeStatus", CURRENT_STATUS);
         contract.put("serverIssuedRequired", true);
         contract.put("callerProvidedResultAllowed", false);
-        contract.put("evidenceBinding", resultEvidenceBinding(auditContext, probeExecutorReport, receiptSchemaReport));
+        contract.put("evidenceBinding", resultEvidenceBinding(sourceDigests, sourceAuditEventDigest));
         contract.put("trustedIdentityBinding", Map.of(
-            "organizationId", text(auditContext.get("organizationId")),
-            "userId", text(auditContext.get("userId")),
-            "username", text(principal.get("username")),
+            "organizationId", organizationId,
+            "userId", userId,
+            "username", username,
             "source", "SERVER_SESSION_CONTEXT",
             "protectedFromCallerParams", true
         ));
@@ -442,17 +469,28 @@ final class NimCreateDurableAuditStorageProbeResultSupport {
         return contract;
     }
 
-    private static Map<String, Object> resultEvidenceBinding(Map<String, Object> auditContext,
-                                                             Map<String, Object> probeExecutorReport,
-                                                             Map<String, Object> receiptSchemaReport) {
+    private static Map<String, Object> resultSourceDigests(Map<String, Object> probeExecutorReport,
+                                                           Map<String, Object> receiptSchemaReport) {
+        Map<String, Object> source = new LinkedHashMap<>();
+        source.put("sourceProbeExecutorPlanDigest", text(probeExecutorReport.get("probeExecutorPlanDigest")));
+        source.put("sourceReceiptSchemaDigest", text(receiptSchemaReport.get("schemaDigest")));
+        source.put("sourceInterfaceSpecDigest", text(receiptSchemaReport.get("sourceInterfaceSpecDigest")));
+        source.put("sourceBoundaryPlanDigest", text(probeExecutorReport.get("sourceBoundaryPlanDigest")));
+        source.put("sourceWriterPlanDigest", text(probeExecutorReport.get("sourceWriterPlanDigest")));
+        source.put("sourceAvailabilityPlanDigest", text(probeExecutorReport.get("sourceAvailabilityPlanDigest")));
+        return source;
+    }
+
+    private static Map<String, Object> resultEvidenceBinding(Map<String, Object> sourceDigests,
+                                                             String sourceAuditEventDigest) {
         Map<String, Object> binding = new LinkedHashMap<>();
-        binding.put("sourceAuditEventDigest", digestFor(auditContext));
-        binding.put("sourceProbeExecutorPlanDigest", text(probeExecutorReport.get("probeExecutorPlanDigest")));
-        binding.put("sourceReceiptSchemaDigest", text(receiptSchemaReport.get("schemaDigest")));
-        binding.put("sourceInterfaceSpecDigest", text(receiptSchemaReport.get("sourceInterfaceSpecDigest")));
-        binding.put("sourceBoundaryPlanDigest", text(probeExecutorReport.get("sourceBoundaryPlanDigest")));
-        binding.put("sourceWriterPlanDigest", text(probeExecutorReport.get("sourceWriterPlanDigest")));
-        binding.put("sourceAvailabilityPlanDigest", text(probeExecutorReport.get("sourceAvailabilityPlanDigest")));
+        binding.put("sourceAuditEventDigest", sourceAuditEventDigest);
+        binding.put("sourceProbeExecutorPlanDigest", text(sourceDigests.get("sourceProbeExecutorPlanDigest")));
+        binding.put("sourceReceiptSchemaDigest", text(sourceDigests.get("sourceReceiptSchemaDigest")));
+        binding.put("sourceInterfaceSpecDigest", text(sourceDigests.get("sourceInterfaceSpecDigest")));
+        binding.put("sourceBoundaryPlanDigest", text(sourceDigests.get("sourceBoundaryPlanDigest")));
+        binding.put("sourceWriterPlanDigest", text(sourceDigests.get("sourceWriterPlanDigest")));
+        binding.put("sourceAvailabilityPlanDigest", text(sourceDigests.get("sourceAvailabilityPlanDigest")));
         binding.put("trustedPrincipalDigestRequired", true);
         binding.put("digestAlgorithm", NimCreateAuditWriterSupport.DIGEST_ALGORITHM);
         binding.put("sameAuditEventRequired", true);

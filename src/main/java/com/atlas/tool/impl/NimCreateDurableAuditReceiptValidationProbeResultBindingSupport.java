@@ -254,6 +254,9 @@ final class NimCreateDurableAuditReceiptValidationProbeResultBindingSupport {
             && Boolean.FALSE.equals(probeResultReport.get("durableReceiptIssued"))
             && text(probeResultReport.get("sourceAuditEventDigest")).equals(digestFor(auditContext))
             && text(probeResultReport.get("trustedPrincipalDigest")).equals(digestFor(principal))
+            && text(auditContext.get("organizationId")).equals(text(probeResultReport.get("sourceOrganizationId")))
+            && text(auditContext.get("userId")).equals(text(probeResultReport.get("sourceUserId")))
+            && text(principal.get("username")).equals(text(probeResultReport.get("sourceUsername")))
             && text(probeResultReport.get("sourceProbeExecutorPlanDigest")).matches("[a-f0-9]{64}")
             && text(probeResultReport.get("sourceReceiptSchemaDigest")).matches("[a-f0-9]{64}")
             && text(probeResultReport.get("sourceInterfaceSpecDigest")).matches("[a-f0-9]{64}")
@@ -283,56 +286,33 @@ final class NimCreateDurableAuditReceiptValidationProbeResultBindingSupport {
                                                     Map<String, Object> principal,
                                                     Map<String, Object> probeResultReport,
                                                     Map<String, Object> contract) {
-        Map<String, Object> evidence = objectMap(contract.get("evidenceBinding"));
-        Map<String, Object> identity = objectMap(contract.get("trustedIdentityBinding"));
-        Map<String, Object> currentTemplate = objectMap(contract.get("currentTemplate"));
-        Map<String, Object> prerequisites = objectMap(contract.get("passPrerequisites"));
-        Map<String, Object> failure = objectMap(contract.get("failureModel"));
-
         return !contract.isEmpty()
-            && "SERVER_ISSUED_STORAGE_PROBE_RESULT_REQUIRED".equals(text(contract.get("contractBoundary")))
-            && NimCreateDurableAuditStorageProbeResultSupport.FUTURE_RESULT_TYPE.equals(
-                text(contract.get("futureResultType")))
-            && NimCreateDurableAuditReceiptSchemaSupport.STORAGE_PROBE_RECEIPT_TYPE.equals(
-                text(contract.get("futureProbeReceiptType")))
-            && NimCreateDurableAuditStorageSupport.CANDIDATE_INDEX.equals(text(contract.get("targetStorage")))
-            && Boolean.FALSE.equals(contract.get("currentInstanceAllowed"))
-            && Boolean.TRUE.equals(contract.get("serverIssuedRequired"))
-            && Boolean.FALSE.equals(contract.get("callerProvidedResultAllowed"))
-            && text(evidence.get("sourceAuditEventDigest")).equals(digestFor(auditContext))
-            && text(evidence.get("sourceProbeExecutorPlanDigest")).equals(
-                text(probeResultReport.get("sourceProbeExecutorPlanDigest")))
-            && text(evidence.get("sourceReceiptSchemaDigest")).equals(
-                text(probeResultReport.get("sourceReceiptSchemaDigest")))
-            && text(evidence.get("sourceInterfaceSpecDigest")).equals(
-                text(probeResultReport.get("sourceInterfaceSpecDigest")))
-            && text(evidence.get("sourceBoundaryPlanDigest")).equals(
-                text(probeResultReport.get("sourceBoundaryPlanDigest")))
-            && text(evidence.get("sourceWriterPlanDigest")).equals(
-                text(probeResultReport.get("sourceWriterPlanDigest")))
-            && text(evidence.get("sourceAvailabilityPlanDigest")).equals(
-                text(probeResultReport.get("sourceAvailabilityPlanDigest")))
-            && Boolean.TRUE.equals(evidence.get("trustedPrincipalDigestRequired"))
-            && NimCreateAuditWriterSupport.DIGEST_ALGORITHM.equals(text(evidence.get("digestAlgorithm")))
-            && Boolean.TRUE.equals(evidence.get("serverIssuedRequired"))
-            && text(auditContext.get("organizationId")).equals(text(identity.get("organizationId")))
-            && text(auditContext.get("userId")).equals(text(identity.get("userId")))
-            && text(principal.get("username")).equals(text(identity.get("username")))
-            && "SERVER_SESSION_CONTEXT".equals(text(identity.get("source")))
-            && Boolean.TRUE.equals(identity.get("protectedFromCallerParams"))
-            && Boolean.FALSE.equals(currentTemplate.get("resultIssued"))
-            && Boolean.FALSE.equals(currentTemplate.get("storageAvailable"))
-            && Boolean.FALSE.equals(currentTemplate.get("storageProbeReceiptIssued"))
-            && Boolean.FALSE.equals(currentTemplate.get("durableAckVerified"))
-            && Boolean.FALSE.equals(currentTemplate.get("readAfterWriteVerified"))
-            && Boolean.FALSE.equals(currentTemplate.get("preWriteAllowed"))
-            && Boolean.TRUE.equals(prerequisites.get("realStorageProbeExecutedRequired"))
-            && Boolean.TRUE.equals(prerequisites.get("storageAvailableRequired"))
-            && Boolean.FALSE.equals(prerequisites.get("currentContractSatisfiesPrerequisites"))
-            && Boolean.TRUE.equals(failure.get("failClosed"))
-            && Boolean.FALSE.equals(failure.get("fallbackToMockProbeAllowed"))
-            && Boolean.FALSE.equals(failure.get("fallbackToCallerProbeResultAllowed"))
-            && Boolean.FALSE.equals(failure.get("fallbackToSchemaOnlyAllowed"));
+            && probeResultContractSourceDigestsMatch(probeResultReport, contract)
+            && digestFor(auditContext).equals(text(objectMap(contract.get("evidenceBinding"))
+                .get("sourceAuditEventDigest")))
+            && text(auditContext.get("organizationId")).equals(text(probeResultReport.get("sourceOrganizationId")))
+            && text(auditContext.get("userId")).equals(text(probeResultReport.get("sourceUserId")))
+            && text(principal.get("username")).equals(text(probeResultReport.get("sourceUsername")))
+            && contract.equals(
+                NimCreateDurableAuditStorageProbeResultSupport.probeResultContractFromReport(probeResultReport));
+    }
+
+    private static boolean probeResultContractSourceDigestsMatch(Map<String, Object> probeResultReport,
+                                                                 Map<String, Object> contract) {
+        Map<String, Object> evidence = objectMap(contract.get("evidenceBinding"));
+        for (String field : List.of(
+            "sourceProbeExecutorPlanDigest",
+            "sourceReceiptSchemaDigest",
+            "sourceInterfaceSpecDigest",
+            "sourceBoundaryPlanDigest",
+            "sourceWriterPlanDigest",
+            "sourceAvailabilityPlanDigest"
+        )) {
+            if (!text(probeResultReport.get(field)).equals(text(evidence.get(field)))) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static void validateValidationGateReport(Map<String, Object> auditContext,

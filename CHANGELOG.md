@@ -6,6 +6,23 @@
 
 ---
 
+## [M5.21-137] - NIM storage probe result contract maps closed
+
+**Delivery**: Closed `probeResultContract` consumption in receipt-validation probe-result binding using producer-owned exact contract equality.
+**Changes**
+- `NimCreateDurableAuditStorageProbeResultSupport` now emits trusted source identity fields and exposes `probeResultContractFromReport(...)` as the canonical producer helper.
+- `NimCreateDurableAuditReceiptValidationProbeResultBindingSupport` now rejects any storage probe result contract that is not exactly equal to that producer-owned helper, rather than hand-interpreting nested maps.
+- Added digest-consistent forged probe-result-contract regressions covering top-level keys, `evidenceBinding`, `trustedIdentityBinding`, `requiredFutureFields`, `currentTemplate`, `passPrerequisites`, `failureModel`, and `failureModel.failureStatuses`.
+**Verification**
+- `git diff --check` passed.
+- Targeted storage probe result and receipt-validation probe-result binding tests passed.
+- Targeted storage probe/result binding plus validation-result probe-binding migration, validation result, and validation-result migration tests passed.
+- Full `mvn -q test` passed; full Maven degraded to L1 embedding mode after local `model.onnx` download timeout but exited 0.
+**Security**
+- This is storage-probe-result proof-schema hardening only; it does not create real probe results, storage receipts, validators, validation results, release decisions, code switches, runtime writes, or NIM deployment writes.
+- No real `8100`, real NIM service HTTP call, Authorization header sending, durable audit write, deployment POST, validation result signer, release decision signer, code release switch implementation, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-136] - NIM validation plan maps closed
 
 **Delivery**: Closed `validationPlan` consumption across validation-result migration and probe-result binding using producer-owned exact plan equality.

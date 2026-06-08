@@ -215,7 +215,28 @@ NIM 链路明确禁止真实 Authorization、token、password、secret、NGC/NIM
 
 学习重点：对于长期 Agent 项目，文档不是附属物。文档是架构记忆、教学材料和恢复机制的一部分。
 
-## M5.21-136 最新学习笔记
+## M5.21-137 最新学习笔记
+
+本轮关闭的是 `NimCreateDurableAuditStorageProbeResultSupport` 输出、并被 receipt-validation probe-result binding 消费的完整 `probeResultContract`：
+- 顶层 storage probe result contract 字段
+- `evidenceBinding`
+- `trustedIdentityBinding`
+- `requiredFutureFields`
+- `currentTemplate`
+- `passPrerequisites`
+- `failureModel`
+- `failureModel.failureStatuses`
+
+关键收获：
+- `probeResultContractDigest` 只能证明 contract 对象自洽，不能证明新增 key 已经被评审为合法 storage probe 语义。
+- `probeResultContract` 是未来 server-issued storage probe result 与 receipt validation 之间的桥。它虽然现在仍是 HOLD，但未来会影响 receipt validation 是否能接受 storage probe evidence。
+- `NimCreateDurableAuditStorageProbeResultSupport` 现在提供 `probeResultContractFromReport(...)` 作为 producer-owned canonical proof object。
+- `NimCreateDurableAuditReceiptValidationProbeResultBindingSupport` 现在只接受完整 canonical contract exact equality，同时校验 source digest、source audit digest、trusted principal digest 和 source identity。
+- 本轮新增 digest-consistent forgery：篡改顶层 key、evidence map、identity map、required future field list、current template、pass prerequisites、failure model 和 failure status list，重算 `probeResultContractDigest` 后仍要求 fail closed。
+
+学习总结：顶级 Agent 的安全链路里，“hash 正确”不是“语义被批准”。越是靠近未来写放行的 proof object，越不能让下游自己解释一部分 JSON。生产者必须拥有完整形状，消费者必须做 exact canonical equality，这样新字段必须经过代码、测试、文档和审查才能进入授权路径。
+
+## M5.21-136 学习笔记
 
 本轮关闭的是 `NimCreateDurableAuditReceiptValidationGateSupport` 输出、并被两个下游共同消费的完整 `validationPlan`：
 

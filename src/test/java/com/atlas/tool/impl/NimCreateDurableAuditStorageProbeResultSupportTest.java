@@ -66,11 +66,18 @@ class NimCreateDurableAuditStorageProbeResultSupportTest {
         assertEquals(probeExecutorReport.get("sourceAvailabilityPlanDigest"),
             report.get("sourceAvailabilityPlanDigest"));
         assertEquals(probeExecutorReport.get("sourceBoundaryPlanDigest"), report.get("sourceBoundaryPlanDigest"));
+        assertEquals(audit.get("organizationId"), report.get("sourceOrganizationId"));
+        assertEquals(audit.get("userId"), report.get("sourceUserId"));
+        assertEquals(principal.get("username"), report.get("sourceUsername"));
         assertTrue(report.get("trustedPrincipalDigest").toString().matches("[a-f0-9]{64}"));
         assertTrue(report.get("probeResultContractDigest").toString().matches("[a-f0-9]{64}"));
 
         @SuppressWarnings("unchecked")
         Map<String, Object> contract = (Map<String, Object>) report.get("probeResultContract");
+        assertEquals(
+            NimCreateDurableAuditStorageProbeResultSupport.probeResultContractFromReport(report),
+            contract
+        );
         assertEquals("SERVER_ISSUED_STORAGE_PROBE_RESULT_REQUIRED", contract.get("contractBoundary"));
         assertEquals(NimCreateDurableAuditStorageProbeResultSupport.FUTURE_RESULT_TYPE,
             contract.get("futureResultType"));

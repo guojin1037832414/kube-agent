@@ -287,6 +287,49 @@ class NimCreateDurableAuditReceiptValidationProbeResultBindingSupportTest {
     }
 
     @Test
+    void binding_shouldRejectDigestConsistentProbeResultContractTopLevelExtraKey() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+        Map<String, Object> forgedProbeResultReport = withDigestConsistentProbeResultContractMutation(
+            storageProbeResultReport(audit, principal),
+            contract -> contract.put("receiptValidationCanTrustDigestOnly", false)
+        );
+
+        assertRejectsDigestConsistentProbeResultContractDrift(audit, principal, forgedProbeResultReport);
+    }
+
+    @Test
+    void binding_shouldRejectDigestConsistentProbeResultContractNestedMapAndListDrift() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> principal = trustedPrincipalSnapshot();
+
+        List<Consumer<Map<String, Object>>> mutations = new ArrayList<>();
+        mutations.add(contract -> objectMap(contract.get("evidenceBinding"))
+            .put("validationBindingCanSkipReceiptSchemaDigest", false));
+        mutations.add(contract -> objectMap(contract.get("trustedIdentityBinding"))
+            .put("callerIdentityCanOverrideStorageProbeResult", false));
+        mutations.add(contract -> objectList(contract.get("requiredFutureFields"))
+            .add("callerControlledProbeBindingDigest"));
+        mutations.add(contract -> objectMap(contract.get("currentTemplate"))
+            .put("validationBindingCanTreatHoldAsPass", false));
+        mutations.add(contract -> objectMap(contract.get("passPrerequisites"))
+            .put("receiptValidationCanSkipReadAfterWrite", false));
+        mutations.add(contract -> objectMap(contract.get("failureModel"))
+            .put("fallbackToDigestOnlyAllowed", false));
+        mutations.add(contract -> objectList(objectMap(contract.get("failureModel")).get("failureStatuses"))
+            .add("DIGEST_CONSISTENT_CONTRACT_DRIFT"));
+
+        for (Consumer<Map<String, Object>> mutation : mutations) {
+            Map<String, Object> forgedProbeResultReport = withDigestConsistentProbeResultContractMutation(
+                storageProbeResultReport(audit, principal),
+                mutation
+            );
+
+            assertRejectsDigestConsistentProbeResultContractDrift(audit, principal, forgedProbeResultReport);
+        }
+    }
+
+    @Test
     void binding_shouldRejectDigestConsistentValidationPlanTopLevelExtraKey() {
         Map<String, Object> audit = completeAuditContext();
         Map<String, Object> principal = trustedPrincipalSnapshot();
@@ -450,7 +493,7 @@ class NimCreateDurableAuditReceiptValidationProbeResultBindingSupportTest {
     }
 
     private Map<String, Object> withDigestConsistentValidationPlanMutation(Map<String, Object> gateReport,
-                                                                          Consumer<Map<String, Object>> mutator) {
+                                                                           Consumer<Map<String, Object>> mutator) {
         Map<String, Object> forgedReport = new LinkedHashMap<>(gateReport);
         Map<String, Object> validationPlan = objectMap(deepMutableCopy(forgedReport.get("validationPlan")));
         mutator.accept(validationPlan);
@@ -459,9 +502,46 @@ class NimCreateDurableAuditReceiptValidationProbeResultBindingSupportTest {
         return forgedReport;
     }
 
+    private Map<String, Object> withDigestConsistentProbeResultContractMutation(Map<String, Object> probeResultReport,
+                                                                               Consumer<Map<String, Object>> mutator) {
+        Map<String, Object> forgedReport = new LinkedHashMap<>(probeResultReport);
+        Map<String, Object> contract = objectMap(deepMutableCopy(forgedReport.get("probeResultContract")));
+        mutator.accept(contract);
+        forgedReport.put("probeResultContract", contract);
+        forgedReport.put("probeResultContractDigest", sha256(contract));
+        return forgedReport;
+    }
+
+    private void assertRejectsDigestConsistentProbeResultContractDrift(Map<String, Object> audit,
+                                                                       Map<String, Object> principal,
+                                                                       Map<String, Object> probeResultReport) {
+        Map<String, Object> report = NimCreateDurableAuditReceiptValidationProbeResultBindingSupport.plan(
+            new NimCreateDurableAuditReceiptValidationProbeResultBindingSupport
+                .ReceiptValidationProbeResultBindingInput(
+                audit,
+                principal,
+                probeResultReport,
+                validationGateReport(audit, principal),
+                Map.of()
+            )
+        );
+
+        assertEquals(NimCreateDurableAuditReceiptValidationProbeResultBindingSupport.REJECTED_STATE,
+            report.get("bindingState"));
+        assertEquals(false, report.get("inputAccepted"));
+        assertSuccessStatesRemainFalse(report);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> plan = (Map<String, Object>) report.get("bindingPlan");
+        assertTrue(plan.isEmpty());
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+        assertHasBlocker(blockers,
+            "STORAGE_PROBE_RESULT_REPORT_INVALID_FOR_RECEIPT_VALIDATION_BINDING");
+    }
+
     private void assertRejectsDigestConsistentValidationPlanDrift(Map<String, Object> audit,
-                                                                 Map<String, Object> principal,
-                                                                 Map<String, Object> validationGateReport) {
+                                                                  Map<String, Object> principal,
+                                                                  Map<String, Object> validationGateReport) {
         Map<String, Object> report = NimCreateDurableAuditReceiptValidationProbeResultBindingSupport.plan(
             new NimCreateDurableAuditReceiptValidationProbeResultBindingSupport
                 .ReceiptValidationProbeResultBindingInput(
