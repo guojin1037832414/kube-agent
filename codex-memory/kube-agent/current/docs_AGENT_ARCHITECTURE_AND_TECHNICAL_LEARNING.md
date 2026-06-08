@@ -215,6 +215,23 @@ NIM 链路明确禁止真实 Authorization、token、password、secret、NGC/NIM
 
 学习重点：对于长期 Agent 项目，文档不是附属物。文档是架构记忆、教学材料和恢复机制的一部分。
 
+## M5.21-125 最新学习笔记
+
+本轮关闭了 M5.21-58 validation result migration 自己输出并被下游消费的两类词表：
+
+- `migrationPlan.failureContract.failureStatuses`
+- `migrationPlan.forbiddenShortcuts`
+
+关键收获：
+
+- `migrationPlanDigest` 是完整性证据，不是语义批准。
+- 生产者必须在源码里拥有标准词表。
+- 当前所有消费这个 proof object 的下游都必须校验同一份源码词表，而不能只修最靠近 release 的一个消费者。
+- `contains(...)`、`containsAll(...)` 和非空校验不适合 release-proof protocol list，因为攻击者或未审查代码可以追加新值并重新计算 digest。
+- 多专家审查很有价值：本轮并行审查发现了相邻的 M5.21-69 consumer，所以 release gate 和 probe-binding migration 两条消费路径都被同步关闭。
+
+学习总结：顶级 Agent 要把 proof object 当成协议，而不是普通 JSON。给协议对象做 hash 是必要的，但允许的协议词表仍然必须闭合、可审查、可测试。
+
 ## M5.21-124 最新学习笔记
 
 本轮关闭了 validation gate 自己输出给 validation result migration 的两类词表：

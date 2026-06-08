@@ -1,0 +1,58 @@
+﻿{
+    "project":  "kube-agent",
+    "wave":  "M5.21-125",
+    "title":  "NIM validation result migration failure/shortcut lists closed",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "head":  "3e17fb087175a0e7514e1828c220c8b15966bfab",
+    "recoveryHome":  "codex-memory/kube-agent/current",
+    "pushed":  true,
+    "generatedAt":  "2026-06-08T16:00:34+08:00",
+    "teachingMap":  "docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+    "files":  [
+                  {
+                      "source":  "CHANGELOG.md",
+                      "savedAs":  "CHANGELOG.md",
+                      "sha256":  "95D52A291D3AFFBC3BAE94D3E320C14432C7932A480CAB6D7727A4AE8E1EA437"
+                  },
+                  {
+                      "source":  "docs\\INDEX.md",
+                      "savedAs":  "docs_INDEX.md",
+                      "sha256":  "D37839DE71FCB099F78EBE970D76026BA8141AC790E5753493185D49CFBE87A7"
+                  },
+                  {
+                      "source":  "docs\\AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "savedAs":  "docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "3AD497A4E584FA8E98E2ACAF09944379BB60A107CC40EB74E2307CE3994A4AA0"
+                  },
+                  {
+                      "source":  "docs\\M5_21_WAVE_INDEX_20260606.md",
+                      "savedAs":  "docs_M5_21_WAVE_INDEX_20260606.md",
+                      "sha256":  "8B7B0D23F4C2C2C3D2B4E1FB06AB34B3BD8422915E1F43BCBE323EAA07085CFE"
+                  },
+                  {
+                      "source":  "docs\\PROJECT_MISSION_AND_MEMORY.md",
+                      "savedAs":  "docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "644A45BF32512667DC2547BAF9E241A8894B26E2FCB62A8647CDE18EEA413688"
+                  },
+                  {
+                      "source":  "docs\\SESSION_PROGRESS_20260606_M521_29.md",
+                      "savedAs":  "docs_SESSION_PROGRESS_20260606_M521_29.md",
+                      "sha256":  "583ED31E0C645404C15944447C69EC6D247619FCC21132E0C7E4FFC2040BFCFD"
+                  },
+                  {
+                      "source":  "docs\\v3.1\\DEVELOPMENT_GUIDE.md",
+                      "savedAs":  "docs_v3.1_DEVELOPMENT_GUIDE.md",
+                      "sha256":  "A7A95B734F76658CB619887FFBEC8F8F558BAB963D9682579FFF34CA21CC79CE"
+                  },
+                  {
+                      "source":  "docs\\M5_21_ONE_HUNDRED_TWENTY_FIFTH_WAVE_NIM_VALIDATION_RESULT_MIGRATION_FAILURE_SHORTCUT_LISTS_CLOSED_AUDIT_20260608.md",
+                      "savedAs":  "docs_M5_21_ONE_HUNDRED_TWENTY_FIFTH_WAVE_NIM_VALIDATION_RESULT_MIGRATION_FAILURE_SHORTCUT_LISTS_CLOSED_AUDIT_20260608.md",
+                      "sha256":  "2D5411322B0BF35E770DC9FE355FAE6DB2DF77E5D46D5BD070A61C34767F7519"
+                  },
+                  {
+                      "source":  "codex-memory\\kube-agent\\current\\RECOVERY_STATUS.md",
+                      "savedAs":  "RECOVERY_STATUS.md",
+                      "sha256":  "005E3D55A03F0C306D067E2BF5E3110185C2EDCB1FF841786C53F4F8D721A48B"
+                  }
+              ]
+}
