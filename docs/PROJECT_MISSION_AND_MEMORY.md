@@ -82,12 +82,24 @@ Current track:
 
 Recently completed:
 
-`M5.21-104 NIM downstream protected context contract`
+`M5.21-105 NIM durable execution attempt spec binding contract`
 
 Latest checkpoint:
 
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-105 implemented:
+  - Hardened `NimCreateDurableWriteExecutorSupport.executionAttemptSpec(...)` from digest-only evidence into a closed, digest-bound future execution mirror.
+  - `executionAttemptSpec` now carries `executionAttemptSpecDigestAlgorithm`, `executionAttemptSpecDigest`, and value-copied `requestSpec`, `body`, and `executionHandoffPlan`.
+  - `NimCreateStateMachineSupport` now verifies the attempt spec digest, exact key set, copied request/body/handoff content, body digest, request spec digest, handoff digest, and post-write readiness executor binding.
+  - Added closed-shape contracts for request specs, handoff plans, idempotency handoff, pre-write audit handoff, post-write readiness handoff, retry policy, and execution attempt specs.
+  - Added digest-consistent forged-report regressions for requestSpec extra fields, handoffPlan extra fields, attemptSpec body drift, and attemptSpec extra protected-context fields.
+  - Added `docs/M5_21_ONE_HUNDRED_FIFTH_WAVE_NIM_EXECUTION_ATTEMPT_SPEC_BINDING_CONTRACT_AUDIT_20260608.md`.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimCreateDurableWriteExecutorSupportTest,NimCreateStateMachineSupportTest" test`
+  - Security invariant: no real `8100`, no real NIM service HTTP call, no Authorization header sending, no durable audit write, no deployment POST, no runtime write behavior, no state-machine release binding implementation, no durable executor release binding implementation, no validation result signer, no release decision signer, no code release switch implementation, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Recommended next slice: derive and verify the durable executor idempotency key against audit/request evidence, or continue release-binding proof design without opening writes.
+- Previous checkpoint:
 - M5.21-104 implemented:
   - Extended shared protected-context body validation into `NimCreateStateMachineSupport`, `NimCreateWriteExecutionHandoffSupport`, and `NimCreateDurableWriteExecutorSupport`.
   - Downstream `writeBodyContractValid(...)` now rejects nested protected context via `NimProtectedContextDetector.containsProtectedContext(body)`.

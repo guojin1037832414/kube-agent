@@ -477,6 +477,109 @@ class NimCreateStateMachineSupportTest {
     }
 
     @Test
+    void stateMachine_shouldRejectDigestConsistentDurableExecutorAttemptSpecBodyDrift() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> receipt = completeAuditReceipt();
+        Map<String, Object> bodyReport = completeWriteBodyRebuildReport(audit, receipt);
+        Map<String, Object> requestSpecReport = completeWriteRequestSpecReport(audit, receipt, bodyReport);
+        Map<String, Object> handoffReport = completeWriteExecutionHandoffReport(audit, receipt, bodyReport, requestSpecReport);
+        Map<String, Object> codeSwitchReport = completeCodeReleaseSwitchContractReport(audit);
+        Map<String, Object> sourceGuardReport = completeCodeReleaseSwitchRuntimeSourceGuardReport(audit);
+        Map<String, Object> executorReport = new java.util.LinkedHashMap<>(completeDurableWriteExecutorReport(
+            handoffReport,
+            requestSpecReport,
+            codeSwitchReport,
+            sourceGuardReport
+        ));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> attemptSpec = new java.util.LinkedHashMap<>(
+            (Map<String, Object>) executorReport.get("executionAttemptSpec")
+        );
+        @SuppressWarnings("unchecked")
+        Map<String, Object> attemptBody = new java.util.LinkedHashMap<>(
+            (Map<String, Object>) attemptSpec.get("body")
+        );
+        attemptBody.put("displayName", "caller-mutated-attempt-body");
+        attemptSpec.put("body", attemptBody);
+        executorReport.put("executionAttemptSpec", attemptSpec);
+        executorReport.put("executionAttemptSpecDigest", sha256(attemptSpec));
+
+        Map<String, Object> guard = NimCreateStateMachineSupport.evaluate(new NimCreateStateMachineSupport.ReadinessRequest(
+            Map.of("name", "nim-attempt-spec-body-drift"),
+            openGate(),
+            completePreview(),
+            HitlConfirmation.human("thread-1", "nim_create"),
+            audit,
+            receipt,
+            bodyReport,
+            requestSpecReport,
+            handoffReport,
+            codeSwitchReport,
+            sourceGuardReport,
+            executorReport,
+            completeReadinessPlan(),
+            completeReadinessExecutionReport(),
+            NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
+            true
+        ));
+
+        assertEquals("HELD", guard.get("state"));
+        assertEquals(false, guard.get("writePermitted"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) guard.get("blockedBy");
+        assertHasBlocker(blockers, "DURABLE_WRITE_EXECUTOR_REPORT_CONTRACT_INVALID");
+    }
+
+    @Test
+    void stateMachine_shouldRejectDigestConsistentDurableExecutorAttemptSpecExtraProtectedContext() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> receipt = completeAuditReceipt();
+        Map<String, Object> bodyReport = completeWriteBodyRebuildReport(audit, receipt);
+        Map<String, Object> requestSpecReport = completeWriteRequestSpecReport(audit, receipt, bodyReport);
+        Map<String, Object> handoffReport = completeWriteExecutionHandoffReport(audit, receipt, bodyReport, requestSpecReport);
+        Map<String, Object> codeSwitchReport = completeCodeReleaseSwitchContractReport(audit);
+        Map<String, Object> sourceGuardReport = completeCodeReleaseSwitchRuntimeSourceGuardReport(audit);
+        Map<String, Object> executorReport = new java.util.LinkedHashMap<>(completeDurableWriteExecutorReport(
+            handoffReport,
+            requestSpecReport,
+            codeSwitchReport,
+            sourceGuardReport
+        ));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> attemptSpec = new java.util.LinkedHashMap<>(
+            (Map<String, Object>) executorReport.get("executionAttemptSpec")
+        );
+        attemptSpec.put("write_request_spec_report", "caller-forged");
+        executorReport.put("executionAttemptSpec", attemptSpec);
+        executorReport.put("executionAttemptSpecDigest", sha256(attemptSpec));
+
+        Map<String, Object> guard = NimCreateStateMachineSupport.evaluate(new NimCreateStateMachineSupport.ReadinessRequest(
+            Map.of("name", "nim-attempt-spec-extra-context"),
+            openGate(),
+            completePreview(),
+            HitlConfirmation.human("thread-1", "nim_create"),
+            audit,
+            receipt,
+            bodyReport,
+            requestSpecReport,
+            handoffReport,
+            codeSwitchReport,
+            sourceGuardReport,
+            executorReport,
+            completeReadinessPlan(),
+            completeReadinessExecutionReport(),
+            NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
+            true
+        ));
+
+        assertEquals("HELD", guard.get("state"));
+        assertEquals(false, guard.get("writePermitted"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) guard.get("blockedBy");
+        assertHasBlocker(blockers, "DURABLE_WRITE_EXECUTOR_REPORT_CONTRACT_INVALID");
+    }
+
+    @Test
     void stateMachine_shouldRejectForgedDurableExecutorSuccessClaims() {
         Map<String, Object> audit = completeAuditContext();
         Map<String, Object> receipt = completeAuditReceipt();

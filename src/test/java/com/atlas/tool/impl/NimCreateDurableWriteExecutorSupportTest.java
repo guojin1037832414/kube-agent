@@ -81,8 +81,25 @@ class NimCreateDurableWriteExecutorSupportTest {
         assertEquals("deployment-create", attemptSpec.get("target"));
         assertEquals("POST", attemptSpec.get("method"));
         assertEquals("/api/100002/deployment", attemptSpec.get("resolvedPath"));
+        assertEquals(NimCreateDurableWriteExecutorSupport.EXECUTION_ATTEMPT_SPEC_DIGEST_ALGORITHM,
+            report.get("executionAttemptSpecDigestAlgorithm"));
+        assertEquals(sha256(attemptSpec), report.get("executionAttemptSpecDigest"));
+        assertEquals(true, attemptSpec.get("requestSpecCopiedByValue"));
+        assertEquals(NimCreateWriteRequestSpecAdapterSupport.REQUEST_SPEC_DIGEST_ALGORITHM,
+            attemptSpec.get("requestSpecDigestAlgorithm"));
         assertEquals(handoffReport.get("handoffDigest"), attemptSpec.get("handoffDigest"));
         assertEquals(requestSpecReport.get("requestSpecDigest"), attemptSpec.get("requestSpecDigest"));
+        assertEquals(requestSpecReport.get("requestSpec"), attemptSpec.get("requestSpec"));
+        assertEquals(true, attemptSpec.get("bodyCopiedByValue"));
+        assertEquals(NimCreateWriteBodyRebuilderSupport.BODY_DIGEST_ALGORITHM,
+            attemptSpec.get("bodyDigestAlgorithm"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> requestSpec = (Map<String, Object>) requestSpecReport.get("requestSpec");
+        assertEquals(requestSpec.get("body"), attemptSpec.get("body"));
+        assertEquals(true, attemptSpec.get("executionHandoffPlanCopiedByValue"));
+        assertEquals(NimCreateWriteExecutionHandoffSupport.HANDOFF_DIGEST_ALGORITHM,
+            attemptSpec.get("handoffDigestAlgorithm"));
+        assertEquals(handoffReport.get("executionHandoffPlan"), attemptSpec.get("executionHandoffPlan"));
         assertEquals(handoffReport.get("idempotencyKey"), attemptSpec.get("idempotencyKey"));
         assertEquals("KUBE_MANAGER_HTTP_CLIENT_CONTEXT_ONLY", attemptSpec.get("kubeManagerAuthBoundary"));
         assertEquals(false, attemptSpec.get("callerHeadersAllowed"));
@@ -95,6 +112,50 @@ class NimCreateDurableWriteExecutorSupportTest {
         assertHasBlocker(blockers, "DURABLE_WRITE_EXECUTOR_IMPLEMENTATION_HOLD");
         assertHasBlocker(blockers, "CODE_RELEASE_SWITCH_RUNTIME_SOURCE_GUARD_IMPLEMENTATION_HOLD");
         assertEquals(2, blockers.size());
+    }
+
+    @Test
+    void executorShell_shouldCopyAttemptSpecInputsByValue() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> receipt = durableAuditReceipt(audit);
+        Map<String, Object> bodyReport = writeBodyReport(audit, receipt);
+        Map<String, Object> requestSpecReport = writeRequestSpecReport(audit, receipt, bodyReport);
+        Map<String, Object> handoffReport = writeExecutionHandoffReport(audit, receipt, bodyReport, requestSpecReport);
+        Map<String, Object> codeSwitchReport = codeReleaseSwitchContractReport(audit);
+        Map<String, Object> sourceGuardReport = codeReleaseSwitchRuntimeSourceGuardReport(audit);
+
+        Map<String, Object> report = NimCreateDurableWriteExecutorSupport.prepare(
+            new NimCreateDurableWriteExecutorSupport.WriteExecutionInput(
+                handoffReport,
+                requestSpecReport,
+                codeSwitchReport,
+                sourceGuardReport
+            )
+        );
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> attemptSpec = (Map<String, Object>) report.get("executionAttemptSpec");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> attemptRequestSpec = (Map<String, Object>) attemptSpec.get("requestSpec");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> attemptBody = (Map<String, Object>) attemptSpec.get("body");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> attemptHandoffPlan = (Map<String, Object>) attemptSpec.get("executionHandoffPlan");
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> mutableRequestSpec = (Map<String, Object>) requestSpecReport.get("requestSpec");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> mutableRequestBody = (Map<String, Object>) mutableRequestSpec.get("body");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> mutableHandoffPlan = (Map<String, Object>) handoffReport.get("executionHandoffPlan");
+        mutableRequestSpec.put("resolvedPath", "/api/mutated/deployment");
+        mutableRequestBody.put("displayName", "mutated-after-prepare");
+        mutableHandoffPlan.put("resolvedPath", "/api/mutated/deployment");
+
+        assertEquals("/api/100002/deployment", attemptRequestSpec.get("resolvedPath"));
+        assertEquals("llama-nim", attemptBody.get("displayName"));
+        assertEquals("/api/100002/deployment", attemptHandoffPlan.get("resolvedPath"));
+        assertEquals(sha256(attemptSpec), report.get("executionAttemptSpecDigest"));
     }
 
     @Test
@@ -439,6 +500,89 @@ class NimCreateDurableWriteExecutorSupportTest {
         assertHasBlocker(blockers, "WRITE_REQUEST_SPEC_REPORT_NOT_TRUSTED_FOR_DURABLE_EXECUTOR");
     }
 
+    @Test
+    void executorShell_shouldRejectDigestConsistentRequestSpecWithExtraProtectedContextOutsideBody() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> receipt = durableAuditReceipt(audit);
+        Map<String, Object> bodyReport = writeBodyReport(audit, receipt);
+        Map<String, Object> trustedRequestSpecReport = writeRequestSpecReport(audit, receipt, bodyReport);
+        Map<String, Object> requestSpecReport = withExtraRequestSpecField(
+            trustedRequestSpecReport,
+            "write_request_spec_report",
+            "caller-forged"
+        );
+        Map<String, Object> trustedHandoffReport = writeExecutionHandoffReport(
+            audit,
+            receipt,
+            bodyReport,
+            trustedRequestSpecReport
+        );
+        Map<String, Object> handoffReport = withForgedDigestConsistentHandoff(
+            trustedHandoffReport,
+            bodyReport,
+            requestSpecReport
+        );
+        Map<String, Object> codeSwitchReport = codeReleaseSwitchContractReport(audit);
+        Map<String, Object> sourceGuardReport = codeReleaseSwitchRuntimeSourceGuardReport(audit);
+
+        Map<String, Object> report = NimCreateDurableWriteExecutorSupport.prepare(
+            new NimCreateDurableWriteExecutorSupport.WriteExecutionInput(
+                handoffReport,
+                requestSpecReport,
+                codeSwitchReport,
+                sourceGuardReport
+            )
+        );
+
+        assertEquals(NimCreateDurableWriteExecutorSupport.REJECTED_STATE, report.get("executionState"));
+        assertEquals(false, report.get("inputAccepted"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> attemptSpec = (Map<String, Object>) report.get("executionAttemptSpec");
+        assertTrue(attemptSpec.isEmpty());
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+        assertHasBlocker(blockers, "WRITE_REQUEST_SPEC_REPORT_NOT_TRUSTED_FOR_DURABLE_EXECUTOR");
+    }
+
+    @Test
+    void executorShell_shouldRejectDigestConsistentHandoffPlanWithExtraProtectedContext() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> receipt = durableAuditReceipt(audit);
+        Map<String, Object> bodyReport = writeBodyReport(audit, receipt);
+        Map<String, Object> requestSpecReport = writeRequestSpecReport(audit, receipt, bodyReport);
+        Map<String, Object> trustedHandoffReport = writeExecutionHandoffReport(
+            audit,
+            receipt,
+            bodyReport,
+            requestSpecReport
+        );
+        Map<String, Object> handoffReport = withExtraHandoffPlanField(
+            trustedHandoffReport,
+            "write_request_spec_report",
+            "caller-forged"
+        );
+        Map<String, Object> codeSwitchReport = codeReleaseSwitchContractReport(audit);
+        Map<String, Object> sourceGuardReport = codeReleaseSwitchRuntimeSourceGuardReport(audit);
+
+        Map<String, Object> report = NimCreateDurableWriteExecutorSupport.prepare(
+            new NimCreateDurableWriteExecutorSupport.WriteExecutionInput(
+                handoffReport,
+                requestSpecReport,
+                codeSwitchReport,
+                sourceGuardReport
+            )
+        );
+
+        assertEquals(NimCreateDurableWriteExecutorSupport.REJECTED_STATE, report.get("executionState"));
+        assertEquals(false, report.get("inputAccepted"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> attemptSpec = (Map<String, Object>) report.get("executionAttemptSpec");
+        assertTrue(attemptSpec.isEmpty());
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+        assertHasBlocker(blockers, "WRITE_EXECUTION_HANDOFF_REPORT_NOT_TRUSTED_FOR_DURABLE_EXECUTOR");
+    }
+
     private Map<String, Object> writeExecutionHandoffReport(Map<String, Object> audit,
                                                             Map<String, Object> receipt,
                                                             Map<String, Object> bodyReport,
@@ -501,6 +645,20 @@ class NimCreateDurableWriteExecutorSupportTest {
         return forgedReport;
     }
 
+    private Map<String, Object> withExtraRequestSpecField(Map<String, Object> requestSpecReport,
+                                                          String key,
+                                                          Object value) {
+        Map<String, Object> forgedReport = new LinkedHashMap<>(requestSpecReport);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> requestSpec = new LinkedHashMap<>(
+            (Map<String, Object>) forgedReport.get("requestSpec")
+        );
+        requestSpec.put(key, value);
+        forgedReport.put("requestSpec", requestSpec);
+        forgedReport.put("requestSpecDigest", sha256(requestSpec));
+        return forgedReport;
+    }
+
     private Map<String, Object> withNestedProtectedContextInRequestBody(Map<String, Object> requestSpecReport,
                                                                         Map<String, Object> bodyReport) {
         Map<String, Object> forgedReport = new LinkedHashMap<>(requestSpecReport);
@@ -530,6 +688,20 @@ class NimCreateDurableWriteExecutorSupportTest {
         handoffPlan.put("requestSpecDigest", text(requestSpecReport.get("requestSpecDigest")));
         forgedReport.put("sourceBodyDigest", text(bodyReport.get("bodyDigest")));
         forgedReport.put("sourceRequestSpecDigest", text(requestSpecReport.get("requestSpecDigest")));
+        forgedReport.put("executionHandoffPlan", handoffPlan);
+        forgedReport.put("handoffDigest", sha256(handoffPlan));
+        return forgedReport;
+    }
+
+    private Map<String, Object> withExtraHandoffPlanField(Map<String, Object> handoffReport,
+                                                          String key,
+                                                          Object value) {
+        Map<String, Object> forgedReport = new LinkedHashMap<>(handoffReport);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> handoffPlan = new LinkedHashMap<>(
+            (Map<String, Object>) forgedReport.get("executionHandoffPlan")
+        );
+        handoffPlan.put(key, value);
         forgedReport.put("executionHandoffPlan", handoffPlan);
         forgedReport.put("handoffDigest", sha256(handoffPlan));
         return forgedReport;

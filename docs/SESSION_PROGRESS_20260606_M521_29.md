@@ -5,7 +5,7 @@
 - Workspace: `F:\gitProject\kube-agent`
 - External memory folder requested by user: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-104, NIM downstream protected context contract.
+- Current latest wave: M5.21-105, NIM durable execution attempt spec binding contract.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -48,6 +48,18 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-105 NIM durable execution attempt spec binding contract is implemented:
+  - Hardened `src/main/java/com/atlas/tool/impl/NimCreateDurableWriteExecutorSupport.java`.
+  - `executionAttemptSpec` now has its own digest fields and value-copied `requestSpec`, `body`, and `executionHandoffPlan`.
+  - Hardened `src/main/java/com/atlas/tool/impl/NimCreateStateMachineSupport.java`.
+  - State-machine durable executor validation now rejects attempt spec body drift, extra attempt spec protected-context fields, requestSpec extra fields, and handoffPlan extra fields even when all affected digests are recomputed.
+  - Added closed-shape contracts for request spec, handoff plan, idempotency handoff, audit handoff, readiness handoff, retry policy, and attempt spec maps.
+  - Added `docs/M5_21_ONE_HUNDRED_FIFTH_WAVE_NIM_EXECUTION_ATTEMPT_SPEC_BINDING_CONTRACT_AUDIT_20260608.md`.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimCreateDurableWriteExecutorSupportTest,NimCreateStateMachineSupportTest" test`
+  - No real `8100` access; no real NIM service HTTP call; no Authorization header sending; no durable audit write; no deployment POST; no runtime write behavior opened; no state-machine release binding implementation; no durable executor release binding implementation; no validation result signer; no release decision signer; no code release switch implementation; no Elasticsearch; no `ISysLogService`; no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Next recommended slice: bind durable executor idempotency key derivation to audit/request evidence, or continue release-binding proof design without opening writes.
 
 - M5.21-104 NIM downstream protected context contract is implemented:
   - Extended shared protected-context body validation into `src/main/java/com/atlas/tool/impl/NimCreateStateMachineSupport.java`.

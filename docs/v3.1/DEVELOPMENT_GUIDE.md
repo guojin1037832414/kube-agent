@@ -493,3 +493,11 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Tests forge digest-consistent reports and still expect rejection when nested body fields carry `audit.receipt`, `write_request_spec_report`, or similar protected context.
 - Do not apply this detector to legitimate handoff evidence containers such as idempotency, pre-write audit handoff, or post-write readiness handoff. Those are not DeploymentDTO body fields.
 - Learning distinction: a top-tier Agent verifies both evidence binding and content policy at each boundary. Digest consistency says "this is the same object"; policy validation says "this object is allowed to cross this boundary."
+
+### M5.21-105 execution attempt spec binding note
+
+- `executionAttemptSpec` is now a closed, digest-bound mirror of the future durable write attempt, not an open parameter bag.
+- The durable executor shell copies `requestSpec`, `body`, and `executionHandoffPlan` by value and emits `executionAttemptSpecDigest` over that mirror.
+- The state machine re-verifies the attempt spec digest, exact key set, copied request/body/handoff content, and nested body contract before accepting the durable executor shell report.
+- Closed-shape validation is used for request specs and handoff evidence containers. This is intentionally different from applying the body protected-context detector to legitimate audit/idempotency handoff evidence.
+- Learning distinction: a safe Agent write path does not let future execution consume "whatever extra fields are present." It defines the exact shape, copies the evidence, and verifies both content and digest at the next boundary.

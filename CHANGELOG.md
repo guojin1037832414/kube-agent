@@ -6,6 +6,19 @@
 
 ---
 
+## [M5.21-105] - NIM durable execution attempt spec binding contract
+
+**Delivery**: Hardened the durable write executor attempt spec from digest-only evidence into a closed, digest-bound, value-copied future execution mirror.
+**Changes**
+- `NimCreateDurableWriteExecutorSupport` now emits `executionAttemptSpecDigestAlgorithm`, `executionAttemptSpecDigest`, and value-copied `requestSpec`, `body`, and `executionHandoffPlan` inside `executionAttemptSpec`.
+- `NimCreateStateMachineSupport` now verifies the attempt spec digest, closed key set, copied request/body/handoff content, body digest, request spec digest, handoff digest, and post-write readiness executor binding.
+- Added closed-shape contracts for request specs, handoff plans, idempotency handoff, pre-write audit handoff, post-write readiness handoff, retry policy, and execution attempt specs.
+- Added digest-consistent forged-report regressions for requestSpec extra fields, handoffPlan extra fields, attemptSpec body drift, and attemptSpec extra protected-context fields.
+**Security**
+- This is contract hardening only; it does not open runtime writes.
+- No real `8100`, real NIM service HTTP call, Authorization header sending, durable audit write, deployment POST, state-machine release binding, durable executor release binding, validation result signer, release decision signer, code release switch implementation, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-104] - NIM downstream protected context contract
 
 **Delivery**: Extended shared NIM protected-context detection through downstream write-chain body contract validators.

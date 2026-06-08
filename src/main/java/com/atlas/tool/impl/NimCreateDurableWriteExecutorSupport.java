@@ -10,6 +10,7 @@ import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 /**
@@ -26,8 +27,84 @@ final class NimCreateDurableWriteExecutorSupport {
     static final String EXECUTION_MODE = "DURABLE_WRITE_EXECUTOR_CONTRACT_SHELL";
     static final String HOLD_STATE = "IMPLEMENTATION_HOLD";
     static final String REJECTED_STATE = "REJECTED";
+    static final String EXECUTION_ATTEMPT_SPEC_DIGEST_ALGORITHM =
+        NimCreateWriteExecutionHandoffSupport.HANDOFF_DIGEST_ALGORITHM;
 
     private static final String PATH_TEMPLATE = "/api/{orgId}/deployment";
+    private static final Set<String> REQUEST_SPEC_KEYS = Set.of(
+        "target",
+        "method",
+        "endpoint",
+        "pathTemplate",
+        "resolvedPath",
+        "clientBoundary",
+        "queryAllowed",
+        "query",
+        "bodyAllowed",
+        "bodyRequired",
+        "bodySource",
+        "body",
+        "bodyDigestAlgorithm",
+        "bodyDigest",
+        "callerHeadersAllowed",
+        "authorizationHeaderFromCallerAllowed",
+        "kubeManagerAuthBoundary",
+        "realApiKeyAllowed",
+        "apiKeyHandling",
+        "idempotencyKeyRequiredBeforeExecution",
+        "executionAdapterRequired",
+        "sideEffect",
+        "futureSideEffectIfExecuted"
+    );
+    private static final Set<String> HANDOFF_PLAN_KEYS = Set.of(
+        "target",
+        "method",
+        "backendEndpoint",
+        "pathTemplate",
+        "resolvedPath",
+        "futureExecutor",
+        "networkAccess",
+        "sideEffect",
+        "requestSpecDigest",
+        "bodyDigest",
+        "callerHeadersAllowed",
+        "authorizationHeaderFromCallerAllowed",
+        "realApiKeyAllowed",
+        "kubeManagerAuthBoundary",
+        "idempotency",
+        "preWriteAuditHandoff",
+        "postWriteReadinessHandoff",
+        "retryPolicy"
+    );
+    private static final Set<String> IDEMPOTENCY_KEYS = Set.of(
+        "required",
+        "key",
+        "keySource",
+        "callerKeyAllowed",
+        "reuseAllowedOnlyForSameAuditReceiptAndRequestSpec"
+    );
+    private static final Set<String> PRE_WRITE_AUDIT_HANDOFF_KEYS = Set.of(
+        "required",
+        "receiptId",
+        "eventDigest",
+        "storageMode",
+        "receiptStatus",
+        "durable",
+        "realStorageTouched"
+    );
+    private static final Set<String> POST_WRITE_READINESS_HANDOFF_KEYS = Set.of(
+        "requiredAfterWrite",
+        "nextExecutor",
+        "pollOnly",
+        "readOnly",
+        "apiKeyHandling",
+        "forbiddenBeforeWrite"
+    );
+    private static final Set<String> RETRY_POLICY_KEYS = Set.of(
+        "retryAllowed",
+        "retryAllowedOnlyWithSameIdempotencyKey",
+        "maxAttemptsBeforeExecutorImplementation"
+    );
 
     private NimCreateDurableWriteExecutorSupport() {
     }
@@ -67,6 +144,7 @@ final class NimCreateDurableWriteExecutorSupport {
         Map<String, Object> executionAttemptSpec = inputAccepted
             ? executionAttemptSpec(handoffReport, handoffPlan, requestSpecReport, requestSpec)
             : Map.of();
+        String executionAttemptSpecDigest = inputAccepted ? digestFor(executionAttemptSpec) : "";
         List<Map<String, Object>> finalBlockers = inputAccepted
             ? List.of(
                 blocker(
@@ -122,6 +200,8 @@ final class NimCreateDurableWriteExecutorSupport {
         result.put("releaseDecisionDigestVerified", false);
         result.put("validationResultDigestVerified", false);
         result.put("fallbackToStateMachineWritePermittedAllowed", false);
+        result.put("executionAttemptSpecDigestAlgorithm", EXECUTION_ATTEMPT_SPEC_DIGEST_ALGORITHM);
+        result.put("executionAttemptSpecDigest", executionAttemptSpecDigest);
         result.put("executionAttemptSpec", executionAttemptSpec);
         result.put("blockedBy", finalBlockers);
         result.put("nextImplementationRequirements", List.of(
@@ -181,6 +261,7 @@ final class NimCreateDurableWriteExecutorSupport {
                                                     Map<String, Object> requestSpec,
                                                     Map<String, Object> requestBody) {
         return !requestSpec.isEmpty()
+            && hasOnlyKeys(requestSpec, REQUEST_SPEC_KEYS)
             && "deployment-create".equals(text(requestSpec.get("target")))
             && "POST".equals(text(requestSpec.get("method")))
             && PATH_TEMPLATE.equals(text(requestSpec.get("endpoint")))
@@ -263,6 +344,11 @@ final class NimCreateDurableWriteExecutorSupport {
                                                     Map<String, Object> postWriteReadinessHandoff,
                                                     Map<String, Object> retryPolicy) {
         return !handoffPlan.isEmpty()
+            && hasOnlyKeys(handoffPlan, HANDOFF_PLAN_KEYS)
+            && hasOnlyKeys(idempotency, IDEMPOTENCY_KEYS)
+            && hasOnlyKeys(preWriteAuditHandoff, PRE_WRITE_AUDIT_HANDOFF_KEYS)
+            && hasOnlyKeys(postWriteReadinessHandoff, POST_WRITE_READINESS_HANDOFF_KEYS)
+            && hasOnlyKeys(retryPolicy, RETRY_POLICY_KEYS)
             && "deployment-create".equals(text(handoffPlan.get("target")))
             && "POST".equals(text(handoffPlan.get("method")))
             && NimCreateAuditReadinessSupport.BACKEND_ENDPOINT.equals(text(handoffPlan.get("backendEndpoint")))
@@ -544,15 +630,25 @@ final class NimCreateDurableWriteExecutorSupport {
                                                             Map<String, Object> handoffPlan,
                                                             Map<String, Object> requestSpecReport,
                                                             Map<String, Object> requestSpec) {
+        Map<String, Object> requestBody = objectMap(requestSpec.get("body"));
         Map<String, Object> spec = new LinkedHashMap<>();
         spec.put("target", "deployment-create");
         spec.put("method", "POST");
         spec.put("backendEndpoint", NimCreateAuditReadinessSupport.BACKEND_ENDPOINT);
         spec.put("pathTemplate", PATH_TEMPLATE);
         spec.put("resolvedPath", text(requestSpec.get("resolvedPath")));
+        spec.put("requestSpecCopiedByValue", true);
+        spec.put("requestSpecDigestAlgorithm", NimCreateWriteRequestSpecAdapterSupport.REQUEST_SPEC_DIGEST_ALGORITHM);
         spec.put("requestSpecDigest", text(requestSpecReport.get("requestSpecDigest")));
+        spec.put("requestSpec", deepObjectMap(requestSpec));
+        spec.put("bodyCopiedByValue", true);
+        spec.put("bodyDigestAlgorithm", NimCreateWriteBodyRebuilderSupport.BODY_DIGEST_ALGORITHM);
         spec.put("bodyDigest", text(requestSpecReport.get("bodyDigest")));
+        spec.put("body", deepObjectMap(requestBody));
+        spec.put("executionHandoffPlanCopiedByValue", true);
+        spec.put("handoffDigestAlgorithm", NimCreateWriteExecutionHandoffSupport.HANDOFF_DIGEST_ALGORITHM);
         spec.put("handoffDigest", text(handoffReport.get("handoffDigest")));
+        spec.put("executionHandoffPlan", deepObjectMap(handoffPlan));
         spec.put("idempotencyKey", text(handoffReport.get("idempotencyKey")));
         spec.put("idempotencyKeySource", NimCreateWriteExecutionHandoffSupport.IDEMPOTENCY_KEY_SOURCE);
         spec.put("auditReceiptId", text(handoffReport.get("sourceAuditReceiptId")));
@@ -648,6 +744,28 @@ final class NimCreateDurableWriteExecutorSupport {
         );
     }
 
+    private static Map<String, Object> deepObjectMap(Map<String, Object> source) {
+        Map<String, Object> copy = new LinkedHashMap<>();
+        source.forEach((key, item) -> copy.put(String.valueOf(key), deepCopy(item)));
+        return copy;
+    }
+
+    private static Object deepCopy(Object value) {
+        if (value instanceof Map<?, ?> map) {
+            Map<String, Object> copy = new LinkedHashMap<>();
+            map.forEach((key, item) -> copy.put(String.valueOf(key), deepCopy(item)));
+            return copy;
+        }
+        if (value instanceof List<?> list) {
+            List<Object> copy = new ArrayList<>();
+            for (Object item : list) {
+                copy.add(deepCopy(item));
+            }
+            return copy;
+        }
+        return value;
+    }
+
     private static String digestFor(Map<String, Object> value) {
         try {
             MessageDigest digest = MessageDigest.getInstance(NimCreateWriteExecutionHandoffSupport.HANDOFF_DIGEST_ALGORITHM);
@@ -716,6 +834,10 @@ final class NimCreateDurableWriteExecutorSupport {
 
     private static boolean listIsEmpty(Object value) {
         return value instanceof List<?> list && list.isEmpty();
+    }
+
+    private static boolean hasOnlyKeys(Map<String, Object> map, Set<String> allowedKeys) {
+        return map.keySet().equals(allowedKeys);
     }
 
     private static List<String> stringList(Object value) {

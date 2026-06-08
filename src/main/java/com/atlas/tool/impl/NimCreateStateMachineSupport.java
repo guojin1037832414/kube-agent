@@ -51,6 +51,109 @@ final class NimCreateStateMachineSupport {
         NimForbiddenSecretMaterialDetector.textValuePolicyAllowing(
             Set.of(NimCreateReadinessExecutorSupport.API_KEY_PLACEHOLDER)
         );
+    private static final Set<String> REQUEST_SPEC_KEYS = Set.of(
+        "target",
+        "method",
+        "endpoint",
+        "pathTemplate",
+        "resolvedPath",
+        "clientBoundary",
+        "queryAllowed",
+        "query",
+        "bodyAllowed",
+        "bodyRequired",
+        "bodySource",
+        "body",
+        "bodyDigestAlgorithm",
+        "bodyDigest",
+        "callerHeadersAllowed",
+        "authorizationHeaderFromCallerAllowed",
+        "kubeManagerAuthBoundary",
+        "realApiKeyAllowed",
+        "apiKeyHandling",
+        "idempotencyKeyRequiredBeforeExecution",
+        "executionAdapterRequired",
+        "sideEffect",
+        "futureSideEffectIfExecuted"
+    );
+    private static final Set<String> HANDOFF_PLAN_KEYS = Set.of(
+        "target",
+        "method",
+        "backendEndpoint",
+        "pathTemplate",
+        "resolvedPath",
+        "futureExecutor",
+        "networkAccess",
+        "sideEffect",
+        "requestSpecDigest",
+        "bodyDigest",
+        "callerHeadersAllowed",
+        "authorizationHeaderFromCallerAllowed",
+        "realApiKeyAllowed",
+        "kubeManagerAuthBoundary",
+        "idempotency",
+        "preWriteAuditHandoff",
+        "postWriteReadinessHandoff",
+        "retryPolicy"
+    );
+    private static final Set<String> IDEMPOTENCY_KEYS = Set.of(
+        "required",
+        "key",
+        "keySource",
+        "callerKeyAllowed",
+        "reuseAllowedOnlyForSameAuditReceiptAndRequestSpec"
+    );
+    private static final Set<String> PRE_WRITE_AUDIT_HANDOFF_KEYS = Set.of(
+        "required",
+        "receiptId",
+        "eventDigest",
+        "storageMode",
+        "receiptStatus",
+        "durable",
+        "realStorageTouched"
+    );
+    private static final Set<String> POST_WRITE_READINESS_HANDOFF_KEYS = Set.of(
+        "requiredAfterWrite",
+        "nextExecutor",
+        "pollOnly",
+        "readOnly",
+        "apiKeyHandling",
+        "forbiddenBeforeWrite"
+    );
+    private static final Set<String> RETRY_POLICY_KEYS = Set.of(
+        "retryAllowed",
+        "retryAllowedOnlyWithSameIdempotencyKey",
+        "maxAttemptsBeforeExecutorImplementation"
+    );
+    private static final Set<String> EXECUTION_ATTEMPT_SPEC_KEYS = Set.of(
+        "target",
+        "method",
+        "backendEndpoint",
+        "pathTemplate",
+        "resolvedPath",
+        "requestSpecCopiedByValue",
+        "requestSpecDigestAlgorithm",
+        "requestSpecDigest",
+        "requestSpec",
+        "bodyCopiedByValue",
+        "bodyDigestAlgorithm",
+        "bodyDigest",
+        "body",
+        "executionHandoffPlanCopiedByValue",
+        "handoffDigestAlgorithm",
+        "handoffDigest",
+        "executionHandoffPlan",
+        "idempotencyKey",
+        "idempotencyKeySource",
+        "auditReceiptId",
+        "auditEventDigest",
+        "kubeManagerAuthBoundary",
+        "callerHeadersAllowed",
+        "authorizationHeaderFromCallerAllowed",
+        "realApiKeyAllowed",
+        "postWriteReadinessExecutor",
+        "writeWillBeAttempted"
+    );
 
     private NimCreateStateMachineSupport() {
     }
@@ -696,6 +799,11 @@ final class NimCreateStateMachineSupport {
             && Boolean.FALSE.equals(durableWriteExecutorReport.get("releaseDecisionDigestVerified"))
             && Boolean.FALSE.equals(durableWriteExecutorReport.get("validationResultDigestVerified"))
             && Boolean.FALSE.equals(durableWriteExecutorReport.get("fallbackToStateMachineWritePermittedAllowed"))
+            && NimCreateDurableWriteExecutorSupport.EXECUTION_ATTEMPT_SPEC_DIGEST_ALGORITHM.equals(
+                text(durableWriteExecutorReport.get("executionAttemptSpecDigestAlgorithm")))
+            && text(durableWriteExecutorReport.get("executionAttemptSpecDigest")).matches("[a-f0-9]{64}")
+            && text(durableWriteExecutorReport.get("executionAttemptSpecDigest")).equals(
+                digestFor(executionAttemptSpec))
             && hasOnlyBlockerCodes(durableWriteExecutorReport.get("blockedBy"),
                 List.of(
                     "DURABLE_WRITE_EXECUTOR_IMPLEMENTATION_HOLD",
@@ -1217,6 +1325,7 @@ final class NimCreateStateMachineSupport {
                                                     Map<String, Object> requestBody) {
         String organizationId = text(auditContext.get("organizationId"));
         return !requestSpec.isEmpty()
+            && hasOnlyKeys(requestSpec, REQUEST_SPEC_KEYS)
             && "deployment-create".equals(text(requestSpec.get("target")))
             && "POST".equals(text(requestSpec.get("method")))
             && "/api/{orgId}/deployment".equals(text(requestSpec.get("endpoint")))
@@ -1252,7 +1361,13 @@ final class NimCreateStateMachineSupport {
                                                     Map<String, Object> preWriteAuditHandoff,
                                                     Map<String, Object> postWriteReadinessHandoff) {
         String organizationId = text(auditContext.get("organizationId"));
+        Map<String, Object> retryPolicy = objectMap(handoffPlan.get("retryPolicy"));
         return !handoffPlan.isEmpty()
+            && hasOnlyKeys(handoffPlan, HANDOFF_PLAN_KEYS)
+            && hasOnlyKeys(idempotency, IDEMPOTENCY_KEYS)
+            && hasOnlyKeys(preWriteAuditHandoff, PRE_WRITE_AUDIT_HANDOFF_KEYS)
+            && hasOnlyKeys(postWriteReadinessHandoff, POST_WRITE_READINESS_HANDOFF_KEYS)
+            && hasOnlyKeys(retryPolicy, RETRY_POLICY_KEYS)
             && "deployment-create".equals(text(handoffPlan.get("target")))
             && "POST".equals(text(handoffPlan.get("method")))
             && NimCreateAuditReadinessSupport.BACKEND_ENDPOINT.equals(text(handoffPlan.get("backendEndpoint")))
@@ -1284,7 +1399,10 @@ final class NimCreateStateMachineSupport {
             && Boolean.TRUE.equals(postWriteReadinessHandoff.get("pollOnly"))
             && Boolean.TRUE.equals(postWriteReadinessHandoff.get("readOnly"))
             && API_KEY_POLICY.equals(text(postWriteReadinessHandoff.get("apiKeyHandling")))
-            && Boolean.TRUE.equals(postWriteReadinessHandoff.get("forbiddenBeforeWrite"));
+            && Boolean.TRUE.equals(postWriteReadinessHandoff.get("forbiddenBeforeWrite"))
+            && Boolean.FALSE.equals(retryPolicy.get("retryAllowed"))
+            && Boolean.TRUE.equals(retryPolicy.get("retryAllowedOnlyWithSameIdempotencyKey"))
+            && "1".equals(text(retryPolicy.get("maxAttemptsBeforeExecutorImplementation")));
     }
 
     private static boolean executionAttemptSpecContractValid(Map<String, Object> auditContext,
@@ -1294,15 +1412,40 @@ final class NimCreateStateMachineSupport {
                                                              Map<String, Object> writeExecutionHandoffReport,
                                                              Map<String, Object> executionAttemptSpec) {
         String organizationId = text(auditContext.get("organizationId"));
+        Map<String, Object> sourceRequestSpec = objectMap(writeRequestSpecReport.get("requestSpec"));
+        Map<String, Object> sourceBody = objectMap(writeBodyRebuildReport.get("body"));
+        Map<String, Object> sourceHandoffPlan = objectMap(writeExecutionHandoffReport.get("executionHandoffPlan"));
+        Map<String, Object> attemptRequestSpec = objectMap(executionAttemptSpec.get("requestSpec"));
+        Map<String, Object> attemptBody = objectMap(executionAttemptSpec.get("body"));
+        Map<String, Object> attemptRequestBody = objectMap(attemptRequestSpec.get("body"));
+        Map<String, Object> attemptHandoffPlan = objectMap(executionAttemptSpec.get("executionHandoffPlan"));
         return !executionAttemptSpec.isEmpty()
+            && hasOnlyKeys(executionAttemptSpec, EXECUTION_ATTEMPT_SPEC_KEYS)
             && "deployment-create".equals(text(executionAttemptSpec.get("target")))
             && "POST".equals(text(executionAttemptSpec.get("method")))
             && NimCreateAuditReadinessSupport.BACKEND_ENDPOINT.equals(text(executionAttemptSpec.get("backendEndpoint")))
             && "/api/{orgId}/deployment".equals(text(executionAttemptSpec.get("pathTemplate")))
             && ("/api/" + organizationId + "/deployment").equals(text(executionAttemptSpec.get("resolvedPath")))
+            && Boolean.TRUE.equals(executionAttemptSpec.get("requestSpecCopiedByValue"))
+            && NimCreateWriteRequestSpecAdapterSupport.REQUEST_SPEC_DIGEST_ALGORITHM.equals(
+                text(executionAttemptSpec.get("requestSpecDigestAlgorithm")))
             && text(writeRequestSpecReport.get("requestSpecDigest")).equals(text(executionAttemptSpec.get("requestSpecDigest")))
+            && text(writeRequestSpecReport.get("requestSpecDigest")).equals(digestFor(attemptRequestSpec))
+            && sourceRequestSpec.equals(attemptRequestSpec)
+            && Boolean.TRUE.equals(executionAttemptSpec.get("bodyCopiedByValue"))
+            && NimCreateWriteBodyRebuilderSupport.BODY_DIGEST_ALGORITHM.equals(
+                text(executionAttemptSpec.get("bodyDigestAlgorithm")))
             && text(writeBodyRebuildReport.get("bodyDigest")).equals(text(executionAttemptSpec.get("bodyDigest")))
+            && text(writeBodyRebuildReport.get("bodyDigest")).equals(digestFor(attemptBody))
+            && sourceBody.equals(attemptBody)
+            && attemptBody.equals(attemptRequestBody)
+            && writeBodyContractValid(attemptBody)
+            && Boolean.TRUE.equals(executionAttemptSpec.get("executionHandoffPlanCopiedByValue"))
+            && NimCreateWriteExecutionHandoffSupport.HANDOFF_DIGEST_ALGORITHM.equals(
+                text(executionAttemptSpec.get("handoffDigestAlgorithm")))
             && text(writeExecutionHandoffReport.get("handoffDigest")).equals(text(executionAttemptSpec.get("handoffDigest")))
+            && text(writeExecutionHandoffReport.get("handoffDigest")).equals(digestFor(attemptHandoffPlan))
+            && sourceHandoffPlan.equals(attemptHandoffPlan)
             && text(writeExecutionHandoffReport.get("idempotencyKey")).equals(text(executionAttemptSpec.get("idempotencyKey")))
             && NimCreateWriteExecutionHandoffSupport.IDEMPOTENCY_KEY_SOURCE.equals(text(executionAttemptSpec.get("idempotencyKeySource")))
             && text(auditReceipt.get("receiptId")).equals(text(executionAttemptSpec.get("auditReceiptId")))
@@ -1467,6 +1610,10 @@ final class NimCreateStateMachineSupport {
 
     private static boolean listIsEmpty(Object value) {
         return value instanceof List<?> list && list.isEmpty();
+    }
+
+    private static boolean hasOnlyKeys(Map<String, Object> map, Set<String> allowedKeys) {
+        return map.keySet().equals(allowedKeys);
     }
 
     private static String digestFor(Map<String, Object> value) {
