@@ -91,10 +91,31 @@ Current track:
 
 Recently completed:
 
-`M5.21-132 NIM release gate contract maps closed`
+`M5.21-133 NIM release decision contract maps closed`
 
 Latest checkpoint:
 
+- Date: 2026-06-08 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- Teaching principle:
+  - This project is not only delivering software. It is also a teaching system for mastering Agent engineering.
+  - Maintain `docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md` as the long-lived architecture and technical-learning map.
+- M5.21-133 implemented:
+  - Hardened `NimCreateDurableAuditReleaseDecisionContractSupport` so release decision reports include `sourceOrganizationId`, `sourceUserId`, and `sourceUsername`.
+  - Added producer-owned `releaseDecisionContractFromReport(...)` canonical reconstruction for the whole `releaseDecisionContract`.
+  - Hardened `NimCreateDurableAuditCodeReleaseSwitchContractSupport` so it requires exact whole-contract equality instead of partial nested-map checks when consuming release decision contracts.
+  - Added digest-consistent forged release decision contract drift regressions covering top-level extra keys, nested binding-map keys, prerequisite value drift, current template extra keys, failure contract extra keys, forbidden shortcut list drift, and existing future evidence list drift.
+  - Added `docs/M5_21_ONE_HUNDRED_THIRTY_THIRD_WAVE_NIM_RELEASE_DECISION_CONTRACT_MAPS_CLOSED_AUDIT_20260608.md`.
+  - Updated the long-lived teaching map with the M5.21-133 lesson: hash self-consistency is not semantic authority; whole producer-owned proof object equality is safer near release/write boundaries.
+  - Targeted verification passed:
+    - `git diff --check`
+    - `mvn -q "-Dtest=NimCreateDurableAuditReleaseDecisionContractSupportTest,NimCreateDurableAuditCodeReleaseSwitchContractSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateDurableAuditReleaseDecisionContractSupportTest,NimCreateDurableAuditCodeReleaseSwitchContractSupportTest,NimCreateStateMachineSupportTest,NimCreateDurableWriteExecutorSupportTest,NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupportTest" test`
+    - `mvn -q test`
+    - Full Maven note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - Security invariant: no real `8100`, no real NIM service HTTP call, no Authorization header sending, no durable audit write, no deployment POST, no runtime write behavior, no source guard installation, no state-machine release binding implementation, no durable executor release binding implementation, no validation result signer, no release decision signer, no code release switch implementation, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Multi-expert next slice: continue scanning validation-result evidence and release-adjacent downstream proof maps for subset, non-empty, or local hand-interpretation validation that should become producer-owned canonical equality.
+- Previous checkpoint:
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
 - Teaching principle:

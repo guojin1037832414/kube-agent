@@ -215,6 +215,30 @@ NIM 链路明确禁止真实 Authorization、token、password、secret、NGC/NIM
 
 学习重点：对于长期 Agent 项目，文档不是附属物。文档是架构记忆、教学材料和恢复机制的一部分。
 
+## M5.21-133 最新学习笔记
+
+本轮关闭的是 code release switch 消费 release decision report 时的完整 `releaseDecisionContract`：
+
+- 顶层 release decision contract 字段
+- `validationResultBinding`
+- `stateMachineBinding`
+- `durableExecutorBinding`
+- `allowPrerequisites`
+- `currentTemplate`
+- `failureContract`
+- `forbiddenShortcuts`
+- `requiredFutureEvidenceDigestFields`
+
+关键收获：
+
+- `releaseDecisionContractDigest` 只能说明对象被重新 hash，不能说明新增 key 已被安全评审。
+- code release switch 比 release gate 更接近真实写放行，所以它不能用局部字段检查来“解释”上游 release decision contract。
+- `NimCreateDurableAuditReleaseDecisionContractSupport` 现在提供 `releaseDecisionContractFromReport(...)` 作为 producer-owned canonical proof object。
+- `NimCreateDurableAuditCodeReleaseSwitchContractSupport` 现在只接受完整 canonical contract exact equality，同时校验 source audit digest、trusted principal digest 和 source identity。
+- 本轮新增多组 digest-consistent forgery：篡改顶层 key、多个嵌套 map、prerequisite 值、failure contract 和 forbidden shortcut list，重算 `releaseDecisionContractDigest` 后仍要求 code switch fail closed。
+
+学习总结：顶级 Agent 不能把“hash 自洽的 JSON”当成“语义可信的授权对象”。越靠近写放行边界，越要让 producer 拥有完整 proof object，consumer 只接受 exact canonical equality。这样未来新增 release 语义必须通过源码、测试、文档和审查，而不是悄悄混进下游可解释的 map。
+
 ## M5.21-132 最新学习笔记
 
 本轮关闭的是 release decision gate 消费 migration plan 时的两个上游 contract map:

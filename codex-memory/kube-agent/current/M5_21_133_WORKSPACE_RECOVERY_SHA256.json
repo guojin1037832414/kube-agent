@@ -1,0 +1,63 @@
+﻿{
+    "project":  "kube-agent",
+    "wave":  "M5.21-133",
+    "title":  "NIM release decision contract maps closed",
+    "generatedAt":  "2026-06-08 Asia/Shanghai",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "head":  "33a07bc9d2d3262bc24d727ceab69d02308b49fa",
+    "verification":  [
+                         "git diff --check",
+                         "mvn -q \"-Dtest=NimCreateDurableAuditReleaseDecisionContractSupportTest,NimCreateDurableAuditCodeReleaseSwitchContractSupportTest\" test",
+                         "mvn -q \"-Dtest=NimCreateDurableAuditReleaseDecisionContractSupportTest,NimCreateDurableAuditCodeReleaseSwitchContractSupportTest,NimCreateStateMachineSupportTest,NimCreateDurableWriteExecutorSupportTest,NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupportTest\" test",
+                         "mvn -q test"
+                     ],
+    "securityInvariant":  "nim_create remains HOLD/mock-first; no real 8100, NIM HTTP call, Authorization header sending, durable audit write, deployment POST, validation result signer, release decision signer, code switch implementation, runtime write behavior, Elasticsearch, ISysLogService, or sys_log write was added.",
+    "nextPriority":  "Scan validation-result evidence and release-adjacent downstream proof maps for subset, non-empty, or local hand-interpretation validation that should become producer-owned canonical equality.",
+    "files":  [
+                  {
+                      "file":  "CHANGELOG.md",
+                      "sha256":  "AAC847C27011A4AFA33FDA7CAF4DAEDC3CE2B76EF1F12F2D75E45E4E125110A3",
+                      "length":  241218
+                  },
+                  {
+                      "file":  "RECOVERY_STATUS.md",
+                      "sha256":  "9CDB446F6B61DA2EB88BA73B5181328424942D830A06C816C470520FADFD4A9C",
+                      "length":  1833
+                  },
+                  {
+                      "file":  "docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "A35EA95B001148E6C03D11A3E4CD2FE89E1D1F5329CF5A07A5EF1FDB84C94702",
+                      "length":  21013
+                  },
+                  {
+                      "file":  "docs_INDEX.md",
+                      "sha256":  "D37839DE71FCB099F78EBE970D76026BA8141AC790E5753493185D49CFBE87A7",
+                      "length":  9886
+                  },
+                  {
+                      "file":  "docs_M5_21_WAVE_INDEX_20260606.md",
+                      "sha256":  "5BBB6133FFC868EA7E14EA5A43154B80BDDA9EA83CB5EBCAC394AEAFE28ACB9A",
+                      "length":  21746
+                  },
+                  {
+                      "file":  "docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "7CA7A4FF484B15E70C3C8ADE1D43C2C64EB40D566FFD5EF2BDFEC60F2630D272",
+                      "length":  253690
+                  },
+                  {
+                      "file":  "docs_SESSION_PROGRESS_20260606_M521_29.md",
+                      "sha256":  "A2CA0A9A76C6929EFA8CFAC4AAB38A3AA416A4A246CA4218DD8CEF152E6CA8E7",
+                      "length":  255437
+                  },
+                  {
+                      "file":  "docs_v3.1_DEVELOPMENT_GUIDE.md",
+                      "sha256":  "9F7250F03280FA425399A72907A5CC60FE5B8AFD5CEEBF239581AAF8C98C264C",
+                      "length":  75023
+                  },
+                  {
+                      "file":  "docs_M5_21_ONE_HUNDRED_THIRTY_THIRD_WAVE_NIM_RELEASE_DECISION_CONTRACT_MAPS_CLOSED_AUDIT_20260608.md",
+                      "sha256":  "D959026B9C1EE06A5D9C1D77FB3283183D0D2F28A256082C46633A2075C508D3",
+                      "length":  4598
+                  }
+              ]
+}
