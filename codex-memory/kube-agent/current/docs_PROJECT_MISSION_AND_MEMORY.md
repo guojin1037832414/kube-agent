@@ -91,7 +91,7 @@ Current track:
 
 Recently completed:
 
-`M5.21-128 NIM code switch failure/shortcut lists closed`
+`M5.21-129 NIM code switch template/prerequisites closed`
 
 Latest checkpoint:
 
@@ -100,21 +100,31 @@ Latest checkpoint:
 - Teaching principle:
   - This project is not only delivering software. It is also a teaching system for mastering Agent engineering.
   - Maintain `docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md` as the long-lived architecture and technical-learning map.
-- M5.21-128 implemented:
-  - Hardened `NimCreateDurableAuditCodeReleaseSwitchContractSupport` so `codeReleaseSwitchContract.failureContract.failureStatuses` and `codeReleaseSwitchContract.forbiddenShortcuts` are source-owned helper lists.
-  - Hardened `NimCreateStateMachineSupport` so state-machine validation rejects digest-consistent code switch contracts with extra failure status or forbidden-shortcut values.
-  - Hardened `NimCreateDurableWriteExecutorSupport` with the same exact checks, closing both current downstream consumers.
-  - Added regressions that append fake future list values, recompute `codeReleaseSwitchContractDigest`, and still expect fail-closed rejection.
-  - Added `docs/M5_21_ONE_HUNDRED_TWENTY_EIGHTH_WAVE_NIM_CODE_SWITCH_FAILURE_SHORTCUT_LISTS_CLOSED_AUDIT_20260608.md`.
-  - Updated the long-lived teaching map with the M5.21-128 lesson: shared proof objects require shared downstream exact validation.
+- M5.21-129 implemented:
+  - Hardened `NimCreateDurableAuditCodeReleaseSwitchContractSupport` so `codeReleaseSwitchContract.currentTemplate` and `codeReleaseSwitchContract.openPrerequisites` are source-owned helper maps.
+  - Hardened `NimCreateStateMachineSupport`, `NimCreateDurableWriteExecutorSupport`, and `NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport` so all current downstream consumers require exact equality for those maps.
+  - Added regressions that append fake authority-shaped nested map fields, recompute `codeReleaseSwitchContractDigest`, and still expect fail-closed rejection.
+  - Added `docs/M5_21_ONE_HUNDRED_TWENTY_NINTH_WAVE_NIM_CODE_SWITCH_TEMPLATE_PREREQUISITES_CLOSED_AUDIT_20260608.md`.
+  - Updated the long-lived teaching map with the M5.21-129 lesson: release-proof maps are closed protocol schemas, not partially checked bags of fields.
   - Targeted verification passed:
-    - `mvn -q "-Dtest=NimCreateDurableAuditCodeReleaseSwitchContractSupportTest,NimCreateStateMachineSupportTest,NimCreateDurableWriteExecutorSupportTest" test`
-  - Final verification passed:
     - `git diff --check`
+    - `mvn -q "-Dtest=NimCreateDurableAuditCodeReleaseSwitchContractSupportTest,NimCreateStateMachineSupportTest,NimCreateDurableWriteExecutorSupportTest,NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupportTest" test`
     - `mvn -q test`
     - Full Maven note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
   - Security invariant: no real `8100`, no real NIM service HTTP call, no Authorization header sending, no durable audit write, no deployment POST, no runtime write behavior, no state-machine release binding implementation, no durable executor release binding implementation, no validation result signer, no release decision signer, no code release switch implementation, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
-  - Recommended next slice: continue scanning shared proof objects for multiple consumers with subset or missing exact vocabulary validation, especially `openPrerequisites`, `currentTemplate`, and binding maps if they become release criteria.
+  - Recommended next slice: continue scanning binding maps and release decision/runtime binding maps for subset, non-empty, or missing exact key-set validation.
+- Previous checkpoint:
+- Date: 2026-06-08 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- Teaching principle:
+  - This project is not only delivering software. It is also a teaching system for mastering Agent engineering.
+  - Maintain `docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md` as the long-lived architecture and technical-learning map.
+- M5.21-128 implemented:
+  - Hardened `NimCreateDurableAuditCodeReleaseSwitchContractSupport` so `codeReleaseSwitchContract.failureContract.failureStatuses` and `codeReleaseSwitchContract.forbiddenShortcuts` are source-owned helper lists.
+  - Hardened `NimCreateStateMachineSupport` and `NimCreateDurableWriteExecutorSupport` so both current downstream consumers reject digest-consistent extra failure status or forbidden-shortcut values.
+  - Added `docs/M5_21_ONE_HUNDRED_TWENTY_EIGHTH_WAVE_NIM_CODE_SWITCH_FAILURE_SHORTCUT_LISTS_CLOSED_AUDIT_20260608.md`.
+  - Verification passed: targeted code switch/state-machine/durable executor tests, `git diff --check`, and full `mvn -q test`.
+  - Security invariant: no real `8100`, no real NIM service HTTP call, no Authorization header sending, no durable audit write, no deployment POST, no runtime write behavior; `nim_create` remains HOLD/mock-first.
 - Previous checkpoint:
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.

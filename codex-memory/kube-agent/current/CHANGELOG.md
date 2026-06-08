@@ -6,6 +6,22 @@
 
 ---
 
+## [M5.21-129] - NIM code switch template/prerequisites closed
+
+**Delivery**: Closed code release switch `currentTemplate` and `openPrerequisites` map shapes across current downstream consumers.
+**Changes**
+- `NimCreateDurableAuditCodeReleaseSwitchContractSupport` now owns source-controlled helper maps for `codeReleaseSwitchContract.currentTemplate` and `codeReleaseSwitchContract.openPrerequisites`.
+- `NimCreateStateMachineSupport`, `NimCreateDurableWriteExecutorSupport`, and `NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupport` now require exact equality for both maps.
+- Added digest-consistent forged nested-map regressions that append authority-shaped fake fields, recompute `codeReleaseSwitchContractDigest`, and still expect fail-closed rejection.
+**Verification**
+- `git diff --check` passed.
+- Targeted code switch contract, state-machine, durable executor, and runtime binding tests passed.
+- Full `mvn -q test` passed; full Maven degraded to L1 embedding mode after local `model.onnx` download timeout but exited 0.
+**Security**
+- This is code release switch proof-schema hardening only; it does not open runtime writes, real audit writes, real readiness polling, or a real code release switch.
+- No real `8100`, real NIM service HTTP call, Authorization header sending, durable audit write, deployment POST, state-machine release binding implementation, durable executor release binding implementation, validation result signer, release decision signer, code release switch implementation, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-128] - NIM code switch failure/shortcut lists closed
 
 **Delivery**: Closed code release switch failure and forbidden-shortcut proof vocabulary across both current downstream consumers.

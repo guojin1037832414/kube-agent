@@ -1,0 +1,57 @@
+﻿{
+    "project":  "kube-agent",
+    "wave":  "M5.21-129",
+    "title":  "NIM code switch template/prerequisites closed",
+    "generatedAt":  "2026-06-08 Asia/Shanghai",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "head":  "f433c29f77f64b4559badb9303fc8775a6469afe",
+    "verification":  [
+                         "git diff --check",
+                         "mvn -q \"-Dtest=NimCreateDurableAuditCodeReleaseSwitchContractSupportTest,NimCreateStateMachineSupportTest,NimCreateDurableWriteExecutorSupportTest,NimCreateDurableAuditCodeReleaseSwitchRuntimeBindingSupportTest\" test",
+                         "mvn -q test"
+                     ],
+    "securityInvariant":  "nim_create remains HOLD/mock-first; no real 8100, NIM HTTP call, Authorization header sending, durable audit write, deployment POST, release signer, code switch implementation, Elasticsearch, ISysLogService, or sys_log write was added.",
+    "nextPriority":  "Close code switch binding maps and runtime/release-decision binding maps with producer-owned exact key-set or exact map validation.",
+    "files":  [
+                  {
+                      "file":  "CHANGELOG.md",
+                      "sha256":  "5E1950E6F02E86A237FF42D627B563B3C90F6D9090A52A91554050F354197DDA",
+                      "length":  234787
+                  },
+                  {
+                      "file":  "RECOVERY_STATUS.md",
+                      "sha256":  "56B6008995BECF85577B3DA516311109F61B2AB0C0C924825D4DA3383EF094AA",
+                      "length":  1589
+                  },
+                  {
+                      "file":  "docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "054FDA43489AC0575A1F6D68CB8331C95CF42E5BB90B63BE7B8D4D54F712DA84",
+                      "length":  15776
+                  },
+                  {
+                      "file":  "docs_M5_21_WAVE_INDEX_20260606.md",
+                      "sha256":  "9ECD36A4F008A455F74D1A44AAE9D703928671E69BB8950F27C3A689EBA26F3F",
+                      "length":  21136
+                  },
+                  {
+                      "file":  "docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "E9C78414538B7B0D04814EE717F5299C021725FBB87A3639229567F5579B943F",
+                      "length":  244600
+                  },
+                  {
+                      "file":  "docs_SESSION_PROGRESS_20260606_M521_29.md",
+                      "sha256":  "92E49FD567A67BDB23626F97A04D52E8F65935BCEB830ACCCBCFF978FC9F75A5",
+                      "length":  247894
+                  },
+                  {
+                      "file":  "docs_v3.1_DEVELOPMENT_GUIDE.md",
+                      "sha256":  "4A56A07E57A4B9E8B34D201213655020285A0E50B7CF18268B7499674908C406",
+                      "length":  72400
+                  },
+                  {
+                      "file":  "docs_M5_21_ONE_HUNDRED_TWENTY_NINTH_WAVE_NIM_CODE_SWITCH_TEMPLATE_PREREQUISITES_CLOSED_AUDIT_20260608.md",
+                      "sha256":  "145A6F1FC4F25416C012C2168DF56CF20B3AA7BCACDE26A42CE1B29180958575",
+                      "length":  5483
+                  }
+              ]
+}

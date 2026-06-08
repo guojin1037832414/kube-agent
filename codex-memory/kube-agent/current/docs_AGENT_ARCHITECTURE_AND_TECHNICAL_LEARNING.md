@@ -215,7 +215,24 @@ NIM 链路明确禁止真实 Authorization、token、password、secret、NGC/NIM
 
 学习重点：对于长期 Agent 项目，文档不是附属物。文档是架构记忆、教学材料和恢复机制的一部分。
 
-## M5.21-128 最新学习笔记
+## M5.21-129 最新学习笔记
+
+本轮关闭的是 code release switch contract 中两个结构化 map：
+
+- `codeReleaseSwitchContract.currentTemplate`
+- `codeReleaseSwitchContract.openPrerequisites`
+
+关键收获：
+
+- 在写放行链路里，map 的 key-set 本身就是协议，不只是普通 JSON 形状。新增一个 key 可能在未来被某个消费者误读成授权事实。
+- `currentTemplate` 描述当前 HOLD 状态模板，不能被调用方或未审查集成随意追加 `writePermitted` 类字段。
+- `openPrerequisites` 描述未来打开 code release switch 前必须满足的条件，不能被追加 `recheckWaived` 或 `reviewSkipped` 类字段。
+- 本轮让生产者 `NimCreateDurableAuditCodeReleaseSwitchContractSupport` 拥有标准 helper maps，并让 state machine、durable executor、runtime binding 三个当前消费者全部 exact equality。
+- 测试继续使用 digest-consistent forgery：向 nested map 追加 fake future authority key，重新计算 `codeReleaseSwitchContractDigest`，仍然要求所有消费者拒绝。
+
+学习总结：顶级 Agent 的 proof object 不能只校验“我现在读到的几个字段”。越靠近 release/write authority，越要把字段集合、字段值、digest、来源和多消费者一致性一起闭合。否则今天看似无害的扩展字段，明天可能变成绕过审查的潜伏授权。
+
+## M5.21-128 学习笔记
 
 本轮关闭的是 code release switch contract 输出并被两个下游共同消费的两类词表：
 
