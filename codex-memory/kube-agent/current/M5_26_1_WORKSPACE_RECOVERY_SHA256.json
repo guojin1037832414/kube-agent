@@ -1,7 +1,7 @@
 ﻿{
     "project":  "kube-agent",
     "wave":  "M5.26-1",
-    "generatedAt":  "2026-06-08T16:34:22.4863901Z",
+    "generatedAt":  "2026-06-08T16:38:24.7598752Z",
     "branch":  "codex/m521-29-top-agent-mission",
     "recoveryHome":  "codex-memory/kube-agent/current",
     "entries":  [
@@ -291,9 +291,14 @@
                         "bytes":  19118
                     },
                     {
+                        "path":  "codex-memory\\kube-agent\\current\\M5_26_1_WORKSPACE_RECOVERY_SHA256.json",
+                        "sha256":  "5a11c7a786d90cf73f37e934094aac80120f798d1a8bc17caaa6ec06780384cc",
+                        "bytes":  19118
+                    },
+                    {
                         "path":  "codex-memory\\kube-agent\\current\\RECOVERY_STATUS.md",
-                        "sha256":  "5653b808e4edff644ce45b2a9dd02e4cef9fb7f02df79f34b9512724194a4ff5",
-                        "bytes":  8131
+                        "sha256":  "210b73568d871ddddcb6ea7d1c9a78dd46adc5bd19ad50795a3eb0a0de5006d3",
+                        "bytes":  8151
                     }
                 ]
 }
