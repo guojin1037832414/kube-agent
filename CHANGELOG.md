@@ -6,6 +6,22 @@
 
 ---
 
+## [M5.21-119] - NIM readiness target taxonomy closed list
+
+**Delivery**: Hardened readiness plan target taxonomy validation across the executor, HTTP adapter, and state-machine consumers.
+**Changes**
+- `NimCreateReadinessExecutorSupport` now requires readiness plan `targets` to exactly match `deployment/service/nim-health/nim-models`, rejecting metadata-only target supersets.
+- `NimCreateReadinessHttpAdapterSupport` now applies the same exact closed-list validation before building request specs.
+- `NimCreateStateMachineSupport` now treats readiness target supersets as `READINESS_PLAN_NOT_READY`.
+- Added forged target-superset regressions that append `nim-chat` while leaving audited readiness steps unchanged.
+**Verification**
+- Targeted readiness executor, readiness HTTP adapter, and state-machine tests passed.
+- Final `git diff --check` and `mvn -q test` passed; full Maven degraded to L1 embedding mode after local `model.onnx` download timeout but exited 0.
+**Security**
+- This is readiness proof-taxonomy hardening only; it does not open runtime writes, real readiness polling, or a real code release switch.
+- No real `8100`, real NIM service HTTP call, Authorization header sending, durable audit write, deployment POST, state-machine release binding implementation, durable executor release binding implementation, validation result signer, release decision signer, code release switch implementation, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-118] - NIM code switch downstream required fields closed list
 
 **Delivery**: Hardened state-machine and durable-executor validation of the upstream code release switch required-evidence field list.

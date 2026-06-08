@@ -1266,6 +1266,31 @@ class NimCreateStateMachineSupportTest {
     }
 
     @Test
+    void stateMachine_shouldRejectForgedReadinessTargetSupersetWithoutMatchingStep() {
+        Map<String, Object> forgedReadiness = new java.util.LinkedHashMap<>(completeReadinessPlan());
+        forgedReadiness.put("targets", List.of("deployment", "service", "nim-health", "nim-models", "nim-chat"));
+
+        Map<String, Object> guard = NimCreateStateMachineSupport.evaluate(new NimCreateStateMachineSupport.ReadinessRequest(
+            Map.of("name", "nim-forged-readiness-targets"),
+            openGate(),
+            completePreview(),
+            HitlConfirmation.human("thread-1", "nim_create"),
+            completeAuditContext(),
+            completeAuditReceipt(),
+            forgedReadiness,
+            completeReadinessExecutionReport(),
+            NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
+            true
+        ));
+
+        assertEquals("HELD", guard.get("state"));
+        assertEquals(false, guard.get("writePermitted"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) guard.get("blockedBy");
+        assertHasBlocker(blockers, "READINESS_PLAN_NOT_READY");
+    }
+
+    @Test
     void stateMachine_shouldRequireReadyReadinessExecutionReportForFutureWrite() {
         Map<String, Object> pendingReport = new java.util.LinkedHashMap<>(completeReadinessExecutionReport());
         pendingReport.put("state", "PENDING");

@@ -118,7 +118,7 @@ final class NimCreateReadinessExecutorSupport {
             || !NimCreateStateMachineSupport.API_KEY_POLICY.equals(text(plan.get("apiKeyHandling")))
             || !Boolean.TRUE.equals(plan.get("apiKeyPlaceholderOnly"))
             || !API_KEY_PLACEHOLDER.equals(text(plan.get("apiKeyPlaceholder")))
-            || !containsAllTargets(plan.get("targets"))) {
+            || !targetsExactlyMatch(plan.get("targets"))) {
             blockers.add(blocker(
                 "READINESS_PLAN_NOT_EXECUTABLE",
                 "readiness 执行器只接受已准备好的只读计划，且必须覆盖 deployment/service/nim-health/nim-models。",
@@ -392,7 +392,7 @@ final class NimCreateReadinessExecutorSupport {
         ).contains(item.get("code")));
     }
 
-    private static boolean containsAllTargets(Object rawTargets) {
+    private static boolean targetsExactlyMatch(Object rawTargets) {
         if (!(rawTargets instanceof List<?> targets)) {
             return false;
         }
@@ -400,7 +400,7 @@ final class NimCreateReadinessExecutorSupport {
         for (Object target : targets) {
             actualTargets.add(text(target));
         }
-        return actualTargets.containsAll(REQUIRED_TARGETS);
+        return actualTargets.equals(REQUIRED_TARGETS);
     }
 
     private static boolean readinessStepsAreReadOnly(Object rawSteps) {

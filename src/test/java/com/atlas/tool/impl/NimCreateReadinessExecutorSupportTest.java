@@ -214,6 +214,26 @@ class NimCreateReadinessExecutorSupportTest {
     }
 
     @Test
+    void executor_shouldRejectForgedReadinessTargetSupersetWithoutMatchingStep() {
+        Map<String, Object> forgedPlan = new java.util.LinkedHashMap<>(readinessPlan());
+        forgedPlan.put("targets", List.of("deployment", "service", "nim-health", "nim-models", "nim-chat"));
+
+        Map<String, Object> rejected = NimCreateReadinessExecutorSupport.evaluate(new NimCreateReadinessExecutorSupport.ReadinessExecutionInput(
+            forgedPlan,
+            deploymentResponse(List.of(deployment("llama-nim", "http", "https://nim.example.com/nim"))),
+            Map.of("live", true),
+            Map.of("data", List.of(Map.of("id", "llama"))),
+            1
+        ));
+
+        assertEquals("REJECTED", rejected.get("state"));
+        assertEquals(false, rejected.get("ready"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) rejected.get("blockedBy");
+        assertHasItem(blockers, "READINESS_PLAN_NOT_EXECUTABLE");
+    }
+
+    @Test
     void executor_shouldAllowApiKeyPlaceholderOnlyOutsideForbiddenSecretKeys() {
         Map<String, Object> planWithDocumentedPlaceholder = new java.util.LinkedHashMap<>(readinessPlan());
         planWithDocumentedPlaceholder.put("operatorHint", NimCreateReadinessExecutorSupport.API_KEY_PLACEHOLDER);

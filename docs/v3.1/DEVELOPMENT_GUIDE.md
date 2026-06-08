@@ -594,3 +594,9 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - State-machine and durable executor validation now require M5.21-72 `codeReleaseSwitchContract.requiredFutureEvidenceDigestFields` to exactly match the source-owned switch evidence list.
 - Extra future code-switch evidence field names are rejected even when `codeReleaseSwitchContractDigest` is recomputed.
 - Learning distinction: downstream runtime consumers must validate the whole proof protocol shape, not only the subset of fields they currently read.
+
+### M5.21-119 readiness target taxonomy closed list note
+
+- Readiness executor, readiness HTTP adapter, and state-machine validation now require readiness plan `targets` to exactly match `deployment/service/nim-health/nim-models`.
+- Extra readiness target names such as `nim-chat` are rejected even if all audited readiness steps remain valid and unchanged.
+- Learning distinction: `containsAll` is useful for optional capability sets, but release-proof taxonomies should usually be exact source-owned protocols. Metadata-only expansion can become future authority if downstream code starts reading it.

@@ -216,6 +216,27 @@ class NimCreateReadinessHttpAdapterSupportTest {
     }
 
     @Test
+    void adapter_shouldRejectForgedReadinessTargetSupersetBeforeBuildingSpecs() {
+        Map<String, Object> forgedPlan = mutablePlan();
+        forgedPlan.put("targets", List.of("deployment", "service", "nim-health", "nim-models", "nim-chat"));
+
+        Map<String, Object> rejected = NimCreateReadinessHttpAdapterSupport.compile(new NimCreateReadinessHttpAdapterSupport.ReadinessHttpAdapterInput(
+            forgedPlan,
+            "https://nim.example.com/nim",
+            1
+        ));
+
+        assertEquals("REJECTED", rejected.get("state"));
+        assertEquals(false, rejected.get("adapterPrepared"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) rejected.get("blockedBy");
+        assertHasItem(blockers, "READINESS_PLAN_NOT_EXECUTABLE");
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> specs = (List<Map<String, Object>>) rejected.get("requestSpecs");
+        assertTrue(specs.isEmpty());
+    }
+
+    @Test
     void adapter_shouldRejectUnsafeServiceUrlsBeforeBuildingNimSpecs() {
         List<String> unsafeUrls = List.of(
             "ftp://nim.example.com/nim",

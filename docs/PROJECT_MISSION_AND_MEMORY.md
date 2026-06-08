@@ -82,12 +82,27 @@ Current track:
 
 Recently completed:
 
-`M5.21-118 NIM code switch downstream required fields closed list`
+`M5.21-119 NIM readiness target taxonomy closed list`
 
 Latest checkpoint:
 
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-119 implemented:
+  - Hardened `NimCreateReadinessExecutorSupport` so readiness plan `targets` must exactly match `deployment/service/nim-health/nim-models` before offline readiness execution can proceed.
+  - Hardened `NimCreateReadinessHttpAdapterSupport` with the same exact target taxonomy validation before request specs are compiled.
+  - Hardened `NimCreateStateMachineSupport` so readiness target supersets are treated as `READINESS_PLAN_NOT_READY`.
+  - Added forged readiness target regressions that append `nim-chat` while leaving the audited readiness steps unchanged.
+  - Added `docs/M5_21_ONE_HUNDRED_NINETEENTH_WAVE_NIM_READINESS_TARGET_TAXONOMY_CLOSED_LIST_AUDIT_20260608.md`.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimCreateReadinessExecutorSupportTest,NimCreateReadinessHttpAdapterSupportTest,NimCreateStateMachineSupportTest" test`
+  - Final verification passed:
+    - `git diff --check`
+    - `mvn -q test`
+    - Full Maven note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - Security invariant: no real `8100`, no real NIM service HTTP call, no Authorization header sending, no durable audit write, no deployment POST, no runtime write behavior, no state-machine release binding implementation, no durable executor release binding implementation, no validation result signer, no release decision signer, no code release switch implementation, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Recommended next slice: continue scanning for remaining proof taxonomies that still use superset acceptance, or start the next release-binding proof slice without opening writes.
+- Previous checkpoint:
 - M5.21-118 implemented:
   - Hardened `NimCreateStateMachineSupport` so M5.21-72 `codeReleaseSwitchContract.requiredFutureEvidenceDigestFields` must exactly match the source-owned switch evidence field list before state-machine planning treats the report as write-chain evidence.
   - Hardened `NimCreateDurableWriteExecutorSupport` with the same exact closed-list validation before durable executor planning accepts the code switch contract report.

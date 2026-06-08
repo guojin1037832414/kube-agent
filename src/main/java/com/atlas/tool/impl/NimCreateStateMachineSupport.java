@@ -471,7 +471,7 @@ final class NimCreateStateMachineSupport {
             || !Boolean.TRUE.equals(readinessPlan.get("pollOnly"))
             || !API_KEY_POLICY.equals(text(readinessPlan.get("apiKeyHandling")))
             || !Boolean.TRUE.equals(readinessPlan.get("apiKeyPlaceholderOnly"))
-            || !containsAllRequiredTargets(readinessPlan.get("targets"), REQUIRED_READINESS_TARGETS)
+            || !targetsExactlyMatch(readinessPlan.get("targets"), REQUIRED_READINESS_TARGETS)
             || !readinessStepsAreReadOnly(readinessPlan.get("steps"))) {
             blockers.add(blocker(
                 "READINESS_PLAN_NOT_READY",
@@ -1299,7 +1299,7 @@ final class NimCreateStateMachineSupport {
         return false;
     }
 
-    private static boolean containsAllRequiredTargets(Object rawTargets, Set<String> requiredTargets) {
+    private static boolean targetsExactlyMatch(Object rawTargets, Set<String> requiredTargets) {
         if (!(rawTargets instanceof List<?> targets)) {
             return false;
         }
@@ -1307,7 +1307,7 @@ final class NimCreateStateMachineSupport {
         for (Object target : targets) {
             actualTargets.add(text(target));
         }
-        return actualTargets.containsAll(requiredTargets);
+        return actualTargets.equals(requiredTargets);
     }
 
     private static boolean sameAuditIdentity(Map<String, Object> auditContext,
