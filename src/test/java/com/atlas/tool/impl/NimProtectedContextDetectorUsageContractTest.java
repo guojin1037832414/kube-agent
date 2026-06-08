@@ -16,6 +16,11 @@ class NimProtectedContextDetectorUsageContractTest {
         Path.of("src/main/java/com/atlas/tool/impl/NimCreateWriteBodyRebuilderSupport.java"),
         Path.of("src/main/java/com/atlas/tool/impl/NimCreateWriteRequestSpecAdapterSupport.java")
     );
+    private static final List<Path> DOWNSTREAM_BODY_CONTRACT_SUPPORTS = List.of(
+        Path.of("src/main/java/com/atlas/tool/impl/NimCreateStateMachineSupport.java"),
+        Path.of("src/main/java/com/atlas/tool/impl/NimCreateWriteExecutionHandoffSupport.java"),
+        Path.of("src/main/java/com/atlas/tool/impl/NimCreateDurableWriteExecutorSupport.java")
+    );
 
     @Test
     void migratedNimWriteSupports_shouldUseSharedProtectedContextDetectorWithoutLocalContextLists()
@@ -44,6 +49,21 @@ class NimProtectedContextDetectorUsageContractTest {
             .contains("writerequestspecreport")
             .contains("replace(\".\", \"\")")
             .contains("replace(\" \", \"\")");
+    }
+
+    @Test
+    void downstreamWriteBodyContracts_shouldRejectSharedProtectedContextDetector() throws IOException {
+        for (Path path : DOWNSTREAM_BODY_CONTRACT_SUPPORTS) {
+            String source = read(path);
+
+            assertThat(source)
+                .as(path.toString())
+                .contains("NimProtectedContextDetector.containsProtectedContext(body)")
+                .doesNotContain("PROTECTED_CONTEXT_KEYS")
+                .doesNotContain("PROTECTED_BODY_KEYS")
+                .doesNotContain("containsProtectedBodyContext(")
+                .doesNotContain("private static boolean isProtectedContextKey(");
+        }
     }
 
     private String read(Path path) throws IOException {

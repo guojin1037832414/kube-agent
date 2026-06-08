@@ -3,9 +3,14 @@ package com.atlas.tool.impl;
 import com.atlas.hitl.HitlConfirmation;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import static java.util.Map.entry;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -215,6 +220,27 @@ class NimCreateWriteExecutionHandoffSupportTest {
         assertHasBlocker(blockers, "WRITE_EXECUTION_HANDOFF_INPUT_CONTAINS_FORBIDDEN_SECRET");
     }
 
+    @Test
+    void handoff_shouldRejectDigestConsistentRequestSpecBodyWithNestedProtectedContext() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> receipt = durableAuditReceipt(audit);
+        Map<String, Object> trustedBodyReport = writeBodyReport(audit, receipt);
+        Map<String, Object> bodyReport = withNestedProtectedContextInBodyReport(trustedBodyReport);
+        Map<String, Object> requestSpecReport = withNestedProtectedContextInRequestBody(
+            writeRequestSpecReport(audit, receipt, trustedBodyReport),
+            bodyReport
+        );
+
+        Map<String, Object> report = writeExecutionHandoffReport(audit, receipt, bodyReport, requestSpecReport);
+
+        assertEquals(false, report.get("writeExecutionPrepared"));
+        assertEquals("", report.get("handoffDigest"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+        assertHasBlocker(blockers, "WRITE_BODY_REBUILD_REPORT_NOT_APPROVED_FOR_EXECUTION_HANDOFF");
+        assertHasBlocker(blockers, "WRITE_REQUEST_SPEC_REPORT_NOT_APPROVED_FOR_EXECUTION_HANDOFF");
+    }
+
     private Map<String, Object> writeExecutionHandoffReport(Map<String, Object> audit,
                                                             Map<String, Object> receipt,
                                                             Map<String, Object> bodyReport,
@@ -253,6 +279,84 @@ class NimCreateWriteExecutionHandoffSupportTest {
                 receipt
             )
         );
+    }
+
+    private Map<String, Object> withNestedProtectedContextInBodyReport(Map<String, Object> bodyReport) {
+        Map<String, Object> forgedReport = new LinkedHashMap<>(bodyReport);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> body = new LinkedHashMap<>((Map<String, Object>) forgedReport.get("body"));
+        body.put("autoScaleConfig", Map.of("minReplicas", 1, "audit.receipt", "caller-forged"));
+        forgedReport.put("body", body);
+        forgedReport.put("bodyDigest", sha256(body));
+        return forgedReport;
+    }
+
+    private Map<String, Object> withNestedProtectedContextInRequestBody(Map<String, Object> requestSpecReport,
+                                                                        Map<String, Object> bodyReport) {
+        Map<String, Object> forgedReport = new LinkedHashMap<>(requestSpecReport);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> requestSpec = new LinkedHashMap<>((Map<String, Object>) forgedReport.get("requestSpec"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> body = new LinkedHashMap<>((Map<String, Object>) bodyReport.get("body"));
+        String bodyDigest = text(bodyReport.get("bodyDigest"));
+        requestSpec.put("body", body);
+        requestSpec.put("bodyDigest", bodyDigest);
+        String requestSpecDigest = sha256(requestSpec);
+        forgedReport.put("bodyDigest", bodyDigest);
+        forgedReport.put("requestSpec", requestSpec);
+        forgedReport.put("requestSpecDigest", requestSpecDigest);
+        return forgedReport;
+    }
+
+    private String sha256(Map<String, Object> value) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(canonical(value).getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IllegalStateException(ex);
+        }
+    }
+
+    private String canonical(Object value) {
+        if (value == null) {
+            return "null";
+        }
+        if (value instanceof Map<?, ?> map) {
+            Map<String, Object> sorted = new TreeMap<>();
+            map.forEach((key, item) -> sorted.put(String.valueOf(key), item));
+            StringBuilder builder = new StringBuilder("{");
+            boolean first = true;
+            for (Map.Entry<String, Object> entry : sorted.entrySet()) {
+                if (!first) {
+                    builder.append(",");
+                }
+                first = false;
+                builder.append(escape(entry.getKey())).append("=").append(canonical(entry.getValue()));
+            }
+            return builder.append("}").toString();
+        }
+        if (value instanceof List<?> list) {
+            StringBuilder builder = new StringBuilder("[");
+            for (int i = 0; i < list.size(); i++) {
+                if (i > 0) {
+                    builder.append(",");
+                }
+                builder.append(canonical(list.get(i)));
+            }
+            return builder.append("]").toString();
+        }
+        return escape(value.toString());
+    }
+
+    private String escape(String value) {
+        return value.replace("\\", "\\\\")
+            .replace("\n", "\\n")
+            .replace("\r", "\\r")
+            .replace("\t", "\\t");
+    }
+
+    private String text(Object value) {
+        return value == null ? "" : value.toString().trim();
     }
 
     private Map<String, Object> openGate() {

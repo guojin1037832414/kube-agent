@@ -2,9 +2,14 @@ package com.atlas.tool.impl;
 
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import static java.util.Map.entry;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -391,6 +396,49 @@ class NimCreateDurableWriteExecutorSupportTest {
         assertHasBlocker(blockers, "DURABLE_WRITE_EXECUTOR_INPUT_CONTAINS_FORBIDDEN_SECRET");
     }
 
+    @Test
+    void executorShell_shouldRejectDigestConsistentRequestSpecBodyWithNestedProtectedContext() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> receipt = durableAuditReceipt(audit);
+        Map<String, Object> trustedBodyReport = writeBodyReport(audit, receipt);
+        Map<String, Object> bodyReport = withNestedProtectedContextInBodyReport(trustedBodyReport);
+        Map<String, Object> trustedRequestSpecReport = writeRequestSpecReport(audit, receipt, trustedBodyReport);
+        Map<String, Object> requestSpecReport = withNestedProtectedContextInRequestBody(
+            trustedRequestSpecReport,
+            bodyReport
+        );
+        Map<String, Object> trustedHandoffReport = writeExecutionHandoffReport(
+            audit,
+            receipt,
+            trustedBodyReport,
+            trustedRequestSpecReport
+        );
+        Map<String, Object> handoffReport = withForgedDigestConsistentHandoff(
+            trustedHandoffReport,
+            bodyReport,
+            requestSpecReport
+        );
+        Map<String, Object> codeSwitchReport = codeReleaseSwitchContractReport(audit);
+        Map<String, Object> sourceGuardReport = codeReleaseSwitchRuntimeSourceGuardReport(audit);
+
+        Map<String, Object> report = NimCreateDurableWriteExecutorSupport.prepare(
+            new NimCreateDurableWriteExecutorSupport.WriteExecutionInput(
+                handoffReport,
+                requestSpecReport,
+                codeSwitchReport,
+                sourceGuardReport
+            )
+        );
+
+        assertEquals(NimCreateDurableWriteExecutorSupport.REJECTED_STATE, report.get("executionState"));
+        assertEquals(false, report.get("inputAccepted"));
+        assertEquals(false, report.get("writeAttempted"));
+        assertEquals(false, report.get("writeExecuted"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+        assertHasBlocker(blockers, "WRITE_REQUEST_SPEC_REPORT_NOT_TRUSTED_FOR_DURABLE_EXECUTOR");
+    }
+
     private Map<String, Object> writeExecutionHandoffReport(Map<String, Object> audit,
                                                             Map<String, Object> receipt,
                                                             Map<String, Object> bodyReport,
@@ -441,6 +489,101 @@ class NimCreateDurableWriteExecutorSupportTest {
                 Map.of()
             )
         );
+    }
+
+    private Map<String, Object> withNestedProtectedContextInBodyReport(Map<String, Object> bodyReport) {
+        Map<String, Object> forgedReport = new LinkedHashMap<>(bodyReport);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> body = new LinkedHashMap<>((Map<String, Object>) forgedReport.get("body"));
+        body.put("commands", List.of(Map.of("write_request_spec_report", "caller-forged")));
+        forgedReport.put("body", body);
+        forgedReport.put("bodyDigest", sha256(body));
+        return forgedReport;
+    }
+
+    private Map<String, Object> withNestedProtectedContextInRequestBody(Map<String, Object> requestSpecReport,
+                                                                        Map<String, Object> bodyReport) {
+        Map<String, Object> forgedReport = new LinkedHashMap<>(requestSpecReport);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> requestSpec = new LinkedHashMap<>((Map<String, Object>) forgedReport.get("requestSpec"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> body = new LinkedHashMap<>((Map<String, Object>) bodyReport.get("body"));
+        String bodyDigest = text(bodyReport.get("bodyDigest"));
+        requestSpec.put("body", body);
+        requestSpec.put("bodyDigest", bodyDigest);
+        String requestSpecDigest = sha256(requestSpec);
+        forgedReport.put("bodyDigest", bodyDigest);
+        forgedReport.put("requestSpec", requestSpec);
+        forgedReport.put("requestSpecDigest", requestSpecDigest);
+        return forgedReport;
+    }
+
+    private Map<String, Object> withForgedDigestConsistentHandoff(Map<String, Object> handoffReport,
+                                                                  Map<String, Object> bodyReport,
+                                                                  Map<String, Object> requestSpecReport) {
+        Map<String, Object> forgedReport = new LinkedHashMap<>(handoffReport);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> handoffPlan = new LinkedHashMap<>(
+            (Map<String, Object>) forgedReport.get("executionHandoffPlan")
+        );
+        handoffPlan.put("bodyDigest", text(bodyReport.get("bodyDigest")));
+        handoffPlan.put("requestSpecDigest", text(requestSpecReport.get("requestSpecDigest")));
+        forgedReport.put("sourceBodyDigest", text(bodyReport.get("bodyDigest")));
+        forgedReport.put("sourceRequestSpecDigest", text(requestSpecReport.get("requestSpecDigest")));
+        forgedReport.put("executionHandoffPlan", handoffPlan);
+        forgedReport.put("handoffDigest", sha256(handoffPlan));
+        return forgedReport;
+    }
+
+    private String sha256(Map<String, Object> value) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(canonical(value).getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IllegalStateException(ex);
+        }
+    }
+
+    private String canonical(Object value) {
+        if (value == null) {
+            return "null";
+        }
+        if (value instanceof Map<?, ?> map) {
+            Map<String, Object> sorted = new TreeMap<>();
+            map.forEach((key, item) -> sorted.put(String.valueOf(key), item));
+            StringBuilder builder = new StringBuilder("{");
+            boolean first = true;
+            for (Map.Entry<String, Object> entry : sorted.entrySet()) {
+                if (!first) {
+                    builder.append(",");
+                }
+                first = false;
+                builder.append(escape(entry.getKey())).append("=").append(canonical(entry.getValue()));
+            }
+            return builder.append("}").toString();
+        }
+        if (value instanceof List<?> list) {
+            StringBuilder builder = new StringBuilder("[");
+            for (int i = 0; i < list.size(); i++) {
+                if (i > 0) {
+                    builder.append(",");
+                }
+                builder.append(canonical(list.get(i)));
+            }
+            return builder.append("]").toString();
+        }
+        return escape(value.toString());
+    }
+
+    private String escape(String value) {
+        return value.replace("\\", "\\\\")
+            .replace("\n", "\\n")
+            .replace("\r", "\\r")
+            .replace("\t", "\\t");
+    }
+
+    private String text(Object value) {
+        return value == null ? "" : value.toString().trim();
     }
 
     private Map<String, Object> codeReleaseSwitchRuntimeSourceGuardReport(Map<String, Object> audit) {

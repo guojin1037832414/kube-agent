@@ -6,6 +6,18 @@
 
 ---
 
+## [M5.21-104] - NIM downstream protected context contract
+
+**Delivery**: Extended shared NIM protected-context detection through downstream write-chain body contract validators.
+**Changes**
+- `NimCreateStateMachineSupport`, `NimCreateWriteExecutionHandoffSupport`, and `NimCreateDurableWriteExecutorSupport` now reject DeploymentDTO bodies where nested maps/lists carry protected context.
+- Extended `NimProtectedContextDetectorUsageContractTest` so downstream `writeBodyContractValid(...)` validators must keep using `NimProtectedContextDetector.containsProtectedContext(body)`.
+- Added digest-consistent forged-report regressions proving state machine, handoff, and durable executor reject nested protected context even when body/request/handoff digests are recomputed.
+**Security**
+- This is downstream contract hardening only; it does not open runtime writes.
+- No real `8100`, real NIM service HTTP call, Authorization header sending, durable audit write, deployment POST, state-machine release binding, durable executor release binding, validation result signer, release decision signer, code release switch implementation, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-103] - NIM protected context detector contract
 
 **Delivery**: Extracted NIM write-chain protected-context detection into a shared helper and hardened nested context rejection before any future write request can be compiled.

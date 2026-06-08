@@ -582,7 +582,8 @@ final class NimCreateDurableWriteExecutorSupport {
             && !body.containsKey("nvaieApiKey")
             && !body.containsKey("Authorization")
             && !body.containsKey("password")
-            && !body.containsKey("secret");
+            && !body.containsKey("secret")
+            && !NimProtectedContextDetector.containsProtectedContext(body);
     }
 
     private static boolean codeReleaseSwitchStatesRemainFalse(Map<String, Object> report) {

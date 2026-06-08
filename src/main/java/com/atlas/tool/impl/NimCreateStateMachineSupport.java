@@ -1207,7 +1207,8 @@ final class NimCreateStateMachineSupport {
             && !body.containsKey("nvaieApiKey")
             && !body.containsKey("Authorization")
             && !body.containsKey("password")
-            && !body.containsKey("secret");
+            && !body.containsKey("secret")
+            && !NimProtectedContextDetector.containsProtectedContext(body);
     }
 
     private static boolean requestSpecContractValid(Map<String, Object> auditContext,

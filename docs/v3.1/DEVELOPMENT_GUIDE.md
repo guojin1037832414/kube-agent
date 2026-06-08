@@ -485,3 +485,11 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - `NimCreateWriteBodyRebuilderSupport` now fails with `WRITE_BODY_CONTAINS_FORBIDDEN_CONTEXT` when a rebuilt body contains nested protected context.
 - `NimCreateWriteRequestSpecAdapterSupport` still fails the final request body with `WRITE_REQUEST_SPEC_CONTAINS_FORBIDDEN_SECRET_OR_CONTEXT` for compatibility.
 - Learning distinction: credential leakage, protected Tool parameters, and protected write-chain context are different proof boundaries. They may share names like `organizationId`, but they should not share one overly broad utility.
+
+### M5.21-104 downstream protected context contract note
+
+- The state machine, write execution handoff, and durable write executor shell now re-check DeploymentDTO body copies with `NimProtectedContextDetector.containsProtectedContext(body)`.
+- This is defense in depth: downstream reviewers should not trust body/request/handoff reports merely because their digests are syntactically valid.
+- Tests forge digest-consistent reports and still expect rejection when nested body fields carry `audit.receipt`, `write_request_spec_report`, or similar protected context.
+- Do not apply this detector to legitimate handoff evidence containers such as idempotency, pre-write audit handoff, or post-write readiness handoff. Those are not DeploymentDTO body fields.
+- Learning distinction: a top-tier Agent verifies both evidence binding and content policy at each boundary. Digest consistency says "this is the same object"; policy validation says "this object is allowed to cross this boundary."

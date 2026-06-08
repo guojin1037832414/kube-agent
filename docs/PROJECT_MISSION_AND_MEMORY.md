@@ -82,12 +82,28 @@ Current track:
 
 Recently completed:
 
-`M5.21-103 NIM protected context detector contract`
+`M5.21-104 NIM downstream protected context contract`
 
 Latest checkpoint:
 
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-104 implemented:
+  - Extended shared protected-context body validation into `NimCreateStateMachineSupport`, `NimCreateWriteExecutionHandoffSupport`, and `NimCreateDurableWriteExecutorSupport`.
+  - Downstream `writeBodyContractValid(...)` now rejects nested protected context via `NimProtectedContextDetector.containsProtectedContext(body)`.
+  - Extended `NimProtectedContextDetectorUsageContractTest` so downstream validators cannot drop the shared detector.
+  - Added digest-consistent forged-report regressions proving state machine, handoff, and durable executor reject protected-context-polluted DeploymentDTO bodies even when body/request/handoff digests are recomputed.
+  - Added `docs/M5_21_ONE_HUNDRED_FOURTH_WAVE_NIM_DOWNSTREAM_PROTECTED_CONTEXT_CONTRACT_AUDIT_20260608.md`.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimCreateWriteExecutionHandoffSupportTest,NimCreateDurableWriteExecutorSupportTest,NimCreateStateMachineSupportTest,NimProtectedContextDetectorUsageContractTest" test`
+    - `mvn -q "-Dtest=NimProtectedContextDetectorUsageContractTest" test`
+  - Final verification passed:
+    - `git diff --check`
+    - `mvn -q test`
+  - Full test note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - Security invariant: no real `8100`, no real NIM service HTTP call, no Authorization header sending, no durable audit write, no deployment POST, no runtime write behavior, no state-machine release binding implementation, no durable executor release binding implementation, no validation result signer, no release decision signer, no code release switch implementation, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Recommended next slice: continue downstream report validator hardening only where embedded data is a DeploymentDTO body, or return to durable audit/release binding design without opening writes.
+- Previous checkpoint:
 - M5.21-103 implemented:
   - Added `NimProtectedContextDetector` for NIM write-chain DTO/request body protected-context detection.
   - Migrated `NimCreateWriteBodyRebuilderSupport` and `NimCreateWriteRequestSpecAdapterSupport` away from local protected-context key lists/scanners.

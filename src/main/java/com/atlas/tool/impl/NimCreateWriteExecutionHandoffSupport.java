@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -366,7 +365,8 @@ final class NimCreateWriteExecutionHandoffSupport {
             && !body.containsKey("nvaieApiKey")
             && !body.containsKey("Authorization")
             && !body.containsKey("password")
-            && !body.containsKey("secret");
+            && !body.containsKey("secret")
+            && !NimProtectedContextDetector.containsProtectedContext(body);
     }
 
     private static boolean requestSpecContractValid(Map<String, Object> auditContext,
@@ -500,10 +500,6 @@ final class NimCreateWriteExecutionHandoffSupport {
 
     private static boolean safeIdentifier(Object value) {
         return text(value).matches("[A-Za-z0-9_-]{1,64}");
-    }
-
-    private static String normalizeKey(String key) {
-        return key == null ? "" : key.replace("_", "").replace("-", "").toLowerCase(Locale.ROOT);
     }
 
     private static String text(Object value) {
