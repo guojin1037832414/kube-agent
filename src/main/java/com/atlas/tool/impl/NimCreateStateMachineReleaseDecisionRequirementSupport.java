@@ -432,20 +432,12 @@ final class NimCreateStateMachineReleaseDecisionRequirementSupport {
             && Boolean.FALSE.equals(contract.get("fallbackToMigrationPlanAllowed"))
             && Boolean.FALSE.equals(contract.get("fallbackToCallerReleaseDecisionAllowed"))
             && Boolean.FALSE.equals(contract.get("fallbackToDurableExecutorHandoffAllowed"))
-            && statuses.contains("RELEASE_DECISION_GATE_NOT_IMPLEMENTED")
-            && statuses.contains("VALIDATION_RESULT_NOT_IMPLEMENTED")
-            && statuses.contains("RELEASE_DECISION_NOT_IMPLEMENTED")
-            && statuses.contains("CODE_RELEASE_SWITCH_NOT_OPEN")
-            && statuses.contains("LEGACY_AUDIT_RECEIPT_RELEASE_FLAG_NOT_TRUSTED");
+            && statuses.equals(NimCreateDurableAuditReleaseDecisionGateSupport.releaseGateFailureStatuses());
     }
 
     private static boolean forbiddenShortcutsValid(Object rawShortcuts) {
-        List<String> shortcuts = stringList(rawShortcuts);
-        return shortcuts.contains("accepting migration plan as release decision gate pass")
-            && shortcuts.contains("accepting caller-supplied releaseDecision or validationResult")
-            && shortcuts.contains("accepting legacy auditReceipt.releaseEligible=true as write permission")
-            && shortcuts.contains("allowing state machine writePermitted=true before release decision digest is verified")
-            && shortcuts.contains("allowing durable executor writeExecuted=true before release decision digest is re-checked");
+        return stringList(rawShortcuts).equals(
+            NimCreateDurableAuditReleaseDecisionGateSupport.releaseGateForbiddenShortcuts());
     }
 
     private static Map<String, Object> stateMachineRequirementPlan(Map<String, Object> auditContext,

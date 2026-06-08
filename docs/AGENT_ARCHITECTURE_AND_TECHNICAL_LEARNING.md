@@ -215,6 +215,22 @@ NIM 链路明确禁止真实 Authorization、token、password、secret、NGC/NIM
 
 学习重点：对于长期 Agent 项目，文档不是附属物。文档是架构记忆、教学材料和恢复机制的一部分。
 
+## M5.21-126 最新学习笔记
+
+本轮关闭了 M5.21-59 release decision gate 输出给 state-machine requirement 的两类词表：
+
+- `releaseDecisionGatePlan.failureContract.failureStatuses`
+- `releaseDecisionGatePlan.forbiddenShortcuts`
+
+关键收获：
+
+- release gate report 比 migration plan 更接近未来写放行边界，因此它的词表更不能被当成可扩展说明文本。
+- state-machine requirement 不能只检查几个关键 failure status 或 forbidden shortcut 是否存在；它必须确认整个词表与 producer 源码拥有的词表完全一致。
+- 对 release-proof protocol list 来说，version skew 应该 fail closed。旧 producer、新 consumer、额外字段、缺失字段或乱序字段都不应该被“兼容性”吞掉。
+- 测试继续采用 digest-consistent forgery：篡改 `releaseDecisionGatePlan`，重新计算 `releaseDecisionGatePlanDigest`，仍然要求下游拒绝。
+
+学习总结：越接近真实写执行，越要减少“宽容解析”。顶级 Agent 的 release protocol 需要严格、可审查、可同步演进，而不是像普通配置一样随意扩展。
+
 ## M5.21-125 最新学习笔记
 
 本轮关闭了 M5.21-58 validation result migration 自己输出并被下游消费的两类词表：

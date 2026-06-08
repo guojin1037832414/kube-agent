@@ -49,6 +49,23 @@
 
 ## Current Status
 
+- M5.21-126 NIM release decision gate failure/shortcut lists closed is implemented:
+  - Hardened `src/main/java/com/atlas/tool/impl/NimCreateDurableAuditReleaseDecisionGateSupport.java`.
+  - Hardened `src/main/java/com/atlas/tool/impl/NimCreateStateMachineReleaseDecisionRequirementSupport.java`.
+  - `releaseDecisionGatePlan.failureContract.failureStatuses` and `releaseDecisionGatePlan.forbiddenShortcuts` are now source-owned helper lists.
+  - State-machine release decision requirement now requires exact equality for those M5.21-59 release-gate-owned lists.
+  - Added digest-consistent forged release gate regressions that append `FUTURE_STATE_MACHINE_RELEASE_SIGNER_READY` or `accepting releaseDecisionGatePlanDigest as write permission`, recompute `releaseDecisionGatePlanDigest`, and still expect rejection.
+  - Added `docs/M5_21_ONE_HUNDRED_TWENTY_SIXTH_WAVE_NIM_RELEASE_DECISION_GATE_FAILURE_SHORTCUT_LISTS_CLOSED_AUDIT_20260608.md`.
+  - Updated `docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md` with the M5.21-126 learning note.
+  - Targeted verification passed:
+    - `git diff --check`
+    - `mvn -q "-Dtest=NimCreateDurableAuditReleaseDecisionGateSupportTest,NimCreateStateMachineReleaseDecisionRequirementSupportTest" test`
+  - Final verification passed:
+    - `mvn -q test`
+    - Full Maven note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - No real `8100` access; no real NIM service HTTP call; no Authorization header sending; no durable audit write; no deployment POST; no runtime write behavior opened; no state-machine release binding implementation; no durable executor release binding implementation; no validation result signer; no release decision signer; no code release switch implementation; no Elasticsearch; no `ISysLogService`; no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Next recommended slice: keep scanning downstream release requirement and state-machine proof fields for remaining subset/non-empty acceptance, or close state-machine requirement's own failure/shortcut lists if they become consumed.
+
 - M5.21-125 NIM validation result migration failure/shortcut lists closed is implemented:
   - Hardened `src/main/java/com/atlas/tool/impl/NimCreateDurableAuditValidationResultMigrationSupport.java`.
   - Hardened `src/main/java/com/atlas/tool/impl/NimCreateDurableAuditReleaseDecisionGateSupport.java`.

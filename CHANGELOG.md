@@ -6,6 +6,22 @@
 
 ---
 
+## [M5.21-126] - NIM release decision gate failure/shortcut lists closed
+
+**Delivery**: Hardened release decision gate failure and forbidden-shortcut proof-list validation at the state-machine release requirement boundary.
+**Changes**
+- `NimCreateDurableAuditReleaseDecisionGateSupport` now owns source-controlled helper lists for `releaseDecisionGatePlan.failureContract.failureStatuses` and `releaseDecisionGatePlan.forbiddenShortcuts`.
+- `NimCreateStateMachineReleaseDecisionRequirementSupport` now requires both release-gate-owned lists to exactly match those helpers before state-machine requirement planning can proceed.
+- Added a digest-consistent forged release gate regression that appends future failure/shortcut values, recomputes `releaseDecisionGatePlanDigest`, and still expects fail-closed rejection.
+**Verification**
+- `git diff --check` passed.
+- Targeted durable release decision gate and state-machine release requirement tests passed.
+- Full `mvn -q test` passed; full Maven degraded to L1 embedding mode after local `model.onnx` download timeout but exited 0.
+**Security**
+- This is release decision gate failure/shortcut proof-list hardening only; it does not open runtime writes, real audit writes, real readiness polling, or a real code release switch.
+- No real `8100`, real NIM service HTTP call, Authorization header sending, durable audit write, deployment POST, state-machine release binding implementation, durable executor release binding implementation, validation result signer, release decision signer, code release switch implementation, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-125] - NIM validation result migration failure/shortcut lists closed
 
 **Delivery**: Hardened validation result migration failure and forbidden-shortcut proof-list validation across current migration-plan consumers.

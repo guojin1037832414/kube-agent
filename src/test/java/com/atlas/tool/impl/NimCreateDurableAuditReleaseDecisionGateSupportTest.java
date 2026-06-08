@@ -167,6 +167,14 @@ class NimCreateDurableAuditReleaseDecisionGateSupportTest {
         assertEquals(false, failure.get("fallbackToMigrationPlanAllowed"));
         assertEquals(false, failure.get("fallbackToCallerReleaseDecisionAllowed"));
         assertEquals(false, failure.get("fallbackToDurableExecutorHandoffAllowed"));
+        @SuppressWarnings("unchecked")
+        List<String> failureStatuses = (List<String>) failure.get("failureStatuses");
+        assertEquals(NimCreateDurableAuditReleaseDecisionGateSupport.releaseGateFailureStatuses(),
+            failureStatuses);
+        @SuppressWarnings("unchecked")
+        List<String> forbiddenShortcuts = (List<String>) plan.get("forbiddenShortcuts");
+        assertEquals(NimCreateDurableAuditReleaseDecisionGateSupport.releaseGateForbiddenShortcuts(),
+            forbiddenShortcuts);
 
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");

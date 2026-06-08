@@ -35,6 +35,33 @@ final class NimCreateDurableAuditReleaseDecisionGateSupport {
     private NimCreateDurableAuditReleaseDecisionGateSupport() {
     }
 
+    static List<String> releaseGateFailureStatuses() {
+        return List.of(
+            "IMPLEMENTATION_HOLD",
+            "RELEASE_DECISION_GATE_NOT_IMPLEMENTED",
+            "VALIDATION_RESULT_NOT_IMPLEMENTED",
+            "RELEASE_DECISION_NOT_IMPLEMENTED",
+            "MIGRATION_PLAN_DIGEST_MISMATCH",
+            "VALIDATION_RESULT_DIGEST_MISSING",
+            "RELEASE_DECISION_DIGEST_MISSING",
+            "CODE_RELEASE_SWITCH_NOT_OPEN",
+            "LEGACY_AUDIT_RECEIPT_RELEASE_FLAG_NOT_TRUSTED",
+            "FORGED_RELEASE_DECISION_CLAIM",
+            "SECRET_MATERIAL_REJECTED"
+        );
+    }
+
+    static List<String> releaseGateForbiddenShortcuts() {
+        return List.of(
+            "accepting migration plan as release decision gate pass",
+            "accepting caller-supplied releaseDecision or validationResult",
+            "accepting legacy auditReceipt.releaseEligible=true as write permission",
+            "allowing state machine writePermitted=true before release decision digest is verified",
+            "allowing durable executor writeExecuted=true before release decision digest is re-checked",
+            "treating code release switch as implied by validation result"
+        );
+    }
+
     static Map<String, Object> plan(DurableAuditReleaseDecisionGateInput input) {
         DurableAuditReleaseDecisionGateInput safeInput = input == null
             ? DurableAuditReleaseDecisionGateInput.empty()
@@ -558,31 +585,12 @@ final class NimCreateDurableAuditReleaseDecisionGateSupport {
         contract.put("fallbackToMigrationPlanAllowed", false);
         contract.put("fallbackToCallerReleaseDecisionAllowed", false);
         contract.put("fallbackToDurableExecutorHandoffAllowed", false);
-        contract.put("failureStatuses", List.of(
-            "IMPLEMENTATION_HOLD",
-            "RELEASE_DECISION_GATE_NOT_IMPLEMENTED",
-            "VALIDATION_RESULT_NOT_IMPLEMENTED",
-            "RELEASE_DECISION_NOT_IMPLEMENTED",
-            "MIGRATION_PLAN_DIGEST_MISMATCH",
-            "VALIDATION_RESULT_DIGEST_MISSING",
-            "RELEASE_DECISION_DIGEST_MISSING",
-            "CODE_RELEASE_SWITCH_NOT_OPEN",
-            "LEGACY_AUDIT_RECEIPT_RELEASE_FLAG_NOT_TRUSTED",
-            "FORGED_RELEASE_DECISION_CLAIM",
-            "SECRET_MATERIAL_REJECTED"
-        ));
+        contract.put("failureStatuses", releaseGateFailureStatuses());
         return contract;
     }
 
     private static List<String> forbiddenShortcuts() {
-        return List.of(
-            "accepting migration plan as release decision gate pass",
-            "accepting caller-supplied releaseDecision or validationResult",
-            "accepting legacy auditReceipt.releaseEligible=true as write permission",
-            "allowing state machine writePermitted=true before release decision digest is verified",
-            "allowing durable executor writeExecuted=true before release decision digest is re-checked",
-            "treating code release switch as implied by validation result"
-        );
+        return releaseGateForbiddenShortcuts();
     }
 
     private static boolean hasOnlyExpectedMigrationHold(Object rawBlockers) {

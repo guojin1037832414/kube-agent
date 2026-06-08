@@ -91,10 +91,30 @@ Current track:
 
 Recently completed:
 
-`M5.21-125 NIM validation result migration failure/shortcut lists closed`
+`M5.21-126 NIM release decision gate failure/shortcut lists closed`
 
 Latest checkpoint:
 
+- Date: 2026-06-08 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- Teaching principle:
+  - This project is not only delivering software. It is also a teaching system for mastering Agent engineering.
+  - Maintain `docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md` as the long-lived architecture and technical-learning map.
+- M5.21-126 implemented:
+  - Hardened `NimCreateDurableAuditReleaseDecisionGateSupport` so `releaseDecisionGatePlan.failureContract.failureStatuses` and `releaseDecisionGatePlan.forbiddenShortcuts` are source-owned helper lists.
+  - Hardened `NimCreateStateMachineReleaseDecisionRequirementSupport` so state-machine requirement planning rejects digest-consistent release gate plans with extra failure status or forbidden-shortcut values.
+  - Added regressions that append fake future values, recompute `releaseDecisionGatePlanDigest`, and still expect `RELEASE_DECISION_GATE_REPORT_INVALID_FOR_STATE_MACHINE`.
+  - Added `docs/M5_21_ONE_HUNDRED_TWENTY_SIXTH_WAVE_NIM_RELEASE_DECISION_GATE_FAILURE_SHORTCUT_LISTS_CLOSED_AUDIT_20260608.md`.
+  - Updated the long-lived teaching map with the M5.21-126 lesson: release-proof protocol version skew should fail closed near the write-release boundary.
+  - Targeted verification passed:
+    - `git diff --check`
+    - `mvn -q "-Dtest=NimCreateDurableAuditReleaseDecisionGateSupportTest,NimCreateStateMachineReleaseDecisionRequirementSupportTest" test`
+  - Final verification passed:
+    - `mvn -q test`
+    - Full Maven note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - Security invariant: no real `8100`, no real NIM service HTTP call, no Authorization header sending, no durable audit write, no deployment POST, no runtime write behavior, no state-machine release binding implementation, no durable executor release binding implementation, no validation result signer, no release decision signer, no code release switch implementation, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Recommended next slice: continue scanning downstream release requirement and state-machine proof fields for remaining subset/non-empty list checks, or close state-machine requirement's own failure/shortcut lists if they become consumed.
+- Previous checkpoint:
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
 - Teaching principle:
