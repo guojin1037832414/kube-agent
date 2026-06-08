@@ -209,6 +209,19 @@ NimDeploymentPreflightTool
 
 ## 当前重点技术点
 
+### 先进后端工程底座
+
+M5.22-1 引入的是一期顶级 Agent Core 的第一批先进工程底座：
+
+- Spring Boot `3.5.14` 与 Spring AI `1.1.7` 作为当前 Java 17 可验证主线；
+- Resilience4j 作为 kube-manager HTTP 出口韧性治理底座；
+- Micrometer Tracing + OpenTelemetry OTLP 作为未来全链路 trace 底座；
+- Testcontainers 作为真实依赖集成测试底座；
+- Maven Enforcer、Surefire/Failsafe、JaCoCo、CycloneDX SBOM、SpotBugs quality profile 和 GitHub Actions 作为 CI/供应链/质量门禁底座；
+- 生产敏感配置改为环境变量驱动，避免把本地代理地址、actuator 详情和 DEBUG 日志固化为生产默认。
+
+学习重点：顶级 Agent 的“先进”不等于把版本号推到最高，而是让每次升级都可构建、可测试、可审计、可回滚。Java 21/25、Spring Boot 4 与 Spring AI 2 应通过兼容矩阵逐步验证，不能破坏当前 Java 17 + Spring AI 1.1 稳定主线的恢复能力。
+
 ### Fail-Closed
 
 当证据缺失、来源不可信、格式不完整、digest 不匹配、词表扩展未审查时，系统必须拒绝，而不是降级为“试试看”。

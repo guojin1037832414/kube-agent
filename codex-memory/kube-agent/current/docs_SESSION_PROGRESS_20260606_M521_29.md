@@ -6,7 +6,7 @@
 - Primary workspace recovery folder: `F:\gitProject\kube-agent\codex-memory\kube-agent\current`
 - Historical external memory folder: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-139, NIM enhanced migration plan maps closed checkpoint.
+- Current latest wave: M5.22-1, advanced backend engineering baseline.
 - Phase update: HPC / Slurm / BCM and NIM are paused and moved to Phase 2 by user direction.
 - Phase 1 focus: deliver the top-tier Agent core through generic manager Agent foundations, safe read/query validation, non-HPC/NIM manager function coverage, Tool metadata quality, HITL/audit execution boundary, traceability, recovery, evaluation, teaching documentation, and vue-kube-manager workflow integration.
 - Phase boundary clarification: moving NIM / HPC / Slurm / BCM to Phase 2 postpones specialist domain plugins only; it does not reduce Phase 1 standards.
@@ -55,6 +55,22 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.22-1 advanced backend engineering baseline is implemented:
+  - Upgraded Spring Boot to `3.5.14` and Spring AI to `1.1.7`.
+  - Kept Java 17 as current verified baseline because local runtime is Java 17; Java 21/25, Spring Boot 4, and Spring AI 2 are documented as compatibility-matrix follow-ups.
+  - Added Resilience4j, Micrometer Tracing / OpenTelemetry OTLP, Spring Boot Testcontainers, Testcontainers JUnit, Maven Enforcer, Surefire/Failsafe, JaCoCo, CycloneDX SBOM, and SpotBugs quality profile.
+  - Added GitHub Actions backend quality workflow.
+  - Added `docs/tech-stack/BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md`.
+  - Converted AI base URL, chat model, kube-manager base URL, actuator health details, and Atlas log level to environment-driven defaults.
+  - Verification passed:
+    - `mvn -q -DskipTests validate`
+    - `mvn -q test`
+    - `mvn -q verify`
+    - `git diff --check`
+  - Generated SBOM artifacts under `target/bom.json` and `target/bom.xml`, and JaCoCo reports under `target/site/jacoco`.
+  - No NIM/HPC/Slurm/BCM Phase 2 implementation was resumed and no new write path was opened.
+  - Next Phase 1 technical slice: migrate remaining direct Tool execution paths to the single `SafeToolExecutor` invocation kernel, then add end-to-end traceId propagation.
 
 - M5.21-139 NIM enhanced migration plan maps closed checkpoint is implemented:
   - Hardened `src/main/java/com/atlas/tool/impl/NimCreateDurableAuditValidationResultProbeBindingMigrationSupport.java`.

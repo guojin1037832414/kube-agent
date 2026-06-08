@@ -93,10 +93,41 @@ Current track:
 
 Recently completed:
 
-`M5.21-139 NIM enhanced migration plan maps closed checkpoint`
+`M5.22-1 advanced backend engineering baseline`
 
 Latest checkpoint:
 
+- Date: 2026-06-08 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- User goal update:
+  - The user asked to introduce all advanced technologies needed to complete the latest ultimate goal.
+  - This was interpreted as building a verified advanced engineering baseline, not blindly switching to versions that cannot build on the current Java 17 machine.
+- M5.22-1 implemented:
+  - Upgraded Spring Boot from `3.4.4` to `3.5.14`.
+  - Upgraded Spring AI from `1.1.6` to `1.1.7`.
+  - Kept Java 17 as the current verified baseline because the local JDK is Java 17. Java 21/25, Spring Boot 4, and Spring AI 2 are documented as compatibility-matrix migrations.
+  - Added Resilience4j Spring Boot 3 and Micrometer integration for read/write resilience policy groundwork.
+  - Added Micrometer Tracing bridge with OpenTelemetry OTLP exporter for future end-to-end Agent traces.
+  - Added Spring Boot Testcontainers and Testcontainers JUnit for future real dependency integration tests.
+  - Added Maven Enforcer, Surefire/Failsafe, JaCoCo, CycloneDX SBOM generation, and SpotBugs quality profile.
+  - Added `.github/workflows/backend-quality.yml`.
+  - Added `docs/tech-stack/BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md`.
+  - Changed application defaults so AI base URL, chat model, kube-manager base URL, actuator health details, and Atlas log level are environment-driven.
+- Verification:
+  - `mvn -q -DskipTests validate`
+  - `mvn -q test`
+  - `mvn -q verify`
+  - `git diff --check`
+  - `mvn verify` generated CycloneDX `target/bom.json` / `target/bom.xml` and JaCoCo reports.
+- Scope boundary:
+  - This is Phase 1 Agent Core engineering hardening only.
+  - No NIM/HPC/Slurm/BCM Phase 2 implementation was resumed.
+  - No new write execution path was opened.
+- Next technical follow-ups:
+  - Migrate ReAct, ToolCallback, Graph, and legacy fallback execution to the single `SafeToolExecutor` invocation kernel.
+  - Add OpenTelemetry traceId propagation through intent, plan, tool, HTTP, HITL, audit, and final answer.
+  - Validate Java 21/25 in CI matrix and verify Spring AI 2 / Spring Boot 4 compatibility before considering a mainline framework jump.
+- Previous checkpoint:
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
 - User priority update:

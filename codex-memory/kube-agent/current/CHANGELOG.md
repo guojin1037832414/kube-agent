@@ -6,6 +6,23 @@
 
 ---
 
+## [M5.22-1] - Advanced backend engineering baseline
+
+**Delivery**: Introduced the first safe batch of advanced backend engineering foundations for the top-tier Phase 1 Agent Core.
+**Changes**
+- Upgraded the backend baseline to Spring Boot `3.5.14` and Spring AI `1.1.7` while keeping Java 17 as the current verified build baseline.
+- Added Resilience4j, Micrometer Tracing with OpenTelemetry OTLP, Spring Boot Testcontainers, Testcontainers JUnit, Maven Enforcer, Surefire/Failsafe, JaCoCo, CycloneDX SBOM generation, and SpotBugs quality profile.
+- Added GitHub Actions backend quality workflow and `docs/tech-stack/BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md`.
+- Converted AI and kube-manager base URLs, actuator detail level, and Atlas log level to environment-driven production-safe defaults.
+**Verification**
+- `mvn -q -DskipTests validate` passed.
+- `mvn -q test` passed on Spring Boot `3.5.14`.
+- `mvn -q verify` passed and generated JaCoCo plus CycloneDX SBOM artifacts under `target/`.
+- `git diff --check` passed.
+**Scope**
+- Java 21/25, Spring Boot 4, and Spring AI 2 are documented as compatibility-matrix follow-ups, not forced into the verified Java 17 / Spring AI 1.1 mainline.
+- This is engineering-platform hardening only; it does not open new real write paths or re-enable NIM/HPC/Slurm/BCM Phase 2 work.
+
 ## [M5.21-139] - NIM enhanced migration plan maps closed
 
 **Delivery**: Closed `enhancedMigrationPlan` consumption in receipt validation result generation using producer-owned exact plan equality.

@@ -1,0 +1,43 @@
+name: Backend Quality
+
+on:
+  push:
+    branches:
+      - main
+      - "codex/**"
+  pull_request:
+    branches:
+      - main
+      - "codex/**"
+
+jobs:
+  maven-quality:
+    name: Maven quality gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Run unit and contract tests
+        run: mvn -B verify
+
+      - name: Generate quality profile reports
+        run: mvn -B -Pquality spotbugs:spotbugs cyclonedx:makeAggregateBom
+
+      - name: Upload quality artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-quality-artifacts
+          path: |
+            target/site/jacoco/
+            target/spotbugsXml.xml
+            target/bom.*
+

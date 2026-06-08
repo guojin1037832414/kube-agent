@@ -14,13 +14,13 @@ spring:
   # ============================================================
   ai:
     model:
-      chat: openai    # ✅ Spring AI 1.1.6 必须显式指定 ChatModel 供应商
+      chat: openai    # Spring AI 1.1.x 必须显式指定 ChatModel 供应商
 
     openai:
-      base-url: "http://124.74.245.75:3000"
+      base-url: "${SPRING_AI_OPENAI_BASE_URL:http://localhost:3000}"
       chat:
         options:
-          model: "moonshotai/kimi-k2.6"
+          model: "${SPRING_AI_OPENAI_CHAT_MODEL:moonshotai/kimi-k2.6}"
           temperature: 0.3  # Agent任务需要确定性，降低随机性
           max-tokens: 4096
 
@@ -98,7 +98,7 @@ atlas:
   # --- kube-manager连接配置 ---
   backend:
     # WSL Mirrored模式直连Windows主机
-    base-url: "http://localhost:8100"
+    base-url: "${ATLAS_BACKEND_BASE_URL:http://localhost:8100}"
     # 登录接口参数
     login-username: "${ATLAS_BACKEND_USERNAME:sysadmin}"
     login-password: "${ATLAS_BACKEND_PASSWORD:}"
@@ -116,7 +116,7 @@ management:
         include: health,info,metrics,prometheus
   endpoint:
     health:
-      show-details: always
+      show-details: ${ATLAS_ACTUATOR_HEALTH_DETAILS:when_authorized}
   metrics:
     tags:
       application: ${spring.application.name}
@@ -124,5 +124,27 @@ management:
 # --- 日志 ---
 logging:
   level:
-    com.atlas: DEBUG
+    com.atlas: ${ATLAS_LOG_LEVEL:INFO}
     org.springframework.ai: INFO
+
+resilience4j:
+  retry:
+    instances:
+      kubeManagerRead:
+        max-attempts: 3
+        wait-duration: 500ms
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+      kubeManagerWrite:
+        max-attempts: 1
+  circuitbreaker:
+    instances:
+      kubeManager:
+        sliding-window-size: 50
+        minimum-number-of-calls: 10
+        failure-rate-threshold: 50
+  bulkhead:
+    instances:
+      kubeManager:
+        max-concurrent-calls: 32
+        max-wait-duration: 100ms

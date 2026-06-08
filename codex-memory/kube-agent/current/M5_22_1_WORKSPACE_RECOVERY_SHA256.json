@@ -1,0 +1,47 @@
+﻿{
+    "project":  "kube-agent",
+    "wave":  "M5.22-1",
+    "title":  "Advanced backend engineering baseline",
+    "phaseGoal":  "Phase 1 delivers the full top-tier kube-manager Agent Core; NIM/HPC/Slurm/BCM are Phase 2 specialist plugins.",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "gitHead":  "6af7ad11747db2302f00e3a5c9729639f1be0d96",
+    "recoveryHome":  "F:\\gitProject\\kube-agent\\codex-memory\\kube-agent\\current",
+    "generatedAt":  "2026-06-08 Asia/Shanghai",
+    "files":  [
+                  {
+                      "file":  "RECOVERY_STATUS.md",
+                      "sha256":  "f1fe389a166b67ec6658fad35c7d65eb91520c6b9a4ce129368a507353d3b3ed",
+                      "length":  2890
+                  },
+                  {
+                      "file":  "CHANGELOG.md",
+                      "sha256":  "73830b5a1adbaa1a3aabebaface09260fa9d372a3c47cde59fb21d8ba6289260",
+                      "length":  253118
+                  },
+                  {
+                      "file":  "docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "e7c50f822658c8e63b5a9e73e6435027e5044d7d8ac9b46fb5b8671f87fb0852",
+                      "length":  39232
+                  },
+                  {
+                      "file":  "docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "66b59076517267fcfdb3be094d40cffa4d95100ffba6eff17f5904dbe7c062f6",
+                      "length":  274462
+                  },
+                  {
+                      "file":  "docs_SESSION_PROGRESS_20260606_M521_29.md",
+                      "sha256":  "b58af4e38f404b4a00335986ff7647e3647c0b65a2c330afd6df64481fc6cd2f",
+                      "length":  274798
+                  },
+                  {
+                      "file":  "docs_v3.1_DEVELOPMENT_GUIDE.md",
+                      "sha256":  "b731f98854b7913e63195cf2f9981f98c3ffb96346c507ce4f7e5bc009f227f4",
+                      "length":  81325
+                  },
+                  {
+                      "file":  "docs_tech-stack_BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "cc8593c0fd1bcf82d50337587558514fbdde3cc80eccfc6e5036574eed1d5157",
+                      "length":  4829
+                  }
+              ]
+}
