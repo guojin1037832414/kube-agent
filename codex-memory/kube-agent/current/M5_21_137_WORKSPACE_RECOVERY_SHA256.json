@@ -1,0 +1,51 @@
+﻿{
+    "project":  "kube-agent",
+    "wave":  "M5.21-137",
+    "title":  "NIM storage probe result contract maps closed",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "gitHead":  "37d9e291f79269dcfe6e14dac85e92e56e253064",
+    "recoveryHome":  "F:\\gitProject\\kube-agent\\codex-memory\\kube-agent\\current",
+    "generatedAt":  "2026-06-08 Asia/Shanghai",
+    "files":  [
+                  {
+                      "file":  "RECOVERY_STATUS.md",
+                      "sha256":  "30ebb69812dc22269405013b0e9b0ec6efc54ebb460463f72217463dcdeb5bc4",
+                      "length":  2163
+                  },
+                  {
+                      "file":  "CHANGELOG.md",
+                      "sha256":  "d5e4bc83b6e16426a574bbbb510d1ad7d21a698c823cf4faeb014d4742a49ca9",
+                      "length":  248065
+                  },
+                  {
+                      "file":  "docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "1fd3514bcc9dc670d91600fbf4bc426c7d8145268dfbc61f8176242510254208",
+                      "length":  27743
+                  },
+                  {
+                      "file":  "docs_M5_21_WAVE_INDEX_20260606.md",
+                      "sha256":  "ab347d4432631f41cfa69d90086d303c62fdaf9c24ad109cc809ef8e5744e6ac",
+                      "length":  22377
+                  },
+                  {
+                      "file":  "docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "d7ecc1d3e6cd84f6158024e64736aea957e81a803a8cde9f940c7591e8f95e63",
+                      "length":  264873
+                  },
+                  {
+                      "file":  "docs_SESSION_PROGRESS_20260606_M521_29.md",
+                      "sha256":  "3a49d5a22259f53eb192a8cd8aa4f64b5f0840697d8a895b58955e2f073bd192",
+                      "length":  267739
+                  },
+                  {
+                      "file":  "docs_v3.1_DEVELOPMENT_GUIDE.md",
+                      "sha256":  "70ce5cad5ba2ccac77053fbf991353adf87bf071e6cedf507636c83c56fc46b2",
+                      "length":  78513
+                  },
+                  {
+                      "file":  "docs_M5_21_ONE_HUNDRED_THIRTY_SEVENTH_WAVE_NIM_STORAGE_PROBE_RESULT_CONTRACT_MAPS_CLOSED_AUDIT_20260608.md",
+                      "sha256":  "a1d3f1bb3afb43f1c3c5d7e7f08116ed7c555ad31acaee5ab304cc9c7fb91956",
+                      "length":  5896
+                  }
+              ]
+}

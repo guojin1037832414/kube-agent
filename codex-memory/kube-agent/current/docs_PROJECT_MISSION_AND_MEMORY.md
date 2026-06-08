@@ -91,10 +91,31 @@ Current track:
 
 Recently completed:
 
-`M5.21-136 NIM validation plan maps closed`
+`M5.21-137 NIM storage probe result contract maps closed`
 
 Latest checkpoint:
 
+- Date: 2026-06-08 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- Teaching principle:
+  - This project is not only delivering software. It is also a teaching system for mastering Agent engineering.
+  - Maintain `docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md` as the long-lived architecture and technical-learning map.
+- M5.21-137 implemented:
+  - Hardened `NimCreateDurableAuditStorageProbeResultSupport` so storage probe result reports include `sourceOrganizationId`, `sourceUserId`, and `sourceUsername`.
+  - Added producer-owned `probeResultContractFromReport(...)` canonical reconstruction for the whole M5.21-67 `probeResultContract`.
+  - Hardened `NimCreateDurableAuditReceiptValidationProbeResultBindingSupport` so it requires exact whole-contract equality instead of partial nested-map checks when consuming storage probe result contracts.
+  - Added digest-consistent forged probe-result-contract drift regressions covering top-level extra keys, evidence-binding keys, identity-binding keys, required-future-field list drift, current-template extra keys, pass-prerequisite extra keys, failure-model extra keys, and failure-status list drift.
+  - Added `docs/M5_21_ONE_HUNDRED_THIRTY_SEVENTH_WAVE_NIM_STORAGE_PROBE_RESULT_CONTRACT_MAPS_CLOSED_AUDIT_20260608.md`.
+  - Updated the long-lived teaching map with the M5.21-137 lesson: `probeResultContractDigest` proves object self-consistency, not semantic approval of new storage-probe authority fields.
+  - Targeted verification passed:
+    - `git diff --check`
+    - `mvn -q "-Dtest=NimCreateDurableAuditStorageProbeResultSupportTest,NimCreateDurableAuditReceiptValidationProbeResultBindingSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateDurableAuditStorageProbeResultSupportTest,NimCreateDurableAuditReceiptValidationProbeResultBindingSupportTest,NimCreateDurableAuditValidationResultProbeBindingMigrationSupportTest,NimCreateDurableAuditReceiptValidationResultSupportTest,NimCreateDurableAuditValidationResultMigrationSupportTest" test`
+    - `mvn -q test`
+    - Full Maven note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - Security invariant: no real `8100`, no real NIM service HTTP call, no Authorization header sending, no durable audit write, no deployment POST, no runtime write behavior, no source guard installation, no state-machine release binding implementation, no durable executor release binding implementation, no validation result signer, no release decision signer, no code release switch implementation, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Multi-expert next slice: continue scanning remaining upstream proof objects consumed by receipt validation and release-adjacent paths for local nested-map interpretation that should become producer-owned canonical equality.
+- Previous checkpoint:
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
 - Teaching principle:

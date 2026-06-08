@@ -726,6 +726,13 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Extra top-level keys, identity-binding keys, evidence-map keys, all four nested evidence maps, validation-sequence drift, template drift, failure-contract drift, and forbidden-shortcut drift are rejected even when `validationPlanDigest` is recomputed.
 - Learning distinction: when one proof object has multiple current consumers, every consumer must validate the same producer-owned exact shape. The strictest consumer does not protect the system if another consumer still accepts a digest-consistent superset.
 
+### M5.21-137 storage probe result contract maps closed note
+
+- Storage probe result contract generation now exposes `probeResultContractFromReport(...)` as the producer-owned canonical reconstruction helper.
+- Receipt-validation probe-result binding requires the whole `probeResultContract` to equal that canonical proof object instead of re-checking only known nested map fields.
+- Extra top-level keys, evidence-binding keys, identity-binding keys, required-future-field drift, current-template drift, prerequisite drift, failure-model drift, and failure-status drift are rejected even when `probeResultContractDigest` is recomputed.
+- Learning distinction: `probeResultContract` is the bridge between future storage-probe evidence and receipt validation. A digest-consistent contract superset can become future storage authority unless the consumer accepts only the producer-owned exact shape.
+
 ### Architecture and technical learning map note
 
 - Maintain `docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md` as the long-lived architecture and technical-learning map.
