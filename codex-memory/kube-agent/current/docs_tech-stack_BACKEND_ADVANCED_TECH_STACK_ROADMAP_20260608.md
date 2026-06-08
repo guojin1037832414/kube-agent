@@ -323,3 +323,30 @@ M5.31-2 adds the first durable audit lifecycle contract:
 - Query metadata: configurable but bounded scan/result limits.
 
 This is intentionally metadata-only. A top-tier Agent should not add an audit download endpoint before it has a clear redacted-only export contract, operator-visible retention policy, and tests proving no raw principal, endpoint, reason, or parameter values are exposed. Future work should implement retention enforcement, export jobs, and database/search indexing behind the same admin-only and redacted-only contract.
+
+## M5.33-1 Update - Deterministic Agent Eval Foundation
+
+M5.33-1 moves Agent eval from roadmap language into the backend mainline:
+
+- `AgentEvalReportService` evaluates redacted replay evidence without LLM calls or external network calls.
+- `/api/agent/observability/eval/trace/{traceId}` is protected by observability admin URL rules and method-level `@PreAuthorize`.
+- The eval report checks replay order, trace consistency, phase sequence, impossible execution/result combinations, high-risk prewrite evidence, high-risk confirmation markers, outcome health, truncation, and privacy.
+- The report includes `deterministic=true`, `llmUsed=false`, and `externalCalls=false`, making it suitable as a future CI/release-gate input.
+
+2026-06-09 official-source refresh:
+
+- Spring AI 1.1.7 remains the current stable Spring AI mainline for this project; Spring AI 2.0.0-M7 remains compatibility-matrix work. Official Spring AI docs confirm Tool Calling, MCP, Vector Store/RAG, observability, and evaluator APIs as first-class directions.
+- Spring Boot official docs list 4.0.6 and 3.5.14 as stable documentation lines. This project stays on the already verified Spring Boot 3.5.14 mainline until the Boot 4 / Framework 7 compatibility matrix passes.
+- MCP latest specification work continues to evolve quickly, with the 2025-11-25 spec line visible in official MCP docs/repo. Phase 1 should expose read-only manifest/schema first; future `tools/call` must still pass through `SafeToolExecutor`, HITL, trace, audit, and eval.
+- OpenTelemetry GenAI/agent semantic conventions are still marked Development, so kube-agent should keep stable internal `atlas.agent.*` attributes and map to GenAI semconv through a compatibility layer rather than freezing experimental names into storage.
+- OpenAI's current Agent/Evals guidance reinforces the same architecture direction: tools, guardrails, memory/vector stores, orchestration, trace grading, and eval workflows are core Agent capabilities. kube-agent implements the same ideas in a Java/Spring control plane bound to kube-manager safety requirements.
+
+References:
+
+- [Spring AI Tool Calling](https://docs.spring.io/spring-ai/reference/api/tools.html)
+- [Spring AI release 1.1.7 / 2.0.0-M7](https://spring.io/blog/2026/05/23/spring-ai-1-0-8-1-1-7-2-0-0-M7-available-now/)
+- [Spring Boot documentation index](https://docs.spring.io/spring-boot/index.html)
+- [Model Context Protocol specification](https://modelcontextprotocol.io/specification)
+- [OpenTelemetry GenAI semantic conventions](https://opentelemetry.io/docs/specs/semconv/gen-ai/)
+- [OpenAI Agents guide](https://platform.openai.com/docs/guides/agents)
+- [OpenAI trace grading](https://platform.openai.com/docs/guides/trace-grading)

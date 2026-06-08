@@ -56,6 +56,51 @@ AgentReplayTimelineStep.recordPhase
 
 学习重点：顶级 Agent 的证据链要优先保留源证据，而不是在后面重复猜测。推断可以作为兼容回退，但如果持久审计已经明确记录“执行前证据”和“最终结果”，前端回放、eval 和事故复盘就应该使用这个原始阶段标记。
 
+## 2026-06-09 M5.33-1 Agent Eval Report 评测闭环
+
+M5.33-1 把 replay timeline 继续推进到“可评测证据”。这一步不是让 LLM 给答案打分，而是用确定性规则检查 Agent 控制链路是否完整、安全、可回放、可脱敏、可进入后续发布门禁。
+
+```text
+ObservabilityController
+    |
+    | GET /api/agent/observability/eval/trace/{traceId}?limit=50
+    v
+AgentEvalReportService
+    |
+    v
+AgentReplayTimelineService
+    |
+    v
+AgentAuditQueryService
+    |
+    |-- JSONL durable query when available
+    |-- in-memory ring buffer fallback
+```
+
+关键设计：
+
+- `AgentEvalReportService` 只消费 `AgentReplayTimelineResponse` / `AgentReplayTimelineStep`，不直接读取 raw audit event。
+- eval report 是 admin-only 诊断/回归对象，不是执行授权来源，不能反向放行 Tool。
+- eval 是确定性的：`deterministic=true`、`llmUsed=false`、`externalCalls=false`。
+- 证据只放计数、状态和 `auditId` / `traceId` 这类锚点，不复制 raw principal、org、conversation、endpoint、reason 或参数值。
+- 高风险检查从 trace 级粗判断升级到 auditId 级闭环：已执行的高风险 `FINAL` 记录必须有同 auditId 的 `PRE_EXECUTION` 证据。
+- 被安全阻断且未执行的高风险步骤不会因为没有 prewrite 被误判为失败，因为阻断本身就是安全证据。
+
+当前检查项：
+
+- `TRACE_HAS_STEPS` / `TRACE_ID_PRESENT`：trace 是否有可回放证据。
+- `PRIVACY_REDACTED_ONLY`：replay/eval 是否仍是脱敏证据。
+- `TIMELINE_ORDER`：timeline 是否 `oldest-first` 且 position 连续。
+- `TRACE_CONSISTENCY`：所有步骤是否属于同一个 trace。
+- `PHASE_SEQUENCE`：同一 auditId 是否先 `PRE_EXECUTION` 后 `FINAL`。
+- `EXECUTION_SEMANTICS`：是否存在 `success=true` 但 `executed=false` 等不可能组合。
+- `HIGH_RISK_PREWRITE_EVIDENCE`：已执行高风险最终记录是否有 prewrite 证据。
+- `HIGH_RISK_CONFIRMATION_MARKER`：已执行高风险记录是否携带确认要求证据。
+- `OUTCOME_HEALTH`：blocked/error/business_failure 是否进入 warning。
+- `REPLAY_NOT_TRUNCATED`：被 limit 截断的 replay 不能被当作完整证据。
+
+学习重点：Replay timeline 是“可解释的执行语言”，Agent eval report 是“可验证的质量语言”。顶级 Agent 不是只会回答问题，而是能证明自己在身份、工具选择、HITL、审计、回放、脱敏和结果健康上都经得起回归检查。
+
 ## 项目定位
 
 `kube-agent` 不只是把 `kube-manager` / `vue-kube-manager` 的功能包成一个 Agent。它的目标是建设一个顶级 Kubernetes / Cloud / HPC Agent，并且把建设过程本身变成可学习、可复盘、可继续演进的教材。

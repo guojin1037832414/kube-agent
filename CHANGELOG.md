@@ -6,6 +6,22 @@
 
 ---
 
+## [M5.33-1] - Agent eval report foundation
+
+**Delivery**: Added the first admin-only deterministic Agent eval report API built from redacted replay evidence.
+**Changes**
+- Added `AgentEvalReportService`, `AgentEvalReportResponse`, and `AgentEvalCheck`.
+- Added `GET /api/agent/observability/eval/trace/{traceId}?limit=50`.
+- Eval reports consume `AgentReplayTimelineService` output only; they do not read raw audit events, call LLMs, call kube-manager, or use external network data.
+- Added deterministic checks for trace evidence, replay order, trace consistency, phase sequence, execution semantics, high-risk pre-execution evidence, high-risk confirmation markers, outcome health, replay truncation, and privacy metadata.
+- Eval report privacy proof now states `redactedOnly=true`, `deterministic=true`, `llmUsed=false`, and `externalCalls=false`.
+**Verification**
+- `mvn -q "-Dtest=AgentEvalReportServiceTest,JsonlAgentAuditDurableSinkTest,AgentAuditRecorderTest,AgentReplayTimelineServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed.
+**Security**
+- The endpoint is protected by observability admin URL rules plus method-level `@PreAuthorize`.
+- Eval evidence uses counts and stable audit/trace anchors only; it does not expose raw principal, organization, conversation, endpoint strings, reason text, or parameter values.
+- This slice adds no kube-manager write/create/delete/state-changing behavior and no raw audit download/export endpoint.
+
 ## [M5.32-2] - Replay record phase evidence
 
 **Delivery**: Preserved durable audit `recordPhase` through the redacted audit query DTO and replay timeline step contract.

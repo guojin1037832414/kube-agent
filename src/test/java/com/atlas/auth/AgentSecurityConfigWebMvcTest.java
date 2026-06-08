@@ -88,6 +88,10 @@ class AgentSecurityConfigWebMvcTest {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
             .andExpect(status().isForbidden());
 
+        mockMvc.perform(get("/api/agent/observability/eval/trace/trc_123")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
+            .andExpect(status().isForbidden());
+
         mockMvc.perform(get("/api/agent/observability/audit/index")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token"))
             .andExpect(status().isOk());
@@ -97,6 +101,10 @@ class AgentSecurityConfigWebMvcTest {
             .andExpect(status().isOk());
 
         mockMvc.perform(get("/api/agent/observability/replay/trace/trc_123")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token"))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/agent/observability/eval/trace/trc_123")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token"))
             .andExpect(status().isOk());
     }
@@ -218,6 +226,11 @@ class AgentSecurityConfigWebMvcTest {
 
         @GetMapping("/api/agent/observability/replay/trace/{id}")
         String observabilityReplayTrace(@PathVariable String id) {
+            return id;
+        }
+
+        @GetMapping("/api/agent/observability/eval/trace/{id}")
+        String observabilityEvalTrace(@PathVariable String id) {
             return id;
         }
 

@@ -1,0 +1,287 @@
+package com.atlas.observability;
+
+import com.atlas.audit.AgentAuditEvent;
+import com.atlas.audit.AgentAuditOutcome;
+import com.atlas.audit.InMemoryAgentAuditRecorder;
+import com.atlas.tool.annotation.AtlasToolMapping;
+import com.atlas.tool.execution.SafeToolExecutionSource;
+import org.junit.jupiter.api.Test;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+/**
+ * Deterministic Agent eval report contract tests.
+ */
+class AgentEvalReportServiceTest {
+
+    @Test
+    void evaluateTrace_shouldPassForReadOnlySuccessReplay() {
+        InMemoryAgentAuditRecorder recorder = new InMemoryAgentAuditRecorder();
+        AgentEvalReportService service = service(recorder);
+        recorder.record(event(
+            "aud_read",
+            "trc_read",
+            Instant.parse("2026-06-09T00:00:00Z"),
+            AtlasToolMapping.OperationType.READ,
+            false,
+            AgentAuditOutcome.SUCCESS,
+            true,
+            true
+        ));
+
+        AgentEvalReportResponse report = service.evaluateTrace("trc_read", 10);
+
+        assertThat(report.schemaVersion()).isEqualTo("agent-eval-report.v1");
+        assertThat(report.evaluationVersion()).isEqualTo("deterministic-replay-eval.v1");
+        assertThat(report.timelineSchemaVersion()).isEqualTo("agent-replay-timeline.v1");
+        assertThat(report.verdict()).isEqualTo("PASS");
+        assertThat(report.pass()).isTrue();
+        assertThat(report.score()).isEqualTo(100);
+        assertThat(report.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("deterministic", true)
+            .containsEntry("llmUsed", false)
+            .containsEntry("externalCalls", false);
+        assertThat(check(report, "HIGH_RISK_PREWRITE_EVIDENCE").status()).isEqualTo("PASS");
+    }
+
+    @Test
+    void evaluateTrace_shouldFailWhenExecutedHighRiskFinalHasNoPreExecutionEvidence() {
+        InMemoryAgentAuditRecorder recorder = new InMemoryAgentAuditRecorder();
+        AgentEvalReportService service = service(recorder);
+        recorder.record(event(
+            "aud_create",
+            "trc_create",
+            Instant.parse("2026-06-09T00:00:00Z"),
+            AtlasToolMapping.OperationType.CREATE,
+            true,
+            AgentAuditOutcome.SUCCESS,
+            true,
+            true
+        ));
+
+        AgentEvalReportResponse report = service.evaluateTrace("trc_create", 10);
+
+        assertThat(report.verdict()).isEqualTo("FAIL");
+        assertThat(report.pass()).isFalse();
+        AgentEvalCheck check = check(report, "HIGH_RISK_PREWRITE_EVIDENCE");
+        assertThat(check.status()).isEqualTo("FAIL");
+        assertThat(check.evidence().get("missingPreExecutionAuditIds"))
+            .isInstanceOfSatisfying(Iterable.class, missing -> assertThat(missing)
+                .containsExactly("aud_create"));
+    }
+
+    @Test
+    void evaluateTrace_shouldPassForHighRiskPreExecutionThenFinalEvidence() {
+        InMemoryAgentAuditRecorder recorder = new InMemoryAgentAuditRecorder();
+        AgentEvalReportService service = service(recorder);
+        recorder.record(event(
+            "aud_create",
+            "trc_prewrite",
+            Instant.parse("2026-06-09T00:00:00Z"),
+            AtlasToolMapping.OperationType.CREATE,
+            true,
+            AgentAuditOutcome.PREPARED,
+            false,
+            false
+        ));
+        recorder.record(event(
+            "aud_create",
+            "trc_prewrite",
+            Instant.parse("2026-06-09T00:00:05Z"),
+            AtlasToolMapping.OperationType.CREATE,
+            true,
+            AgentAuditOutcome.SUCCESS,
+            true,
+            true
+        ));
+
+        AgentEvalReportResponse report = service.evaluateTrace("trc_prewrite", 10);
+
+        assertThat(report.verdict()).isEqualTo("PASS");
+        assertThat(check(report, "PHASE_SEQUENCE").status()).isEqualTo("PASS");
+        assertThat(check(report, "HIGH_RISK_PREWRITE_EVIDENCE").status()).isEqualTo("PASS");
+        assertThat(check(report, "HIGH_RISK_CONFIRMATION_MARKER").status()).isEqualTo("PASS");
+    }
+
+    @Test
+    void evaluateTrace_shouldWarnForBlockedErrorBusinessFailureAndTruncatedReplay() {
+        InMemoryAgentAuditRecorder recorder = new InMemoryAgentAuditRecorder();
+        AgentEvalReportService service = service(recorder);
+        recorder.record(event(
+            "aud_blocked",
+            "trc_warning",
+            Instant.parse("2026-06-09T00:00:00Z"),
+            AtlasToolMapping.OperationType.CREATE,
+            true,
+            AgentAuditOutcome.BLOCKED,
+            false,
+            false
+        ));
+        recorder.record(event(
+            "aud_error",
+            "trc_warning",
+            Instant.parse("2026-06-09T00:00:01Z"),
+            AtlasToolMapping.OperationType.READ,
+            false,
+            AgentAuditOutcome.ERROR,
+            true,
+            false
+        ));
+        recorder.record(event(
+            "aud_business_failure",
+            "trc_warning",
+            Instant.parse("2026-06-09T00:00:02Z"),
+            AtlasToolMapping.OperationType.READ,
+            false,
+            AgentAuditOutcome.BUSINESS_FAILURE,
+            true,
+            false
+        ));
+
+        AgentEvalReportResponse report = service.evaluateTrace("trc_warning", 2);
+
+        assertThat(report.verdict()).isEqualTo("PASS_WITH_WARNINGS");
+        assertThat(report.truncated()).isTrue();
+        assertThat(check(report, "OUTCOME_HEALTH").status()).isEqualTo("WARN");
+        assertThat(check(report, "REPLAY_NOT_TRUNCATED").status()).isEqualTo("WARN");
+        assertThat(check(report, "HIGH_RISK_PREWRITE_EVIDENCE").status()).isEqualTo("PASS");
+    }
+
+    @Test
+    void evaluateTrace_shouldFailImpossibleSuccessWithoutExecution() {
+        InMemoryAgentAuditRecorder recorder = new InMemoryAgentAuditRecorder();
+        AgentEvalReportService service = service(recorder);
+        recorder.record(event(
+            "aud_impossible",
+            "trc_impossible",
+            Instant.parse("2026-06-09T00:00:00Z"),
+            AtlasToolMapping.OperationType.READ,
+            false,
+            AgentAuditOutcome.SUCCESS,
+            false,
+            true
+        ));
+
+        AgentEvalReportResponse report = service.evaluateTrace("trc_impossible", 10);
+
+        assertThat(report.verdict()).isEqualTo("FAIL");
+        assertThat(check(report, "EXECUTION_SEMANTICS").status()).isEqualTo("FAIL");
+    }
+
+    @Test
+    void evaluateTrace_shouldRemainRedactedEvenWhenAuditContainsSensitiveRawValues() {
+        InMemoryAgentAuditRecorder recorder = new InMemoryAgentAuditRecorder();
+        AgentEvalReportService service = service(recorder);
+        recorder.record(new AgentAuditEvent(
+            "aud_sensitive",
+            Instant.parse("2026-06-09T00:00:00Z"),
+            "trc_sensitive",
+            "conv-sensitive",
+            "user-sensitive",
+            "org-sensitive",
+            "intent",
+            "tool",
+            SafeToolExecutionSource.REACT_ENGINE,
+            "GET",
+            List.of("/api/org-sensitive/resource?token=secret-token-value"),
+            AtlasToolMapping.OperationType.READ,
+            false,
+            AgentAuditOutcome.SUCCESS,
+            true,
+            true,
+            "reason token=secret-token-value",
+            Map.of("count", 1, "keys", List.of(Map.of(
+                "name", "token",
+                "protected", true,
+                "type", "string",
+                "present", true
+            )))
+        ));
+
+        AgentEvalReportResponse report = service.evaluateTrace("trc_sensitive", 10);
+
+        assertThat(report.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("containsRawEndpoints", false)
+            .containsEntry("containsRawParameterValues", false);
+        assertThat(report.toString())
+            .contains("aud_sensitive", "trc_sensitive", "<protected>")
+            .doesNotContain("conv-sensitive", "user-sensitive", "org-sensitive", "secret-token-value", "/api/org-sensitive");
+    }
+
+    @Test
+    void evaluateTrace_shouldBeDeterministicExceptGeneratedAt() {
+        InMemoryAgentAuditRecorder recorder = new InMemoryAgentAuditRecorder();
+        AgentEvalReportService service = service(recorder);
+        recorder.record(event(
+            "aud_read",
+            "trc_deterministic",
+            Instant.parse("2026-06-09T00:00:00Z"),
+            AtlasToolMapping.OperationType.READ,
+            false,
+            AgentAuditOutcome.SUCCESS,
+            true,
+            true
+        ));
+
+        AgentEvalReportResponse first = service.evaluateTrace("trc_deterministic", 10);
+        AgentEvalReportResponse second = service.evaluateTrace("trc_deterministic", 10);
+
+        assertThat(second.verdict()).isEqualTo(first.verdict());
+        assertThat(second.score()).isEqualTo(first.score());
+        assertThat(second.summary()).isEqualTo(first.summary());
+        assertThat(second.privacy()).isEqualTo(first.privacy());
+        assertThat(second.checks()).isEqualTo(first.checks());
+    }
+
+    private AgentEvalReportService service(InMemoryAgentAuditRecorder recorder) {
+        return new AgentEvalReportService(new AgentReplayTimelineService(recorder));
+    }
+
+    private AgentEvalCheck check(AgentEvalReportResponse report, String code) {
+        return report.checks().stream()
+            .filter(candidate -> code.equals(candidate.code()))
+            .findFirst()
+            .orElseThrow();
+    }
+
+    private AgentAuditEvent event(String auditId,
+                                  String traceId,
+                                  Instant occurredAt,
+                                  AtlasToolMapping.OperationType operationType,
+                                  boolean requiresConfirmation,
+                                  AgentAuditOutcome outcome,
+                                  boolean executed,
+                                  boolean success) {
+        return new AgentAuditEvent(
+            auditId,
+            occurredAt,
+            traceId,
+            "conv-sensitive",
+            "user-sensitive",
+            "org-sensitive",
+            "intent",
+            "tool",
+            SafeToolExecutionSource.GRAPH_TOOL_CALL,
+            operationType == AtlasToolMapping.OperationType.READ ? "GET" : "POST",
+            List.of("/api/org-sensitive/tool?token=secret-token-value"),
+            operationType,
+            requiresConfirmation,
+            outcome,
+            executed,
+            success,
+            "reason token=secret-token-value",
+            Map.of("count", 1, "keys", List.of(Map.of(
+                "name", "token",
+                "protected", true,
+                "type", "string",
+                "present", true
+            )))
+        );
+    }
+}

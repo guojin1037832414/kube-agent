@@ -35,17 +35,20 @@ public class ObservabilityController {
     private final AgentAuditSnapshotProvider auditSnapshotProvider;
     private final AgentAuditQueryService auditQueryService;
     private final AgentReplayTimelineService replayTimelineService;
+    private final AgentEvalReportService evalReportService;
     private final AgentPrincipalResolver principalResolver;
 
     public ObservabilityController(AgentMetricsService metricsService,
                                    AgentAuditSnapshotProvider auditSnapshotProvider,
                                    AgentAuditQueryService auditQueryService,
                                    AgentReplayTimelineService replayTimelineService,
+                                   AgentEvalReportService evalReportService,
                                    AgentPrincipalResolver principalResolver) {
         this.metricsService = metricsService;
         this.auditSnapshotProvider = auditSnapshotProvider;
         this.auditQueryService = auditQueryService;
         this.replayTimelineService = replayTimelineService;
+        this.evalReportService = evalReportService;
         this.principalResolver = principalResolver;
     }
 
@@ -112,6 +115,18 @@ public class ObservabilityController {
             return guard;
         }
         return ResponseEntity.ok(ApiResponse.ok(replayTimelineService.traceTimeline(traceId, limit)));
+    }
+
+    /** Evaluate redacted replay evidence for a trace. */
+    @GetMapping("/eval/trace/{traceId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentEvalReportResponse>> evalByTraceId(@PathVariable String traceId,
+                                                                              @RequestParam(defaultValue = "50") int limit) {
+        ResponseEntity<ApiResponse<AgentEvalReportResponse>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return ResponseEntity.ok(ApiResponse.ok(evalReportService.evaluateTrace(traceId, limit)));
     }
 
     private <T> ResponseEntity<ApiResponse<T>> requireAdmin() {

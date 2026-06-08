@@ -24,11 +24,13 @@ class ObservabilityControllerTest {
 
     private final UserPermissionContext userPermissionContext = new UserPermissionContext();
     private final InMemoryAgentAuditRecorder auditRecorder = new InMemoryAgentAuditRecorder();
+    private final AgentReplayTimelineService replayTimelineService = new AgentReplayTimelineService(auditRecorder);
     private final ObservabilityController controller = new ObservabilityController(
         new AgentMetricsService(new SimpleMeterRegistry()),
         auditRecorder,
         auditRecorder,
-        new AgentReplayTimelineService(auditRecorder),
+        replayTimelineService,
+        new AgentEvalReportService(replayTimelineService),
         new AgentPrincipalResolver(userPermissionContext)
     );
 
@@ -252,6 +254,101 @@ class ObservabilityControllerTest {
         String bodyText = timeline.toString();
         assertThat(bodyText)
             .contains("aud_replay", "trc_replay", "<protected>", "confirmation:required")
+            .doesNotContain("conv-sensitive", "user-sensitive", "org-sensitive", "secret-token-value", "/api/org-sensitive");
+    }
+
+    @Test
+    void evalReport_shouldRequireAdminUser() {
+        ResponseEntity<ApiResponse<AgentEvalReportResponse>> anonymous =
+            controller.evalByTraceId("trc_missing", 10);
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentEvalReportResponse>> user =
+            controller.evalByTraceId("trc_missing", 10);
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void evalReport_shouldReturnRedactedDeterministicAdminEvidence() {
+        auditRecorder.record(new com.atlas.audit.AgentAuditEvent(
+            "aud_eval",
+            java.time.Instant.parse("2026-06-09T00:00:00Z"),
+            "trc_eval",
+            "conv-sensitive",
+            "user-sensitive",
+            "org-sensitive",
+            "intent",
+            "tool",
+            com.atlas.tool.execution.SafeToolExecutionSource.REACT_ENGINE,
+            "POST",
+            java.util.List.of("/api/org-sensitive/deployment?token=secret-token-value"),
+            com.atlas.tool.annotation.AtlasToolMapping.OperationType.CREATE,
+            true,
+            com.atlas.audit.AgentAuditOutcome.PREPARED,
+            false,
+            false,
+            "prepared token=secret-token-value",
+            java.util.Map.of("count", 1, "keys", java.util.List.of(java.util.Map.of(
+                "name", "token",
+                "protected", true,
+                "type", "string",
+                "present", true
+            )))
+        ));
+        auditRecorder.record(new com.atlas.audit.AgentAuditEvent(
+            "aud_eval",
+            java.time.Instant.parse("2026-06-09T00:00:05Z"),
+            "trc_eval",
+            "conv-sensitive",
+            "user-sensitive",
+            "org-sensitive",
+            "intent",
+            "tool",
+            com.atlas.tool.execution.SafeToolExecutionSource.REACT_ENGINE,
+            "POST",
+            java.util.List.of("/api/org-sensitive/deployment?token=secret-token-value"),
+            com.atlas.tool.annotation.AtlasToolMapping.OperationType.CREATE,
+            true,
+            com.atlas.audit.AgentAuditOutcome.SUCCESS,
+            true,
+            true,
+            "ok token=secret-token-value",
+            java.util.Map.of("count", 1, "keys", java.util.List.of(java.util.Map.of(
+                "name", "token",
+                "protected", true,
+                "type", "string",
+                "present", true
+            )))
+        ));
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentEvalReportResponse>> response =
+            controller.evalByTraceId("trc_eval", 10);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        AgentEvalReportResponse report = response.getBody().getData();
+        assertThat(report.schemaVersion()).isEqualTo("agent-eval-report.v1");
+        assertThat(report.evaluationVersion()).isEqualTo("deterministic-replay-eval.v1");
+        assertThat(report.timelineSchemaVersion()).isEqualTo("agent-replay-timeline.v1");
+        assertThat(report.verdict()).isEqualTo("PASS");
+        assertThat(report.pass()).isTrue();
+        assertThat(report.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("deterministic", true)
+            .containsEntry("llmUsed", false)
+            .containsEntry("externalCalls", false);
+        assertThat(report.checks()).extracting(AgentEvalCheck::code)
+            .contains("HIGH_RISK_PREWRITE_EVIDENCE", "HIGH_RISK_CONFIRMATION_MARKER", "EXECUTION_SEMANTICS");
+        String bodyText = report.toString();
+        assertThat(bodyText)
+            .contains("aud_eval", "trc_eval", "<protected>", "confirmation:required")
             .doesNotContain("conv-sensitive", "user-sensitive", "org-sensitive", "secret-token-value", "/api/org-sensitive");
     }
 }

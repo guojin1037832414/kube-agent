@@ -10,7 +10,32 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.32-2
+## Latest Phase 1 Core Memory - M5.33-1
+
+M5.33-1 introduces the first deterministic Agent eval report foundation.
+
+Delivered:
+
+- Added `AgentEvalReportService`, `AgentEvalReportResponse`, and `AgentEvalCheck`.
+- Added admin-only `GET /api/agent/observability/eval/trace/{traceId}?limit=50`.
+- Eval reports consume the redacted replay timeline contract from `AgentReplayTimelineService`; they do not read raw audit events directly.
+- The report includes schema/evaluation version, trace id, timeline schema, result count, truncation flag, score, verdict, privacy proof, replay reference, summary counts, and deterministic checks.
+- Checks currently cover trace presence, privacy, timeline order, trace consistency, phase sequence, execution semantics, high-risk prewrite evidence, high-risk confirmation marker, outcome health, and replay truncation.
+
+Security boundary:
+
+- Eval is admin-only at URL and method levels.
+- Eval is deterministic and local: `llmUsed=false`, `externalCalls=false`.
+- Eval evidence remains redacted-only and does not expose raw principal, organization, conversation, endpoint strings, reason text, or parameter values.
+- This slice adds no kube-manager write/create/delete/state-changing behavior.
+
+Learning point: M5.32 replay timeline is the "executable evidence language"; M5.33 eval report is the "quality and release-gate language". A top-tier Agent should not only be able to replay what happened; it should also be able to grade whether the evidence chain is complete, redacted, ordered, and safe enough for regression and release gates.
+
+Latest verified command:
+
+- `mvn -q "-Dtest=AgentEvalReportServiceTest,JsonlAgentAuditDurableSinkTest,AgentAuditRecorderTest,AgentReplayTimelineServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+## Previous Phase 1 Core Memory - M5.32-2
 
 M5.32-2 strengthens the replay timeline evidence contract by preserving durable audit `recordPhase`.
 
