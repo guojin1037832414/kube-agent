@@ -1,0 +1,52 @@
+﻿{
+    "project":  "kube-agent",
+    "wave":  "M5.21-139",
+    "title":  "NIM enhanced migration plan maps closed checkpoint",
+    "phaseGoal":  "Phase 1 delivers the full top-tier kube-manager Agent Core; NIM/HPC/Slurm/BCM are Phase 2 specialist plugins.",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "gitHead":  "a9c8393130b9fec0d87cb3e710262732658ee3c3",
+    "recoveryHome":  "F:\\gitProject\\kube-agent\\codex-memory\\kube-agent\\current",
+    "generatedAt":  "2026-06-08 Asia/Shanghai",
+    "files":  [
+                  {
+                      "file":  "RECOVERY_STATUS.md",
+                      "sha256":  "2ccdb66d6debc5632f078e2bd090fffb00707b3a3e89b010045152a6b65b64f1",
+                      "length":  2584
+                  },
+                  {
+                      "file":  "CHANGELOG.md",
+                      "sha256":  "795e3a44377950a5559deb5676911c174b29af323ab764ce74ae3622849f2747",
+                      "length":  251789
+                  },
+                  {
+                      "file":  "docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "dff125c2a48d219e6d17513cb0b101f48b8c36895d0ec28cbf2e3cf144bb7d9d",
+                      "length":  38243
+                  },
+                  {
+                      "file":  "docs_M5_21_WAVE_INDEX_20260606.md",
+                      "sha256":  "3d9f8b4120fc91745e73794ffc026ff5d2f4df8b3d8a15bec4a5048651bf530b",
+                      "length":  22714
+                  },
+                  {
+                      "file":  "docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "59d28b301fcf419e8a08085094d59d892534d108e701119090b138487da3fb4d",
+                      "length":  272295
+                  },
+                  {
+                      "file":  "docs_SESSION_PROGRESS_20260606_M521_29.md",
+                      "sha256":  "4e5665026af9e10f42f48e97f3e000966e1d8f52db05d0b24d7f04b9a8f0929a",
+                      "length":  273523
+                  },
+                  {
+                      "file":  "docs_v3.1_DEVELOPMENT_GUIDE.md",
+                      "sha256":  "b731f98854b7913e63195cf2f9981f98c3ffb96346c507ce4f7e5bc009f227f4",
+                      "length":  81325
+                  },
+                  {
+                      "file":  "docs_M5_21_ONE_HUNDRED_THIRTY_NINTH_WAVE_NIM_ENHANCED_MIGRATION_PLAN_MAPS_CLOSED_AUDIT_20260608.md",
+                      "sha256":  "c122adaa851da7868e6e16d8ae63a414839dec08d9f6fd686d255e53520870be",
+                      "length":  5620
+                  }
+              ]
+}

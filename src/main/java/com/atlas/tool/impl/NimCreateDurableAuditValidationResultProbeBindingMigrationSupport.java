@@ -118,6 +118,9 @@ final class NimCreateDurableAuditValidationResultProbeBindingMigrationSupport {
         result.put("writeExecutionAllowed", false);
         result.put("realHttpExecutionAllowed", false);
         result.put("legacyAuditReceiptReleaseFlagTrusted", false);
+        result.put("sourceOrganizationId", text(auditContext.get("organizationId")));
+        result.put("sourceUserId", text(auditContext.get("userId")));
+        result.put("sourceUsername", text(principal.get("username")));
         result.put("sourceAuditEventDigest", digestFor(auditContext));
         result.put("trustedPrincipalDigest", digestFor(principal));
         result.put("sourceProbeBindingPlanDigest", text(probeBindingReport.get("bindingPlanDigest")));
@@ -487,6 +490,43 @@ final class NimCreateDurableAuditValidationResultProbeBindingMigrationSupport {
                                                              Map<String, Object> principal,
                                                              Map<String, Object> probeBindingReport,
                                                              Map<String, Object> migrationReport) {
+        Map<String, Object> sourceDigests = new LinkedHashMap<>();
+        sourceDigests.put("sourceProbeBindingPlanDigest", text(probeBindingReport.get("bindingPlanDigest")));
+        sourceDigests.put("sourceProbeResultContractDigest",
+            text(probeBindingReport.get("sourceProbeResultContractDigest")));
+        sourceDigests.put("sourceProbeExecutorPlanDigest",
+            text(probeBindingReport.get("sourceProbeExecutorPlanDigest")));
+        sourceDigests.put("sourceReceiptSchemaDigest", text(migrationReport.get("sourceReceiptSchemaDigest")));
+        sourceDigests.put("sourceValidationPlanDigest", text(migrationReport.get("sourceValidationPlanDigest")));
+        sourceDigests.put("sourceMigrationPlanDigest", text(migrationReport.get("migrationPlanDigest")));
+        sourceDigests.put("sourceInterfaceSpecDigest", text(migrationReport.get("sourceInterfaceSpecDigest")));
+        sourceDigests.put("sourceBoundaryPlanDigest", text(migrationReport.get("sourceBoundaryPlanDigest")));
+        sourceDigests.put("sourceWriterPlanDigest", text(migrationReport.get("sourceWriterPlanDigest")));
+        sourceDigests.put("sourceAvailabilityPlanDigest", text(migrationReport.get("sourceAvailabilityPlanDigest")));
+        return enhancedMigrationPlanForDigests(
+            sourceDigests,
+            digestFor(auditContext),
+            text(auditContext.get("organizationId")),
+            text(auditContext.get("userId")),
+            text(principal.get("username"))
+        );
+    }
+
+    static Map<String, Object> enhancedMigrationPlanFromReport(Map<String, Object> migrationReport) {
+        return enhancedMigrationPlanForDigests(
+            migrationReport,
+            text(migrationReport.get("sourceAuditEventDigest")),
+            text(migrationReport.get("sourceOrganizationId")),
+            text(migrationReport.get("sourceUserId")),
+            text(migrationReport.get("sourceUsername"))
+        );
+    }
+
+    private static Map<String, Object> enhancedMigrationPlanForDigests(Map<String, Object> sourceDigests,
+                                                                       String sourceAuditEventDigest,
+                                                                       String organizationId,
+                                                                       String userId,
+                                                                       String username) {
         Map<String, Object> plan = new LinkedHashMap<>();
         plan.put("migrationBoundary",
             "SERVER_SIDE_VALIDATION_RESULT_AND_RELEASE_DECISION_REQUIRE_PROBE_BINDING");
@@ -497,30 +537,21 @@ final class NimCreateDurableAuditValidationResultProbeBindingMigrationSupport {
             NimCreateDurableAuditValidationResultMigrationSupport.FUTURE_VALIDATION_RESULT);
         plan.put("futureReleaseDecision",
             NimCreateDurableAuditValidationResultMigrationSupport.FUTURE_RELEASE_DECISION);
-        plan.put("sourceProbeBindingPlanDigest", text(probeBindingReport.get("bindingPlanDigest")));
-        plan.put("sourceProbeResultContractDigest", text(probeBindingReport.get("sourceProbeResultContractDigest")));
-        plan.put("sourceProbeExecutorPlanDigest", text(probeBindingReport.get("sourceProbeExecutorPlanDigest")));
-        plan.put("sourceReceiptSchemaDigest", text(migrationReport.get("sourceReceiptSchemaDigest")));
-        plan.put("sourceValidationPlanDigest", text(migrationReport.get("sourceValidationPlanDigest")));
-        plan.put("sourceMigrationPlanDigest", text(migrationReport.get("migrationPlanDigest")));
-        plan.put("sourceInterfaceSpecDigest", text(migrationReport.get("sourceInterfaceSpecDigest")));
-        plan.put("sourceBoundaryPlanDigest", text(migrationReport.get("sourceBoundaryPlanDigest")));
-        plan.put("sourceWriterPlanDigest", text(migrationReport.get("sourceWriterPlanDigest")));
-        plan.put("sourceAvailabilityPlanDigest", text(migrationReport.get("sourceAvailabilityPlanDigest")));
-        plan.put("sourceAuditEventDigest", digestFor(auditContext));
+        putSourceDigests(plan, sourceDigests);
+        plan.put("sourceAuditEventDigest", sourceAuditEventDigest);
         plan.put("digestAlgorithm", NimCreateAuditWriterSupport.DIGEST_ALGORITHM);
         plan.put("trustedIdentityBinding", Map.of(
-            "organizationId", text(auditContext.get("organizationId")),
-            "userId", text(auditContext.get("userId")),
-            "username", text(principal.get("username")),
+            "organizationId", organizationId,
+            "userId", userId,
+            "username", username,
             "source", "SERVER_SESSION_CONTEXT",
             "protectedFromCallerParams", true
         ));
-        plan.put("probeBindingRequirement", probeBindingRequirement(probeBindingReport));
+        plan.put("probeBindingRequirement", probeBindingRequirement(sourceDigests));
         plan.put("enhancedValidationResultContract",
-            enhancedValidationResultContract(probeBindingReport, migrationReport));
+            enhancedValidationResultContract(sourceDigests));
         plan.put("enhancedReleaseDecisionContract",
-            enhancedReleaseDecisionContract(probeBindingReport, migrationReport));
+            enhancedReleaseDecisionContract(sourceDigests));
         plan.put("migrationSequencePatch", migrationSequencePatch());
         plan.put("currentDecisionTemplate", currentDecisionTemplate());
         plan.put("failureContract", enhancedFailureContract());
@@ -528,14 +559,27 @@ final class NimCreateDurableAuditValidationResultProbeBindingMigrationSupport {
         return plan;
     }
 
-    private static Map<String, Object> probeBindingRequirement(Map<String, Object> probeBindingReport) {
+    private static void putSourceDigests(Map<String, Object> target, Map<String, Object> sourceDigests) {
+        target.put("sourceProbeBindingPlanDigest", text(sourceDigests.get("sourceProbeBindingPlanDigest")));
+        target.put("sourceProbeResultContractDigest", text(sourceDigests.get("sourceProbeResultContractDigest")));
+        target.put("sourceProbeExecutorPlanDigest", text(sourceDigests.get("sourceProbeExecutorPlanDigest")));
+        target.put("sourceReceiptSchemaDigest", text(sourceDigests.get("sourceReceiptSchemaDigest")));
+        target.put("sourceValidationPlanDigest", text(sourceDigests.get("sourceValidationPlanDigest")));
+        target.put("sourceMigrationPlanDigest", text(sourceDigests.get("sourceMigrationPlanDigest")));
+        target.put("sourceInterfaceSpecDigest", text(sourceDigests.get("sourceInterfaceSpecDigest")));
+        target.put("sourceBoundaryPlanDigest", text(sourceDigests.get("sourceBoundaryPlanDigest")));
+        target.put("sourceWriterPlanDigest", text(sourceDigests.get("sourceWriterPlanDigest")));
+        target.put("sourceAvailabilityPlanDigest", text(sourceDigests.get("sourceAvailabilityPlanDigest")));
+    }
+
+    private static Map<String, Object> probeBindingRequirement(Map<String, Object> sourceDigests) {
         Map<String, Object> requirement = new LinkedHashMap<>();
         requirement.put("requiredReportName",
             NimCreateDurableAuditReceiptValidationProbeResultBindingSupport.BINDING_NAME);
         requirement.put("requiredStateNow", HOLD_STATE);
-        requirement.put("sourceProbeBindingPlanDigest", text(probeBindingReport.get("bindingPlanDigest")));
+        requirement.put("sourceProbeBindingPlanDigest", text(sourceDigests.get("sourceProbeBindingPlanDigest")));
         requirement.put("sourceProbeResultContractDigest",
-            text(probeBindingReport.get("sourceProbeResultContractDigest")));
+            text(sourceDigests.get("sourceProbeResultContractDigest")));
         requirement.put("mustBindProbeResultBindingDigest", true);
         requirement.put("probeBindingReportCanPassNow", false);
         requirement.put("fallbackToValidationGateOnlyAllowed", false);
@@ -543,8 +587,7 @@ final class NimCreateDurableAuditValidationResultProbeBindingMigrationSupport {
         return requirement;
     }
 
-    private static Map<String, Object> enhancedValidationResultContract(Map<String, Object> probeBindingReport,
-                                                                        Map<String, Object> migrationReport) {
+    private static Map<String, Object> enhancedValidationResultContract(Map<String, Object> sourceDigests) {
         Map<String, Object> contract = new LinkedHashMap<>();
         contract.put("type", NimCreateDurableAuditValidationResultMigrationSupport.FUTURE_VALIDATION_RESULT);
         contract.put("producedBy", NimCreateDurableAuditReceiptValidationGateSupport.FUTURE_VALIDATOR);
@@ -552,12 +595,12 @@ final class NimCreateDurableAuditValidationResultProbeBindingMigrationSupport {
         contract.put("instanceAllowedNow", false);
         contract.put("currentValidationStatus", VALIDATION_NOT_RUN);
         contract.put("requiredPassStatus", "PASS");
-        contract.put("sourceProbeBindingPlanDigest", text(probeBindingReport.get("bindingPlanDigest")));
+        contract.put("sourceProbeBindingPlanDigest", text(sourceDigests.get("sourceProbeBindingPlanDigest")));
         contract.put("sourceProbeResultContractDigest",
-            text(probeBindingReport.get("sourceProbeResultContractDigest")));
-        contract.put("sourceMigrationPlanDigest", text(migrationReport.get("migrationPlanDigest")));
-        contract.put("sourceReceiptSchemaDigest", text(migrationReport.get("sourceReceiptSchemaDigest")));
-        contract.put("sourceValidationPlanDigest", text(migrationReport.get("sourceValidationPlanDigest")));
+            text(sourceDigests.get("sourceProbeResultContractDigest")));
+        contract.put("sourceMigrationPlanDigest", text(sourceDigests.get("sourceMigrationPlanDigest")));
+        contract.put("sourceReceiptSchemaDigest", text(sourceDigests.get("sourceReceiptSchemaDigest")));
+        contract.put("sourceValidationPlanDigest", text(sourceDigests.get("sourceValidationPlanDigest")));
         contract.put("mustBindProbeResultBindingDigest", true);
         contract.put("mustBindProbeResultContractDigest", true);
         contract.put("mustBindStorageProbeReceiptDigest", true);
@@ -581,8 +624,7 @@ final class NimCreateDurableAuditValidationResultProbeBindingMigrationSupport {
         return template;
     }
 
-    private static Map<String, Object> enhancedReleaseDecisionContract(Map<String, Object> probeBindingReport,
-                                                                       Map<String, Object> migrationReport) {
+    private static Map<String, Object> enhancedReleaseDecisionContract(Map<String, Object> sourceDigests) {
         Map<String, Object> contract = new LinkedHashMap<>();
         contract.put("type", NimCreateDurableAuditValidationResultMigrationSupport.FUTURE_RELEASE_DECISION);
         contract.put("dependsOn", NimCreateDurableAuditValidationResultMigrationSupport.FUTURE_VALIDATION_RESULT);
@@ -590,12 +632,12 @@ final class NimCreateDurableAuditValidationResultProbeBindingMigrationSupport {
         contract.put("instanceAllowedNow", false);
         contract.put("currentDecision", RELEASE_DENIED);
         contract.put("requiredAllowDecision", "ALLOW_WRITE_EXECUTION");
-        contract.put("sourceProbeBindingPlanDigest", text(probeBindingReport.get("bindingPlanDigest")));
+        contract.put("sourceProbeBindingPlanDigest", text(sourceDigests.get("sourceProbeBindingPlanDigest")));
         contract.put("sourceProbeResultContractDigest",
-            text(probeBindingReport.get("sourceProbeResultContractDigest")));
-        contract.put("sourceMigrationPlanDigest", text(migrationReport.get("migrationPlanDigest")));
-        contract.put("sourceReceiptSchemaDigest", text(migrationReport.get("sourceReceiptSchemaDigest")));
-        contract.put("sourceValidationPlanDigest", text(migrationReport.get("sourceValidationPlanDigest")));
+            text(sourceDigests.get("sourceProbeResultContractDigest")));
+        contract.put("sourceMigrationPlanDigest", text(sourceDigests.get("sourceMigrationPlanDigest")));
+        contract.put("sourceReceiptSchemaDigest", text(sourceDigests.get("sourceReceiptSchemaDigest")));
+        contract.put("sourceValidationPlanDigest", text(sourceDigests.get("sourceValidationPlanDigest")));
         contract.put("mustBindProbeResultBindingDigest", true);
         contract.put("mustBindProbeResultContractDigest", true);
         contract.put("mustBindValidationResultDigest", true);

@@ -6,7 +6,10 @@
 - Primary workspace recovery folder: `F:\gitProject\kube-agent\codex-memory\kube-agent\current`
 - Historical external memory folder: `H:\codex重要文件\kube-agent`
 - Current task: continue M5.21 kube-manager Tool alignment/audit waves.
-- Current latest wave: M5.21-138, NIM validation result migration plan maps closed.
+- Current latest wave: M5.21-139, NIM enhanced migration plan maps closed checkpoint.
+- Phase update: HPC / Slurm / BCM and NIM are paused and moved to Phase 2 by user direction.
+- Phase 1 focus: deliver the top-tier Agent core through generic manager Agent foundations, safe read/query validation, non-HPC/NIM manager function coverage, Tool metadata quality, HITL/audit execution boundary, traceability, recovery, evaluation, teaching documentation, and vue-kube-manager workflow integration.
+- Phase boundary clarification: moving NIM / HPC / Slurm / BCM to Phase 2 postpones specialist domain plugins only; it does not reduce Phase 1 standards.
 - Historical anchor: this recovery file started during M5.21-29 legacy GET HTTP metadata convergence and now accumulates later M5.21 checkpoints.
 
 ## User Requirements To Preserve
@@ -18,7 +21,9 @@
 - Use cautious, evidence-based Tool migration.
 - kube-manager query/read methods may use local `8100` for real query tests when safely scoped.
 - Write/create/delete/state-changing methods, including `nim_create`, remain HOLD/mock-first unless explicitly released.
+- Do not start new HPC / Slurm / BCM or NIM implementation slices in Phase 1 unless the user explicitly reopens Phase 2 scope.
 - The user clarified the ultimate mission is not just a production-grade Agent, but a top-tier Agent and learning project that helps the owner progress from Agent beginner to Agent master.
+- The user clarified again on 2026-06-08 that Phase 1 must still become a top-tier Agent core; NIM/HPC/Slurm/BCM are simply Phase 2 specialist extensions.
 - Continue using latest reasonable Agent engineering patterns, multi-expert/multi-round review, Chinese comments and technical docs, and commit/push after each completed chunk.
 
 ## Completed In This Continuation
@@ -50,6 +55,21 @@
   - `ExperimentInstanceListTool` / `ExperimentTemplateListTool`: need stronger backend evidence before metadata whitelist.
 
 ## Current Status
+
+- M5.21-139 NIM enhanced migration plan maps closed checkpoint is implemented:
+  - Hardened `src/main/java/com/atlas/tool/impl/NimCreateDurableAuditValidationResultProbeBindingMigrationSupport.java`.
+  - Hardened `src/main/java/com/atlas/tool/impl/NimCreateDurableAuditReceiptValidationResultSupport.java`.
+  - Enhanced migration reports now include `sourceOrganizationId`, `sourceUserId`, and `sourceUsername`.
+  - `NimCreateDurableAuditValidationResultProbeBindingMigrationSupport` now exposes producer-owned `enhancedMigrationPlanFromReport(...)`.
+  - Receipt validation result now requires exact `enhancedMigrationPlan` equality against that producer-owned canonical helper instead of locally hand-interpreting nested maps.
+  - Preserved report-level HOLD checks, false-state checks, digest checks, expected hold blocker checks, forged-claim checks, caller-evidence rejection, and secret-material checks.
+  - Added digest-consistent forged enhanced-plan drift regressions that append fake top-level/nested/list proof fields, recompute `enhancedMigrationPlanDigest`, and still expect rejection.
+  - Added `docs/M5_21_ONE_HUNDRED_THIRTY_NINTH_WAVE_NIM_ENHANCED_MIGRATION_PLAN_MAPS_CLOSED_AUDIT_20260608.md`.
+  - Updated `docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md` with the M5.21-139 learning note and the Phase 1 / Phase 2 scope boundary.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimCreateDurableAuditValidationResultProbeBindingMigrationSupportTest,NimCreateDurableAuditReceiptValidationResultSupportTest" test`
+  - No real `8100` access; no real NIM service HTTP call; no Authorization header sending; no durable audit write; no deployment POST; no runtime write behavior opened; no source guard installation; no state-machine release binding implementation; no durable executor release binding implementation; no validation result signer; no release decision signer; no code release switch implementation; no Elasticsearch; no `ISysLogService`; no `sys_log`; `nim_create` remains HOLD/mock-first and is now Phase 2.
+  - Next Phase 1 slice: inspect non-NIM/non-HPC manager read/query tools and choose a safe `8100` query-validation batch.
 
 - M5.21-138 NIM validation result migration plan maps closed is implemented:
   - Hardened `src/main/java/com/atlas/tool/impl/NimCreateDurableAuditValidationResultMigrationSupport.java`.

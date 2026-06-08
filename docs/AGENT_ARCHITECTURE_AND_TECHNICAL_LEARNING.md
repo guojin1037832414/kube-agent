@@ -6,6 +6,8 @@
 
 `kube-agent` 不只是把 `kube-manager` / `vue-kube-manager` 的功能包成一个 Agent。它的目标是建设一个顶级 Kubernetes / Cloud / HPC Agent，并且把建设过程本身变成可学习、可复盘、可继续演进的教材。
 
+2026-06-08 用户进一步明确：一期目标就是完成顶级 Agent 的核心系统，而不是一个缩水版或过渡版 Agent。NIM / HPC / Slurm / BCM 进入二期，只代表这些专项领域插件后置，并不降低一期在架构、安全、编排、工具、前端、观测、评测和教学文档上的顶级标准。
+
 这个项目同时承担两件事：
 
 - 工程目标：生产可用、安全可审计、权限边界清晰、能对接成熟 kube-manager 能力。
@@ -93,6 +95,71 @@ Tool 层负责把成熟后端能力变成 Agent 可调用能力。一个高质�
 - 任何 caller-supplied 的 `orgId`、`userId`、`releaseEligible`、`writeExecutionAllowed` 等字段都不能直接成为权限事实。
 
 学习重点：Agent 的安全不是单个 if 判断，而是一条多层证据链。每层都假设上一层可能被提示词、参数或未来代码变更误导。
+
+## 一期与二期范围
+
+2026-06-08 用户明确调整优先级：HPC / Slurm / BCM 与 NIM 相关能力先暂停，统一作为二期项目再继续添加和真实化。
+
+一期验收口径必须保持“顶级 Agent 核心完整实现”：
+
+- 通用 kube-manager Agent 必须形成完整闭环：意图识别、任务规划、Tool 调用、结果解释、失败恢复、trace 回放和前端工作台体验。
+- Tool Registry 必须具备高质量元数据、风险分级、权限约束、参数契约和成熟 kube-manager 证据，不靠猜测路径扩展能力。
+- Safe Execution Boundary 必须覆盖 READ / SENSITIVE_READ / CREATE / UPDATE / DELETE / ACTION，并对写操作建立 HITL、审计、幂等、前置/后置校验和 fail-closed 策略。
+- 多专家流程、测试体系、中文教学文档、恢复记忆和 commit/push 节奏都属于一期顶级标准的一部分，不因专项域延期而减少。
+
+一期能力范围聚焦通用 manager Agent：
+
+- Kubernetes 基础查询与资源状态解释。
+- Dashboard、资源监控、日志、事件、命名空间、Pod、Deployment、Service、Ingress 等通用只读能力。
+- 文件、镜像、仓库、模板、产品、课程、行业应用、用户/RBAC 等非 HPC/NIM 的 manager 功能块梳理。
+- 安全只读接口逐步接入本地 `8100` 做真实查询验证。
+- 通用 Tool 元数据、HITL、审计、执行边界、trace、恢复和前端工作台体验。
+
+### 一期顶级 Agent 验收清单
+
+- Core workflow：用户可以通过 Agent 完成通用 kube-manager 的查询、诊断、解释、计划生成、工具调用和失败恢复。
+- Tool governance：所有 Tool 都来自成熟 `kube-manager` / `vue-kube-manager` 证据，具备 method、endpoint、operationType、risk、permission、HITL policy 和参数契约。
+- Safe execution：所有真实执行都经过统一安全边界，不能由 ReAct、Graph、ToolCallback 或前端参数绕过；未知 Tool、未知风险、缺租户、缺权限、未知参数全部 fail closed。
+- HITL / audit：敏感读、高风险写、删除、状态变更和动作类能力必须绑定服务端 HITL marker、审计事件、参数摘要、操作者、租户、traceId 和执行结果。
+- RBAC / tenant：权限事实只来自服务端可信上下文，不信任 LLM 或 caller-supplied 的 `orgId`、`userId`、`role`、`confirmed`、`releaseEligible`、`writeExecutionAllowed`。
+- Observability：每次请求都有贯穿 intent、plan、tool、HTTP、HITL、audit、final answer 的 trace，可以在前端工作台回放关键证据。
+- Frontend workflow：`vue-kube-manager` 工作台能展示计划、风险解释、确认卡片、工具执行、失败原因、重试/恢复和审计摘要。
+- Evaluation：保留意图路由、工具选择、参数抽取、多步 ReAct、中文口语、模糊资源名、安全红队和 must-block 用例；高风险绕过类用例必须 100% 阻断。
+- Recovery / teaching：每个重要批次都同步架构文档、中文学习笔记、恢复记忆、SHA256 manifest、commit 和 push。
+
+### 多专家协作角色
+
+- Archimedes / 架构专家：守住一期 Core 与二期插件边界，检查模块所有权和长期演进路线。
+- Newton / 后端专家：核对 kube-manager controller、DTO、HTTP 方法、`8100` 只读验证顺序和后端语义。
+- Boole / 安全测试专家：检查 RBAC、HITL、protected params、审计、trace、红队用例和 fail-closed 门槛。
+- Hubble / 前端专家：检查 vue-kube-manager 工作台、确认流、风险展示、结果解释和失败恢复体验。
+- Herschel / 可观测专家：检查 trace、metrics、timeline、eval 报告和审计回放。
+- Lorentz / 教学文档专家：维护中文注释、架构学习图、技术点说明和跨会话恢复记忆。
+
+二期再恢复：
+
+- HPC / Slurm / BCM 相关查询、作业提交、节点分配、环境模块和集群管理。
+- NIM 创建、NIM readiness、NIM durable audit、validation result、release decision、code switch 和真实写执行链路。
+
+学习重点：顶级 Agent 的路线规划也要可审计。暂停不是丢弃，更不是降低一期标准，而是把风险较高、链路较深的专项域能力明确做成二期插件扩展。这样一期可以先把通用 Agent 大脑、执行边界、工具治理、前端闭环、观测评测和教学体系做到顶级，再把 NIM/HPC 等专项域接入同一套强内核。
+
+## kube-manager 功能块覆盖现状
+
+从功能域看，当前 manager 能力分成三种成熟度：
+
+- 已较稳的查询/敏感查询：Kubernetes 基础查询、Dashboard、资源监控、镜像/仓库只读、文件/存储只读、EasyFlow/TensorBoard 只读、课程/行业应用/模板/产品只读、用户/RBAC/组织只读等。
+- 可以逐步接入真实 `8100` 验证的查询类：dashboard/resource/file/registry/EasyFlow/TensorBoard 等安全只读接口。接入时要先做 method/path/query/body 契约测试，再做真实返回结构验证。
+- 必须继续 HOLD/HITL/mock-first 的高风险动作：deployment create/delete/scale/restart、Helm/Compose install/update/delete/rollback、storage create/delete、user create/delete/enable/disable/recharge、experiment start/stop/delete、image pull/delete/build/push/load、支付/充值、集群变更、环境安装等。
+
+当前还差的 manager 大块：
+
+1. 批量把安全只读能力接入本地 `8100` 做真实查询验证。
+2. 给所有写操作建立统一执行边界：HITL、审计、幂等、前置/后置校验、失败恢复。
+3. 把真实 RBAC/tenant/license/quota/provider 接入 Agent，而不是信任 caller 自报字段。
+4. 把 vue-kube-manager 的真实工作流变成 Agent 工作台体验：确认卡片、风险解释、证据回放、执行追踪、失败恢复。
+5. 建立 agent trace、tool-call trace、危险动作红队用例和长期评测集。
+
+学习重点：manager 的“查”可以逐步真实化，“做动作”必须先证据链化。顶级 Agent 不追求最快把按钮变成 Tool，而是先证明这个 Tool 在当前身份、当前证据、当前风险下为什么可以被调用。
 
 ## NIM 创建写放行链路
 
@@ -214,6 +281,32 @@ NIM 链路明确禁止真实 Authorization、token、password、secret、NGC/NIM
 - `codex-memory/kube-agent/current` 恢复快照
 
 学习重点：对于长期 Agent 项目，文档不是附属物。文档是架构记忆、教学材料和恢复机制的一部分。
+
+## M5.21-139 最新学习笔记
+
+本轮关闭的是 `NimCreateDurableAuditValidationResultProbeBindingMigrationSupport` 输出、并被 receipt validation result 消费的完整 `enhancedMigrationPlan`：
+
+- 顶层 enhanced migration plan 字段
+- `trustedIdentityBinding`
+- `probeBindingRequirement`
+- `enhancedValidationResultContract`
+- `enhancedValidationResultContract.currentTemplate`
+- `enhancedReleaseDecisionContract`
+- `enhancedReleaseDecisionContract.currentTemplate`
+- `migrationSequencePatch`
+- `currentDecisionTemplate`
+- `failureContract`
+- `forbiddenShortcuts`
+
+关键收获：
+
+- `enhancedMigrationPlanDigest` 只能证明 enhanced plan 对象自洽，不能证明新增 key 已经被评审为合法 validation / release 语义。
+- `enhancedMigrationPlan` 是 validation result 生成前的桥接协议。它虽然不是 PASS 结果，但会决定未来 validation result 和 release decision 必须绑定哪些上游证据。
+- `NimCreateDurableAuditValidationResultProbeBindingMigrationSupport` 现在提供 `enhancedMigrationPlanFromReport(...)` 作为 producer-owned canonical proof object。
+- `NimCreateDurableAuditReceiptValidationResultSupport` 现在只接受完整 canonical enhanced migration plan exact equality，同时保留 report 顶层 HOLD、未执行 false 状态、digest、blockedBy、secret/forged-claim 等前置门。
+- 本轮新增 digest-consistent forgery：篡改顶层 key、identity map、probe requirement、validation result contract、release decision contract、sequence patch、current decision template、failure contract 和 forbidden shortcuts，重算 `enhancedMigrationPlanDigest` 后仍要求 fail closed。
+
+学习总结：顶级 Agent 的 proof object 安全不是“我认识几个字段，所以我认为它安全”。越靠近 validation result / release decision / write path 的 map，越要让 producer 拥有完整 canonical shape，让 consumer 做 exact equality。用户已经决定 NIM 进入二期，本轮因此作为二期暂停前的安全 checkpoint 保存。
 
 ## M5.21-138 最新学习笔记
 

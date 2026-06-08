@@ -740,6 +740,21 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Extra top-level keys, identity-binding keys, migration-sequence drift, validation-result contract drift, release-decision contract drift, template drift, legacy-policy drift, release-credential-rule drift, failure-contract drift, and forbidden-shortcut drift are rejected even when `migrationPlanDigest` is recomputed.
 - Learning distinction: a migration plan is release-adjacent protocol. Keep report-level HOLD and digest checks, then accept only the producer-owned exact plan shape so new migration semantics cannot enter downstream release logic silently.
 
+### M5.21-139 enhanced migration plan maps closed note
+
+- Validation-result probe-binding migration generation now exposes `enhancedMigrationPlanFromReport(...)` as the producer-owned canonical reconstruction helper.
+- Receipt validation result generation requires the whole `enhancedMigrationPlan` to equal that canonical proof object instead of re-checking only known nested map fields.
+- Extra top-level keys, identity-binding keys, probe requirement drift, validation-result contract drift, release-decision contract drift, sequence drift, decision-template drift, failure-contract drift, failure-status drift, and forbidden-shortcut drift are rejected even when `enhancedMigrationPlanDigest` is recomputed.
+- Learning distinction: an enhanced migration plan is a validation-result bridge protocol. It is now saved as the final NIM safety checkpoint before the user-requested Phase 2 pause for NIM/HPC/Slurm/BCM work.
+
+### Phase boundary update
+
+- As of 2026-06-08, HPC / Slurm / BCM and NIM work are paused and moved to Phase 2 by user direction.
+- Phase 1 remains the top-tier Agent core target, not a reduced MVP. It must still deliver strong orchestration, Tool governance, safe execution boundary, frontend workflow, traceability, evaluation, recovery memory, and teaching documentation.
+- Phase 1 should prioritize generic manager Agent foundations: safe read/query validation, non-HPC/NIM manager function coverage, Tool metadata quality, HITL/audit execution boundary, traceability, recovery, and vue-kube-manager workflow integration.
+- Phase 2 should add NIM / HPC / Slurm / BCM as specialist domain plugins on top of the same core rather than changing the core safety model.
+- Safe kube-manager query/read methods may still use local `8100` for real query tests. Write/create/delete/state-changing paths remain HOLD/HITL/mock-first unless explicitly released.
+
 ### Architecture and technical learning map note
 
 - Maintain `docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md` as the long-lived architecture and technical-learning map.

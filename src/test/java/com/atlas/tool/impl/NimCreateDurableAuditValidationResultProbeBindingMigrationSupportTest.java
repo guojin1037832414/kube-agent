@@ -60,6 +60,9 @@ class NimCreateDurableAuditValidationResultProbeBindingMigrationSupportTest {
         assertEquals(false, report.get("legacyMigrationReportAloneAllowed"));
         assertEquals(false, report.get("callerReleaseEvidenceAuthoritative"));
         assertSuccessStatesRemainFalse(report);
+        assertEquals(audit.get("organizationId"), report.get("sourceOrganizationId"));
+        assertEquals(audit.get("userId"), report.get("sourceUserId"));
+        assertEquals(principal.get("username"), report.get("sourceUsername"));
         assertEquals(bindingReport.get("bindingPlanDigest"), report.get("sourceProbeBindingPlanDigest"));
         assertEquals(bindingReport.get("sourceProbeResultContractDigest"),
             report.get("sourceProbeResultContractDigest"));
@@ -70,6 +73,10 @@ class NimCreateDurableAuditValidationResultProbeBindingMigrationSupportTest {
 
         @SuppressWarnings("unchecked")
         Map<String, Object> plan = (Map<String, Object>) report.get("enhancedMigrationPlan");
+        assertEquals(
+            NimCreateDurableAuditValidationResultProbeBindingMigrationSupport.enhancedMigrationPlanFromReport(report),
+            plan
+        );
         assertEquals("SERVER_SIDE_VALIDATION_RESULT_AND_RELEASE_DECISION_REQUIRE_PROBE_BINDING",
             plan.get("migrationBoundary"));
         assertEquals(bindingReport.get("bindingPlanDigest"), plan.get("sourceProbeBindingPlanDigest"));

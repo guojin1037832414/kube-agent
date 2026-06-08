@@ -8,6 +8,8 @@ The target is to build a top-tier, near-perfect Kubernetes/cloud/HPC Agent on to
 
 The owner explicitly clarified on 2026-06-06 that the target is higher than a normal production-grade Agent: this should become a top-tier learning project for mastering Agent development. Implementation should therefore prefer modern, evidence-backed Agent patterns, strong safety boundaries, rich Chinese documentation/comments, and multi-expert iterative review, while still staying grounded in mature `kube-manager` / `vue-kube-manager` behavior.
 
+The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
+
 ## Product Direction
 
 - Use `kube-manager` backend and `vue-kube-manager` frontend as the primary capability evidence.
@@ -91,10 +93,37 @@ Current track:
 
 Recently completed:
 
-`M5.21-138 NIM validation result migration plan maps closed`
+`M5.21-139 NIM enhanced migration plan maps closed checkpoint`
 
 Latest checkpoint:
 
+- Date: 2026-06-08 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- User priority update:
+  - HPC / Slurm / BCM and NIM are paused and moved to Phase 2.
+  - Phase 1 remains the top-tier Agent core delivery target, not a reduced MVP. It should prioritize generic manager Agent foundations while preserving full top-tier standards: safe read/query validation, non-HPC/NIM manager function coverage, Tool metadata quality, HITL/audit execution boundary, traceability, recovery, vue-kube-manager workflow integration, evaluation, and teaching documentation.
+  - NIM / HPC / Slurm / BCM are Phase 2 specialist domain plugins that should later attach to the same strong Agent core instead of forcing a redesign.
+  - Safe kube-manager query/read methods may use local `8100` for real query tests when safely scoped.
+  - Write/create/delete/state-changing paths remain HOLD/HITL/mock-first unless explicitly released.
+- Teaching principle:
+  - M5.21-139 is saved as the final NIM safety checkpoint before the Phase 2 pause.
+  - `enhancedMigrationPlanDigest` proves object self-consistency, not semantic approval of new validation/release bridge fields.
+  - `enhancedMigrationPlan` is now producer-owned and consumed by exact canonical equality at the receipt validation result boundary.
+  - Do not start new NIM/HPC/Slurm/BCM implementation slices in Phase 1 unless the user explicitly reopens Phase 2 scope.
+  - Continue maintaining `docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md` as the long-lived architecture and technical-learning map.
+- M5.21-139 implemented:
+  - Hardened `NimCreateDurableAuditValidationResultProbeBindingMigrationSupport` so enhanced migration reports include `sourceOrganizationId`, `sourceUserId`, and `sourceUsername`.
+  - Added producer-owned `enhancedMigrationPlanFromReport(...)` canonical reconstruction for the whole M5.21-69 `enhancedMigrationPlan`.
+  - Hardened `NimCreateDurableAuditReceiptValidationResultSupport` so it requires exact whole-plan equality instead of partial nested-map checks when consuming enhanced migration plans.
+  - Preserved top-level report HOLD checks, false execution/result states, digest verification, expected hold blocker, forged-claim rejection, caller-evidence rejection, and secret-material checks.
+  - Added digest-consistent forged enhanced-plan drift regressions covering top-level extra keys, identity-binding keys, probe-requirement keys, enhanced validation-result contract drift, enhanced validation-result template drift, enhanced release-decision contract drift, enhanced release-decision template drift, migration-sequence patch drift, current-decision-template drift, failure-contract drift, failure-status list drift, and forbidden-shortcut drift.
+  - Added `docs/M5_21_ONE_HUNDRED_THIRTY_NINTH_WAVE_NIM_ENHANCED_MIGRATION_PLAN_MAPS_CLOSED_AUDIT_20260608.md`.
+  - Updated the long-lived teaching map with both the M5.21-139 lesson and the Phase 1 / Phase 2 scope boundary.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimCreateDurableAuditValidationResultProbeBindingMigrationSupportTest,NimCreateDurableAuditReceiptValidationResultSupportTest" test`
+  - Security invariant: no real `8100`, no real NIM service HTTP call, no Authorization header sending, no durable audit write, no deployment POST, no runtime write behavior, no source guard installation, no state-machine release binding implementation, no durable executor release binding implementation, no validation result signer, no release decision signer, no code release switch implementation, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first and is now Phase 2.
+  - Next Phase 1 slice: inspect non-NIM/non-HPC manager read/query tools and choose a safe `8100` query-validation batch.
+- Previous checkpoint:
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
 - Teaching principle:
