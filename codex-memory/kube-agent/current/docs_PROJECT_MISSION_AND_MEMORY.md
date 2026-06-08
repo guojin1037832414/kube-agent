@@ -91,10 +91,31 @@ Current track:
 
 Recently completed:
 
-`M5.21-134 NIM validation result contract maps closed`
+`M5.21-135 NIM probe binding plan maps closed`
 
 Latest checkpoint:
 
+- Date: 2026-06-08 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- Teaching principle:
+  - This project is not only delivering software. It is also a teaching system for mastering Agent engineering.
+  - Maintain `docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md` as the long-lived architecture and technical-learning map.
+- M5.21-135 implemented:
+  - Hardened `NimCreateDurableAuditReceiptValidationProbeResultBindingSupport` so probe binding reports include `sourceOrganizationId`, `sourceUserId`, and `sourceUsername`.
+  - Added producer-owned `bindingPlanFromReport(...)` canonical reconstruction for the whole M5.21-68 `bindingPlan`.
+  - Hardened `NimCreateDurableAuditValidationResultProbeBindingMigrationSupport` so it requires exact whole-plan equality instead of partial nested-map checks when consuming probe binding plans.
+  - Added digest-consistent forged binding-plan drift regressions covering top-level extra keys, identity-binding keys, evidence-map keys, nested storage probe result evidence, current decision template extra keys, failure contract extra keys, and forbidden shortcut list drift.
+  - Added `docs/M5_21_ONE_HUNDRED_THIRTY_FIFTH_WAVE_NIM_PROBE_BINDING_PLAN_MAPS_CLOSED_AUDIT_20260608.md`.
+  - Updated the long-lived teaching map with the M5.21-135 lesson: intermediate proof bridges are still protocol objects, not metadata.
+  - Targeted verification passed:
+    - `git diff --check`
+    - `mvn -q "-Dtest=NimCreateDurableAuditReceiptValidationProbeResultBindingSupportTest,NimCreateDurableAuditValidationResultProbeBindingMigrationSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateDurableAuditReceiptValidationProbeResultBindingSupportTest,NimCreateDurableAuditValidationResultProbeBindingMigrationSupportTest,NimCreateDurableAuditValidationResultMigrationSupportTest,NimCreateDurableAuditReleaseDecisionGateSupportTest,NimCreateDurableAuditReleaseDecisionContractSupportTest" test`
+    - `mvn -q test`
+    - Full Maven note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - Security invariant: no real `8100`, no real NIM service HTTP call, no Authorization header sending, no durable audit write, no deployment POST, no runtime write behavior, no source guard installation, no state-machine release binding implementation, no durable executor release binding implementation, no validation result signer, no release decision signer, no code release switch implementation, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Multi-expert next slice: continue scanning validation-result probe-binding migration and earlier receipt-validation inputs for remaining local nested-map interpretation, especially `validationPlan` and `probeResultContract` consumers.
+- Previous checkpoint:
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
 - Teaching principle:

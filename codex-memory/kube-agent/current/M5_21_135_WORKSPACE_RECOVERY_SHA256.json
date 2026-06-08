@@ -1,0 +1,51 @@
+﻿{
+    "project":  "kube-agent",
+    "wave":  "M5.21-135",
+    "title":  "NIM probe binding plan maps closed",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "gitHead":  "43ffdd97839702151580d9bf890dc5f39acef104",
+    "recoveryHome":  "F:\\gitProject\\kube-agent\\codex-memory\\kube-agent\\current",
+    "generatedAt":  "2026-06-08 Asia/Shanghai",
+    "files":  [
+                  {
+                      "file":  "RECOVERY_STATUS.md",
+                      "sha256":  "1c2994aaa6d76eeb6e4c13bce64ec46daea4d16c02ab957b4fa5fcefcc637058",
+                      "length":  2131
+                  },
+                  {
+                      "file":  "CHANGELOG.md",
+                      "sha256":  "f0f1f15fed68da6172b5a8efdec13d45b2cd8065bbaa7bb46ff9627b2eb8b65e",
+                      "length":  244684
+                  },
+                  {
+                      "file":  "docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "61fba863e414bd019af06eec132d46447a5110c1b8fc0ab5c3d75f562912840b",
+                      "length":  24419
+                  },
+                  {
+                      "file":  "docs_M5_21_WAVE_INDEX_20260606.md",
+                      "sha256":  "3dab0e9e69b1d5b9ec95a4b9fe508dbd8734facdaaa23c0154e06b86c597d6a8",
+                      "length":  22061
+                  },
+                  {
+                      "file":  "docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "5333141984f4ebf4e89c72e799e22003bd3bbf6b97b5ee61c0fe7ff392168ee1",
+                      "length":  259372
+                  },
+                  {
+                      "file":  "docs_SESSION_PROGRESS_20260606_M521_29.md",
+                      "sha256":  "cf74579d45609d8dc85290ab7222156c809fba5a49ad241f17be264ec79c891c",
+                      "length":  263017
+                  },
+                  {
+                      "file":  "docs_v3.1_DEVELOPMENT_GUIDE.md",
+                      "sha256":  "f91e55c03b86fe3e8bc654d88c759d120cb677a855eefaff5a87f304f3c01e06",
+                      "length":  76712
+                  },
+                  {
+                      "file":  "docs_M5_21_ONE_HUNDRED_THIRTY_FIFTH_WAVE_NIM_PROBE_BINDING_PLAN_MAPS_CLOSED_AUDIT_20260608.md",
+                      "sha256":  "9fafad8d7047050ab84ffcab18752d7334cca6b3d3157fbd78208786c480dbff",
+                      "length":  4922
+                  }
+              ]
+}

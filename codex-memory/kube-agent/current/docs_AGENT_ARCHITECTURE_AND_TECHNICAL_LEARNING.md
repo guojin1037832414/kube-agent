@@ -215,7 +215,32 @@ NIM 链路明确禁止真实 Authorization、token、password、secret、NGC/NIM
 
 学习重点：对于长期 Agent 项目，文档不是附属物。文档是架构记忆、教学材料和恢复机制的一部分。
 
-## M5.21-134 最新学习笔记
+## M5.21-135 最新学习笔记
+
+本轮关闭的是 validation-result probe-binding migration 消费上游 probe binding report 时的完整 `bindingPlan`：
+
+- 顶层 binding plan 字段
+- `trustedIdentityBinding`
+- `requiredBindingEvidence`
+- `storageProbeResultContract`
+- `receiptValidationGate`
+- `futureStorageProbeReceipt`
+- `validationSequencePatch`
+- `currentDecisionTemplate`
+- `failureContract`
+- `forbiddenShortcuts`
+
+关键收获：
+
+- `bindingPlanDigest` 只能证明 binding plan 对象自洽，不能证明新增 key 已经被评审为合法迁移语义。
+- `bindingPlan` 不是最终 release decision，但它会影响未来 validation result migration 是否可以依赖 storage probe evidence，因此它也是 release-adjacent protocol。
+- `NimCreateDurableAuditReceiptValidationProbeResultBindingSupport` 现在提供 `bindingPlanFromReport(...)` 作为 producer-owned canonical proof object。
+- `NimCreateDurableAuditValidationResultProbeBindingMigrationSupport` 现在只接受完整 canonical binding plan exact equality，同时校验 source digest、source audit digest 和 source identity。
+- 本轮新增多组 digest-consistent forgery：篡改顶层 key、identity map、evidence map、nested probe contract、decision template、failure contract 和 forbidden shortcut list，重算 `bindingPlanDigest` 后仍要求 migration fail closed。
+
+学习总结：顶级 Agent 的安全协议不只保护最终授权对象，也要保护中间桥接 proof。因为中间 proof 会塑造未来下游“能不能继续往 release path 走”。只要某个 map 会被后续边界消费，它就应该被当成协议对象，由 producer 拥有完整形状，由 consumer 做 exact canonical equality。
+
+## M5.21-134 学习笔记
 
 本轮关闭的是 release decision 消费 validation result report 时的完整 `validationResultContract`：
 

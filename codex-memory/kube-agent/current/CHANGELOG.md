@@ -6,6 +6,23 @@
 
 ---
 
+## [M5.21-135] - NIM probe binding plan maps closed
+
+**Delivery**: Closed `bindingPlan` consumption at the validation-result probe-binding migration boundary using producer-owned exact plan equality.
+**Changes**
+- `NimCreateDurableAuditReceiptValidationProbeResultBindingSupport` now emits trusted source identity fields and exposes `bindingPlanFromReport(...)` as the canonical producer helper.
+- `NimCreateDurableAuditValidationResultProbeBindingMigrationSupport` now rejects any probe-binding plan that is not exactly equal to that producer-owned helper, rather than hand-interpreting nested maps.
+- Added digest-consistent forged binding-plan regressions covering top-level keys, `trustedIdentityBinding`, `requiredBindingEvidence`, nested storage probe result evidence, `currentDecisionTemplate`, `failureContract`, and `forbiddenShortcuts`.
+**Verification**
+- `git diff --check` passed.
+- Targeted probe result binding and validation-result probe-binding migration tests passed.
+- Targeted probe binding/migration plus validation-result migration, release gate, and release decision tests passed.
+- Full `mvn -q test` passed; full Maven degraded to L1 embedding mode after local `model.onnx` download timeout but exited 0.
+**Security**
+- This is probe-binding proof-schema hardening only; it does not create real probe results, validation results, release decisions, code switches, runtime writes, or NIM deployment writes.
+- No real `8100`, real NIM service HTTP call, Authorization header sending, durable audit write, deployment POST, validation result signer, release decision signer, code release switch implementation, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-134] - NIM validation result contract maps closed
 
 **Delivery**: Closed `validationResultContract` consumption at the release decision contract boundary using producer-owned exact contract equality.
