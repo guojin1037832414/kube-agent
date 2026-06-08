@@ -580,6 +580,68 @@ class NimCreateStateMachineSupportTest {
     }
 
     @Test
+    void stateMachine_shouldRejectDigestConsistentDurableExecutorAttemptSpecForgedIdempotencyKey() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> receipt = completeAuditReceipt();
+        Map<String, Object> bodyReport = completeWriteBodyRebuildReport(audit, receipt);
+        Map<String, Object> requestSpecReport = completeWriteRequestSpecReport(audit, receipt, bodyReport);
+        Map<String, Object> handoffReport = completeWriteExecutionHandoffReport(audit, receipt, bodyReport, requestSpecReport);
+        Map<String, Object> codeSwitchReport = completeCodeReleaseSwitchContractReport(audit);
+        Map<String, Object> sourceGuardReport = completeCodeReleaseSwitchRuntimeSourceGuardReport(audit);
+        Map<String, Object> executorReport = new java.util.LinkedHashMap<>(completeDurableWriteExecutorReport(
+            handoffReport,
+            requestSpecReport,
+            codeSwitchReport,
+            sourceGuardReport
+        ));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> attemptSpec = new java.util.LinkedHashMap<>(
+            (Map<String, Object>) executorReport.get("executionAttemptSpec")
+        );
+        @SuppressWarnings("unchecked")
+        Map<String, Object> attemptHandoffPlan = new java.util.LinkedHashMap<>(
+            (Map<String, Object>) attemptSpec.get("executionHandoffPlan")
+        );
+        @SuppressWarnings("unchecked")
+        Map<String, Object> idempotency = new java.util.LinkedHashMap<>(
+            (Map<String, Object>) attemptHandoffPlan.get("idempotency")
+        );
+        String forgedKey = "nim-create-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+        idempotency.put("key", forgedKey);
+        attemptHandoffPlan.put("idempotency", idempotency);
+        attemptSpec.put("executionHandoffPlan", attemptHandoffPlan);
+        attemptSpec.put("idempotencyKey", forgedKey);
+        executorReport.put("idempotencyKey", forgedKey);
+        executorReport.put("executionAttemptSpec", attemptSpec);
+        executorReport.put("executionAttemptSpecDigest", sha256(attemptSpec));
+
+        Map<String, Object> guard = NimCreateStateMachineSupport.evaluate(new NimCreateStateMachineSupport.ReadinessRequest(
+            Map.of("name", "nim-attempt-spec-forged-idempotency"),
+            openGate(),
+            completePreview(),
+            HitlConfirmation.human("thread-1", "nim_create"),
+            audit,
+            receipt,
+            bodyReport,
+            requestSpecReport,
+            handoffReport,
+            codeSwitchReport,
+            sourceGuardReport,
+            executorReport,
+            completeReadinessPlan(),
+            completeReadinessExecutionReport(),
+            NimCreateStateMachineSupport.TRUSTED_BODY_PROVENANCE,
+            true
+        ));
+
+        assertEquals("HELD", guard.get("state"));
+        assertEquals(false, guard.get("writePermitted"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) guard.get("blockedBy");
+        assertHasBlocker(blockers, "DURABLE_WRITE_EXECUTOR_REPORT_CONTRACT_INVALID");
+    }
+
+    @Test
     void stateMachine_shouldRejectForgedDurableExecutorSuccessClaims() {
         Map<String, Object> audit = completeAuditContext();
         Map<String, Object> receipt = completeAuditReceipt();

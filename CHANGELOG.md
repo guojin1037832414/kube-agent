@@ -6,6 +6,19 @@
 
 ---
 
+## [M5.21-106] - NIM durable idempotency derivation binding contract
+
+**Delivery**: Bound downstream durable executor and state-machine validation to the same server-derived idempotency key formula used by the handoff generator.
+**Changes**
+- `NimCreateWriteExecutionHandoffSupport` now exposes the server-derived idempotency key derivation as a package-level proof helper.
+- `NimCreateDurableWriteExecutorSupport` now recomputes the idempotency key from handoff source evidence plus request spec digest before accepting a handoff report.
+- `NimCreateStateMachineSupport` now recomputes the idempotency key from audit context, audit receipt, and request spec digest across handoff plan and durable execution attempt spec validation.
+- Added digest-consistent forged-key regressions proving a syntactically valid `nim-create-[a-f0-9]{32}` key is rejected when it is not the server-derived value.
+**Security**
+- This is proof-chain hardening only; it does not open runtime writes.
+- No real `8100`, real NIM service HTTP call, Authorization header sending, durable audit write, deployment POST, state-machine release binding, durable executor release binding, validation result signer, release decision signer, code release switch implementation, Elasticsearch, `ISysLogService`, or `sys_log` write was added.
+- `nim_create` remains HOLD/mock-first.
+
 ## [M5.21-105] - NIM durable execution attempt spec binding contract
 
 **Delivery**: Hardened the durable write executor attempt spec from digest-only evidence into a closed, digest-bound, value-copied future execution mirror.

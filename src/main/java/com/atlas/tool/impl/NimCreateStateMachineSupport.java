@@ -709,6 +709,12 @@ final class NimCreateStateMachineSupport {
             && Boolean.TRUE.equals(writeExecutionHandoffReport.get("idempotencyRequired"))
             && NimCreateWriteExecutionHandoffSupport.IDEMPOTENCY_KEY_SOURCE.equals(text(writeExecutionHandoffReport.get("idempotencyKeySource")))
             && text(writeExecutionHandoffReport.get("idempotencyKey")).matches("nim-create-[a-f0-9]{32}")
+            && text(writeExecutionHandoffReport.get("idempotencyKey")).equals(
+                NimCreateWriteExecutionHandoffSupport.serverDerivedIdempotencyKey(
+                    auditContext,
+                    auditReceipt,
+                    writeRequestSpecReport
+                ))
             && Boolean.FALSE.equals(writeExecutionHandoffReport.get("callerIdempotencyKeyAllowed"))
             && Boolean.FALSE.equals(writeExecutionHandoffReport.get("callerHeadersAllowed"))
             && Boolean.FALSE.equals(writeExecutionHandoffReport.get("authorizationHeaderFromCallerAllowed"))
@@ -1383,7 +1389,12 @@ final class NimCreateStateMachineSupport {
             && Boolean.FALSE.equals(handoffPlan.get("realApiKeyAllowed"))
             && "KUBE_MANAGER_HTTP_CLIENT_CONTEXT_ONLY".equals(text(handoffPlan.get("kubeManagerAuthBoundary")))
             && Boolean.TRUE.equals(idempotency.get("required"))
-            && text(idempotency.get("key")).matches("nim-create-[a-f0-9]{32}")
+            && text(idempotency.get("key")).equals(
+                NimCreateWriteExecutionHandoffSupport.serverDerivedIdempotencyKey(
+                    auditContext,
+                    auditReceipt,
+                    writeRequestSpecReport
+                ))
             && NimCreateWriteExecutionHandoffSupport.IDEMPOTENCY_KEY_SOURCE.equals(text(idempotency.get("keySource")))
             && Boolean.FALSE.equals(idempotency.get("callerKeyAllowed"))
             && Boolean.TRUE.equals(idempotency.get("reuseAllowedOnlyForSameAuditReceiptAndRequestSpec"))
@@ -1447,6 +1458,12 @@ final class NimCreateStateMachineSupport {
             && text(writeExecutionHandoffReport.get("handoffDigest")).equals(digestFor(attemptHandoffPlan))
             && sourceHandoffPlan.equals(attemptHandoffPlan)
             && text(writeExecutionHandoffReport.get("idempotencyKey")).equals(text(executionAttemptSpec.get("idempotencyKey")))
+            && text(executionAttemptSpec.get("idempotencyKey")).equals(
+                NimCreateWriteExecutionHandoffSupport.serverDerivedIdempotencyKey(
+                    auditContext,
+                    auditReceipt,
+                    writeRequestSpecReport
+                ))
             && NimCreateWriteExecutionHandoffSupport.IDEMPOTENCY_KEY_SOURCE.equals(text(executionAttemptSpec.get("idempotencyKeySource")))
             && text(auditReceipt.get("receiptId")).equals(text(executionAttemptSpec.get("auditReceiptId")))
             && text(auditReceipt.get("eventDigest")).equals(text(executionAttemptSpec.get("auditEventDigest")))

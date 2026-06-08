@@ -314,6 +314,11 @@ final class NimCreateDurableWriteExecutorSupport {
             && Boolean.TRUE.equals(handoffReport.get("idempotencyRequired"))
             && NimCreateWriteExecutionHandoffSupport.IDEMPOTENCY_KEY_SOURCE.equals(text(handoffReport.get("idempotencyKeySource")))
             && text(handoffReport.get("idempotencyKey")).matches("nim-create-[a-f0-9]{32}")
+            && text(handoffReport.get("idempotencyKey")).equals(
+                NimCreateWriteExecutionHandoffSupport.serverDerivedIdempotencyKeyFromHandoffEvidence(
+                    handoffReport,
+                    requestSpecReport
+                ))
             && Boolean.FALSE.equals(handoffReport.get("callerIdempotencyKeyAllowed"))
             && Boolean.FALSE.equals(handoffReport.get("callerHeadersAllowed"))
             && Boolean.FALSE.equals(handoffReport.get("authorizationHeaderFromCallerAllowed"))
@@ -365,6 +370,11 @@ final class NimCreateDurableWriteExecutorSupport {
             && "KUBE_MANAGER_HTTP_CLIENT_CONTEXT_ONLY".equals(text(handoffPlan.get("kubeManagerAuthBoundary")))
             && Boolean.TRUE.equals(idempotency.get("required"))
             && text(handoffReport.get("idempotencyKey")).equals(text(idempotency.get("key")))
+            && text(idempotency.get("key")).equals(
+                NimCreateWriteExecutionHandoffSupport.serverDerivedIdempotencyKeyFromHandoffEvidence(
+                    handoffReport,
+                    requestSpecReport
+                ))
             && NimCreateWriteExecutionHandoffSupport.IDEMPOTENCY_KEY_SOURCE.equals(text(idempotency.get("keySource")))
             && Boolean.FALSE.equals(idempotency.get("callerKeyAllowed"))
             && Boolean.TRUE.equals(idempotency.get("reuseAllowedOnlyForSameAuditReceiptAndRequestSpec"))

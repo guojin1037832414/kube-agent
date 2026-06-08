@@ -583,6 +583,44 @@ class NimCreateDurableWriteExecutorSupportTest {
         assertHasBlocker(blockers, "WRITE_EXECUTION_HANDOFF_REPORT_NOT_TRUSTED_FOR_DURABLE_EXECUTOR");
     }
 
+    @Test
+    void executorShell_shouldRejectDigestConsistentForgedServerDerivedIdempotencyKey() {
+        Map<String, Object> audit = completeAuditContext();
+        Map<String, Object> receipt = durableAuditReceipt(audit);
+        Map<String, Object> bodyReport = writeBodyReport(audit, receipt);
+        Map<String, Object> requestSpecReport = writeRequestSpecReport(audit, receipt, bodyReport);
+        Map<String, Object> trustedHandoffReport = writeExecutionHandoffReport(
+            audit,
+            receipt,
+            bodyReport,
+            requestSpecReport
+        );
+        Map<String, Object> handoffReport = withForgedIdempotencyKey(
+            trustedHandoffReport,
+            "nim-create-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        );
+        Map<String, Object> codeSwitchReport = codeReleaseSwitchContractReport(audit);
+        Map<String, Object> sourceGuardReport = codeReleaseSwitchRuntimeSourceGuardReport(audit);
+
+        Map<String, Object> report = NimCreateDurableWriteExecutorSupport.prepare(
+            new NimCreateDurableWriteExecutorSupport.WriteExecutionInput(
+                handoffReport,
+                requestSpecReport,
+                codeSwitchReport,
+                sourceGuardReport
+            )
+        );
+
+        assertEquals(NimCreateDurableWriteExecutorSupport.REJECTED_STATE, report.get("executionState"));
+        assertEquals(false, report.get("inputAccepted"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> attemptSpec = (Map<String, Object>) report.get("executionAttemptSpec");
+        assertTrue(attemptSpec.isEmpty());
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> blockers = (List<Map<String, Object>>) report.get("blockedBy");
+        assertHasBlocker(blockers, "WRITE_EXECUTION_HANDOFF_REPORT_NOT_TRUSTED_FOR_DURABLE_EXECUTOR");
+    }
+
     private Map<String, Object> writeExecutionHandoffReport(Map<String, Object> audit,
                                                             Map<String, Object> receipt,
                                                             Map<String, Object> bodyReport,
@@ -688,6 +726,25 @@ class NimCreateDurableWriteExecutorSupportTest {
         handoffPlan.put("requestSpecDigest", text(requestSpecReport.get("requestSpecDigest")));
         forgedReport.put("sourceBodyDigest", text(bodyReport.get("bodyDigest")));
         forgedReport.put("sourceRequestSpecDigest", text(requestSpecReport.get("requestSpecDigest")));
+        forgedReport.put("executionHandoffPlan", handoffPlan);
+        forgedReport.put("handoffDigest", sha256(handoffPlan));
+        return forgedReport;
+    }
+
+    private Map<String, Object> withForgedIdempotencyKey(Map<String, Object> handoffReport,
+                                                         String forgedIdempotencyKey) {
+        Map<String, Object> forgedReport = new LinkedHashMap<>(handoffReport);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> handoffPlan = new LinkedHashMap<>(
+            (Map<String, Object>) forgedReport.get("executionHandoffPlan")
+        );
+        @SuppressWarnings("unchecked")
+        Map<String, Object> idempotency = new LinkedHashMap<>(
+            (Map<String, Object>) handoffPlan.get("idempotency")
+        );
+        idempotency.put("key", forgedIdempotencyKey);
+        handoffPlan.put("idempotency", idempotency);
+        forgedReport.put("idempotencyKey", forgedIdempotencyKey);
         forgedReport.put("executionHandoffPlan", handoffPlan);
         forgedReport.put("handoffDigest", sha256(handoffPlan));
         return forgedReport;

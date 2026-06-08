@@ -501,3 +501,11 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - The state machine re-verifies the attempt spec digest, exact key set, copied request/body/handoff content, and nested body contract before accepting the durable executor shell report.
 - Closed-shape validation is used for request specs and handoff evidence containers. This is intentionally different from applying the body protected-context detector to legitimate audit/idempotency handoff evidence.
 - Learning distinction: a safe Agent write path does not let future execution consume "whatever extra fields are present." It defines the exact shape, copies the evidence, and verifies both content and digest at the next boundary.
+
+### M5.21-106 idempotency derivation binding note
+
+- The server-derived idempotency key is now treated as a recomputable proof, not merely a string matching `nim-create-[a-f0-9]{32}`.
+- The handoff generator, durable executor shell, and state machine use the same derivation rule over request id, conversation id, user id, organization id, audit receipt id, audit event digest, and request spec digest.
+- Durable executor validation can recompute the same key from handoff source evidence plus request spec digest, without trusting caller-provided key material.
+- Forged keys that are syntactically valid and digest-consistent still fail if they are not the server-derived value.
+- Learning distinction: idempotency is both a retry-safety mechanism and an authority boundary. A top-tier Agent verifies who derived the key and what evidence it binds, not just whether it has the expected prefix.

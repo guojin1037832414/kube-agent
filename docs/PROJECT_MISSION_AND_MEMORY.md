@@ -82,12 +82,24 @@ Current track:
 
 Recently completed:
 
-`M5.21-105 NIM durable execution attempt spec binding contract`
+`M5.21-106 NIM durable idempotency derivation binding contract`
 
 Latest checkpoint:
 
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
+- M5.21-106 implemented:
+  - Exposed `NimCreateWriteExecutionHandoffSupport.serverDerivedIdempotencyKey(...)` as the shared server-derived idempotency proof helper.
+  - Added `serverDerivedIdempotencyKeyFromHandoffEvidence(...)` so the durable executor can recompute the same key from handoff source evidence plus request spec digest.
+  - `NimCreateDurableWriteExecutorSupport` now rejects a handoff whose top-level key and handoff-plan idempotency key are syntactically valid but not the server-derived value.
+  - `NimCreateStateMachineSupport` now recomputes the idempotency key from audit context, audit receipt, and request spec digest when validating handoff plans and execution attempt specs.
+  - Added digest-consistent forged-key regressions in durable executor and state-machine tests.
+  - Added `docs/M5_21_ONE_HUNDRED_SIXTH_WAVE_NIM_DURABLE_IDEMPOTENCY_DERIVATION_BINDING_CONTRACT_AUDIT_20260608.md`.
+  - Targeted verification passed:
+    - `mvn -q "-Dtest=NimCreateWriteExecutionHandoffSupportTest,NimCreateDurableWriteExecutorSupportTest,NimCreateStateMachineSupportTest" test`
+  - Security invariant: no real `8100`, no real NIM service HTTP call, no Authorization header sending, no durable audit write, no deployment POST, no runtime write behavior, no state-machine release binding implementation, no durable executor release binding implementation, no validation result signer, no release decision signer, no code release switch implementation, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Recommended next slice: bind handoff audit receipt drift more deeply in durable executor, or continue release-binding proof design without opening writes.
+- Previous checkpoint:
 - M5.21-105 implemented:
   - Hardened `NimCreateDurableWriteExecutorSupport.executionAttemptSpec(...)` from digest-only evidence into a closed, digest-bound future execution mirror.
   - `executionAttemptSpec` now carries `executionAttemptSpecDigestAlgorithm`, `executionAttemptSpecDigest`, and value-copied `requestSpec`, `body`, and `executionHandoffPlan`.

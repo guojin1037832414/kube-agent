@@ -53,7 +53,7 @@ final class NimCreateWriteExecutionHandoffSupport {
         validateNoSecretMaterial("writeRequestSpecReport", requestSpecReport, blockers);
 
         String idempotencyKey = blockers.isEmpty()
-            ? idempotencyKey(auditContext, auditReceipt, requestSpecReport)
+            ? serverDerivedIdempotencyKey(auditContext, auditReceipt, requestSpecReport)
             : "";
         Map<String, Object> handoffPlan = blockers.isEmpty()
             ? executionHandoffPlan(auditContext, auditReceipt, bodyReport, requestSpecReport, idempotencyKey)
@@ -316,9 +316,9 @@ final class NimCreateWriteExecutionHandoffSupport {
         return policy;
     }
 
-    private static String idempotencyKey(Map<String, Object> auditContext,
-                                         Map<String, Object> auditReceipt,
-                                         Map<String, Object> requestSpecReport) {
+    static String serverDerivedIdempotencyKey(Map<String, Object> auditContext,
+                                              Map<String, Object> auditReceipt,
+                                              Map<String, Object> requestSpecReport) {
         String seed = String.join("\n", List.of(
             text(auditContext.get("requestId")),
             text(auditContext.get("conversationId")),
@@ -326,6 +326,20 @@ final class NimCreateWriteExecutionHandoffSupport {
             text(auditContext.get("organizationId")),
             text(auditReceipt.get("receiptId")),
             text(auditReceipt.get("eventDigest")),
+            text(requestSpecReport.get("requestSpecDigest"))
+        ));
+        return "nim-create-" + digestFor(Map.of("seed", seed)).substring(0, 32);
+    }
+
+    static String serverDerivedIdempotencyKeyFromHandoffEvidence(Map<String, Object> handoffReport,
+                                                                 Map<String, Object> requestSpecReport) {
+        String seed = String.join("\n", List.of(
+            text(handoffReport.get("sourceRequestId")),
+            text(handoffReport.get("sourceConversationId")),
+            text(handoffReport.get("sourceUserId")),
+            text(handoffReport.get("organizationId")),
+            text(handoffReport.get("sourceAuditReceiptId")),
+            text(handoffReport.get("sourceAuditEventDigest")),
             text(requestSpecReport.get("requestSpecDigest"))
         ));
         return "nim-create-" + digestFor(Map.of("seed", seed)).substring(0, 32);
