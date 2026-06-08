@@ -77,12 +77,19 @@ class NimCreateDurableAuditReceiptValidationResultSupportTest {
         assertEquals(migrationReport.get("sourceAvailabilityPlanDigest"),
             report.get("sourceAvailabilityPlanDigest"));
         assertEquals(migrationReport.get("trustedPrincipalDigest"), report.get("trustedPrincipalDigest"));
+        assertEquals(audit.get("organizationId"), report.get("sourceOrganizationId"));
+        assertEquals(audit.get("userId"), report.get("sourceUserId"));
+        assertEquals(principal.get("username"), report.get("sourceUsername"));
         assertEquals(NimCreateAuditWriterSupport.DIGEST_ALGORITHM,
             report.get("validationResultContractDigestAlgorithm"));
         assertTrue(report.get("validationResultContractDigest").toString().matches("[a-f0-9]{64}"));
 
         @SuppressWarnings("unchecked")
         Map<String, Object> contract = (Map<String, Object>) report.get("validationResultContract");
+        assertEquals(
+            NimCreateDurableAuditReceiptValidationResultSupport.validationResultContractFromReport(report),
+            contract
+        );
         assertEquals("SERVER_ISSUED_DURABLE_RECEIPT_VALIDATION_RESULT_REQUIRED",
             contract.get("contractBoundary"));
         assertEquals(NimCreateDurableAuditValidationResultMigrationSupport.FUTURE_VALIDATION_RESULT,

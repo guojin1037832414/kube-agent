@@ -307,52 +307,16 @@ final class NimCreateDurableAuditReleaseDecisionContractSupport {
                                                          Map<String, Object> principal,
                                                          Map<String, Object> report,
                                                          Map<String, Object> contract) {
-        Map<String, Object> identity = objectMap(contract.get("trustedIdentityBinding"));
-        Map<String, Object> evidence = objectMap(contract.get("evidenceBinding"));
-        Map<String, Object> template = objectMap(contract.get("currentTemplate"));
-        Map<String, Object> failure = objectMap(contract.get("failureContract"));
-        List<String> requiredFutureFields = stringList(contract.get("requiredFutureEvidenceDigestFields"));
         return !contract.isEmpty()
-            && "SERVER_ISSUED_DURABLE_RECEIPT_VALIDATION_RESULT_REQUIRED".equals(
-                text(contract.get("contractBoundary")))
-            && NimCreateDurableAuditValidationResultMigrationSupport.FUTURE_VALIDATION_RESULT.equals(
-                text(contract.get("type")))
-            && NimCreateDurableAuditReceiptValidationGateSupport.FUTURE_VALIDATOR.equals(
-                text(contract.get("producedBy")))
-            && Boolean.TRUE.equals(contract.get("futureOnly"))
-            && Boolean.FALSE.equals(contract.get("instanceAllowedNow"))
-            && VALIDATION_NOT_RUN.equals(text(contract.get("currentValidationStatus")))
-            && "PASS".equals(text(contract.get("requiredPassStatus")))
-            && Boolean.TRUE.equals(contract.get("serverIssuedRequired"))
-            && Boolean.FALSE.equals(contract.get("callerProvidedValidationResultAllowed"))
             && sourceDigestFieldsMatch(report, contract)
             && digestFor(auditContext).equals(text(contract.get("sourceAuditEventDigest")))
             && digestFor(principal).equals(text(contract.get("trustedPrincipalDigest")))
-            && NimCreateAuditWriterSupport.DIGEST_ALGORITHM.equals(text(contract.get("digestAlgorithm")))
-            && text(auditContext.get("organizationId")).equals(text(identity.get("organizationId")))
-            && text(auditContext.get("userId")).equals(text(identity.get("userId")))
-            && text(principal.get("username")).equals(text(identity.get("username")))
-            && "SERVER_SESSION_CONTEXT".equals(text(identity.get("source")))
-            && Boolean.TRUE.equals(identity.get("protectedFromCallerParams"))
-            && evidenceBindingValid(report, evidence)
-            && requiredFutureFields.equals(requiredValidationResultDigestFields())
-            && VALIDATION_NOT_RUN.equals(text(template.get("validationStatus")))
-            && Boolean.FALSE.equals(template.get("enhancedMigrationDigestVerified"))
-            && Boolean.FALSE.equals(template.get("probeBindingDigestVerified"))
-            && Boolean.FALSE.equals(template.get("probeResultContractDigestVerified"))
-            && Boolean.FALSE.equals(template.get("storageProbeReceiptValidated"))
-            && Boolean.FALSE.equals(template.get("preWriteDurableAckValidated"))
-            && Boolean.FALSE.equals(template.get("postWriteDurableAckValidated"))
-            && Boolean.FALSE.equals(template.get("durableReceiptValidated"))
-            && Boolean.FALSE.equals(template.get("validationPassed"))
-            && Boolean.FALSE.equals(template.get("releaseEligible"))
-            && Boolean.FALSE.equals(template.get("writeExecutionAllowed"))
-            && Boolean.TRUE.equals(failure.get("failClosed"))
-            && Boolean.FALSE.equals(failure.get("fallbackToMigrationPlanOnlyAllowed"))
-            && Boolean.FALSE.equals(failure.get("fallbackToProbeBindingPlanAllowed"))
-            && Boolean.FALSE.equals(failure.get("fallbackToSchemaOnlyAllowed"))
-            && Boolean.FALSE.equals(failure.get("fallbackToCallerValidationResultAllowed"))
-            && Boolean.FALSE.equals(failure.get("fallbackToLegacyAuditReceiptFlagAllowed"));
+            && text(auditContext.get("organizationId")).equals(text(report.get("sourceOrganizationId")))
+            && text(auditContext.get("userId")).equals(text(report.get("sourceUserId")))
+            && text(principal.get("username")).equals(text(report.get("sourceUsername")))
+            && contract.equals(
+                NimCreateDurableAuditReceiptValidationResultSupport
+                    .validationResultContractFromReport(report));
     }
 
     private static boolean sourceDigestFieldsMatch(Map<String, Object> report, Map<String, Object> contract) {
@@ -374,35 +338,6 @@ final class NimCreateDurableAuditReleaseDecisionContractSupport {
             }
         }
         return true;
-    }
-
-    private static boolean evidenceBindingValid(Map<String, Object> report, Map<String, Object> evidence) {
-        return sourceDigestFieldsMatch(report, evidence)
-            && text(report.get("trustedPrincipalDigest")).equals(text(evidence.get("trustedPrincipalDigest")))
-            && Boolean.TRUE.equals(evidence.get("mustBindEnhancedMigrationDigest"))
-            && Boolean.TRUE.equals(evidence.get("mustBindProbeResultBindingDigest"))
-            && Boolean.TRUE.equals(evidence.get("mustBindProbeResultContractDigest"))
-            && Boolean.TRUE.equals(evidence.get("mustBindStorageProbeReceiptDigest"))
-            && Boolean.TRUE.equals(evidence.get("mustBindPreWriteDurableAckDigest"))
-            && Boolean.TRUE.equals(evidence.get("mustBindPostWriteDurableAckDigest"))
-            && Boolean.TRUE.equals(evidence.get("mustBindDurableReceiptDigest"))
-            && Boolean.TRUE.equals(evidence.get("mustBindTrustedPrincipalDigest"))
-            && Boolean.TRUE.equals(evidence.get("mustBeServerIssued"));
-    }
-
-    private static List<String> requiredValidationResultDigestFields() {
-        return List.of(
-            "sourceEnhancedMigrationPlanDigest",
-            "sourceProbeBindingPlanDigest",
-            "sourceProbeResultContractDigest",
-            "sourceProbeExecutorPlanDigest",
-            "storageProbeReceiptDigest",
-            "preWriteDurableAckDigest",
-            "postWriteDurableAckDigest",
-            "durableReceiptDigest",
-            "trustedPrincipalDigest",
-            "sourceAuditEventDigest"
-        );
     }
 
     private static void validateCallerReleaseEvidence(Map<String, Object> callerReleaseEvidence,
@@ -818,17 +753,6 @@ final class NimCreateDurableAuditReleaseDecisionContractSupport {
             if (!map.isEmpty()) {
                 items.add(map);
             }
-        }
-        return items;
-    }
-
-    private static List<String> stringList(Object value) {
-        if (!(value instanceof List<?> list)) {
-            return List.of();
-        }
-        List<String> items = new ArrayList<>();
-        for (Object item : list) {
-            items.add(text(item));
         }
         return items;
     }

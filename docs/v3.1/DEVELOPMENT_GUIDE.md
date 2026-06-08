@@ -705,6 +705,13 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 - Extra top-level keys, binding-map keys, prerequisite drift, template drift, failure-contract drift, forbidden-shortcut drift, and future evidence-field drift are rejected even when `releaseDecisionContractDigest` is recomputed.
 - Learning distinction: a digest-consistent proof object can still be semantically unreviewed. Near write release, accept exact producer-owned proof objects, not downstream hand interpretations.
 
+### M5.21-134 validation result contract maps closed note
+
+- Validation result contract generation now exposes `validationResultContractFromReport(...)` as the producer-owned canonical reconstruction helper.
+- Release decision validation requires the whole `validationResultContract` to equal that canonical proof object instead of re-checking only known nested map fields.
+- Extra top-level keys, identity-binding keys, evidence-binding keys, prerequisite drift, template drift, failure-contract drift, forbidden-shortcut drift, and future evidence-field drift are rejected even when `validationResultContractDigest` is recomputed.
+- Learning distinction: validation result is the proof immediately upstream of release decision. Its contract map must be producer-owned and exact, because hash self-consistency alone cannot prove that new validation authority was reviewed.
+
 ### Architecture and technical learning map note
 
 - Maintain `docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md` as the long-lived architecture and technical-learning map.

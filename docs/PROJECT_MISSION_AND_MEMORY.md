@@ -91,10 +91,31 @@ Current track:
 
 Recently completed:
 
-`M5.21-133 NIM release decision contract maps closed`
+`M5.21-134 NIM validation result contract maps closed`
 
 Latest checkpoint:
 
+- Date: 2026-06-08 Asia/Shanghai.
+- Branch: `codex/m521-29-top-agent-mission`.
+- Teaching principle:
+  - This project is not only delivering software. It is also a teaching system for mastering Agent engineering.
+  - Maintain `docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md` as the long-lived architecture and technical-learning map.
+- M5.21-134 implemented:
+  - Hardened `NimCreateDurableAuditReceiptValidationResultSupport` so validation result reports include `sourceOrganizationId`, `sourceUserId`, and `sourceUsername`.
+  - Added producer-owned `validationResultContractFromReport(...)` canonical reconstruction for the whole `validationResultContract`.
+  - Hardened `NimCreateDurableAuditReleaseDecisionContractSupport` so it requires exact whole-contract equality instead of partial nested-map checks when consuming validation result contracts.
+  - Added digest-consistent forged validation result contract drift regressions covering top-level extra keys, identity-binding keys, evidence-binding keys, prerequisite value drift, current template extra keys, failure contract extra keys, forbidden shortcut list drift, and existing future evidence list drift.
+  - Added `docs/M5_21_ONE_HUNDRED_THIRTY_FOURTH_WAVE_NIM_VALIDATION_RESULT_CONTRACT_MAPS_CLOSED_AUDIT_20260608.md`.
+  - Updated the long-lived teaching map with the M5.21-134 lesson: validation result sits directly upstream of release decision, so release decision must accept only exact producer-owned validation result contracts.
+  - Targeted verification passed:
+    - `git diff --check`
+    - `mvn -q "-Dtest=NimCreateDurableAuditReceiptValidationResultSupportTest,NimCreateDurableAuditReleaseDecisionContractSupportTest" test`
+    - `mvn -q "-Dtest=NimCreateDurableAuditReceiptValidationResultSupportTest,NimCreateDurableAuditReleaseDecisionContractSupportTest,NimCreateDurableAuditReleaseDecisionGateSupportTest,NimCreateDurableAuditCodeReleaseSwitchContractSupportTest" test`
+    - `mvn -q test`
+    - Full Maven note: local `model.onnx` download timed out and Atlas degraded to L1 embedding mode, but Maven exited 0.
+  - Security invariant: no real `8100`, no real NIM service HTTP call, no Authorization header sending, no durable audit write, no deployment POST, no runtime write behavior, no source guard installation, no state-machine release binding implementation, no durable executor release binding implementation, no validation result signer, no release decision signer, no code release switch implementation, no Elasticsearch, no `ISysLogService`, no `sys_log`; `nim_create` remains HOLD/mock-first.
+  - Multi-expert next slice: continue scanning release-adjacent proof maps and validation result / migration plan local hand-interpretation points for subset, non-empty, or `contains(...)` validation that should become producer-owned canonical equality.
+- Previous checkpoint:
 - Date: 2026-06-08 Asia/Shanghai.
 - Branch: `codex/m521-29-top-agent-mission`.
 - Teaching principle:
