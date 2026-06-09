@@ -6,6 +6,26 @@
 
 ---
 
+## [M5.60-1] - Memory/RAG source evidence digest contract
+
+**Delivery**: Added a pure Java source evidence digest derivation contract and an admin-only read model for future cited Memory/RAG retrieval.
+**Changes**
+- Added `MemoryRagSourceEvidenceInput`, `MemoryRagSourceEvidenceDigestResult`, and `MemoryRagSourceEvidenceDigestDeriver`.
+- Added `AgentMemoryRagSourceEvidenceDigestContractResponse`.
+- Added `AgentMemoryRagSourceEvidenceDigestContractService`.
+- Added `GET /api/agent/observability/memory-rag/source-evidence-digest-contract`.
+- Updated Memory/RAG readiness, citation/source contract, and top-tier readiness endpoint maps to reference the digest contract.
+- Added pure-Java digest, service, controller, source-contract, and MockMvc security coverage.
+**Verification**
+- `mvn -q "-DskipTests" validate` passed.
+- `git diff --check` passed.
+- `mvn -q "-Dtest=MemoryRagSourceEvidenceDigestDeriverTest,AgentMemoryRagSourceEvidenceDigestContractServiceTest,AgentMemoryRagCitationSourceContractServiceTest,AgentMemoryRagReadinessServiceTest,AgentTopTierReadinessOverviewServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed during implementation.
+**Security**
+- `contractStatus=CONTRACT_DEFINED_NOT_BOUND`.
+- `sourceEvidenceDigestDeriverDefined=true`, `boundToIngestionRuntime=false`, `boundToRetrievalRuntime=false`, `promptEvidenceAllowedNow=false`, and `sampleUsesSyntheticEvidenceOnly=true`.
+- The deriver accepts only stable ids, bounded enums, and SHA-256 digests; raw source, prompt, retrieved chunk, tenant id, token, Authorization header, and password evidence are rejected or excluded.
+- No real ingestion, retrieval, vector store binding, embedding call, reranker call, LLM call, prompt mutation, memory write, raw evidence exposure, Tool execution, `SafeToolExecutor` invocation, HITL invocation, audit write, durable receipt issuance, kube-manager call, `RestClient`, `WebClient`, MCP runtime `tools/call`, or NIM / HPC / Slurm / BCM Phase 2 work is added.
+
 ## [M5.59-1] - Memory/RAG citation-source contract
 
 **Delivery**: Added an admin-only, read-only citation/source contract for future Memory/RAG retrieval evidence.

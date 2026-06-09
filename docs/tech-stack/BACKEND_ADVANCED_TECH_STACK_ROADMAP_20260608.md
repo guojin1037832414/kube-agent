@@ -9,6 +9,35 @@
 - 供应链、CI、SBOM、质量门禁进入工程默认路径；
 - Java / Spring / Agent 框架升级以兼容性矩阵推进，不用不可构建的版本号伪装先进。
 
+## 2026-06-09 M5.60 Source-Evidence-Digest-First RAG Rule
+
+M5.60 refines the Memory/RAG roadmap from citation-first to digest-first + citation-first.
+
+Current mainline:
+- `MemoryRagSourceEvidenceDigestDeriver` defines pure Java source/chunk/evidence digest derivation.
+- `GET /api/agent/observability/memory-rag/source-evidence-digest-contract` exposes the admin-only read model.
+- `GET /api/agent/observability/memory-rag/readiness` reports `sourceEvidenceDigestContractDefined=true` and `sourceEvidenceDigestContractBound=false`.
+- Retrieval runtime remains closed.
+
+Required digest chain:
+- stable source id and bounded source type;
+- source URI digest, tenant scope digest, source ACL digest;
+- redaction status and redaction policy digest;
+- retention policy;
+- redacted source content and metadata digests;
+- redacted chunk digest;
+- retrieval policy digest;
+- server-derived `sourceDigest`, `chunkDigest`, `evidenceDigest`, and `citationSeed`.
+
+Compatibility matrix:
+- Spring AI `VectorStore` metadata can carry digest fields without raw source leakage;
+- MCP resources and future `tools/call` results can map to the same source evidence envelope;
+- A2A task artifacts can reference `evidenceDigest` for cross-agent provenance;
+- OTel GenAI retrieval spans can emit stable digest anchors instead of raw prompt/source text;
+- OpenAI-style Agent guardrails can require digest evidence before handoff or prompt evidence injection.
+
+Teaching conclusion: advanced RAG is not "turn on embeddings." It is a signed-looking, deterministic, tenant-scoped evidence chain. M5.60 keeps the production mainline safe while preparing the exact fields that future VectorStore, GraphRAG, reranker, MCP, A2A, OTel, and guardrail layers will consume.
+
 ## 2026-06-09 M5.59 Citation-First RAG Rule
 
 M5.59 refines the Memory/RAG roadmap again: future retrieval must be citation-first and source-digest-first.

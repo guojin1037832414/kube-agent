@@ -79,7 +79,7 @@ public record AgentMemoryRagCitationSourceContractResponse(
                 "sourceDigest",
                 "Source digest",
                 true,
-                "SHA-256 style digest over the redacted source representation used for retrieval.",
+                "Server-derived SHA-256 digest over redacted source evidence; see source-evidence-digest-contract.",
                 "raw-document-body"
             ),
             field(
@@ -148,6 +148,11 @@ public record AgentMemoryRagCitationSourceContractResponse(
 
     private static List<Map<String, Object>> buildPromptEvidenceRules() {
         return List.of(
+            rule(
+                "source-evidence-digest-required",
+                "Source, chunk, and evidence digests must be server-derived before any retrieved evidence can enter prompts.",
+                true
+            ),
             rule(
                 "redacted-evidence-only",
                 "Only redacted source snippets or summaries may enter prompts.",
@@ -227,6 +232,7 @@ public record AgentMemoryRagCitationSourceContractResponse(
     private static Map<String, Object> buildEndpointMap() {
         Map<String, Object> endpoints = new LinkedHashMap<>();
         endpoints.put("citationSourceContract", "/api/agent/observability/memory-rag/citation-source-contract");
+        endpoints.put("sourceEvidenceDigestContract", "/api/agent/observability/memory-rag/source-evidence-digest-contract");
         endpoints.put("memoryRagReadiness", "/api/agent/observability/memory-rag/readiness");
         endpoints.put("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview");
         return Map.copyOf(endpoints);

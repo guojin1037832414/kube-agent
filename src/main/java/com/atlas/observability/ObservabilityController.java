@@ -44,6 +44,7 @@ public class ObservabilityController {
     private final AgentTopTierReadinessOverviewService topTierReadinessOverviewService;
     private final AgentMemoryRagReadinessService memoryRagReadinessService;
     private final AgentMemoryRagCitationSourceContractService memoryRagCitationSourceContractService;
+    private final AgentMemoryRagSourceEvidenceDigestContractService memoryRagSourceEvidenceDigestContractService;
     private final AgentAuditSnapshotProvider auditSnapshotProvider;
     private final AgentAuditQueryService auditQueryService;
     private final AgentReplayTimelineService replayTimelineService;
@@ -71,6 +72,7 @@ public class ObservabilityController {
                                    AgentTopTierReadinessOverviewService topTierReadinessOverviewService,
                                    AgentMemoryRagReadinessService memoryRagReadinessService,
                                    AgentMemoryRagCitationSourceContractService memoryRagCitationSourceContractService,
+                                   AgentMemoryRagSourceEvidenceDigestContractService memoryRagSourceEvidenceDigestContractService,
                                    AgentAuditSnapshotProvider auditSnapshotProvider,
                                    AgentAuditQueryService auditQueryService,
                                    AgentReplayTimelineService replayTimelineService,
@@ -97,6 +99,7 @@ public class ObservabilityController {
         this.topTierReadinessOverviewService = topTierReadinessOverviewService;
         this.memoryRagReadinessService = memoryRagReadinessService;
         this.memoryRagCitationSourceContractService = memoryRagCitationSourceContractService;
+        this.memoryRagSourceEvidenceDigestContractService = memoryRagSourceEvidenceDigestContractService;
         this.auditSnapshotProvider = auditSnapshotProvider;
         this.auditQueryService = auditQueryService;
         this.replayTimelineService = replayTimelineService;
@@ -145,6 +148,17 @@ public class ObservabilityController {
             return guard;
         }
         return ResponseEntity.ok(ApiResponse.ok(memoryRagCitationSourceContractService.contract()));
+    }
+
+    /** Build the Memory/RAG source evidence digest contract without ingestion or retrieval runtime binding. */
+    @GetMapping("/memory-rag/source-evidence-digest-contract")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentMemoryRagSourceEvidenceDigestContractResponse>> memoryRagSourceEvidenceDigestContract() {
+        ResponseEntity<ApiResponse<AgentMemoryRagSourceEvidenceDigestContractResponse>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return ResponseEntity.ok(ApiResponse.ok(memoryRagSourceEvidenceDigestContractService.contract()));
     }
 
     /** Describe kube-manager HTTP outlet resilience state without probing kube-manager. */

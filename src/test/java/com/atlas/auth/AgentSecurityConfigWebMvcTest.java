@@ -125,6 +125,10 @@ class AgentSecurityConfigWebMvcTest {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
             .andExpect(status().isForbidden());
 
+        mockMvc.perform(get("/api/agent/observability/memory-rag/source-evidence-digest-contract")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
+            .andExpect(status().isForbidden());
+
         mockMvc.perform(get("/api/agent/observability/replay/trace/trc_123")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
             .andExpect(status().isForbidden());
@@ -266,6 +270,10 @@ class AgentSecurityConfigWebMvcTest {
             .andExpect(status().isOk());
 
         mockMvc.perform(get("/api/agent/observability/memory-rag/citation-source-contract")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token"))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/agent/observability/memory-rag/source-evidence-digest-contract")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token"))
             .andExpect(status().isOk());
 
@@ -581,6 +589,11 @@ class AgentSecurityConfigWebMvcTest {
         @GetMapping("/api/agent/observability/memory-rag/citation-source-contract")
         String observabilityMemoryRagCitationSourceContract() {
             return "memory-rag-citation-source-contract";
+        }
+
+        @GetMapping("/api/agent/observability/memory-rag/source-evidence-digest-contract")
+        String observabilityMemoryRagSourceEvidenceDigestContract() {
+            return "memory-rag-source-evidence-digest-contract";
         }
 
         @GetMapping("/api/agent/observability/replay/trace/{id}")

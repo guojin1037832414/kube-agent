@@ -45,6 +45,7 @@ class ObservabilityControllerSecurityContractTest {
         assertThat(source).contains("@GetMapping(\"/top-tier/readiness-overview\")");
         assertThat(source).contains("@GetMapping(\"/memory-rag/readiness\")");
         assertThat(source).contains("@GetMapping(\"/memory-rag/citation-source-contract\")");
+        assertThat(source).contains("@GetMapping(\"/memory-rag/source-evidence-digest-contract\")");
         assertThat(source).contains("@GetMapping(\"/replay/trace/{traceId}\")");
         assertThat(source).contains("@GetMapping(\"/eval/trace/{traceId}\")");
         assertThat(source).contains("@PostMapping(\"/eval/suite\")");
@@ -77,6 +78,7 @@ class ObservabilityControllerSecurityContractTest {
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentTopTierReadinessOverviewResponse>> topTierReadinessOverview()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentMemoryRagReadinessResponse>> memoryRagReadiness()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentMemoryRagCitationSourceContractResponse>> memoryRagCitationSourceContract()");
+        assertThat(source).contains("public ResponseEntity<ApiResponse<AgentMemoryRagSourceEvidenceDigestContractResponse>> memoryRagSourceEvidenceDigestContract()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentReplayTimelineResponse>> replayByTraceId(@PathVariable String traceId,");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentEvalReportResponse>> evalByTraceId(@PathVariable String traceId,");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentEvalSuiteResponse>> evalSuite(@RequestBody(required = false) AgentEvalSuiteRequest request)");

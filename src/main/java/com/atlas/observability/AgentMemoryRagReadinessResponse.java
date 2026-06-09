@@ -125,12 +125,14 @@ public record AgentMemoryRagReadinessResponse(
             ),
             card(
                 "citation-and-source-contract",
-                "Citation and source contract",
-                "BLOCKED",
-                "Future RAG answers must cite source documents, source type, digest, tenant scope, and redaction status before evidence can enter prompts.",
-                List.of("citation contract", "source digest", "redacted evidence", "prompt evidence budget"),
+                "Citation and source digest contract",
+                "PARTIAL",
+                "Citation/source fields and deterministic source evidence digest contracts now exist, but they are not bound to ingestion, retrieval, prompts, or eval gates.",
+                List.of("citation contract", "source evidence digest", "redacted evidence", "prompt evidence budget"),
                 Map.of(
-                    "citationContractImplemented", false,
+                    "citationContractImplemented", true,
+                    "sourceEvidenceDigestContractImplemented", true,
+                    "sourceEvidenceDigestBoundToRuntime", false,
                     "sourceDigestRequired", true,
                     "rawDocumentExposureAllowed", false,
                     "uncitedAnswerAllowed", false
@@ -176,6 +178,7 @@ public record AgentMemoryRagReadinessResponse(
     private static List<String> buildRecommendedBuildOrder() {
         return List.of(
             "define-memory-rag-citation-source-contract",
+            "define-memory-rag-source-evidence-digest-contract",
             "add-durable-memory-store-with-retention-delete-export-metadata",
             "bind-tenant-isolated-vector-store-through-reviewed-retrieval-policy",
             "add-redacted-runbook-and-kube-manager-doc-ingestion-pipeline",
@@ -201,6 +204,8 @@ public record AgentMemoryRagReadinessResponse(
         evidence.put("vectorStoreBound", false);
         evidence.put("retrievalPolicyBound", false);
         evidence.put("citationSourceContractDefined", true);
+        evidence.put("sourceEvidenceDigestContractDefined", true);
+        evidence.put("sourceEvidenceDigestContractBound", false);
         evidence.put("citationContractBound", false);
         evidence.put("memoryRagEvalSuiteExists", false);
         evidence.put("vueWorkbenchBound", false);
@@ -211,6 +216,7 @@ public record AgentMemoryRagReadinessResponse(
         Map<String, Object> endpoints = new LinkedHashMap<>();
         endpoints.put("memoryRagReadiness", "/api/agent/observability/memory-rag/readiness");
         endpoints.put("citationSourceContract", "/api/agent/observability/memory-rag/citation-source-contract");
+        endpoints.put("sourceEvidenceDigestContract", "/api/agent/observability/memory-rag/source-evidence-digest-contract");
         endpoints.put("memorySummaries", "/api/agent/memory/summaries");
         endpoints.put("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview");
         endpoints.put("evalWorkbenchCapabilities", "/api/agent/observability/eval/workbench/capabilities");
@@ -224,6 +230,7 @@ public record AgentMemoryRagReadinessResponse(
         protocol.put("requiresDurableStore", true);
         protocol.put("requiresTenantPartition", true);
         protocol.put("requiresCitationContract", true);
+        protocol.put("requiresSourceEvidenceDigestContract", true);
         protocol.put("requiresRedactedIngestion", true);
         protocol.put("requiresEvalGate", true);
         protocol.put("requiresFrontendGovernance", true);
@@ -231,7 +238,7 @@ public record AgentMemoryRagReadinessResponse(
         protocol.put("futureStableMainlineCandidates", List.of(
             "Spring AI VectorStore abstraction",
             "tenant-aware document metadata",
-            "citation digest contract",
+            "source evidence digest contract",
             "deterministic Memory/RAG eval suite"
         ));
         protocol.put("compatibilityMatrixCandidates", List.of(

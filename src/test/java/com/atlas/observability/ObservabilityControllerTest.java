@@ -98,6 +98,8 @@ class ObservabilityControllerTest {
         new AgentMemoryRagReadinessService(memoryStore);
     private final AgentMemoryRagCitationSourceContractService memoryRagCitationSourceContractService =
         new AgentMemoryRagCitationSourceContractService();
+    private final AgentMemoryRagSourceEvidenceDigestContractService memoryRagSourceEvidenceDigestContractService =
+        new AgentMemoryRagSourceEvidenceDigestContractService();
     private final AgentTopTierReadinessOverviewService topTierReadinessOverviewService =
         new AgentTopTierReadinessOverviewService(
             kubeManagerHttpOutletGovernanceWorkbenchOverviewService,
@@ -116,6 +118,7 @@ class ObservabilityControllerTest {
         topTierReadinessOverviewService,
         memoryRagReadinessService,
         memoryRagCitationSourceContractService,
+        memoryRagSourceEvidenceDigestContractService,
         auditRecorder,
         auditRecorder,
         replayTimelineService,
@@ -908,7 +911,9 @@ class ObservabilityControllerTest {
             .containsEntry("trustedPrincipalOwner", true)
             .containsEntry("durableStoreBound", false)
             .containsEntry("vectorStoreBound", false)
-            .containsEntry("citationSourceContractDefined", true);
+            .containsEntry("citationSourceContractDefined", true)
+            .containsEntry("sourceEvidenceDigestContractDefined", true)
+            .containsEntry("sourceEvidenceDigestContractBound", false);
         assertThat(readiness.safety())
             .containsEntry("adminOnly", true)
             .containsEntry("readOnly", true)
@@ -959,6 +964,10 @@ class ObservabilityControllerTest {
             .contains("sourceDigest", "tenantScope", "redactionStatus");
         assertThat(contract.citationFields()).extracting(field -> field.get("id"))
             .contains("citationId", "sourceDigest", "chunkDigest");
+        assertThat(contract.promptEvidenceRules()).extracting(rule -> rule.get("id"))
+            .contains("source-evidence-digest-required");
+        assertThat(contract.endpointMap())
+            .containsEntry("sourceEvidenceDigestContract", "/api/agent/observability/memory-rag/source-evidence-digest-contract");
         assertThat(contract.safety())
             .containsEntry("adminOnly", true)
             .containsEntry("readOnly", true)
@@ -975,6 +984,61 @@ class ObservabilityControllerTest {
         assertThat(contract.toString())
             .contains("citation-required-for-rag-answer", "sourceDigest")
             .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret");
+    }
+
+    @Test
+    void memoryRagSourceEvidenceDigestContract_shouldRequireAdminAndReturnUnboundContract() {
+        ResponseEntity<ApiResponse<AgentMemoryRagSourceEvidenceDigestContractResponse>> anonymous =
+            controller.memoryRagSourceEvidenceDigestContract();
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentMemoryRagSourceEvidenceDigestContractResponse>> user =
+            controller.memoryRagSourceEvidenceDigestContract();
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        userPermissionContext.unbind();
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentMemoryRagSourceEvidenceDigestContractResponse>> admin =
+            controller.memoryRagSourceEvidenceDigestContract();
+
+        assertThat(admin.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(admin.getBody()).isNotNull();
+        AgentMemoryRagSourceEvidenceDigestContractResponse contract = admin.getBody().getData();
+        assertThat(contract.schemaVersion()).isEqualTo("agent-memory-rag-source-evidence-digest-contract.v1");
+        assertThat(contract.contractStatus()).isEqualTo("CONTRACT_DEFINED_NOT_BOUND");
+        assertThat(contract.sourceEvidenceDigestDeriverDefined()).isTrue();
+        assertThat(contract.boundToIngestionRuntime()).isFalse();
+        assertThat(contract.boundToRetrievalRuntime()).isFalse();
+        assertThat(contract.sampleDigest().evidenceDigest()).matches("sha256:[a-f0-9]{64}");
+        assertThat(contract.digestInputs()).extracting(input -> input.get("id"))
+            .contains("tenantScopeDigest", "sourceAclDigest", "chunkContentDigest", "retrievalPolicyDigest");
+        assertThat(contract.enforcementRules()).extracting(rule -> rule.get("id"))
+            .contains("redacted-or-summary-only", "tenant-scope-bound", "runtime-binding-gated");
+        assertThat(contract.safety())
+            .containsEntry("adminOnly", true)
+            .containsEntry("readOnly", true)
+            .containsEntry("contractOnly", true)
+            .containsEntry("sampleDerivationLocalOnly", true)
+            .containsEntry("ingestionExecuted", false)
+            .containsEntry("retrievalExecuted", false)
+            .containsEntry("llmUsed", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("kubeManagerCalls", false);
+        assertThat(contract.privacy())
+            .containsEntry("sampleSyntheticOnly", true)
+            .containsEntry("containsRawDocument", false)
+            .containsEntry("containsRawPrompt", false)
+            .containsEntry("containsToken", false);
+        assertThat(contract.toString())
+            .contains("sourceDigest", "citationSeed")
+            .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret", "raw document");
     }
 
     @Test

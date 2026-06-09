@@ -10,6 +10,42 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
+## Latest Phase 1 Core Memory - M5.60-1
+
+M5.60-1 adds the Phase 1 Memory/RAG source evidence digest contract.
+
+Delivered:
+
+- Added pure Java `MemoryRagSourceEvidenceInput`, `MemoryRagSourceEvidenceDigestResult`, and `MemoryRagSourceEvidenceDigestDeriver`.
+- Added `AgentMemoryRagSourceEvidenceDigestContractResponse`.
+- Added `AgentMemoryRagSourceEvidenceDigestContractService`.
+- Added admin-only `GET /api/agent/observability/memory-rag/source-evidence-digest-contract`.
+- Updated Memory/RAG readiness so `sourceEvidenceDigestContractDefined=true` and `sourceEvidenceDigestContractBound=false`.
+- Updated citation/source and top-tier readiness contracts to link to the new digest contract.
+- Added pure-Java digest, service, controller, source-contract, and MockMvc security coverage.
+
+Current state:
+
+- `schemaVersion=agent-memory-rag-source-evidence-digest-contract.v1`.
+- `contractStatus=CONTRACT_DEFINED_NOT_BOUND`.
+- `sourceEvidenceDigestDeriverDefined=true`.
+- `boundToIngestionRuntime=false`.
+- `boundToRetrievalRuntime=false`.
+- `sampleUsesSyntheticEvidenceOnly=true`.
+- `promptEvidenceAllowedNow=false`.
+
+Security boundary:
+
+- The endpoint is admin-only, read-only, contract-only, and fail-closed.
+- The deriver accepts only stable ids, bounded enums, and SHA-256 digests.
+- It does not execute ingestion/retrieval, bind a vector store, call embedding/reranker/LLM, mutate prompts, write memory, expose raw source/prompt/chunk content, execute Tools, invoke `SafeToolExecutor`, invoke HITL, write audit, issue durable receipts, call kube-manager, use `RestClient` / `WebClient`, expose MCP runtime `tools/call`, or touch NIM / HPC / Slurm / BCM Phase 2 scope.
+
+Learning point: source evidence digests turn future RAG into a verifiable custody protocol. Before a chunk can influence an answer, the Agent must prove which redacted source it came from, which tenant scope allows it, which policy redacted it, which retention rule governs it, and which citation seed can point back to it.
+
+Latest verified command:
+
+- `mvn -q "-Dtest=MemoryRagSourceEvidenceDigestDeriverTest,AgentMemoryRagSourceEvidenceDigestContractServiceTest,AgentMemoryRagCitationSourceContractServiceTest,AgentMemoryRagReadinessServiceTest,AgentTopTierReadinessOverviewServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
 ## Latest Phase 1 Core Memory - M5.59-1
 
 M5.59-1 adds the Phase 1 Memory/RAG citation-source contract.

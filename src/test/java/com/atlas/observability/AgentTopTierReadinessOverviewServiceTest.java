@@ -90,13 +90,15 @@ class AgentTopTierReadinessOverviewServiceTest {
             "wire-vue-top-tier-readiness-overview",
             "populate-reviewed-redacted-eval-trace-evidence",
             "promote-eval-gate-bundle-from-evidence-only-to-reviewed-blocking",
-            "implement-durable-memory-and-rag-citation-contract",
+            "implement-durable-memory-and-rag-runtime-binding-after-source-digest-contract",
             "add-mcp-tools-call-only-after-safe-tool-executor-consent-hitl-audit-eval-binding",
             "keep-nim-hpc-slurm-bcm-paused-until-phase-2"
         );
         assertThat(overview.endpointMap())
             .containsEntry("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview")
             .containsEntry("mcpGovernanceOverview", "/api/agent/mcp/governance/overview")
+            .containsEntry("memoryRagCitationSourceContract", "/api/agent/observability/memory-rag/citation-source-contract")
+            .containsEntry("memoryRagSourceEvidenceDigestContract", "/api/agent/observability/memory-rag/source-evidence-digest-contract")
             .containsEntry("kubeManagerGovernanceOverview", "/api/agent/observability/kube-manager/http-outlet/governance-workbench/overview");
         assertThat(overview.safety())
             .containsEntry("adminOnly", true)

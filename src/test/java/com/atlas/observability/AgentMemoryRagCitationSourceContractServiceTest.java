@@ -60,6 +60,7 @@ class AgentMemoryRagCitationSourceContractServiceTest {
             );
         assertThat(contract.promptEvidenceRules()).extracting(rule -> rule.get("id"))
             .containsExactly(
+                "source-evidence-digest-required",
                 "redacted-evidence-only",
                 "citation-required-for-rag-answer",
                 "tenant-scope-match-required",

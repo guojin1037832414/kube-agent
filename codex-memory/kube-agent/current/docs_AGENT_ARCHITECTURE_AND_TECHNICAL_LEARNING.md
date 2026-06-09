@@ -2,6 +2,38 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-09 M5.60 Memory/RAG Source Evidence Digest Contract
+
+M5.60 defines the deterministic digest contract that future RAG source evidence must satisfy before ingestion or retrieval can be runtime-bound.
+
+```text
+redacted source evidence
+        |
+        | stable ids + bounded enums + SHA-256 digests only
+        v
+MemoryRagSourceEvidenceDigestDeriver
+        |
+        | sourceDigest + chunkDigest + evidenceDigest + citationSeed
+        v
+AgentMemoryRagSourceEvidenceDigestContractService
+        |
+        | admin-only, read-only, contract-only
+        v
+/api/agent/observability/memory-rag/source-evidence-digest-contract
+```
+
+Key design:
+- `MemoryRagSourceEvidenceInput` accepts only stable source ids, bounded source/redaction/retention enums, and SHA-256 digests. It rejects raw secret or document markers.
+- `MemoryRagSourceEvidenceDigestDeriver` is pure Java and uses `MessageDigest` + Java 17 `HexFormat`.
+- `MemoryRagSourceEvidenceDigestResult` publishes `sourceDigest`, `chunkDigest`, `evidenceDigest`, and server-derived `citationSeed`.
+- `AgentMemoryRagSourceEvidenceDigestContractResponse` publishes `schemaVersion=agent-memory-rag-source-evidence-digest-contract.v1` and `contractStatus=CONTRACT_DEFINED_NOT_BOUND`.
+- The endpoint keeps `boundToIngestionRuntime=false`, `boundToRetrievalRuntime=false`, `promptEvidenceAllowedNow=false`, and `sampleUsesSyntheticEvidenceOnly=true`.
+- M5.58 readiness now reports `sourceEvidenceDigestContractDefined=true` and `sourceEvidenceDigestContractBound=false`; M5.59 citation/source contract now requires `source-evidence-digest-required`.
+
+Learning point: 顶级 RAG 的第一性原理不是“搜得准”，而是“证据可证明”。source digest 证明来源，chunk digest 证明片段，evidence digest 证明完整证据信封，citationSeed 让未来回答可以稳定引用。只有这条证据链存在，后续 Spring AI VectorStore、GraphRAG、reranker、MCP resources、A2A artifacts、OpenTelemetry GenAI retrieval spans 才有可靠的治理锚点。
+
+Technology point: M5.60 把最新 Agent 技术方向落成一个稳定 Java 合同，而不是今天就打开运行时检索。它为 Spring AI metadata、MCP resource evidence、A2A task artifacts、OTel GenAI retrieval spans 和 OpenAI-style guardrails/handoffs 留好字段语义，同时保持无 ingestion、无 retrieval、无 vector store、无 LLM、无 kube-manager 调用。
+
 ## 2026-06-09 M5.59 Memory/RAG Citation Source Contract
 
 M5.59 defines the chain-of-custody contract that future RAG evidence must satisfy before it can enter a prompt.
