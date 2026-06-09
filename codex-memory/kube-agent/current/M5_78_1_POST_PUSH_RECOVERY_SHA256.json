@@ -1,0 +1,80 @@
+﻿{
+    "milestone":  "M5.78-1",
+    "title":  "Advanced technology compatibility matrix Vue binding spec",
+    "generatedAt":  "2026-06-10T00:48:45.3898987+08:00",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "head":  "43153a5a0a1ea3e6d96227e350d84892eeea3e44",
+    "note":  "Post-push recovery manifest after M5.78 implementation commit and push.",
+    "files":  [
+                  {
+                      "path":  "CHANGELOG.md",
+                      "sha256":  "2F390A6DE5C112F04EF26AA48614477B5C1DAE0B8D54963B70DA91D2076D43A6",
+                      "bytes":  380497
+                  },
+                  {
+                      "path":  "docs/PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "C6C6D220636325C1B469EBB72F6C75E08C2FAC04284D498C5363A46C7C9DE02E",
+                      "bytes":  437664
+                  },
+                  {
+                      "path":  "docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "1BF4694DCF1CABC24BF7B50EB2F372706C2BC32809D6708298826C6B36964232",
+                      "bytes":  184833
+                  },
+                  {
+                      "path":  "docs/tech-stack/BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "366CC3A6930516BC9F78BF5F1EA1288F346D170A91CCF8E40F56469FB1DF2B23",
+                      "bytes":  107405
+                  },
+                  {
+                      "path":  "docs/M5_78_ADVANCED_TECHNOLOGY_COMPATIBILITY_MATRIX_VUE_BINDING_SPEC_20260610.md",
+                      "sha256":  "03876D995389375677829D9C3935E97656CD0F6481604CF7F5EDACA281CB0AB1",
+                      "bytes":  5703
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/CHANGELOG.md",
+                      "sha256":  "2F390A6DE5C112F04EF26AA48614477B5C1DAE0B8D54963B70DA91D2076D43A6",
+                      "bytes":  380497
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/RECOVERY_STATUS.md",
+                      "sha256":  "96C17D4782EE15C5D213DB874708DB25640DD62ED49F24D92BD6878AEF7C10BB",
+                      "bytes":  82018
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "C6C6D220636325C1B469EBB72F6C75E08C2FAC04284D498C5363A46C7C9DE02E",
+                      "bytes":  437664
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "1BF4694DCF1CABC24BF7B50EB2F372706C2BC32809D6708298826C6B36964232",
+                      "bytes":  184833
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "366CC3A6930516BC9F78BF5F1EA1288F346D170A91CCF8E40F56469FB1DF2B23",
+                      "bytes":  107405
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_M5_78_ADVANCED_TECHNOLOGY_COMPATIBILITY_MATRIX_VUE_BINDING_SPEC_20260610.md",
+                      "sha256":  "03876D995389375677829D9C3935E97656CD0F6481604CF7F5EDACA281CB0AB1",
+                      "bytes":  5703
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecResponse.java",
+                      "sha256":  "11687483BC5B572E467E4887E11DF575C67EA29E435DAB6AD1077EC6BCAF406A",
+                      "bytes":  22611
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecService.java",
+                      "sha256":  "C174869BA027E7216ADC869DEBD00AD41778C8CA77F7CA3CB19616A62FBECFA2",
+                      "bytes":  1369
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecServiceTest.java",
+                      "sha256":  "EDD95EB88D886A4B6E2F8D671E1D3081E7D0029F684F127F64E1A4B8502466DB",
+                      "bytes":  11484
+                  }
+              ]
+}
