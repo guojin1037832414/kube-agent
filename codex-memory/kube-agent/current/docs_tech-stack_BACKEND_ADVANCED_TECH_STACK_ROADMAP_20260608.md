@@ -9,6 +9,30 @@
 - 供应链、CI、SBOM、质量门禁进入工程默认路径；
 - Java / Spring / Agent 框架升级以兼容性矩阵推进，不用不可构建的版本号伪装先进。
 
+## 2026-06-10 M5.77 Advanced-Technology-Compatibility-Matrix Rule
+
+M5.77 adds the backend-owned compatibility matrix for latest technology adoption:
+
+```text
+GET /api/agent/observability/top-tier/advanced-technology-compatibility-matrix
+```
+
+This is now the Phase 1 rule before any dependency/runtime upgrade:
+
+- Java 21/25, Spring Boot 4, Spring AI 2, OpenAI Agents/Responses runtime patterns, MCP tools/call, A2A handoff, OTel GenAI/MCP semconv, GraphRAG/rerankers/vector stores, kube-manager writes, SBOM/dependency audit, and CI blocking all enter the matrix first.
+- The matrix publishes source baselines, candidate targets, required evidence, migration gates, blocked shortcuts, and test lanes.
+- Current mainline remains Java 17 + Spring Boot 3.5.x + Spring AI 1.1.x until compatibility evidence proves a safe migration.
+- Future runtime authority requires official source review, compatibility branch, focused tests, security/privacy regression, Vue readonly evidence, recovery memory, and Git-reviewed release decision.
+
+Technology judgment: M5.77 is a higher-fidelity interpretation of "use the latest technologies". It keeps the latest technologies inside Phase 1 scope, but represents them as testable upgrade lanes rather than unsafe runtime changes. This is how a top-tier Agent stays modern without becoming fragile.
+
+Next order after M5.77:
+
+- Bind `vue-kube-manager` to render the compatibility matrix.
+- Add compatibility branches for Java 21/25, Spring Boot 4, and Spring AI 2 as separate reviewed slices.
+- Continue reviewed redacted eval and Memory/RAG trace evidence curation before retrieval/runtime expansion.
+- Keep MCP tools/call, A2A handoff, CI blocking, kube-manager writes, and Phase 2 NIM/HPC/Slurm/BCM closed until their gates pass.
+
 ## 2026-06-09 M5.76 Official-Version-Protocol-Watch-Vue-Binding-Spec Rule
 
 M5.76 adds the backend-owned Vue binding spec for the latest-technology governance dashboard:

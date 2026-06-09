@@ -144,6 +144,8 @@ class ObservabilityControllerTest {
         new AgentAdvancedTechnologyAdoptionContractService();
     private final AgentOfficialVersionProtocolWatchService officialVersionProtocolWatchService =
         new AgentOfficialVersionProtocolWatchService();
+    private final AgentAdvancedTechnologyCompatibilityMatrixService advancedTechnologyCompatibilityMatrixService =
+        new AgentAdvancedTechnologyCompatibilityMatrixService(officialVersionProtocolWatchService);
     private final AgentOfficialVersionProtocolWatchDashboardService officialVersionProtocolWatchDashboardService =
         new AgentOfficialVersionProtocolWatchDashboardService(officialVersionProtocolWatchService);
     private final AgentOfficialVersionProtocolWatchVueBindingSpecService officialVersionProtocolWatchVueBindingSpecService =
@@ -163,6 +165,7 @@ class ObservabilityControllerTest {
         kubeManagerHttpOutletGovernanceWorkbenchOverviewService,
         topTierReadinessOverviewService,
         advancedTechnologyAdoptionContractService,
+        advancedTechnologyCompatibilityMatrixService,
         officialVersionProtocolWatchService,
         officialVersionProtocolWatchDashboardService,
         officialVersionProtocolWatchVueBindingSpecService,
@@ -978,6 +981,8 @@ class ObservabilityControllerTest {
             .contains("source-owned-contract", "eval-before-release", "phase2-domain-pause");
         assertThat(contract.endpointMap())
             .containsEntry("advancedTechnologyAdoptionContract", "/api/agent/observability/top-tier/advanced-technology-adoption-contract")
+            .containsEntry("advancedTechnologyCompatibilityMatrix",
+                "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix")
             .containsEntry("officialVersionProtocolWatch", "/api/agent/observability/top-tier/official-version-protocol-watch")
             .containsEntry("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap")
             .containsEntry("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane");
@@ -998,6 +1003,67 @@ class ObservabilityControllerTest {
             .containsEntry("containsPassword", false);
         assertThat(contract.toString())
             .contains("java-spring-control-plane", "COMPATIBILITY_MATRIX", "source-owned-contract")
+            .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret");
+    }
+
+    @Test
+    void advancedTechnologyCompatibilityMatrix_shouldRequireAdminAndReturnMatrixOnlyContract() {
+        ResponseEntity<ApiResponse<AgentAdvancedTechnologyCompatibilityMatrixResponse>> anonymous =
+            controller.advancedTechnologyCompatibilityMatrix();
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentAdvancedTechnologyCompatibilityMatrixResponse>> user =
+            controller.advancedTechnologyCompatibilityMatrix();
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        userPermissionContext.unbind();
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentAdvancedTechnologyCompatibilityMatrixResponse>> admin =
+            controller.advancedTechnologyCompatibilityMatrix();
+
+        assertThat(admin.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(admin.getBody()).isNotNull();
+        AgentAdvancedTechnologyCompatibilityMatrixResponse matrix = admin.getBody().getData();
+        assertThat(matrix.schemaVersion()).isEqualTo("agent-advanced-technology-compatibility-matrix.v1");
+        assertThat(matrix.matrixStatus()).isEqualTo("MATRIX_DEFINED_NOT_EXECUTED");
+        assertThat(matrix.sourceBaselineCount()).isEqualTo(8);
+        assertThat(matrix.matrixItemCount()).isEqualTo(10);
+        assertThat(matrix.migrationGateCount()).isEqualTo(8);
+        assertThat(matrix.blockedShortcutCount()).isEqualTo(7);
+        assertThat(matrix.testLaneCount()).isEqualTo(8);
+        assertThat(matrix.runtimeUpgradeAllowedNow()).isFalse();
+        assertThat(matrix.dependencyUpgradeAllowedNow()).isFalse();
+        assertThat(matrix.matrixItems()).extracting(item -> item.get("id"))
+            .contains("java-runtime-toolchains", "spring-boot-framework", "spring-ai-access-layer",
+                "mcp-runtime-call-plane", "memory-rag-graphrag-reranker-vectorstore");
+        assertThat(matrix.blockedUpgradeShortcuts()).extracting(shortcut -> shortcut.get("id"))
+            .contains("upgrade-pom-from-readiness-page", "trust-mcp-tool-annotations",
+                "enable-ci-blocking-with-empty-fixtures");
+        assertThat(matrix.endpointMap())
+            .containsEntry("advancedTechnologyCompatibilityMatrix",
+                "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix")
+            .containsEntry("officialVersionProtocolWatch",
+                "/api/agent/observability/top-tier/official-version-protocol-watch");
+        assertThat(matrix.safety())
+            .containsEntry("adminOnly", true)
+            .containsEntry("readOnly", true)
+            .containsEntry("matrixOnly", true)
+            .containsEntry("dependencyUpgradeAllowedNow", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("mcpToolsCall", false)
+            .containsEntry("retrievalExecuted", false)
+            .containsEntry("phase2NimHpcSlurmBcmTouched", false);
+        assertThat(matrix.sourceWatch().schemaVersion())
+            .isEqualTo("agent-official-version-protocol-watch.v1");
+        assertThat(matrix.toString())
+            .contains("spring-ai-access-layer", "mcp-runtime-call-plane", "upgrade-pom-from-readiness-page")
             .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret");
     }
 

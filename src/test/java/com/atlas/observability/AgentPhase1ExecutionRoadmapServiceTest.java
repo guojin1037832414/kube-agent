@@ -64,6 +64,7 @@ class AgentPhase1ExecutionRoadmapServiceTest {
             .contains(
                 "top-tier-overview",
                 "technology-adoption",
+                "advanced-technology-compatibility-matrix",
                 "official-version-protocol-watch",
                 "official-version-protocol-watch-dashboard",
                 "official-version-protocol-watch-binding-spec",
@@ -89,6 +90,8 @@ class AgentPhase1ExecutionRoadmapServiceTest {
             .containsEntry("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane")
             .containsEntry("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview")
             .containsEntry("advancedTechnologyAdoptionContract", "/api/agent/observability/top-tier/advanced-technology-adoption-contract")
+            .containsEntry("advancedTechnologyCompatibilityMatrix",
+                "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix")
             .containsEntry("officialVersionProtocolWatch", "/api/agent/observability/top-tier/official-version-protocol-watch")
             .containsEntry("officialVersionProtocolWatchDashboard",
                 "/api/agent/observability/top-tier/official-version-protocol-watch/dashboard")

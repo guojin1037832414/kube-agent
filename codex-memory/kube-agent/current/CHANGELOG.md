@@ -6,6 +6,22 @@
 
 ---
 
+## [M5.77-1] - Advanced technology compatibility matrix
+
+**Delivery**: Added a backend-owned compatibility matrix for adopting latest Agent technologies without blind dependency/runtime upgrades.
+**Changes**
+- Added `GET /api/agent/observability/top-tier/advanced-technology-compatibility-matrix`.
+- Added `AgentAdvancedTechnologyCompatibilityMatrixResponse` and `AgentAdvancedTechnologyCompatibilityMatrixService`.
+- Published 8 official-source baselines, 10 matrix items, 8 migration gates, 7 blocked upgrade shortcuts, 8 test lanes, and an implementation checklist.
+- Embedded the official version/protocol watch as `sourceWatch`.
+- Integrated the matrix into advanced technology adoption, official watch, dashboard, Vue binding spec, top-tier readiness, Phase 1 roadmap, Vue readiness control plane, Controller, and security contracts.
+- Updated Vue readiness dashboard count to `13` and added `advanced-technology-compatibility-matrix`.
+**Verification**
+- `mvn -q "-Dtest=AgentAdvancedTechnologyCompatibilityMatrixServiceTest,AgentAdvancedTechnologyAdoptionContractServiceTest,AgentOfficialVersionProtocolWatchServiceTest,AgentOfficialVersionProtocolWatchDashboardServiceTest,AgentOfficialVersionProtocolWatchVueBindingSpecServiceTest,AgentTopTierReadinessOverviewServiceTest,AgentPhase1ExecutionRoadmapServiceTest,AgentVueReadinessControlPlaneServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed during implementation.
+**Security**
+- The matrix is admin-only, read-only, matrix-only, and external-call-free at request time.
+- It does not modify `pom.xml`, upgrade dependencies, switch Java/Spring/Spring AI baselines, run LLMs, execute Tools, invoke `SafeToolExecutor`, invoke HITL, call kube-manager or port `8100`, expose MCP runtime `tools/call`, run A2A handoff, execute retrieval/vector/reranker/GraphRAG, write memory, write audit, issue durable receipts, mutate catalogs, enable CI blocking, or touch NIM / HPC / Slurm / BCM Phase 2 work.
+
 ## [M5.76-1] - Official version/protocol watch Vue binding spec
 
 **Delivery**: Added a backend-owned Vue binding specification for the official version/protocol watch dashboard so `vue-kube-manager` can implement the page without duplicating governance logic.

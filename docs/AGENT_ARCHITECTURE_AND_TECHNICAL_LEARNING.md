@@ -2,6 +2,58 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-10 M5.77 Advanced Technology Compatibility Matrix
+
+M5.77 adds a backend-owned compatibility matrix for advanced Agent technologies. It answers: how can this project use latest frameworks and Agent protocols while keeping the mainline buildable, secure, testable, and recoverable?
+
+```text
+Official version/protocol watch
+        |
+        v
+M5.77 compatibility matrix
+        |
+        +-- sourceBaselines
+        +-- matrixItems
+        +-- migrationGates
+        +-- blockedUpgradeShortcuts
+        +-- testLanes
+        |
+        v
+future compatibility branches
+        |
+        v
+reviewed runtime/dependency release slices
+```
+
+Endpoint:
+
+```text
+GET /api/agent/observability/top-tier/advanced-technology-compatibility-matrix
+```
+
+Current state:
+
+- `schemaVersion=agent-advanced-technology-compatibility-matrix.v1`
+- `matrixStatus=MATRIX_DEFINED_NOT_EXECUTED`
+- `sourceBaselineCount=8`
+- `matrixItemCount=10`
+- `migrationGateCount=8`
+- `blockedShortcutCount=7`
+- `testLaneCount=8`
+- `runtimeUpgradeAllowedNow=false`
+- `dependencyUpgradeAllowedNow=false`
+
+Key design:
+
+- The matrix service composes only `AgentOfficialVersionProtocolWatchService.watch()`.
+- The matrix does not change dependencies, run tests, call LLMs, execute Tools, call kube-manager, or open runtime controls.
+- It captures candidate lanes for Java 21/25, Spring Boot 4, Spring AI 2, OpenAI Agents/Responses, MCP runtime, A2A, OTel GenAI, GraphRAG/rerankers/vector stores, kube-manager writes, and CI/SBOM quality.
+- It exposes migration gates and blocked shortcuts so a future Vue page can teach why "latest" is not automatically "safe".
+
+Learning point: 顶级 Agent 的升级路径是 compatibility matrix first。一个 Agent 工程师需要学会判断：哪些技术可以在主线稳定使用，哪些必须先进入兼容矩阵，哪些必须等 release gate 才能进入 runtime。
+
+Technology point: Spring Boot 4、Spring AI 2、Java 21/25、MCP runtime、A2A、GraphRAG、reranker、vector store、CI blocking 都在一期目标的技术视野内，但它们进入系统的方式是证据链，而不是按钮或版本号冲动。
+
 ## 2026-06-09 M5.76 Official Version / Protocol Watch Vue Binding Spec
 
 M5.76 turns the M5.75 dashboard into a backend-owned frontend binding spec. It answers: how can `vue-kube-manager` implement the official technology/protocol watch page without duplicating or weakening backend governance logic?

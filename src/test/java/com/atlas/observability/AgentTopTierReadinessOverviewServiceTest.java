@@ -91,6 +91,7 @@ class AgentTopTierReadinessOverviewServiceTest {
         assertThat(overview.recommendedBuildOrder()).containsExactly(
             "wire-vue-top-tier-readiness-overview",
             "wire-vue-advanced-technology-adoption-contract",
+            "wire-vue-advanced-technology-compatibility-matrix",
             "wire-vue-official-version-protocol-watch",
             "wire-vue-official-version-protocol-watch-dashboard",
             "wire-vue-official-version-protocol-watch-binding-spec",
@@ -106,6 +107,8 @@ class AgentTopTierReadinessOverviewServiceTest {
         assertThat(overview.endpointMap())
             .containsEntry("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview")
             .containsEntry("advancedTechnologyAdoptionContract", "/api/agent/observability/top-tier/advanced-technology-adoption-contract")
+            .containsEntry("advancedTechnologyCompatibilityMatrix",
+                "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix")
             .containsEntry("officialVersionProtocolWatch", "/api/agent/observability/top-tier/official-version-protocol-watch")
             .containsEntry("officialVersionProtocolWatchDashboard",
                 "/api/agent/observability/top-tier/official-version-protocol-watch/dashboard")
@@ -153,6 +156,8 @@ class AgentTopTierReadinessOverviewServiceTest {
             .orElseThrow()
             .get("evidence");
         assertThat(advancedTechnologyEvidence)
+            .containsEntry("compatibilityMatrixEndpoint",
+                "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix")
             .containsEntry("officialVersionProtocolWatchDashboardEndpoint",
                 "/api/agent/observability/top-tier/official-version-protocol-watch/dashboard")
             .containsEntry("officialVersionProtocolWatchVueBindingSpecEndpoint",

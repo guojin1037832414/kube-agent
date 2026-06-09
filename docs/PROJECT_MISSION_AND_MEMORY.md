@@ -10,6 +10,61 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
+## Latest Phase 1 Core Memory - M5.77-1
+
+M5.77-1 adds the backend-owned advanced technology compatibility matrix. This converts the user's "use all latest technologies/frameworks" goal into upgrade governance evidence: official-source baselines, candidate technology lanes, migration gates, blocked shortcuts, test lanes, and a checklist before any dependency/runtime upgrade.
+
+Endpoint:
+
+```text
+GET /api/agent/observability/top-tier/advanced-technology-compatibility-matrix
+```
+
+Delivered:
+
+- Added `AgentAdvancedTechnologyCompatibilityMatrixResponse`.
+- Added `AgentAdvancedTechnologyCompatibilityMatrixService`.
+- Added admin-only Controller method `advancedTechnologyCompatibilityMatrix()`.
+- Published `sourceBaselines`, `matrixItems`, `migrationGates`, `blockedUpgradeShortcuts`, `testLanes`, and `implementationChecklist`.
+- Embedded the official version/protocol watch as `sourceWatch`.
+- Integrated the matrix into advanced technology adoption, official watch, official watch dashboard, Vue binding spec, top-tier readiness overview, Phase 1 roadmap, and Vue readiness control plane.
+- Updated Vue readiness dashboard count to `13`.
+- Added service, Controller, source-security, WebMvc security, top-tier readiness, roadmap, and Vue readiness tests.
+- Added the teaching document `docs/M5_77_ADVANCED_TECHNOLOGY_COMPATIBILITY_MATRIX_20260610.md`.
+
+Current state:
+
+- `schemaVersion=agent-advanced-technology-compatibility-matrix.v1`.
+- `matrixStatus=MATRIX_DEFINED_NOT_EXECUTED`.
+- `sourceReviewDate=2026-06-10`.
+- `sourceBaselineCount=8`.
+- `matrixItemCount=10`.
+- `migrationGateCount=8`.
+- `blockedShortcutCount=7`.
+- `testLaneCount=8`.
+- `runtimeUpgradeAllowedNow=false`.
+- `dependencyUpgradeAllowedNow=false`.
+- `runtimeControlAllowed=false`.
+
+Security boundary:
+
+- M5.77 is admin-only, read-only, matrix-only, and external-call-free at request time.
+- It does not modify `pom.xml`, upgrade dependencies, switch Java/Spring/Spring AI baselines, bind external Agent runtimes, run LLMs, execute Tools, call `SafeToolExecutor`, invoke HITL, call kube-manager including port `8100`, expose MCP runtime `tools/call`, run A2A handoff, execute retrieval/vector/reranker/GraphRAG, write memory, write audit, issue durable receipts, mutate catalogs, enable CI blocking, or touch NIM / HPC / Slurm / BCM Phase 2 scope.
+
+Learning point: top-tier Agent projects adopt new technology through a compatibility matrix. The matrix is where Java 21/25, Spring Boot 4, Spring AI 2, MCP runtime, A2A, OTel GenAI, GraphRAG, rerankers, vector stores, CI blocking, and kube-manager write authority wait until evidence proves they are safe.
+
+Latest verified command:
+
+- `mvn -q "-Dtest=AgentAdvancedTechnologyCompatibilityMatrixServiceTest,AgentAdvancedTechnologyAdoptionContractServiceTest,AgentOfficialVersionProtocolWatchServiceTest,AgentOfficialVersionProtocolWatchDashboardServiceTest,AgentOfficialVersionProtocolWatchVueBindingSpecServiceTest,AgentTopTierReadinessOverviewServiceTest,AgentPhase1ExecutionRoadmapServiceTest,AgentVueReadinessControlPlaneServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+Next safe development order:
+
+- Wire `vue-kube-manager` to render the compatibility matrix beside the advanced technology adoption page.
+- Continue reviewed redacted eval and Memory/RAG trace evidence curation.
+- Add compatibility-matrix branches for Java 21/25, Spring Boot 4, Spring AI 2 only as separate reviewed slices.
+- Keep MCP runtime, A2A handoff, retrieval runtime, CI blocking, and kube-manager writes release-gated.
+- Keep NIM / HPC / Slurm / BCM paused for Phase 2.
+
 ## Latest Phase 1 Core Memory - M5.76-1
 
 M5.76-1 adds the backend-owned Vue binding specification for the official version/protocol watch dashboard. This is the missing bridge between the M5.75 Dashboard contract and future `vue-kube-manager` implementation: Vue now has component specs, field bindings, table column groups, disabled action bindings, fixtures, and implementation checklist from the backend.

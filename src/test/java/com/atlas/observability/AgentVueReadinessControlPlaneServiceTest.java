@@ -37,11 +37,12 @@ class AgentVueReadinessControlPlaneServiceTest {
         assertThat(controlPlane.phase2NimHpcSlurmBcmPaused()).isTrue();
         assertThat(controlPlane.vueBindingReady()).isTrue();
         assertThat(controlPlane.runtimeControlAllowed()).isFalse();
-        assertThat(controlPlane.dashboardCount()).isEqualTo(12);
+        assertThat(controlPlane.dashboardCount()).isEqualTo(13);
         assertThat(controlPlane.dashboards()).extracting(dashboard -> dashboard.get("id"))
             .containsExactly(
                 "top-tier-command-center",
                 "advanced-technology-adoption",
+                "advanced-technology-compatibility-matrix",
                 "official-version-protocol-watch",
                 "official-version-protocol-watch-dashboard",
                 "official-version-protocol-watch-binding-spec",
@@ -57,6 +58,7 @@ class AgentVueReadinessControlPlaneServiceTest {
             .contains(
                 "readiness-overview",
                 "advanced-technology-adoption",
+                "advanced-technology-compatibility-matrix",
                 "official-version-protocol-watch",
                 "official-version-protocol-watch-dashboard",
                 "official-version-protocol-watch-binding-spec",
@@ -86,6 +88,7 @@ class AgentVueReadinessControlPlaneServiceTest {
             "create-vue-top-tier-agent-navigation",
             "bind-readiness-overview-card-grid",
             "bind-advanced-technology-adoption-matrix",
+            "bind-advanced-technology-compatibility-matrix",
             "bind-official-version-protocol-watch",
             "bind-official-version-protocol-watch-dashboard",
             "bind-official-version-protocol-watch-binding-spec",
@@ -100,6 +103,8 @@ class AgentVueReadinessControlPlaneServiceTest {
         );
         assertThat(controlPlane.endpointMap())
             .containsEntry("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane")
+            .containsEntry("advancedTechnologyCompatibilityMatrix",
+                "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix")
             .containsEntry("officialVersionProtocolWatch", "/api/agent/observability/top-tier/official-version-protocol-watch")
             .containsEntry("officialVersionProtocolWatchDashboard",
                 "/api/agent/observability/top-tier/official-version-protocol-watch/dashboard")

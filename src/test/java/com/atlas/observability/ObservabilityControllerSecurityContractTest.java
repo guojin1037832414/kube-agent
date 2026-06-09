@@ -44,6 +44,7 @@ class ObservabilityControllerSecurityContractTest {
         assertThat(source).contains("@GetMapping(\"/kube-manager/http-outlet/governance-workbench/overview\")");
         assertThat(source).contains("@GetMapping(\"/top-tier/readiness-overview\")");
         assertThat(source).contains("@GetMapping(\"/top-tier/advanced-technology-adoption-contract\")");
+        assertThat(source).contains("@GetMapping(\"/top-tier/advanced-technology-compatibility-matrix\")");
         assertThat(source).contains("@GetMapping(\"/top-tier/official-version-protocol-watch\")");
         assertThat(source).contains("@GetMapping(\"/top-tier/official-version-protocol-watch/dashboard\")");
         assertThat(source).contains("@GetMapping(\"/top-tier/official-version-protocol-watch/vue-binding-spec\")");
@@ -91,6 +92,7 @@ class ObservabilityControllerSecurityContractTest {
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentKubeManagerHttpOutletGovernanceWorkbenchOverviewResponse>> kubeManagerHttpOutletGovernanceWorkbenchOverview()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentTopTierReadinessOverviewResponse>> topTierReadinessOverview()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentAdvancedTechnologyAdoptionContractResponse>> advancedTechnologyAdoptionContract()");
+        assertThat(source).contains("public ResponseEntity<ApiResponse<AgentAdvancedTechnologyCompatibilityMatrixResponse>> advancedTechnologyCompatibilityMatrix()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentOfficialVersionProtocolWatchResponse>> officialVersionProtocolWatch()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentOfficialVersionProtocolWatchDashboardResponse>> officialVersionProtocolWatchDashboard()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentOfficialVersionProtocolWatchVueBindingSpecResponse>> officialVersionProtocolWatchVueBindingSpec()");

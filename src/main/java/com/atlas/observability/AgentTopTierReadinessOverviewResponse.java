@@ -142,9 +142,11 @@ public record AgentTopTierReadinessOverviewResponse(
             "READY",
             "Phase 1 keeps the Java/Spring control plane stable while tracking official Responses/Agents, Spring AI, MCP, OTel GenAI, A2A, OWASP LLM, and advanced RAG sources in a compatibility matrix.",
             "/api/agent/observability/top-tier/advanced-technology-adoption-contract",
-            List.of("Java/Spring control plane", "official source watch", "Responses/Agents mapping", "MCP runtime matrix", "OTel GenAI adapter", "A2A artifacts"),
+            List.of("Java/Spring control plane", "official source watch", "compatibility matrix",
+                "Responses/Agents mapping", "MCP runtime matrix", "OTel GenAI adapter", "A2A artifacts"),
             Map.of(
                 "adoptionContractExists", true,
+                "compatibilityMatrixEndpoint", AgentAdvancedTechnologyCompatibilityMatrixResponse.MATRIX_ENDPOINT,
                 "officialVersionProtocolWatchExists", true,
                 "officialVersionProtocolWatchEndpoint", AgentOfficialVersionProtocolWatchResponse.WATCH_ENDPOINT,
                 "officialVersionProtocolWatchDashboardEndpoint",
@@ -313,6 +315,7 @@ public record AgentTopTierReadinessOverviewResponse(
         return List.of(
             "wire-vue-top-tier-readiness-overview",
             "wire-vue-advanced-technology-adoption-contract",
+            "wire-vue-advanced-technology-compatibility-matrix",
             "wire-vue-official-version-protocol-watch",
             "wire-vue-official-version-protocol-watch-dashboard",
             "wire-vue-official-version-protocol-watch-binding-spec",
@@ -342,6 +345,8 @@ public record AgentTopTierReadinessOverviewResponse(
         Map<String, Object> endpoints = new LinkedHashMap<>();
         endpoints.put("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview");
         endpoints.put("advancedTechnologyAdoptionContract", "/api/agent/observability/top-tier/advanced-technology-adoption-contract");
+        endpoints.put("advancedTechnologyCompatibilityMatrix",
+            AgentAdvancedTechnologyCompatibilityMatrixResponse.MATRIX_ENDPOINT);
         endpoints.put("officialVersionProtocolWatch", AgentOfficialVersionProtocolWatchResponse.WATCH_ENDPOINT);
         endpoints.put("officialVersionProtocolWatchDashboard",
             AgentOfficialVersionProtocolWatchDashboardResponse.DASHBOARD_ENDPOINT);

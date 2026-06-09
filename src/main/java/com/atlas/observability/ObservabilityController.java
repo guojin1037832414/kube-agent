@@ -43,6 +43,7 @@ public class ObservabilityController {
     private final AgentKubeManagerHttpOutletGovernanceWorkbenchOverviewService kubeManagerHttpOutletGovernanceWorkbenchOverviewService;
     private final AgentTopTierReadinessOverviewService topTierReadinessOverviewService;
     private final AgentAdvancedTechnologyAdoptionContractService advancedTechnologyAdoptionContractService;
+    private final AgentAdvancedTechnologyCompatibilityMatrixService advancedTechnologyCompatibilityMatrixService;
     private final AgentOfficialVersionProtocolWatchService officialVersionProtocolWatchService;
     private final AgentOfficialVersionProtocolWatchDashboardService officialVersionProtocolWatchDashboardService;
     private final AgentOfficialVersionProtocolWatchVueBindingSpecService officialVersionProtocolWatchVueBindingSpecService;
@@ -85,6 +86,7 @@ public class ObservabilityController {
                                    AgentKubeManagerHttpOutletGovernanceWorkbenchOverviewService kubeManagerHttpOutletGovernanceWorkbenchOverviewService,
                                    AgentTopTierReadinessOverviewService topTierReadinessOverviewService,
                                    AgentAdvancedTechnologyAdoptionContractService advancedTechnologyAdoptionContractService,
+                                   AgentAdvancedTechnologyCompatibilityMatrixService advancedTechnologyCompatibilityMatrixService,
                                    AgentOfficialVersionProtocolWatchService officialVersionProtocolWatchService,
                                    AgentOfficialVersionProtocolWatchDashboardService officialVersionProtocolWatchDashboardService,
                                    AgentOfficialVersionProtocolWatchVueBindingSpecService officialVersionProtocolWatchVueBindingSpecService,
@@ -126,6 +128,7 @@ public class ObservabilityController {
         this.kubeManagerHttpOutletGovernanceWorkbenchOverviewService = kubeManagerHttpOutletGovernanceWorkbenchOverviewService;
         this.topTierReadinessOverviewService = topTierReadinessOverviewService;
         this.advancedTechnologyAdoptionContractService = advancedTechnologyAdoptionContractService;
+        this.advancedTechnologyCompatibilityMatrixService = advancedTechnologyCompatibilityMatrixService;
         this.officialVersionProtocolWatchService = officialVersionProtocolWatchService;
         this.officialVersionProtocolWatchDashboardService = officialVersionProtocolWatchDashboardService;
         this.officialVersionProtocolWatchVueBindingSpecService = officialVersionProtocolWatchVueBindingSpecService;
@@ -179,6 +182,17 @@ public class ObservabilityController {
             return guard;
         }
         return ResponseEntity.ok(ApiResponse.ok(advancedTechnologyAdoptionContractService.contract()));
+    }
+
+    /** Publish the advanced technology compatibility matrix without changing dependencies or runtimes. */
+    @GetMapping("/top-tier/advanced-technology-compatibility-matrix")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentAdvancedTechnologyCompatibilityMatrixResponse>> advancedTechnologyCompatibilityMatrix() {
+        ResponseEntity<ApiResponse<AgentAdvancedTechnologyCompatibilityMatrixResponse>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return ResponseEntity.ok(ApiResponse.ok(advancedTechnologyCompatibilityMatrixService.matrix()));
     }
 
     /** Publish the official version/protocol watch without external calls or runtime upgrades. */
