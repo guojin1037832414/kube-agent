@@ -2,6 +2,36 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-09 M5.62 Memory/RAG Eval Gate Contract
+
+M5.62 defines the eval gate evidence that future Memory/RAG retrieval must pass before memory can influence prompts.
+
+```text
+source evidence digest + durable lifecycle evidence
+        |
+        | eval gate contract
+        v
+citation fidelity + source digest integrity + privacy leakage
+        + tenant isolation + retention/staleness
+        + delete/export/recovery proof + retrieval policy budget
+        |
+        | admin-only, read-only, contract-only
+        v
+/api/agent/observability/memory-rag/eval-gate-contract
+```
+
+Key design:
+- `AgentMemoryRagEvalGateContractResponse` publishes `schemaVersion=agent-memory-rag-eval-gate-contract.v1` and `contractStatus=CONTRACT_DEFINED_NOT_BOUND`.
+- Gate inputs include trace set id, eval suite id, source evidence digest, durable lifecycle digest, retrieval policy digest, tenant partition digest, expected citation seed, and redaction policy digest.
+- Gate checks include citation fidelity, source digest integrity, privacy leakage, tenant isolation, retention/staleness, delete/export/recovery proof, retrieval policy budget, unsupported answer, and prompt-injection boundary.
+- Failure classes are designed to fail closed: missing citation, source digest mismatch, tenant violation, raw secret/prompt leak, missing lifecycle proof, stale memory, policy budget bypass, and authority escalation from retrieved text.
+- M5.58 readiness now reports `memoryRagEvalGateContractDefined=true` and `memoryRagEvalGateContractBound=false`; M5.57 top-tier overview requires eval-gate binding before retrieval runtime.
+- The endpoint does not run eval, read traces, mutate trace sets, enable CI blocking, retrieve documents, call models, execute Tools, or call kube-manager.
+
+Learning point: 顶级 RAG 不能把“模型说得像真的”当作可信证据。进入 prompt 的记忆必须先通过 deterministic eval gates：引用是否真实、digest 是否匹配、是否泄漏隐私、是否跨租户、是否过期、是否缺少删除/导出/恢复证明、是否绕过检索预算、是否试图从文档中提升运行时权限。
+
+Technology point: M5.62 把 OpenAI-style guardrails/tracing、MCP resource/tool 边界、A2A artifact evidence、Spring AI metadata eval、OTel GenAI eval/retrieval spans 统一成项目内部稳定的评测门禁合同。先进方向进入主线，但 runtime 仍 fail-closed。
+
 ## 2026-06-09 M5.61 Memory/RAG Durable Memory Lifecycle Contract
 
 M5.61 defines the lifecycle evidence that future persistent memory must satisfy before a durable store, vector retrieval, export/delete workflow, or prompt evidence injection can be runtime-bound.

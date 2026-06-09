@@ -9,6 +9,33 @@
 - 供应链、CI、SBOM、质量门禁进入工程默认路径；
 - Java / Spring / Agent 框架升级以兼容性矩阵推进，不用不可构建的版本号伪装先进。
 
+## 2026-06-09 M5.62 Eval-Gate-Before-Retrieval Rule
+
+M5.62 refines the Memory/RAG roadmap again: future retrieval must be eval-gated before it is runtime-bound.
+
+Current mainline:
+- `GET /api/agent/observability/memory-rag/eval-gate-contract` exposes the admin-only read model.
+- `GET /api/agent/observability/memory-rag/readiness` reports `memoryRagEvalGateContractDefined=true` and `memoryRagEvalGateContractBound=false`.
+- The top-tier readiness overview requires `bind-memory-rag-eval-gate-before-retrieval-runtime`.
+- Runtime eval execution, CI blocking promotion, trace evidence mutation, retrieval runtime, and prompt evidence injection remain closed.
+
+Required eval gate chain:
+- reviewed redacted trace set id;
+- server-owned Memory/RAG eval suite id;
+- source evidence digest and durable lifecycle digest;
+- retrieval policy digest and tenant partition digest;
+- expected citation seed and redaction policy digest;
+- citation fidelity, source digest integrity, privacy leakage, tenant isolation, retention/staleness, delete/export/recovery proof, retrieval policy budget, unsupported-answer, and prompt-injection checks.
+
+Compatibility matrix:
+- OpenAI Agents SDK-style guardrails and tracing can require these gates before handoff or prompt evidence injection;
+- MCP resources and future tool results can be evaluated without granting MCP `tools/call` authority;
+- A2A artifacts can carry gate evidence as cross-agent provenance;
+- Spring AI VectorStore metadata can later carry gate digests and retrieval policy digests;
+- OTel GenAI eval/retrieval spans can map stable internal gate fields after the semconv line stabilizes.
+
+Teaching conclusion: advanced RAG is eval-gated RAG. Retrieval is not eligible because it is semantically close; it is eligible only after deterministic checks prove citation, source custody, privacy, tenant isolation, lifecycle validity, and policy-budget compliance.
+
 ## 2026-06-09 M5.61 Durable-Memory-Lifecycle-First Rule
 
 M5.61 refines the Memory/RAG roadmap again: future persistent memory must be lifecycle-first before it is storage-first or vector-first.

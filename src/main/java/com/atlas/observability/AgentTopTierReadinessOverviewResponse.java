@@ -187,14 +187,16 @@ public record AgentTopTierReadinessOverviewResponse(
             "memory-rag-learning",
             "Persistent Memory and RAG learning layer",
             "BLOCKED",
-            "Safe summary memory, readiness, citation/source, source evidence digest, and durable lifecycle contracts exist, but Phase 1 still needs runtime durable store binding, retrieval binding, and eval coverage.",
+            "Safe summary memory, readiness, citation/source, source evidence digest, durable lifecycle, and eval gate contracts exist, but Phase 1 still needs runtime durable store binding, retrieval binding, and curated eval coverage.",
             "/api/agent/observability/memory-rag/readiness",
-            List.of("conversation summary memory", "Memory/RAG readiness contract", "source evidence digest contract", "durable lifecycle contract", "future vector store"),
+            List.of("conversation summary memory", "Memory/RAG readiness contract", "source evidence digest contract", "durable lifecycle contract", "eval gate contract", "future vector store"),
             Map.of(
                 "readinessContractExists", true,
                 "durableMemoryImplemented", false,
                 "durableMemoryLifecycleContractImplemented", true,
                 "durableMemoryLifecycleContractBound", false,
+                "memoryRagEvalGateContractImplemented", true,
+                "memoryRagEvalGateContractBound", false,
                 "vectorRetrievalImplemented", false,
                 "citationContractImplemented", true,
                 "sourceEvidenceDigestContractImplemented", true,
@@ -287,6 +289,7 @@ public record AgentTopTierReadinessOverviewResponse(
             "wire-vue-top-tier-readiness-overview",
             "populate-reviewed-redacted-eval-trace-evidence",
             "promote-eval-gate-bundle-from-evidence-only-to-reviewed-blocking",
+            "bind-memory-rag-eval-gate-before-retrieval-runtime",
             "bind-durable-memory-runtime-after-lifecycle-and-source-digest-contract",
             "add-mcp-tools-call-only-after-safe-tool-executor-consent-hitl-audit-eval-binding",
             "keep-nim-hpc-slurm-bcm-paused-until-phase-2"
@@ -316,6 +319,7 @@ public record AgentTopTierReadinessOverviewResponse(
         endpoints.put("memoryRagCitationSourceContract", "/api/agent/observability/memory-rag/citation-source-contract");
         endpoints.put("memoryRagSourceEvidenceDigestContract", "/api/agent/observability/memory-rag/source-evidence-digest-contract");
         endpoints.put("memoryRagDurableMemoryLifecycleContract", "/api/agent/observability/memory-rag/durable-memory-lifecycle-contract");
+        endpoints.put("memoryRagEvalGateContract", "/api/agent/observability/memory-rag/eval-gate-contract");
         endpoints.put("replayTimeline", "/api/agent/observability/replay/trace/{traceId}");
         endpoints.put("memorySummaries", "/api/agent/memory/summaries");
         return Map.copyOf(endpoints);

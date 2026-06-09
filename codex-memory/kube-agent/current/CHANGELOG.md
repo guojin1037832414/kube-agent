@@ -6,6 +6,23 @@
 
 ---
 
+## [M5.62-1] - Memory/RAG eval gate contract
+
+**Delivery**: Added an admin-only Memory/RAG eval gate contract before any retrieval evidence can influence prompts.
+**Changes**
+- Added `AgentMemoryRagEvalGateContractResponse`.
+- Added `AgentMemoryRagEvalGateContractService`.
+- Added `GET /api/agent/observability/memory-rag/eval-gate-contract`.
+- Defined future gate inputs, checks, pass criteria, and fail-closed failure classes for Memory/RAG retrieval.
+- Updated Memory/RAG readiness and top-tier readiness endpoint maps and evidence to reference the eval gate contract.
+- Added service, controller, source-contract, readiness/top-tier, and MockMvc security coverage.
+**Verification**
+- `mvn -q "-Dtest=AgentMemoryRagEvalGateContractServiceTest,AgentMemoryRagDurableMemoryLifecycleContractServiceTest,AgentMemoryRagSourceEvidenceDigestContractServiceTest,AgentMemoryRagCitationSourceContractServiceTest,AgentMemoryRagReadinessServiceTest,AgentTopTierReadinessOverviewServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed during implementation.
+**Security**
+- `contractStatus=CONTRACT_DEFINED_NOT_BOUND`.
+- `evalGateContractDefined=true`, `boundToEvalRuntime=false`, `ciBlockingEnabled=false`, `traceEvidenceCurated=false`, `promptEvidenceAllowedNow=false`, and `retrievalRuntimeAllowedNow=false`.
+- No eval runtime execution, CI blocking change, trace evidence read/mutation, retrieval execution, vector store binding, embedding/reranker/LLM call, prompt mutation, memory write, durable store call, document ingestion, Tool execution, `SafeToolExecutor` invocation, HITL invocation, audit write, durable receipt issuance, kube-manager call, `RestClient`, `WebClient`, MCP runtime `tools/call`, or NIM / HPC / Slurm / BCM Phase 2 work is added.
+
 ## [M5.61-1] - Memory/RAG durable memory lifecycle contract
 
 **Delivery**: Added an admin-only durable Memory/RAG lifecycle contract before any persistent memory runtime is bound.

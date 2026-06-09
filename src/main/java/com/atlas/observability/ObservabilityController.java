@@ -46,6 +46,7 @@ public class ObservabilityController {
     private final AgentMemoryRagCitationSourceContractService memoryRagCitationSourceContractService;
     private final AgentMemoryRagSourceEvidenceDigestContractService memoryRagSourceEvidenceDigestContractService;
     private final AgentMemoryRagDurableMemoryLifecycleContractService memoryRagDurableMemoryLifecycleContractService;
+    private final AgentMemoryRagEvalGateContractService memoryRagEvalGateContractService;
     private final AgentAuditSnapshotProvider auditSnapshotProvider;
     private final AgentAuditQueryService auditQueryService;
     private final AgentReplayTimelineService replayTimelineService;
@@ -75,6 +76,7 @@ public class ObservabilityController {
                                    AgentMemoryRagCitationSourceContractService memoryRagCitationSourceContractService,
                                    AgentMemoryRagSourceEvidenceDigestContractService memoryRagSourceEvidenceDigestContractService,
                                    AgentMemoryRagDurableMemoryLifecycleContractService memoryRagDurableMemoryLifecycleContractService,
+                                   AgentMemoryRagEvalGateContractService memoryRagEvalGateContractService,
                                    AgentAuditSnapshotProvider auditSnapshotProvider,
                                    AgentAuditQueryService auditQueryService,
                                    AgentReplayTimelineService replayTimelineService,
@@ -103,6 +105,7 @@ public class ObservabilityController {
         this.memoryRagCitationSourceContractService = memoryRagCitationSourceContractService;
         this.memoryRagSourceEvidenceDigestContractService = memoryRagSourceEvidenceDigestContractService;
         this.memoryRagDurableMemoryLifecycleContractService = memoryRagDurableMemoryLifecycleContractService;
+        this.memoryRagEvalGateContractService = memoryRagEvalGateContractService;
         this.auditSnapshotProvider = auditSnapshotProvider;
         this.auditQueryService = auditQueryService;
         this.replayTimelineService = replayTimelineService;
@@ -173,6 +176,17 @@ public class ObservabilityController {
             return guard;
         }
         return ResponseEntity.ok(ApiResponse.ok(memoryRagDurableMemoryLifecycleContractService.contract()));
+    }
+
+    /** Describe Memory/RAG eval gates before any retrieval evidence can influence prompts. */
+    @GetMapping("/memory-rag/eval-gate-contract")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentMemoryRagEvalGateContractResponse>> memoryRagEvalGateContract() {
+        ResponseEntity<ApiResponse<AgentMemoryRagEvalGateContractResponse>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return ResponseEntity.ok(ApiResponse.ok(memoryRagEvalGateContractService.contract()));
     }
 
     /** Describe kube-manager HTTP outlet resilience state without probing kube-manager. */

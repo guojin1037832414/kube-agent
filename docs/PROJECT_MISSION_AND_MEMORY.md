@@ -10,7 +10,43 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.61-1
+## Latest Phase 1 Core Memory - M5.62-1
+
+M5.62-1 adds the Phase 1 Memory/RAG eval gate contract.
+
+Delivered:
+
+- Added `AgentMemoryRagEvalGateContractResponse`.
+- Added `AgentMemoryRagEvalGateContractService`.
+- Added admin-only `GET /api/agent/observability/memory-rag/eval-gate-contract`.
+- Updated Memory/RAG readiness so `memoryRagEvalGateContractDefined=true`, `memoryRagEvalGateContractBound=false`, and `eval-and-observability` is `PARTIAL` while runtime eval suites and curated trace evidence remain unbound.
+- Updated top-tier readiness so the Memory/RAG card exposes `memoryRagEvalGateContractImplemented=true`, `memoryRagEvalGateContractBound=false`, and requires eval-gate binding before retrieval runtime.
+- Added service, controller, source-contract, readiness/top-tier, and MockMvc security coverage.
+
+Current state:
+
+- `schemaVersion=agent-memory-rag-eval-gate-contract.v1`.
+- `contractStatus=CONTRACT_DEFINED_NOT_BOUND`.
+- `evalGateContractDefined=true`.
+- `boundToEvalRuntime=false`.
+- `ciBlockingEnabled=false`.
+- `traceEvidenceCurated=false`.
+- `promptEvidenceAllowedNow=false`.
+- `retrievalRuntimeAllowedNow=false`.
+
+Security boundary:
+
+- The endpoint is admin-only, read-only, contract-only, and fail-closed.
+- It defines required future gates for citation fidelity, source digest integrity, privacy leakage, tenant isolation, retention/staleness, delete/export/recovery proof, retrieval policy budget, unsupported answers, and prompt-injection authority escalation.
+- It does not execute eval suites, read trace evidence, mutate curated traces, change CI blocking, execute retrieval, bind a vector store, call embedding/reranker/LLM, mutate prompts, write memory, call a durable store, ingest documents, execute Tools, invoke `SafeToolExecutor`, invoke HITL, write audit, issue durable receipts, call kube-manager, use `RestClient` / `WebClient`, expose MCP runtime `tools/call`, or touch NIM / HPC / Slurm / BCM Phase 2 scope.
+
+Learning point: top-tier Memory/RAG needs eval gates before runtime. A retrieved memory is not trustworthy because the text sounds plausible; it becomes eligible only when deterministic gates prove source custody, citation fidelity, privacy, tenant isolation, lifecycle validity, and retrieval-policy compliance.
+
+Latest verified command:
+
+- `mvn -q "-Dtest=AgentMemoryRagEvalGateContractServiceTest,AgentMemoryRagDurableMemoryLifecycleContractServiceTest,AgentMemoryRagSourceEvidenceDigestContractServiceTest,AgentMemoryRagCitationSourceContractServiceTest,AgentMemoryRagReadinessServiceTest,AgentTopTierReadinessOverviewServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+## Previous Phase 1 Core Memory - M5.61-1
 
 M5.61-1 adds the Phase 1 Memory/RAG durable memory lifecycle contract.
 
