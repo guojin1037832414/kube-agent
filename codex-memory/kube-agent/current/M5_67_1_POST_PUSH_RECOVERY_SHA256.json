@@ -1,0 +1,47 @@
+﻿{
+    "schemaVersion":  "kube-agent-post-push-recovery-sha256.v1",
+    "project":  "kube-agent",
+    "milestone":  "M5.67-1-post-push",
+    "implementationCommit":  "ba5151e",
+    "pushedToRemote":  true,
+    "generatedAt":  "2026-06-09T18:50:48.4869902+08:00",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "files":  [
+                  {
+                      "path":  "codex-memory/kube-agent/current/RECOVERY_STATUS.md",
+                      "sha256":  "5C8ED690E8FBCDB306F6646A399AE9F91F591EADE767E26C1E4F8914BAC330B0",
+                      "length":  57934,
+                      "lastWriteTime":  "2026-06-09T18:50:36.7218879+08:00"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/M5_67_1_WORKSPACE_RECOVERY_SHA256.json",
+                      "sha256":  "CCC4C53A2298F7DA9CB990D78A9232C1BA98AE0759FE03DCC5E951321FD528C5",
+                      "length":  11411,
+                      "lastWriteTime":  "2026-06-09T18:49:26.4947016+08:00"
+                  },
+                  {
+                      "path":  "docs/PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "30EF21FC61F7EC006F05153D1D7A0E55A9C6B233BAD9318F9C48C2F4EE62134B",
+                      "length":  390251,
+                      "lastWriteTime":  "2026-06-09T18:41:15.7335300+08:00"
+                  },
+                  {
+                      "path":  "docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "D0CE64E0F595C8DCA7FB887ACA11903BF524633E991BF42B0F1E014C55FE12C7",
+                      "length":  149521,
+                      "lastWriteTime":  "2026-06-09T18:43:20.1234224+08:00"
+                  },
+                  {
+                      "path":  "docs/tech-stack/BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "71992551ABEB852BBA1C552CB36BF257C1FFE345824F744DF795AA98EC85F0BB",
+                      "length":  76867,
+                      "lastWriteTime":  "2026-06-09T18:43:31.0414850+08:00"
+                  },
+                  {
+                      "path":  "CHANGELOG.md",
+                      "sha256":  "82C616E5BAEBD9E2433B5F414EDC3D5649D79F9096E84BFFB46E64516992C1DA",
+                      "length":  353556,
+                      "lastWriteTime":  "2026-06-09T18:33:08.7510094+08:00"
+                  }
+              ]
+}
