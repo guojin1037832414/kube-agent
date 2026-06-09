@@ -1,0 +1,71 @@
+﻿{
+    "milestone":  "M5.76-1",
+    "title":  "Official version/protocol watch Vue binding spec",
+    "generatedAt":  "2026-06-10T00:09:08.0230596+08:00",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "implementationCommit":  "8baf803",
+    "pushed":  true,
+    "note":  "Post-push recovery manifest after M5.76 implementation push.",
+    "files":  [
+                  {
+                      "path":  "CHANGELOG.md",
+                      "sha256":  "39CE88A6390B580C46D42C1589DB5749CD3DCD74CA14940A0E686334733F7C00",
+                      "bytes":  376114
+                  },
+                  {
+                      "path":  "docs/PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "5CC7BDFE249BFD737EFF95CA02AA5DFE6BAE1C8F6FF036B99C7817DAC57E1FBF",
+                      "bytes":  430374
+                  },
+                  {
+                      "path":  "docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "72CECCAD944AA24356CEC4E3E15458453A5EC034C680AD310D66A6238C193885",
+                      "bytes":  180616
+                  },
+                  {
+                      "path":  "docs/tech-stack/BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "9DED53DD44CBD264867B8CBB496F5B17F6422EF31B74B60DCC7C81D35A506C27",
+                      "bytes":  103822
+                  },
+                  {
+                      "path":  "docs/M5_76_OFFICIAL_VERSION_PROTOCOL_WATCH_VUE_BINDING_SPEC_20260609.md",
+                      "sha256":  "034CE2B80098037B1FB4A1C455206192EDC2F7E643DA7427D3F7BF24E5A7F5AC",
+                      "bytes":  6810
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/RECOVERY_STATUS.md",
+                      "sha256":  "757F2F405912856ABE131A0CE2BBC7AD89E9030344C1811C43E1AB4902A6D38B",
+                      "bytes":  78755
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/CHANGELOG.md",
+                      "sha256":  "39CE88A6390B580C46D42C1589DB5749CD3DCD74CA14940A0E686334733F7C00",
+                      "bytes":  376114
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "5CC7BDFE249BFD737EFF95CA02AA5DFE6BAE1C8F6FF036B99C7817DAC57E1FBF",
+                      "bytes":  430374
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "72CECCAD944AA24356CEC4E3E15458453A5EC034C680AD310D66A6238C193885",
+                      "bytes":  180616
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "9DED53DD44CBD264867B8CBB496F5B17F6422EF31B74B60DCC7C81D35A506C27",
+                      "bytes":  103822
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_M5_76_OFFICIAL_VERSION_PROTOCOL_WATCH_VUE_BINDING_SPEC_20260609.md",
+                      "sha256":  "034CE2B80098037B1FB4A1C455206192EDC2F7E643DA7427D3F7BF24E5A7F5AC",
+                      "bytes":  6810
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/M5_76_1_WORKSPACE_RECOVERY_SHA256.json",
+                      "sha256":  "A29429FD41241C5D7129CFD66DBDD7ECABBB09C962A98F81FD489C2886681CE2",
+                      "bytes":  9316
+                  }
+              ]
+}
