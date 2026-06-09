@@ -62,6 +62,17 @@ public class AgentEvalWorkbenchCapabilitiesService {
                 List.of("uiSteps", "patchSummary", "workflowVerdict", "nextActions")
             ),
             capability(
+                "workbench-catalog-patch-review",
+                "Eval workbench catalog patch review",
+                "review",
+                "POST",
+                "/api/agent/observability/eval/workbench/trace-sets/{traceSetId}/catalog-patch-review",
+                "AgentEvalSuiteRequest",
+                AgentEvalWorkbenchCatalogPatchReviewResponse.SCHEMA_VERSION,
+                List.of("traceSetId", "candidateTraceIds"),
+                List.of("patchOperations", "traceDelta", "reviewChecklist", "nextActions")
+            ),
+            capability(
                 "trace-set-candidate-discovery",
                 "Trace-set candidate discovery",
                 "discover",
@@ -146,6 +157,7 @@ public class AgentEvalWorkbenchCapabilitiesService {
                 "trace-set-catalog",
                 "workbench-trace-set-detail",
                 "workbench-promotion-workflow",
+                "workbench-catalog-patch-review",
                 "trace-set-catalog-patch-proposal",
                 "trace-set-gate-bundle",
                 "trace-replay-timeline",
@@ -218,6 +230,7 @@ public class AgentEvalWorkbenchCapabilitiesService {
         proof.put("containsRawPrincipal", false);
         proof.put("containsRawOrganization", false);
         proof.put("containsRawConversation", false);
+        proof.put("containsRawEndpoints", false);
         proof.put("containsRawKubeManagerEndpoints", false);
         proof.put("containsRawReason", false);
         proof.put("containsRawParameterValues", false);

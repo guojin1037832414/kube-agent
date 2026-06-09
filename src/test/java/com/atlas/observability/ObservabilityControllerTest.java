@@ -41,6 +41,8 @@ class ObservabilityControllerTest {
         new AgentEvalWorkbenchTraceSetDetailService(evalTraceSetCatalogService);
     private final AgentEvalWorkbenchPromotionWorkflowService evalWorkbenchPromotionWorkflowService =
         new AgentEvalWorkbenchPromotionWorkflowService(evalTraceSetCatalogService, traceSetPromotionWorkflowService);
+    private final AgentEvalWorkbenchCatalogPatchReviewService evalWorkbenchCatalogPatchReviewService =
+        new AgentEvalWorkbenchCatalogPatchReviewService(evalTraceSetCatalogService);
     private final ObservabilityController controller = new ObservabilityController(
         new AgentMetricsService(new SimpleMeterRegistry()),
         auditRecorder,
@@ -55,6 +57,7 @@ class ObservabilityControllerTest {
         evalWorkbenchOverviewService,
         evalWorkbenchTraceSetDetailService,
         evalWorkbenchPromotionWorkflowService,
+        evalWorkbenchCatalogPatchReviewService,
         new AgentPrincipalResolver(userPermissionContext)
     );
 
@@ -842,6 +845,8 @@ class ObservabilityControllerTest {
         assertThat(detail.endpointTemplates())
             .containsEntry("workbenchPromotionWorkflow",
                 "/api/agent/observability/eval/workbench/trace-sets/phase1-core-golden/promotion-workflow")
+            .containsEntry("workbenchCatalogPatchReview",
+                "/api/agent/observability/eval/workbench/trace-sets/phase1-core-golden/catalog-patch-review")
             .containsEntry("promotionWorkflow",
                 "/api/agent/observability/eval/trace-sets/phase1-core-golden/promotion-workflow");
         assertThat(detail.detailPolicy())
@@ -960,6 +965,105 @@ class ObservabilityControllerTest {
             .containsEntry("kubeManagerCalls", false);
         assertThat(workflow.toString())
             .contains(traceId, "workbench-promotion")
+            .doesNotContain("reports=", "replay=")
+            .doesNotContain("secret-token-value", "conv-sensitive", "user-sensitive", "org-sensitive", "/api/org-sensitive");
+    }
+
+    @Test
+    void evalWorkbenchCatalogPatchReview_shouldRequireAdminUserAndRejectUnknownTraceSet() {
+        ResponseEntity<ApiResponse<AgentEvalWorkbenchCatalogPatchReviewResponse>> anonymous =
+            controller.evalWorkbenchCatalogPatchReview("phase1-core-golden", null);
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentEvalWorkbenchCatalogPatchReviewResponse>> user =
+            controller.evalWorkbenchCatalogPatchReview("phase1-core-golden", null);
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        SecurityContextHolder.clearContext();
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentEvalWorkbenchCatalogPatchReviewResponse>> missing =
+            controller.evalWorkbenchCatalogPatchReview("missing-trace-set", null);
+
+        assertThat(missing.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void evalWorkbenchCatalogPatchReview_shouldReturnGitReviewModelForAdminUser() {
+        String traceId = "trc_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+        auditRecorder.record(new com.atlas.audit.AgentAuditEvent(
+            "aud_eval_workbench_patch_review",
+            java.time.Instant.parse("2026-06-09T00:00:00Z"),
+            traceId,
+            "conv-sensitive",
+            "user-sensitive",
+            "org-sensitive",
+            "intent",
+            "tool",
+            com.atlas.tool.execution.SafeToolExecutionSource.REACT_ENGINE,
+            "GET",
+            java.util.List.of("/api/org-sensitive/pod?token=secret-token-value"),
+            com.atlas.tool.annotation.AtlasToolMapping.OperationType.READ,
+            false,
+            com.atlas.audit.AgentAuditOutcome.SUCCESS,
+            true,
+            true,
+            "ok token=secret-token-value",
+            java.util.Map.of("count", 1, "keys", java.util.List.of(java.util.Map.of(
+                "name", "token",
+                "protected", true,
+                "type", "string",
+                "present", true
+            )))
+        ));
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentEvalWorkbenchCatalogPatchReviewResponse>> response =
+            controller.evalWorkbenchCatalogPatchReview(
+                "phase1-core-golden",
+                new AgentEvalSuiteRequest(java.util.List.of(traceId, "secret-token-value"), null, null, null)
+            );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        AgentEvalWorkbenchCatalogPatchReviewResponse review = response.getBody().getData();
+        assertThat(review.schemaVersion()).isEqualTo("agent-eval-workbench-catalog-patch-review.v1");
+        assertThat(review.proposalVerdict()).isEqualTo("READY_FOR_GIT_REVIEW");
+        assertThat(review.readyForGitReview()).isTrue();
+        assertThat(review.addedTraceIds()).containsExactly(traceId);
+        assertThat(review.patchOperations()).hasSize(1);
+        assertThat(review.patchOperations().get(0))
+            .containsEntry("op", "replace")
+            .containsEntry("path", "/0/traceIds")
+            .containsEntry("applied", false)
+            .containsEntry("runtimeCatalogWrite", false);
+        assertThat(review.traceDelta())
+            .containsEntry("addedTraceCount", 1)
+            .containsEntry("catalogMutated", false)
+            .containsEntry("runtimeCatalogWrite", false);
+        assertThat(review.workbenchPolicy())
+            .containsEntry("catalogPatchReviewOnly", true)
+            .containsEntry("catalogMutationAllowed", false)
+            .containsEntry("runtimeCatalogWrite", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("kubeManagerCalls", false);
+        assertThat(review.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("containsRawEndpoints", false)
+            .containsEntry("containsRawKubeManagerEndpoints", false)
+            .containsEntry("llmUsed", false)
+            .containsEntry("externalCalls", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("kubeManagerCalls", false);
+        assertThat(review.toString())
+            .contains(traceId, "catalog-patch-review")
             .doesNotContain("reports=", "replay=")
             .doesNotContain("secret-token-value", "conv-sensitive", "user-sensitive", "org-sensitive", "/api/org-sensitive");
     }

@@ -46,6 +46,7 @@ public class ObservabilityController {
     private final AgentEvalWorkbenchOverviewService evalWorkbenchOverviewService;
     private final AgentEvalWorkbenchTraceSetDetailService evalWorkbenchTraceSetDetailService;
     private final AgentEvalWorkbenchPromotionWorkflowService evalWorkbenchPromotionWorkflowService;
+    private final AgentEvalWorkbenchCatalogPatchReviewService evalWorkbenchCatalogPatchReviewService;
     private final AgentPrincipalResolver principalResolver;
 
     public ObservabilityController(AgentMetricsService metricsService,
@@ -61,6 +62,7 @@ public class ObservabilityController {
                                    AgentEvalWorkbenchOverviewService evalWorkbenchOverviewService,
                                    AgentEvalWorkbenchTraceSetDetailService evalWorkbenchTraceSetDetailService,
                                    AgentEvalWorkbenchPromotionWorkflowService evalWorkbenchPromotionWorkflowService,
+                                   AgentEvalWorkbenchCatalogPatchReviewService evalWorkbenchCatalogPatchReviewService,
                                    AgentPrincipalResolver principalResolver) {
         this.metricsService = metricsService;
         this.auditSnapshotProvider = auditSnapshotProvider;
@@ -75,6 +77,7 @@ public class ObservabilityController {
         this.evalWorkbenchOverviewService = evalWorkbenchOverviewService;
         this.evalWorkbenchTraceSetDetailService = evalWorkbenchTraceSetDetailService;
         this.evalWorkbenchPromotionWorkflowService = evalWorkbenchPromotionWorkflowService;
+        this.evalWorkbenchCatalogPatchReviewService = evalWorkbenchCatalogPatchReviewService;
         this.principalResolver = principalResolver;
     }
 
@@ -277,6 +280,22 @@ public class ObservabilityController {
             return guard;
         }
         return evalWorkbenchPromotionWorkflowService.workflow(traceSetId, request)
+            .map(response -> ResponseEntity.ok(ApiResponse.ok(response)))
+            .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.fail("Unknown Agent eval trace set: " + traceSetId)));
+    }
+
+    /** Build a frontend-ready Git review model for a trace-set catalog patch proposal. */
+    @PostMapping("/eval/workbench/trace-sets/{traceSetId}/catalog-patch-review")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentEvalWorkbenchCatalogPatchReviewResponse>> evalWorkbenchCatalogPatchReview(
+        @PathVariable String traceSetId,
+        @RequestBody(required = false) AgentEvalSuiteRequest request) {
+        ResponseEntity<ApiResponse<AgentEvalWorkbenchCatalogPatchReviewResponse>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return evalWorkbenchCatalogPatchReviewService.review(traceSetId, request)
             .map(response -> ResponseEntity.ok(ApiResponse.ok(response)))
             .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(ApiResponse.fail("Unknown Agent eval trace set: " + traceSetId)));

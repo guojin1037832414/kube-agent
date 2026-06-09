@@ -6,6 +6,26 @@
 
 ---
 
+## [M5.47-1] - Eval workbench catalog patch review model
+
+**Delivery**: Added an admin-only workbench-level catalog patch review model for future `vue-kube-manager` eval workbench pages.
+**Changes**
+- Added `AgentEvalWorkbenchCatalogPatchReviewResponse`.
+- Added `AgentEvalWorkbenchCatalogPatchReviewService`.
+- Added admin-only `POST /api/agent/observability/eval/workbench/trace-sets/{traceSetId}/catalog-patch-review`.
+- Extended the workbench capability manifest with `workbench-catalog-patch-review` and made it part of the recommended UI workflow after workbench promotion workflow.
+- Extended trace-set detail endpoint templates with `workbenchCatalogPatchReview`.
+- The response wraps the existing review-only catalog patch proposal artifact with sanitized patch operations, trace delta, candidate gate summary, review checklist, next actions, endpoint templates, policy proof, and privacy proof.
+- Added service, controller, source-contract, and MockMvc security coverage.
+**Verification**
+- `mvn -q "-Dtest=AgentEvalWorkbenchCatalogPatchReviewServiceTest,AgentEvalWorkbenchPromotionWorkflowServiceTest,AgentEvalWorkbenchTraceSetDetailServiceTest,AgentEvalWorkbenchOverviewServiceTest,AgentEvalWorkbenchCapabilitiesServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed.
+**Security**
+- The workbench catalog patch review endpoint is admin-only and review-only.
+- It does not mutate `observability/eval-trace-sets.json`, apply JSON Patch, write catalog data, execute Tool code, call kube-manager, use LLMs, make external calls, or embed replay/report payloads.
+- Catalog promotion authority remains human Git review only.
+- `catalogPatchReviewOnly=true`, `catalogMutationAllowed=false`, `runtimeCatalogWrite=false`, `patchApplied=false`, `toolExecution=false`, `kubeManagerCalls=false`, `llmUsed=false`, and `externalCalls=false`.
+- This slice adds no kube-manager write/create/delete/state-changing behavior and does not reopen NIM/HPC/Slurm/BCM scope.
+
 ## [M5.46-1] - Eval workbench promotion workflow result model
 
 **Delivery**: Added an admin-only workbench-level promotion workflow result model for future `vue-kube-manager` eval workbench pages.

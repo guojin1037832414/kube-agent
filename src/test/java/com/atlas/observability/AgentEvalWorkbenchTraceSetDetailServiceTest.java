@@ -53,6 +53,8 @@ class AgentEvalWorkbenchTraceSetDetailServiceTest {
             .containsEntry("overview", "/api/agent/observability/eval/workbench/overview")
             .containsEntry("workbenchPromotionWorkflow",
                 "/api/agent/observability/eval/workbench/trace-sets/phase1-core-golden/promotion-workflow")
+            .containsEntry("workbenchCatalogPatchReview",
+                "/api/agent/observability/eval/workbench/trace-sets/phase1-core-golden/catalog-patch-review")
             .containsEntry("promotionWorkflow",
                 "/api/agent/observability/eval/trace-sets/phase1-core-golden/promotion-workflow")
             .containsEntry("replayTimeline", "/api/agent/observability/replay/trace/{traceId}?limit={limit}");

@@ -2,6 +2,33 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-09 M5.47 Eval Workbench Catalog Patch Review 审查模型
+
+M5.47 把已有的 review-only catalog patch proposal 再包装成未来 `vue-kube-manager` 可以直接渲染的 Git 审查页面模型。底层 proposal 仍然负责 RFC 6902 风格的 patch 证据；新的 workbench response 负责把 patch 证据整理成更适合页面使用的 sanitized patch operations、trace delta、candidate gate summary、review checklist 和 next actions。
+
+```text
+POST /api/agent/observability/eval/workbench/trace-sets/{traceSetId}/catalog-patch-review
+    |
+    | existing review-only catalog patch proposal
+    v
+AgentEvalWorkbenchCatalogPatchReviewResponse
+    |
+    | patchOperations + traceDelta + reviewChecklist + nextActions
+    v
+Vue catalog patch Git review page
+```
+
+关键设计：
+- 新 endpoint 是 admin-only，且是 review helper，不是 catalog writer。
+- response 可以嵌入 raw `proposal` 作为高级审查证据，但默认页面应优先渲染 `patchOperations` 等 sanitized 字段。
+- `patchOperations` 明确带有 `applied=false` 和 `runtimeCatalogWrite=false`，避免前端把 JSON Patch 误解成运行时执行入口。
+- `traceDelta` 把 original、candidate、added、duplicate/already-curated、proposed 这些数量拆开，让审查人能判断“这次到底增加了什么证据”。
+- `candidateGateSummary` 只给 compact gate summary，不嵌入 replay timeline 或 per-trace report，排障仍走显式 drill-down。
+- capability manifest 新增 `workbench-catalog-patch-review`，推荐 UI 流程变成 capability -> overview -> detail -> promotion workflow -> catalog patch review -> human Git review -> gate bundle。
+- 安全证明继续声明 `catalogMutationAllowed=false`、`runtimeCatalogWrite=false`、`patchApplied=false`、`toolExecution=false`、`kubeManagerCalls=false`、`llmUsed=false`、`externalCalls=false`。
+
+学习重点：顶级 Agent 的评测工作台不能只有“生成 patch”这一步，还要有“审查 patch”的页面契约。生成 proposal 是证据生产，review model 是人机协作界面，Git merge 才是发布授权。把这三层拆开，才能避免一次运行时请求直接升级成 release evidence。
+
 ## 2026-06-09 M5.46 Eval Workbench Promotion Workflow 结果模型
 
 M5.46 把已有的底层 promotion workflow 包装成未来 `vue-kube-manager` 可以直接渲染的页面级结果模型。底层 artifact 仍然负责 discovery、curation review、catalog patch proposal 的证据语义；新的 workbench response 负责把这些证据整理成 UI steps、patch summary、candidate gate summary、next actions 和 endpoint templates。

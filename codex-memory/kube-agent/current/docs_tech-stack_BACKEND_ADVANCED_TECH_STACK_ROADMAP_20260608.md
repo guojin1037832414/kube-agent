@@ -444,6 +444,19 @@ M5.40-1 adds the candidate discovery step before M5.39 curation review:
 
 Technology judgment: this gives eval operations a real evidence workflow without granting new authority. Discovery is read-only and advisory, curation review is deterministic and review-only, and catalog promotion still requires a Git-reviewed patch. This separation is the mature Agent pattern for moving from observability data to release-blocking evidence.
 
+## M5.47-1 Update - Eval Workbench Catalog Patch Review Model
+
+M5.47-1 adds the page-level catalog patch review contract for the future `vue-kube-manager` eval workbench:
+
+- `POST /api/agent/observability/eval/workbench/trace-sets/{traceSetId}/catalog-patch-review` returns `AgentEvalWorkbenchCatalogPatchReviewResponse`.
+- `AgentEvalWorkbenchCatalogPatchReviewService` wraps the existing review-only catalog patch proposal artifact instead of introducing runtime catalog mutation.
+- The response adds sanitized patch operations, trace delta, candidate gate summary, review checklist, next actions, endpoint templates, workbench policy, and privacy proof.
+- The capability manifest now includes `workbench-catalog-patch-review`, and the recommended workflow points Vue to this Git-review contract after workbench promotion workflow.
+- Trace-set detail now exposes `workbenchCatalogPatchReview` while preserving lower-level raw backend endpoints.
+- The contract remains admin-only, no catalog mutation, no JSON Patch application, no runtime catalog write, no Tool execution, no kube-manager call, no LLM/external call, and no embedded replay/report payloads.
+
+Technology judgment: a top-tier Agent eval workbench needs both evidence generation and evidence review contracts. `catalog-patch-review` turns the patch proposal into a human-reviewable UI model without granting runtime write authority, which keeps Agent evaluation, frontend UX, CI evidence, and Git governance aligned.
+
 ## M5.46-1 Update - Eval Workbench Promotion Workflow Result Model
 
 M5.46-1 adds the page-level promotion workflow result contract for the future `vue-kube-manager` eval workbench:

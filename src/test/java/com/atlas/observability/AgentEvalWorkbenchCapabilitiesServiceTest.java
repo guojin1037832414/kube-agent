@@ -24,6 +24,7 @@ class AgentEvalWorkbenchCapabilitiesServiceTest {
                 "trace-set-catalog",
                 "workbench-trace-set-detail",
                 "workbench-promotion-workflow",
+                "workbench-catalog-patch-review",
                 "trace-set-candidate-discovery",
                 "trace-set-curation-review",
                 "trace-set-catalog-patch-proposal",
@@ -49,6 +50,7 @@ class AgentEvalWorkbenchCapabilitiesServiceTest {
                 "trace-set-catalog",
                 "workbench-trace-set-detail",
                 "workbench-promotion-workflow",
+                "workbench-catalog-patch-review",
                 "trace-set-catalog-patch-proposal",
                 "trace-set-gate-bundle",
                 "trace-replay-timeline",
@@ -63,6 +65,7 @@ class AgentEvalWorkbenchCapabilitiesServiceTest {
         assertThat(response.privacy())
             .containsEntry("redactedOnly", true)
             .containsEntry("containsRawPrincipal", false)
+            .containsEntry("containsRawEndpoints", false)
             .containsEntry("containsRawKubeManagerEndpoints", false)
             .containsEntry("containsRawParameterValues", false)
             .containsEntry("llmUsed", false)
@@ -73,6 +76,7 @@ class AgentEvalWorkbenchCapabilitiesServiceTest {
             .contains(
                 "workbench-overview",
                 "workbench-trace-set-detail",
+                "agent-eval-workbench-catalog-patch-review.v1",
                 "agent-eval-workbench-promotion-workflow.v1"
             )
             .doesNotContain("conv-sensitive", "user-sensitive", "org-sensitive", "secret-token-value", "/api/org-sensitive");

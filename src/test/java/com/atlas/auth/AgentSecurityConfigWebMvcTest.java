@@ -133,6 +133,12 @@ class AgentSecurityConfigWebMvcTest {
                 .content("{\"candidateLimit\":50,\"maxRecommendedCandidates\":5}"))
             .andExpect(status().isForbidden());
 
+        mockMvc.perform(post("/api/agent/observability/eval/workbench/trace-sets/phase1-core-golden/catalog-patch-review")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer user-token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"traceIds\":[\"trc_11111111111111111111111111111111\"]}"))
+            .andExpect(status().isForbidden());
+
         mockMvc.perform(get("/api/agent/observability/eval/trace-sets")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
             .andExpect(status().isForbidden());
@@ -238,6 +244,17 @@ class AgentSecurityConfigWebMvcTest {
             .andExpect(status().isOk());
 
         mockMvc.perform(post("/api/agent/observability/eval/workbench/trace-sets/phase1-core-golden/promotion-workflow")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token")
+                .contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/agent/observability/eval/workbench/trace-sets/phase1-core-golden/catalog-patch-review")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"traceIds\":[\"trc_11111111111111111111111111111111\"]}"))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/agent/observability/eval/workbench/trace-sets/phase1-core-golden/catalog-patch-review")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token")
                 .contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk());
@@ -468,6 +485,11 @@ class AgentSecurityConfigWebMvcTest {
 
         @PostMapping("/api/agent/observability/eval/workbench/trace-sets/{id}/promotion-workflow")
         String observabilityEvalWorkbenchPromotionWorkflow(@PathVariable String id, @RequestBody(required = false) String body) {
+            return id + body;
+        }
+
+        @PostMapping("/api/agent/observability/eval/workbench/trace-sets/{id}/catalog-patch-review")
+        String observabilityEvalWorkbenchCatalogPatchReview(@PathVariable String id, @RequestBody(required = false) String body) {
             return id + body;
         }
 
