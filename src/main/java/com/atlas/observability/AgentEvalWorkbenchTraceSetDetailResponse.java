@@ -107,6 +107,8 @@ public record AgentEvalWorkbenchTraceSetDetailResponse(
         endpoints.put("capabilities", "/api/agent/observability/eval/workbench/capabilities");
         endpoints.put("overview", "/api/agent/observability/eval/workbench/overview");
         endpoints.put("detail", "/api/agent/observability/eval/workbench/trace-sets/" + id);
+        endpoints.put("workbenchPromotionWorkflow",
+            "/api/agent/observability/eval/workbench/trace-sets/" + id + "/promotion-workflow");
         endpoints.put("traceSetCatalog", "/api/agent/observability/eval/trace-sets");
         endpoints.put("candidateDiscovery", "/api/agent/observability/eval/trace-sets/" + id + "/candidates?limit={limit}");
         endpoints.put("curationReview", "/api/agent/observability/eval/trace-sets/" + id + "/curation-review");

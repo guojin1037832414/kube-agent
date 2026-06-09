@@ -23,6 +23,7 @@ class AgentEvalWorkbenchCapabilitiesServiceTest {
                 "workbench-overview",
                 "trace-set-catalog",
                 "workbench-trace-set-detail",
+                "workbench-promotion-workflow",
                 "trace-set-candidate-discovery",
                 "trace-set-curation-review",
                 "trace-set-catalog-patch-proposal",
@@ -47,7 +48,7 @@ class AgentEvalWorkbenchCapabilitiesServiceTest {
                 "workbench-overview",
                 "trace-set-catalog",
                 "workbench-trace-set-detail",
-                "trace-set-promotion-workflow",
+                "workbench-promotion-workflow",
                 "trace-set-catalog-patch-proposal",
                 "trace-set-gate-bundle",
                 "trace-replay-timeline",
@@ -69,7 +70,11 @@ class AgentEvalWorkbenchCapabilitiesServiceTest {
             .containsEntry("toolExecution", false)
             .containsEntry("kubeManagerCalls", false);
         assertThat(response.toString())
-            .contains("workbench-overview", "workbench-trace-set-detail", "agent-eval-workbench-trace-set-detail.v1")
+            .contains(
+                "workbench-overview",
+                "workbench-trace-set-detail",
+                "agent-eval-workbench-promotion-workflow.v1"
+            )
             .doesNotContain("conv-sensitive", "user-sensitive", "org-sensitive", "secret-token-value", "/api/org-sensitive");
     }
 }

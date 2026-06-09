@@ -444,6 +444,19 @@ M5.40-1 adds the candidate discovery step before M5.39 curation review:
 
 Technology judgment: this gives eval operations a real evidence workflow without granting new authority. Discovery is read-only and advisory, curation review is deterministic and review-only, and catalog promotion still requires a Git-reviewed patch. This separation is the mature Agent pattern for moving from observability data to release-blocking evidence.
 
+## M5.46-1 Update - Eval Workbench Promotion Workflow Result Model
+
+M5.46-1 adds the page-level promotion workflow result contract for the future `vue-kube-manager` eval workbench:
+
+- `POST /api/agent/observability/eval/workbench/trace-sets/{traceSetId}/promotion-workflow` returns `AgentEvalWorkbenchPromotionWorkflowResponse`.
+- `AgentEvalWorkbenchPromotionWorkflowService` wraps the existing redacted promotion workflow artifact instead of inventing a second evidence path.
+- The response adds UI steps, patch summary, candidate gate summary, next actions, endpoint templates, workbench policy, and privacy proof.
+- The capability manifest now includes `workbench-promotion-workflow`, and the recommended workflow points Vue to this page-ready contract after trace-set detail.
+- Trace-set detail now exposes `workbenchPromotionWorkflow` while preserving the raw backend `promotionWorkflow` endpoint.
+- The contract remains admin-only, no catalog mutation, no runtime catalog write, no Tool execution, no kube-manager call, no LLM/external call, and no embedded replay/report payloads.
+
+Technology judgment: a top-tier Agent workbench should not ask the frontend to reconstruct release governance from raw artifacts. Backend-owned page contracts keep evidence semantics, security policy, and next-action guidance consistent across API, UI, CI, and recovery documentation while preserving human Git review as the only catalog promotion authority.
+
 ## M5.45-1 Update - Eval Workbench Trace-Set Detail Read Model
 
 M5.45-1 adds the trace-set detail layer for the future `vue-kube-manager` eval workbench:

@@ -2,6 +2,32 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-09 M5.46 Eval Workbench Promotion Workflow 结果模型
+
+M5.46 把已有的底层 promotion workflow 包装成未来 `vue-kube-manager` 可以直接渲染的页面级结果模型。底层 artifact 仍然负责 discovery、curation review、catalog patch proposal 的证据语义；新的 workbench response 负责把这些证据整理成 UI steps、patch summary、candidate gate summary、next actions 和 endpoint templates。
+
+```text
+POST /api/agent/observability/eval/workbench/trace-sets/{traceSetId}/promotion-workflow
+    |
+    | existing redacted promotion workflow artifact
+    v
+AgentEvalWorkbenchPromotionWorkflowResponse
+    |
+    | uiSteps + patchSummary + candidateGateSummary + nextActions
+    v
+Vue promotion workflow result page
+```
+
+关键设计：
+- 新 endpoint 是 admin-only，且是 workbench wrapper，不是新的 release authority。
+- 它可以调用已有的脱敏候选发现、确定性复核和补丁提案服务，但仍然不写 `observability/eval-trace-sets.json`。
+- `workbench-promotion-workflow` 进入 capability manifest，并成为 detail 之后推荐的 UI 流程。
+- trace-set detail 的 endpoint templates 增加 `workbenchPromotionWorkflow`，同时保留 raw backend `promotionWorkflow`，方便前端常规页面和高级排障分层使用。
+- response 不嵌入 replay timeline 和 per-trace eval report；如果需要排障，仍通过显式 admin-only drill-down endpoint 进入。
+- 安全证明继续声明 `catalogMutationAllowed=false`、`runtimeCatalogWrite=false`、`toolExecution=false`、`kubeManagerCalls=false`、`llmUsed=false`、`externalCalls=false`。
+
+学习重点：顶级 Agent 的前端不应该直接拼接多个底层 artifact 来猜 release 状态。更成熟的方式是由后端提供“页面级契约”：既能让操作员看到步骤、状态、补丁摘要和下一步动作，又不会把页面按钮变成 catalog 写权限或 CI release 权限。证据晋升仍然只能通过 human/Git review。
+
 ## 2026-06-09 M5.45 Eval Workbench Trace-Set Detail 详情读模型
 
 M5.45 补上了 overview 之后的下一层页面契约：当管理员在 eval workbench 首屏点击一个 trace set，后端返回这个 trace set 的详情读模型，而不是让前端自己拼 catalog、gate、promotion 路径和安全策略。

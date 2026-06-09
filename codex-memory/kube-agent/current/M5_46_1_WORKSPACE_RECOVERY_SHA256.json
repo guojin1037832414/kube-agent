@@ -1,0 +1,99 @@
+﻿{
+    "milestone":  "M5.46-1",
+    "title":  "Eval workbench promotion workflow result model",
+    "generatedAt":  "2026-06-09T10:40:00+08:00",
+    "files":  [
+                  {
+                      "path":  "CHANGELOG.md",
+                      "sha256":  "2B80968A09A5365F8B1798EE0D1C10DA80DD0FFBFB3156BED91AD6E468EBDABB"
+                  },
+                  {
+                      "path":  "docs/PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "35E9F30699A50E1DB4E8020159121DED96CF6ABBADAAE73BAE321353CA524FA7"
+                  },
+                  {
+                      "path":  "docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "358B6325ABE51702A0298E2C699E13D75153D9D623CB27790F5276779E8B6C15"
+                  },
+                  {
+                      "path":  "docs/tech-stack/BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "6C40ED8F06D17B944401B7E53269A65CA3F2EBDA58C4E90C049153CE86E74A2B"
+                  },
+                  {
+                      "path":  "docs/M5_46_EVAL_WORKBENCH_PROMOTION_WORKFLOW_20260609.md",
+                      "sha256":  "7A642D5F35D1C1FF17C864EE88CEE4F6553E4FDE64D4F18A7CB19488A7CBC7B1"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/CHANGELOG.md",
+                      "sha256":  "2B80968A09A5365F8B1798EE0D1C10DA80DD0FFBFB3156BED91AD6E468EBDABB"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/RECOVERY_STATUS.md",
+                      "sha256":  "A8ECC92E671F82C63ACEC532CA28712FCC24078BC78B97C8388EFCA76D6406B1"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "35E9F30699A50E1DB4E8020159121DED96CF6ABBADAAE73BAE321353CA524FA7"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "358B6325ABE51702A0298E2C699E13D75153D9D623CB27790F5276779E8B6C15"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "6C40ED8F06D17B944401B7E53269A65CA3F2EBDA58C4E90C049153CE86E74A2B"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_M5_46_EVAL_WORKBENCH_PROMOTION_WORKFLOW_20260609.md",
+                      "sha256":  "7A642D5F35D1C1FF17C864EE88CEE4F6553E4FDE64D4F18A7CB19488A7CBC7B1"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentEvalWorkbenchCapabilitiesService.java",
+                      "sha256":  "0654AB86CA524F287AA1991167863F261BB45D04996C699D410EB13CC6400A94"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentEvalWorkbenchTraceSetDetailResponse.java",
+                      "sha256":  "250A15A8FA23E469394E524729C6E010AB7CB2DC5401F12A56A141A8E87BBC86"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentEvalWorkbenchPromotionWorkflowResponse.java",
+                      "sha256":  "C8F657D92433E551245F6502A2626ED07DD8BF1D730113E9AEE444899209A65F"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentEvalWorkbenchPromotionWorkflowService.java",
+                      "sha256":  "660C440049C4F54F128CEF79C0735E16FB1C7FFE3D766B7B004CC06757417D59"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/ObservabilityController.java",
+                      "sha256":  "7F002E35B01A5FB410A5EF35A9EF4BB744A89035B8C4B65A38F22D83FD83C2EE"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/auth/AgentSecurityConfigWebMvcTest.java",
+                      "sha256":  "4766265711B00F46198C78D4C5C4F9F3706A420B0A4091F914420AD22EBF077F"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/AgentEvalWorkbenchCapabilitiesServiceTest.java",
+                      "sha256":  "0C91171A314E91A5EEBED8FED6442ECBD760C4FE16CAEA63DBE78020DD55CBC7"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/AgentEvalWorkbenchOverviewServiceTest.java",
+                      "sha256":  "35DE4258D66E3271FFA513AEBD7CEA5FED86D8B331B0A0B42E3AE4667D9F627E"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/AgentEvalWorkbenchTraceSetDetailServiceTest.java",
+                      "sha256":  "A3EB996AA96818269E427103867B4B0F09D3A9A0A2B35B77ED96B65FFBA31CB6"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/AgentEvalWorkbenchPromotionWorkflowServiceTest.java",
+                      "sha256":  "D874A82DD9F0F082E41BE8014F32F7C3EE7F3FBA0007C7B62AF39E6DC559FCF3"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/ObservabilityControllerSecurityContractTest.java",
+                      "sha256":  "7D0D268672673293BA27BD0989F998540AB110859D2C943D338F1CB30F063F45"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/ObservabilityControllerTest.java",
+                      "sha256":  "C1049CC8602EA5CD1D3F28D998ED78D61AC7EC0CC2AAB216E4356651A0F8E949"
+                  }
+              ]
+}

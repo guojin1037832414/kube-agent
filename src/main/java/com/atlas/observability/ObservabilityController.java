@@ -45,6 +45,7 @@ public class ObservabilityController {
     private final AgentEvalWorkbenchCapabilitiesService evalWorkbenchCapabilitiesService;
     private final AgentEvalWorkbenchOverviewService evalWorkbenchOverviewService;
     private final AgentEvalWorkbenchTraceSetDetailService evalWorkbenchTraceSetDetailService;
+    private final AgentEvalWorkbenchPromotionWorkflowService evalWorkbenchPromotionWorkflowService;
     private final AgentPrincipalResolver principalResolver;
 
     public ObservabilityController(AgentMetricsService metricsService,
@@ -59,6 +60,7 @@ public class ObservabilityController {
                                    AgentEvalWorkbenchCapabilitiesService evalWorkbenchCapabilitiesService,
                                    AgentEvalWorkbenchOverviewService evalWorkbenchOverviewService,
                                    AgentEvalWorkbenchTraceSetDetailService evalWorkbenchTraceSetDetailService,
+                                   AgentEvalWorkbenchPromotionWorkflowService evalWorkbenchPromotionWorkflowService,
                                    AgentPrincipalResolver principalResolver) {
         this.metricsService = metricsService;
         this.auditSnapshotProvider = auditSnapshotProvider;
@@ -72,6 +74,7 @@ public class ObservabilityController {
         this.evalWorkbenchCapabilitiesService = evalWorkbenchCapabilitiesService;
         this.evalWorkbenchOverviewService = evalWorkbenchOverviewService;
         this.evalWorkbenchTraceSetDetailService = evalWorkbenchTraceSetDetailService;
+        this.evalWorkbenchPromotionWorkflowService = evalWorkbenchPromotionWorkflowService;
         this.principalResolver = principalResolver;
     }
 
@@ -258,6 +261,22 @@ public class ObservabilityController {
             return guard;
         }
         return evalWorkbenchTraceSetDetailService.detail(traceSetId)
+            .map(response -> ResponseEntity.ok(ApiResponse.ok(response)))
+            .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.fail("Unknown Agent eval trace set: " + traceSetId)));
+    }
+
+    /** Compose a frontend-ready promotion workflow result for the eval workbench. */
+    @PostMapping("/eval/workbench/trace-sets/{traceSetId}/promotion-workflow")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentEvalWorkbenchPromotionWorkflowResponse>> evalWorkbenchPromotionWorkflow(
+        @PathVariable String traceSetId,
+        @RequestBody(required = false) AgentEvalTraceSetPromotionWorkflowRequest request) {
+        ResponseEntity<ApiResponse<AgentEvalWorkbenchPromotionWorkflowResponse>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return evalWorkbenchPromotionWorkflowService.workflow(traceSetId, request)
             .map(response -> ResponseEntity.ok(ApiResponse.ok(response)))
             .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(ApiResponse.fail("Unknown Agent eval trace set: " + traceSetId)));

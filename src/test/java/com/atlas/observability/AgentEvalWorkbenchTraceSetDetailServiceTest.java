@@ -51,6 +51,8 @@ class AgentEvalWorkbenchTraceSetDetailServiceTest {
             );
         assertThat(detail.endpointTemplates())
             .containsEntry("overview", "/api/agent/observability/eval/workbench/overview")
+            .containsEntry("workbenchPromotionWorkflow",
+                "/api/agent/observability/eval/workbench/trace-sets/phase1-core-golden/promotion-workflow")
             .containsEntry("promotionWorkflow",
                 "/api/agent/observability/eval/trace-sets/phase1-core-golden/promotion-workflow")
             .containsEntry("replayTimeline", "/api/agent/observability/replay/trace/{traceId}?limit={limit}");

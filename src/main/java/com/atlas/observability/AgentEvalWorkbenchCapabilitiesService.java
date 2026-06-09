@@ -51,6 +51,17 @@ public class AgentEvalWorkbenchCapabilitiesService {
                 List.of("traceSetView", "promotionChecklist", "endpointTemplates")
             ),
             capability(
+                "workbench-promotion-workflow",
+                "Eval workbench promotion workflow result",
+                "orchestrate",
+                "POST",
+                "/api/agent/observability/eval/workbench/trace-sets/{traceSetId}/promotion-workflow",
+                "AgentEvalTraceSetPromotionWorkflowRequest",
+                AgentEvalWorkbenchPromotionWorkflowResponse.SCHEMA_VERSION,
+                List.of("traceSetId", "candidateLimit"),
+                List.of("uiSteps", "patchSummary", "workflowVerdict", "nextActions")
+            ),
+            capability(
                 "trace-set-candidate-discovery",
                 "Trace-set candidate discovery",
                 "discover",
@@ -134,7 +145,7 @@ public class AgentEvalWorkbenchCapabilitiesService {
                 "workbench-overview",
                 "trace-set-catalog",
                 "workbench-trace-set-detail",
-                "trace-set-promotion-workflow",
+                "workbench-promotion-workflow",
                 "trace-set-catalog-patch-proposal",
                 "trace-set-gate-bundle",
                 "trace-replay-timeline",
@@ -191,7 +202,7 @@ public class AgentEvalWorkbenchCapabilitiesService {
         policy.put("frontendTarget", "vue-kube-manager eval workbench");
         policy.put("capabilityCount", capabilities.size());
         policy.put("catalogPromotionAuthority", "human Git review only");
-        policy.put("recommendedPrimaryFlow", "trace-set-promotion-workflow");
+        policy.put("recommendedPrimaryFlow", "workbench-promotion-workflow");
         policy.put("drillDownFlow", "trace-replay-timeline -> trace-eval-report");
         policy.put("runtimeCatalogWrite", false);
         policy.put("toolExecution", false);

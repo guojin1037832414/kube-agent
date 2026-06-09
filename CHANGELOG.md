@@ -6,6 +6,26 @@
 
 ---
 
+## [M5.46-1] - Eval workbench promotion workflow result model
+
+**Delivery**: Added an admin-only workbench-level promotion workflow result model for future `vue-kube-manager` eval workbench pages.
+**Changes**
+- Added `AgentEvalWorkbenchPromotionWorkflowResponse`.
+- Added `AgentEvalWorkbenchPromotionWorkflowService`.
+- Added admin-only `POST /api/agent/observability/eval/workbench/trace-sets/{traceSetId}/promotion-workflow`.
+- Extended the workbench capability manifest with `workbench-promotion-workflow` and made it the recommended UI workflow after trace-set detail.
+- Extended trace-set detail endpoint templates with `workbenchPromotionWorkflow` while preserving the raw backend promotion workflow endpoint.
+- The response wraps the existing safe promotion workflow artifact with UI steps, patch summary, candidate gate summary, next actions, endpoint templates, policy proof, and privacy proof.
+- Added service, controller, source-contract, and MockMvc security coverage.
+**Verification**
+- `mvn -q "-Dtest=AgentEvalWorkbenchPromotionWorkflowServiceTest,AgentEvalWorkbenchTraceSetDetailServiceTest,AgentEvalWorkbenchOverviewServiceTest,AgentEvalWorkbenchCapabilitiesServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed.
+**Security**
+- The workbench workflow endpoint is admin-only and workbench-wrapper-only.
+- It may run the existing redacted promotion workflow, but it never mutates `observability/eval-trace-sets.json`, writes catalog data, executes Tool code, calls kube-manager, uses LLMs, makes external calls, or embeds replay/report payloads.
+- Catalog promotion authority remains human Git review only.
+- `catalogMutationAllowed=false`, `runtimeCatalogWrite=false`, `toolExecution=false`, `kubeManagerCalls=false`, `llmUsed=false`, and `externalCalls=false`.
+- This slice adds no kube-manager write/create/delete/state-changing behavior and does not reopen NIM/HPC/Slurm/BCM scope.
+
 ## [M5.45-1] - Eval workbench trace-set detail read model
 
 **Delivery**: Added an admin-only trace-set detail read model for future `vue-kube-manager` eval workbench pages.
