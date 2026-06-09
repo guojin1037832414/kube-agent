@@ -2,6 +2,35 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-09 M5.57 Top-Tier Agent Readiness Overview
+
+M5.57 adds the master read model for the Phase 1 top-tier Agent objective. It answers a question that a mature Agent project must make explicit: "What is ready, what is partial, what is blocked, and what is intentionally postponed?"
+
+```text
+Identity/Security + SafeToolExecutor + Trace/Audit/Replay
+        + Eval Workbench + Kube-Manager Governance + MCP Governance
+        + Memory/RAG Gap + Vue Workbench Gap + Phase 2 Plugin Boundary
+        |
+        v
+AgentTopTierReadinessOverviewService
+        |
+        | admin-only, read-only, local composition
+        v
+/api/agent/observability/top-tier/readiness-overview
+```
+
+Key design:
+- `AgentTopTierReadinessOverviewResponse` is a backend-owned control-plane map, not a UI-only checklist and not a runtime enable switch.
+- It composes existing read models instead of re-querying the world: kube-manager governance workbench, eval workbench capabilities, and MCP governance overview.
+- It publishes nine capability cards: identity/security, SafeToolExecutor boundary, trace/audit/replay, eval release gates, kube-manager HTTP governance, MCP interoperability, Memory/RAG learning, Vue operator workbench, and Phase 2 domain plugins.
+- Current verdict is `PHASE_1_TOP_TIER_CORE_IN_PROGRESS`: the project has strong safety/execution/observability foundations, but still needs reviewed eval evidence, blocking CI promotion, durable Memory/RAG with citations, Vue consumption, and later MCP runtime binding.
+- The endpoint proves that `phase1TopTierGoalPreserved=true`; pausing NIM / HPC / Slurm / BCM only postpones specialist plugins and does not lower Phase 1 quality.
+- The read model explicitly keeps `toolExecution=false`, `kubeManagerCalls=false`, `llmUsed=false`, `mcpToolsCall=false`, and `writeAuthorityClosed=true`.
+
+Learning point: 顶级 Agent 不能只靠散落的接口和口头路线图推进。它需要一个由后端拥有、可测试、可恢复、可给前端消费的 readiness map。这个 map 让每个先进能力都有状态、证据、阻断原因和下一步顺序。
+
+Technology point: "引入全部最先进技术" 应该分成两层落地。主线吸收已经能形成闭环的先进能力，例如身份、安全执行、审计、回放、eval、Resilience4j 治理、MCP manifest/governance 和 Vue-ready contracts。兼容矩阵继续验证 Spring Boot 4 / Spring Framework 7、Spring AI 2、Java 21/25/26、完整 MCP broker、OTel GenAI semconv、A2A、GraphRAG、reranker、多向量库、virtual threads 和 structured concurrency。这样项目既保持顶级方向，又不牺牲当前可构建、可测试、可恢复的工程纪律。
+
 ## 2026-06-09 M5.56 MCP Governance Overview
 
 M5.56 adds an authenticated, read-only MCP governance overview. It turns the current MCP integration from "safe manifest only" into a clearer, teachable capability stack without opening `tools/call`.

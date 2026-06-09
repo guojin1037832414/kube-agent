@@ -113,6 +113,10 @@ class AgentSecurityConfigWebMvcTest {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
             .andExpect(status().isForbidden());
 
+        mockMvc.perform(get("/api/agent/observability/top-tier/readiness-overview")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
+            .andExpect(status().isForbidden());
+
         mockMvc.perform(get("/api/agent/observability/replay/trace/trc_123")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
             .andExpect(status().isForbidden());
@@ -242,6 +246,10 @@ class AgentSecurityConfigWebMvcTest {
             .andExpect(status().isOk());
 
         mockMvc.perform(get("/api/agent/observability/kube-manager/http-outlet/governance-workbench/overview")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token"))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/agent/observability/top-tier/readiness-overview")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token"))
             .andExpect(status().isOk());
 
@@ -542,6 +550,11 @@ class AgentSecurityConfigWebMvcTest {
         @GetMapping("/api/agent/observability/kube-manager/http-outlet/governance-workbench/overview")
         String observabilityKubeManagerHttpOutletGovernanceWorkbenchOverview() {
             return "kube-manager-http-outlet-governance-workbench-overview";
+        }
+
+        @GetMapping("/api/agent/observability/top-tier/readiness-overview")
+        String observabilityTopTierReadinessOverview() {
+            return "top-tier-readiness-overview";
         }
 
         @GetMapping("/api/agent/observability/replay/trace/{id}")

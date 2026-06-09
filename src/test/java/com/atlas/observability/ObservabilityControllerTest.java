@@ -4,6 +4,13 @@ import com.atlas.audit.InMemoryAgentAuditRecorder;
 import com.atlas.auth.AgentPrincipalResolver;
 import com.atlas.auth.UserPermissionContext;
 import com.atlas.dto.ApiResponse;
+import com.atlas.mcp.McpGovernanceOverviewService;
+import com.atlas.mcp.McpToolManifestService;
+import com.atlas.tool.core.ToolRegistry;
+import com.atlas.tool.impl.DeployDeleteTool;
+import com.atlas.tool.impl.MigConfigListTool;
+import com.atlas.tool.impl.NodeQueryTool;
+import com.atlas.tool.impl.UserQueryTool;
 import io.github.resilience4j.bulkhead.BulkheadConfig;
 import io.github.resilience4j.bulkhead.BulkheadRegistry;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
@@ -83,6 +90,14 @@ class ObservabilityControllerTest {
             kubeManagerWriteRetryGovernanceContractService,
             kubeManagerWriteReleaseGateContractService
         );
+    private final McpGovernanceOverviewService mcpGovernanceOverviewService =
+        new McpGovernanceOverviewService(new McpToolManifestService(mcpToolRegistry()));
+    private final AgentTopTierReadinessOverviewService topTierReadinessOverviewService =
+        new AgentTopTierReadinessOverviewService(
+            kubeManagerHttpOutletGovernanceWorkbenchOverviewService,
+            evalWorkbenchCapabilitiesService,
+            mcpGovernanceOverviewService
+        );
     private final ObservabilityController controller = new ObservabilityController(
         new AgentMetricsService(new SimpleMeterRegistry()),
         kubeManagerHttpOutletHealthSummaryService,
@@ -92,6 +107,7 @@ class ObservabilityControllerTest {
         kubeManagerWriteRetryGovernanceContractService,
         kubeManagerWriteReleaseGateContractService,
         kubeManagerHttpOutletGovernanceWorkbenchOverviewService,
+        topTierReadinessOverviewService,
         auditRecorder,
         auditRecorder,
         replayTimelineService,
@@ -116,6 +132,17 @@ class ObservabilityControllerTest {
         ));
         registry.retry("kubeManagerRead", "kubeManagerRead");
         registry.retry("kubeManagerWrite", "kubeManagerWrite");
+        return registry;
+    }
+
+    private ToolRegistry mcpToolRegistry() {
+        ToolRegistry registry = new ToolRegistry(java.util.List.of(
+            new NodeQueryTool(null),
+            new MigConfigListTool(null),
+            new UserQueryTool(null),
+            new DeployDeleteTool(null)
+        ), new UserPermissionContext());
+        registry.init();
         return registry;
     }
 
@@ -768,6 +795,67 @@ class ObservabilityControllerTest {
             .containsEntry("kubeManagerCalls", false);
         assertThat(overview.toString())
             .contains("governance-workbench-overview", "write-release-gate-contract")
+            .doesNotContain("kube-manager.internal", "secret-password", "Bearer", "user-token", "/api/login", "/api/100002");
+    }
+
+    @Test
+    void topTierReadinessOverview_shouldRequireAdminAndReturnMasterReadModel() {
+        ResponseEntity<ApiResponse<AgentTopTierReadinessOverviewResponse>> anonymous =
+            controller.topTierReadinessOverview();
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentTopTierReadinessOverviewResponse>> user =
+            controller.topTierReadinessOverview();
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        userPermissionContext.unbind();
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentTopTierReadinessOverviewResponse>> admin =
+            controller.topTierReadinessOverview();
+
+        assertThat(admin.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(admin.getBody()).isNotNull();
+        AgentTopTierReadinessOverviewResponse overview = admin.getBody().getData();
+        assertThat(overview.schemaVersion()).isEqualTo("agent-top-tier-readiness-overview.v1");
+        assertThat(overview.readinessVerdict()).isEqualTo("PHASE_1_TOP_TIER_CORE_IN_PROGRESS");
+        assertThat(overview.phase1TopTierGoalPreserved()).isTrue();
+        assertThat(overview.writeAuthorityClosed()).isTrue();
+        assertThat(overview.toolExecutionTriggered()).isFalse();
+        assertThat(overview.capabilityCardCount()).isEqualTo(9);
+        assertThat(overview.topGaps())
+            .contains("eval-release-gates", "memory-rag-learning", "vue-operator-workbench");
+        assertThat(overview.endpointMap())
+            .containsEntry("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview")
+            .containsEntry("mcpGovernanceOverview", "/api/agent/mcp/governance/overview");
+        assertThat(overview.safety())
+            .containsEntry("adminOnly", true)
+            .containsEntry("adminOnlyAppliesToThisEndpoint", true)
+            .containsEntry("readOnly", true)
+            .containsEntry("endpointMapNavigationOnly", true)
+            .containsEntry("endpointMapDoesNotGrantAccess", true)
+            .containsEntry("runtimeMutationAllowed", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("safeToolExecutorInvocation", false)
+            .containsEntry("hitlInvocation", false)
+            .containsEntry("kubeManagerCalls", false)
+            .containsEntry("writeAuthorityClosed", true)
+            .containsEntry("phase2NimHpcSlurmBcmTouched", false);
+        assertThat(overview.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("containsRawPrincipal", false)
+            .containsEntry("containsAuthorizationHeader", false)
+            .containsEntry("containsToken", false);
+        assertThat(overview.kubeManagerGovernance().workbenchStatus()).isEqualTo("WRITE_GOVERNANCE_NOT_READY");
+        assertThat(overview.mcpGovernance().governanceStatus()).isEqualTo("MANIFEST_ONLY_NOT_CALLABLE");
+        assertThat(overview.toString())
+            .contains("top-tier", "memory-rag-learning", "mcp-interoperability")
             .doesNotContain("kube-manager.internal", "secret-password", "Bearer", "user-token", "/api/login", "/api/100002");
     }
 

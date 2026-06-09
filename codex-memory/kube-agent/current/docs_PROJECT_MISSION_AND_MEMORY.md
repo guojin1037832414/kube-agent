@@ -10,7 +10,40 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.56-1
+## Latest Phase 1 Core Memory - M5.57-1
+
+M5.57-1 adds the Phase 1 top-tier Agent readiness overview as the master control-plane read model.
+
+Delivered:
+
+- Added `AgentTopTierReadinessOverviewResponse`.
+- Added `AgentTopTierReadinessOverviewService`.
+- Added admin-only `GET /api/agent/observability/top-tier/readiness-overview`.
+- The overview composes kube-manager HTTP outlet governance, eval workbench capabilities, and MCP governance into one backend-owned readiness map.
+- Added nine capability cards: identity/security, SafeToolExecutor, trace/audit/replay, eval gates, kube-manager governance, MCP governance, Memory/RAG, Vue operator workbench, and Phase 2 domain plugins.
+- Added service, controller, source-contract, and MockMvc security coverage.
+
+Current readiness:
+
+- `schemaVersion=agent-top-tier-readiness-overview.v1`.
+- `phase=PHASE_1_GENERIC_MANAGER_AGENT_CORE`.
+- `readinessVerdict=PHASE_1_TOP_TIER_CORE_IN_PROGRESS`.
+- `capabilityCardCount=9`, `readyCardCount=3`, `partialCardCount=4`, `blockedCardCount=1`, and `phase2PausedCardCount=1`.
+- `phase1TopTierGoalPreserved=true` and `writeAuthorityClosed=true`.
+
+Security boundary:
+
+- The endpoint is admin-only, read-only, summary-only, and local read-model composition only.
+- It does not execute Tools, invoke `SafeToolExecutor`, invoke HITL, write audit, issue durable receipts, call kube-manager, use LLMs, mutate runtime registries, expose MCP `tools/call`, bind `KubeManagerHttpClient`, or use `RestClient` / `WebClient`.
+- NIM / HPC / Slurm / BCM remain Phase 2 paused scope. This postpones specialist plugins only; it does not lower the Phase 1 top-tier standard.
+
+Learning point: a top-tier Agent needs a backend-owned readiness map, not scattered status pages. The map should tell operators and learners what is ready, what is partial, what is blocked, and what evidence must exist before runtime authority can expand.
+
+Latest verified command:
+
+- `mvn -q "-Dtest=AgentTopTierReadinessOverviewServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+## Previous Phase 1 Core Memory - M5.56-1
 
 M5.56-1 adds a read-only MCP governance overview for future interoperability.
 

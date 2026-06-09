@@ -6,6 +6,25 @@
 
 ---
 
+## [M5.57-1] - Top-tier Agent readiness overview
+
+**Delivery**: Added an admin-only, read-only master readiness overview for the Phase 1 top-tier kube-manager Agent Core.
+**Changes**
+- Added `AgentTopTierReadinessOverviewResponse`.
+- Added `AgentTopTierReadinessOverviewService`.
+- Added `GET /api/agent/observability/top-tier/readiness-overview`.
+- The overview composes kube-manager HTTP outlet governance, eval workbench capabilities, and MCP governance into one backend-owned control-plane map.
+- Added nine capability cards covering identity/security, SafeToolExecutor, trace/audit/replay, eval gates, kube-manager governance, MCP governance, Memory/RAG, Vue workbench, and Phase 2 domain plugins.
+- Added service, controller, source-contract, and MockMvc security coverage.
+**Verification**
+- `mvn -q "-Dtest=AgentTopTierReadinessOverviewServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed during implementation.
+**Security**
+- `readinessVerdict=PHASE_1_TOP_TIER_CORE_IN_PROGRESS`.
+- `phase1TopTierGoalPreserved=true`, `writeAuthorityClosed=true`, `toolExecutionTriggered=false`, `kubeManagerCalls=false`, and `llmUsed=false`.
+- The endpoint is admin-only, read-only, summary-only, and local read-model composition only.
+- No real MCP runtime server, MCP `tools/call`, external Agent tool execution, Tool execution, `SafeToolExecutor` runtime invocation, HITL invocation, audit write, durable receipt issuance, runtime Tool registry mutation, kube-manager call, `KubeManagerHttpClient` binding, `RestClient`, `WebClient`, write-tool export, or sensitive-read export is added.
+- NIM / HPC / Slurm / BCM remain Phase 2 paused scope, without lowering the Phase 1 top-tier quality bar.
+
 ## [M5.56-1] - MCP governance overview contract
 
 **Delivery**: Added an authenticated, read-only MCP governance overview that explains why the current MCP surface remains manifest-only and what evidence is required before any future `tools/call` runtime.

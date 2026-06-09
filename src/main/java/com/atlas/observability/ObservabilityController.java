@@ -41,6 +41,7 @@ public class ObservabilityController {
     private final AgentKubeManagerWriteRetryGovernanceContractService kubeManagerWriteRetryGovernanceContractService;
     private final AgentKubeManagerWriteReleaseGateContractService kubeManagerWriteReleaseGateContractService;
     private final AgentKubeManagerHttpOutletGovernanceWorkbenchOverviewService kubeManagerHttpOutletGovernanceWorkbenchOverviewService;
+    private final AgentTopTierReadinessOverviewService topTierReadinessOverviewService;
     private final AgentAuditSnapshotProvider auditSnapshotProvider;
     private final AgentAuditQueryService auditQueryService;
     private final AgentReplayTimelineService replayTimelineService;
@@ -65,6 +66,7 @@ public class ObservabilityController {
                                    AgentKubeManagerWriteRetryGovernanceContractService kubeManagerWriteRetryGovernanceContractService,
                                    AgentKubeManagerWriteReleaseGateContractService kubeManagerWriteReleaseGateContractService,
                                    AgentKubeManagerHttpOutletGovernanceWorkbenchOverviewService kubeManagerHttpOutletGovernanceWorkbenchOverviewService,
+                                   AgentTopTierReadinessOverviewService topTierReadinessOverviewService,
                                    AgentAuditSnapshotProvider auditSnapshotProvider,
                                    AgentAuditQueryService auditQueryService,
                                    AgentReplayTimelineService replayTimelineService,
@@ -88,6 +90,7 @@ public class ObservabilityController {
         this.kubeManagerWriteRetryGovernanceContractService = kubeManagerWriteRetryGovernanceContractService;
         this.kubeManagerWriteReleaseGateContractService = kubeManagerWriteReleaseGateContractService;
         this.kubeManagerHttpOutletGovernanceWorkbenchOverviewService = kubeManagerHttpOutletGovernanceWorkbenchOverviewService;
+        this.topTierReadinessOverviewService = topTierReadinessOverviewService;
         this.auditSnapshotProvider = auditSnapshotProvider;
         this.auditQueryService = auditQueryService;
         this.replayTimelineService = replayTimelineService;
@@ -105,7 +108,17 @@ public class ObservabilityController {
         this.principalResolver = principalResolver;
     }
 
-    /** 查询 Agent 指标快照。 */
+    /** 构建一期顶级 Agent 就绪总览，不触发任何运行时动作。 */
+    @GetMapping("/top-tier/readiness-overview")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentTopTierReadinessOverviewResponse>> topTierReadinessOverview() {
+        ResponseEntity<ApiResponse<AgentTopTierReadinessOverviewResponse>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return ResponseEntity.ok(ApiResponse.ok(topTierReadinessOverviewService.overview()));
+    }
+
     /** Describe kube-manager HTTP outlet resilience state without probing kube-manager. */
     @GetMapping("/kube-manager/http-outlet/health-summary")
     @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")

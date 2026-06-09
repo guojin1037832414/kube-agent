@@ -9,6 +9,48 @@
 - 供应链、CI、SBOM、质量门禁进入工程默认路径；
 - Java / Spring / Agent 框架升级以兼容性矩阵推进，不用不可构建的版本号伪装先进。
 
+## 2026-06-09 M5.57 最新顶级技术引入规则
+
+M5.57 把“引入全部最先进的技术，然后完成最新修订的终极目标”落成一条工程规则：
+
+```text
+advanced technology
+        |
+        +-- stable mainline: 当前能构建、测试、审计、回放、评测、恢复
+        |
+        +-- compatibility matrix: 技术方向先进，但还需要版本、运行时、依赖生态验证
+```
+
+主线已经承接的先进能力：
+- Spring Security URL + method 双层授权；
+- trusted principal 与租户/资源归属校验；
+- `SafeToolExecutor` 作为唯一真实 Tool 执行边界；
+- trace、redacted audit、durable audit readiness、replay timeline、deterministic eval gate；
+- Resilience4j 治理 kube-manager HTTP outlet，读重试，写请求不自动重试；
+- kube-manager / eval / MCP / top-tier readiness 的后端拥有型治理 workbench read model；
+- MCP safe manifest 与 governance overview，暂不开放 runtime `tools/call`；
+- workspace-local recovery memory 与 SHA256 恢复清单。
+
+兼容矩阵继续跟进：
+- Java 21 / Java 25 / Java 26 toolchain；
+- Spring Boot 4 / Spring Framework 7；
+- Spring AI 2.x 与 Spring AI Alibaba 后续兼容性；
+- 完整 MCP runtime server / broker、`tools/list`、`tools/call`、structured output、annotations、consent、rate limits、SafeToolExecutor binding；
+- OpenTelemetry GenAI semantic conventions 从内部 `atlas.agent.*` 字段迁移；
+- A2A / Agent Card / 多 Agent 互操作；
+- GraphRAG、reranker、多向量库、可引用证据质量；
+- virtual threads / structured concurrency，等待运行时和依赖行为压测。
+
+二期暂停范围仍然是 NIM / HPC / Slurm / BCM。暂停的是专家域插件，不是一期顶级标准。
+
+教学结论：顶级不是今天把所有最新框架都压进生产主线，而是让每个新能力都经过 source-owned contract、redaction、identity、audit、replay、eval、frontend governance、recovery memory 和可回滚升级路径。
+
+2026-06-09 官方资料复核：
+- Spring Boot 官方文档显示 4.0.x 与 3.5.x 都在稳定文档线中，且 Boot 4 需要 Java 17+，所以它进入兼容矩阵而不是盲目主线替换。
+- Spring AI 官方 2.0 文档说明 2.0.x 支持 Spring Boot 4.x，但该线仍在 development；文档同时提示最新稳定版本使用 1.1.7。
+- MCP tools 规范明确了 `tools/list`、`tools/call`、`outputSchema`、`structuredContent` 与 annotations，所以一期需要继续朝 MCP 兼容演进，但执行层必须经 SafeToolExecutor / HITL / audit / eval 绑定。
+- OpenTelemetry GenAI semantic conventions 仍标注 `Status: Development`，所以项目继续用内部 `atlas.agent.*` 稳定字段承接证据，再以兼容层逐步映射。
+
 ## 当前可落地先进线
 
 已采用的第一批先进工程底座：
