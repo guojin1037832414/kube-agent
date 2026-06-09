@@ -293,6 +293,8 @@ public record AgentAdvancedTechnologyCompatibilityMatrixResponse(
             AgentOfficialVersionProtocolWatchDashboardResponse.DASHBOARD_ENDPOINT);
         endpoints.put("officialVersionProtocolWatchVueBindingSpec",
             AgentOfficialVersionProtocolWatchVueBindingSpecResponse.BINDING_SPEC_ENDPOINT);
+        endpoints.put("topTierVueWorkbenchImplementationPackage",
+            AgentTopTierVueWorkbenchImplementationPackageResponse.PACKAGE_ENDPOINT);
         endpoints.put("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview");
         endpoints.put("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap");
         endpoints.put("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane");

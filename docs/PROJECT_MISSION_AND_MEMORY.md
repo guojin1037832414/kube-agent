@@ -10,6 +10,66 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
+## Latest Phase 1 Core Memory - M5.79-1
+
+M5.79-1 adds the backend-owned top-tier Vue workbench implementation package. This is the bridge from separate backend Vue binding specs to a page-level implementation contract: `vue-kube-manager` can now implement the official technology watch page and compatibility matrix page from one backend-published package of routes, API clients, shared components, fixtures, disabled runtime controls, and acceptance order.
+
+Endpoint:
+
+```text
+GET /api/agent/observability/top-tier/vue-workbench-implementation-package
+```
+
+Delivered:
+
+- Added `AgentTopTierVueWorkbenchImplementationPackageResponse`.
+- Added `AgentTopTierVueWorkbenchImplementationPackageService`.
+- Added admin-only Controller method `topTierVueWorkbenchImplementationPackage()`.
+- Published 2 route specs, 4 API client bindings, 2 page assemblies, 7 shared component contracts, 6 acceptance fixtures, and 3 forbidden runtime-control groups.
+- Embedded the M5.76 official watch binding spec as `officialWatchBindingSpec`.
+- Embedded the M5.78 compatibility matrix binding spec as `compatibilityMatrixBindingSpec`.
+- Integrated the package into advanced technology adoption, official watch dashboard, compatibility matrix, top-tier readiness overview, Phase 1 roadmap, and Vue readiness control plane.
+- Updated Vue readiness dashboard count to `15`.
+- Added service, Controller, source-security, WebMvc security, top-tier readiness, roadmap, and Vue readiness tests.
+- Added the teaching document `docs/M5_79_TOP_TIER_VUE_WORKBENCH_IMPLEMENTATION_PACKAGE_20260610.md`.
+
+Current state:
+
+- `schemaVersion=agent-top-tier-vue-workbench-implementation-package.v1`.
+- `packageStatus=IMPLEMENTATION_PACKAGE_READY`.
+- `sourceBindingSpecsEmbedded=true`.
+- `runtimeControlAllowed=false`.
+- `routeSpecCount=2`.
+- `apiClientBindingCount=4`.
+- `pageAssemblyCount=2`.
+- `sharedComponentCount=7`.
+- `acceptanceFixtureCount=6`.
+
+Security boundary:
+
+- M5.79 is admin-only, read-only, implementation-package-only, Vue-workbench-only, and external-call-free at request time.
+- It does not modify `pom.xml`, upgrade dependencies, switch Java/Spring/Spring AI baselines, bind external Agent runtimes, run LLMs, execute Tools, call `SafeToolExecutor`, invoke HITL, call kube-manager including port `8100`, expose MCP runtime `tools/call`, run A2A handoff, execute retrieval/vector/reranker/GraphRAG, write memory, write audit, issue durable receipts, mutate catalogs, enable CI blocking, or touch NIM / HPC / Slurm / BCM Phase 2 scope.
+
+Multi-expert memory:
+
+- Newton / frontend-contract review recommended a cross-page workbench package so Vue does not guess route, tab, drilldown, disabled-action, and fixture behavior. M5.79 implements this recommendation.
+- Faraday / backend-architecture review recommended a future evidence-readiness layer for mapping compatibility-matrix lanes to reviewed trace/eval/Memory-RAG gaps. This should be treated as the likely M5.80 direction.
+
+Learning point: a top-tier Agent frontend is not only screens. It is a governed operator and teaching surface. The backend must publish not just data, but also route intent, component semantics, fixture expectations, and forbidden runtime controls.
+
+Latest verified commands:
+
+- `git diff --check`
+- `mvn -q "-DskipTests" validate`
+- `mvn -q "-Dtest=AgentTopTierVueWorkbenchImplementationPackageServiceTest,AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecServiceTest,AgentOfficialVersionProtocolWatchVueBindingSpecServiceTest,AgentAdvancedTechnologyCompatibilityMatrixServiceTest,AgentOfficialVersionProtocolWatchDashboardServiceTest,AgentTopTierReadinessOverviewServiceTest,AgentAdvancedTechnologyAdoptionContractServiceTest,AgentPhase1ExecutionRoadmapServiceTest,AgentVueReadinessControlPlaneServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+Next safe development order:
+
+- Add M5.80 `advanced-technology-compatibility-matrix/evidence-readiness` as a read-only evidence gap layer.
+- Then wire `vue-kube-manager` to consume M5.79 and render the official watch + compatibility matrix workbench with mocked fixtures.
+- Continue reviewed redacted eval and Memory/RAG trace evidence curation.
+- Keep MCP runtime, A2A handoff, retrieval runtime, CI blocking, kube-manager writes, and Phase 2 NIM/HPC/Slurm/BCM release-gated.
+
 ## Latest Phase 1 Core Memory - M5.78-1
 
 M5.78-1 adds the backend-owned Vue binding specification for the advanced technology compatibility matrix. This turns M5.77 from a backend read model into a frontend implementation contract: `vue-kube-manager` can render the latest-technology workbench from backend-defined components, fields, tables, states, disabled actions, fixtures, and checklist.

@@ -96,6 +96,7 @@ class AgentTopTierReadinessOverviewServiceTest {
             "wire-vue-official-version-protocol-watch",
             "wire-vue-official-version-protocol-watch-dashboard",
             "wire-vue-official-version-protocol-watch-binding-spec",
+            "wire-vue-top-tier-workbench-implementation-package",
             "wire-vue-phase1-execution-roadmap",
             "wire-vue-readiness-control-plane",
             "populate-reviewed-redacted-eval-trace-evidence",

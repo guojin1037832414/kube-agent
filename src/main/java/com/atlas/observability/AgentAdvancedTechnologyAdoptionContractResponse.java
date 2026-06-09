@@ -159,6 +159,7 @@ public record AgentAdvancedTechnologyAdoptionContractResponse(
             "keep-java-spring-control-plane-as-phase1-mainline",
             "publish-official-version-protocol-watch",
             "add-official-version-and-protocol-watch-to-compatibility-matrix",
+            "publish-top-tier-vue-workbench-implementation-package",
             "bind-memory-rag-eval-suite-before-retrieval-runtime",
             "wire-vue-top-tier-readiness-and-technology-adoption-workbench",
             "promote-reviewed-eval-and-security-gates-to-release-blocking",
@@ -197,6 +198,8 @@ public record AgentAdvancedTechnologyAdoptionContractResponse(
             AgentOfficialVersionProtocolWatchDashboardResponse.DASHBOARD_ENDPOINT);
         endpoints.put("officialVersionProtocolWatchVueBindingSpec",
             AgentOfficialVersionProtocolWatchVueBindingSpecResponse.BINDING_SPEC_ENDPOINT);
+        endpoints.put("topTierVueWorkbenchImplementationPackage",
+            AgentTopTierVueWorkbenchImplementationPackageResponse.PACKAGE_ENDPOINT);
         endpoints.put("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap");
         endpoints.put("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane");
         endpoints.put("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview");

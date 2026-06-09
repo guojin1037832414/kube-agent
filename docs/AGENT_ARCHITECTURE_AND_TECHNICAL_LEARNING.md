@@ -2,6 +2,68 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-10 M5.79 Top-Tier Vue Workbench Implementation Package
+
+M5.79 turns the two latest-technology Vue binding specs into a page-level implementation package. It answers: how can `vue-kube-manager` implement the official watch page and compatibility matrix page as one governed workbench without inventing routes, API client behavior, shared components, fixtures, or runtime controls?
+
+```text
+M5.76 official watch Vue binding spec
+        |
+        +--------------------+
+                             v
+M5.79 Vue workbench implementation package
+                             ^
+        +--------------------+
+        |
+M5.78 compatibility matrix Vue binding spec
+
+M5.79 publishes:
+        +-- routeSpecs
+        +-- apiClientBindings
+        +-- pageAssemblies
+        +-- sharedComponentContracts
+        +-- acceptanceFixtures
+        +-- forbiddenRuntimeControls
+        |
+        v
+vue-kube-manager can implement two pages with mocked fixtures and no runtime buttons
+```
+
+Endpoint:
+
+```text
+GET /api/agent/observability/top-tier/vue-workbench-implementation-package
+```
+
+Current state:
+
+- `schemaVersion=agent-top-tier-vue-workbench-implementation-package.v1`
+- `packageStatus=IMPLEMENTATION_PACKAGE_READY`
+- `routeSpecCount=2`
+- `apiClientBindingCount=4`
+- `pageAssemblyCount=2`
+- `sharedComponentCount=7`
+- `acceptanceFixtureCount=6`
+- `runtimeControlAllowed=false`
+
+Key design:
+
+- The package service composes only the official watch binding spec service and the compatibility matrix binding spec service.
+- It publishes two frontend route specs: official watch and compatibility matrix.
+- It publishes four read-only API client bindings and marks all as mocked-fixture-friendly.
+- It defines shared components as security semantics, not just UI widgets.
+- It groups disabled runtime controls from both source specs and adds a global forbidden-control group.
+- It embeds both source binding specs so Vue can drill into backend-owned evidence.
+
+Multi-expert review:
+
+- Newton / frontend-contract review recommended a cross-page workbench package because single-page specs still leave Vue guessing about route, tab, drilldown, disabled action, and fixture behavior. M5.79 implements that recommendation.
+- Faraday / backend-architecture review recommended a follow-up evidence-readiness endpoint that maps compatibility-matrix lanes to reviewed trace/eval/Memory-RAG evidence gaps. This is kept as the likely next slice rather than mixed into M5.79.
+
+Learning point: 顶级 Agent 的前端不是“把接口数据显示出来”。它是一个 operator UX + learning UX + governance UX。后端要发布的不只是数据，还包括页面边界、组件语义、验收 fixture、禁用动作和安全证明。
+
+Technology point: 最新技术治理应该先变成可见、可测、可教学的工作台，再变成运行时能力。这个顺序可以防止“看起来先进”的按钮绕开审计、评测、HITL、release gate 和恢复记忆。
+
 ## 2026-06-10 M5.78 Compatibility Matrix Vue Binding Spec
 
 M5.78 turns the M5.77 compatibility matrix into a backend-owned frontend binding specification. It answers: how can `vue-kube-manager` render the latest-technology compatibility workbench without duplicating backend governance logic or accidentally adding runtime controls?

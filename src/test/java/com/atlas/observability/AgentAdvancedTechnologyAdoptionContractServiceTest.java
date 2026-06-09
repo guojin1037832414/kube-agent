@@ -88,6 +88,7 @@ class AgentAdvancedTechnologyAdoptionContractServiceTest {
             "keep-java-spring-control-plane-as-phase1-mainline",
             "publish-official-version-protocol-watch",
             "add-official-version-and-protocol-watch-to-compatibility-matrix",
+            "publish-top-tier-vue-workbench-implementation-package",
             "bind-memory-rag-eval-suite-before-retrieval-runtime",
             "wire-vue-top-tier-readiness-and-technology-adoption-workbench",
             "promote-reviewed-eval-and-security-gates-to-release-blocking",

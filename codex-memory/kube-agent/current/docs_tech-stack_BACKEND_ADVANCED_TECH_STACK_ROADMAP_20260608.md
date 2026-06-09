@@ -9,6 +9,36 @@
 - 供应链、CI、SBOM、质量门禁进入工程默认路径；
 - Java / Spring / Agent 框架升级以兼容性矩阵推进，不用不可构建的版本号伪装先进。
 
+## 2026-06-10 M5.79 Top-Tier-Vue-Workbench-Implementation-Package Rule
+
+M5.79 adds the backend-owned implementation package for the latest-technology Vue workbench:
+
+```text
+GET /api/agent/observability/top-tier/vue-workbench-implementation-package
+```
+
+This is now the Phase 1 frontend handoff rule after M5.76 and M5.78:
+
+- `vue-kube-manager` should implement the official watch page and compatibility matrix page from a single backend-published package.
+- The package publishes route specs, API client bindings, page assemblies, shared component contracts, acceptance fixtures, and forbidden runtime controls.
+- The package embeds both source binding specs: official watch binding spec and compatibility matrix binding spec.
+- All API client bindings are GET-only, admin-only, mocked-fixture-friendly, and do not require kube-manager `8100`.
+- Runtime/dependency buttons remain absent for Java/Spring/Spring AI upgrades, MCP `tools/call`, A2A handoff, retrieval/vector/reranker/GraphRAG, CI blocking, kube-manager writes, and Phase 2 domain reopening.
+
+Technology judgment: a top-tier Agent frontend needs a backend-owned implementation package, not only separate data endpoints. The workbench must be usable and teachable while remaining governed by backend evidence and release gates.
+
+Multi-expert decision:
+
+- Newton / frontend-contract review pointed out the missing cross-page workbench contract; M5.79 implements it.
+- Faraday / backend-architecture review recommended a follow-up evidence-readiness layer; keep that as the likely next backend slice.
+
+Next order after M5.79:
+
+- Add M5.80 `advanced-technology-compatibility-matrix/evidence-readiness` as a read-only evidence gap layer.
+- Wire `vue-kube-manager` to consume the M5.79 implementation package when that repo is writable.
+- Continue reviewed redacted eval and Memory/RAG trace evidence curation.
+- Keep runtime MCP, A2A, retrieval, CI blocking, kube-manager writes, and Phase 2 NIM/HPC/Slurm/BCM closed until their gates pass.
+
 ## 2026-06-10 M5.78 Compatibility-Matrix-Vue-Binding-Spec Rule
 
 M5.78 adds the backend-owned Vue binding spec for the advanced technology compatibility matrix:

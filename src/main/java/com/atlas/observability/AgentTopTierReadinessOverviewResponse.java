@@ -326,6 +326,7 @@ public record AgentTopTierReadinessOverviewResponse(
             "wire-vue-official-version-protocol-watch",
             "wire-vue-official-version-protocol-watch-dashboard",
             "wire-vue-official-version-protocol-watch-binding-spec",
+            "wire-vue-top-tier-workbench-implementation-package",
             "wire-vue-phase1-execution-roadmap",
             "wire-vue-readiness-control-plane",
             "populate-reviewed-redacted-eval-trace-evidence",
@@ -361,6 +362,8 @@ public record AgentTopTierReadinessOverviewResponse(
             AgentOfficialVersionProtocolWatchDashboardResponse.DASHBOARD_ENDPOINT);
         endpoints.put("officialVersionProtocolWatchVueBindingSpec",
             AgentOfficialVersionProtocolWatchVueBindingSpecResponse.BINDING_SPEC_ENDPOINT);
+        endpoints.put("topTierVueWorkbenchImplementationPackage",
+            AgentTopTierVueWorkbenchImplementationPackageResponse.PACKAGE_ENDPOINT);
         endpoints.put("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap");
         endpoints.put("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane");
         endpoints.put("kubeManagerGovernanceOverview", "/api/agent/observability/kube-manager/http-outlet/governance-workbench/overview");

@@ -152,6 +152,11 @@ class ObservabilityControllerTest {
         new AgentOfficialVersionProtocolWatchDashboardService(officialVersionProtocolWatchService);
     private final AgentOfficialVersionProtocolWatchVueBindingSpecService officialVersionProtocolWatchVueBindingSpecService =
         new AgentOfficialVersionProtocolWatchVueBindingSpecService(officialVersionProtocolWatchDashboardService);
+    private final AgentTopTierVueWorkbenchImplementationPackageService topTierVueWorkbenchImplementationPackageService =
+        new AgentTopTierVueWorkbenchImplementationPackageService(
+            officialVersionProtocolWatchVueBindingSpecService,
+            advancedTechnologyCompatibilityMatrixVueBindingSpecService
+        );
     private final AgentPhase1ExecutionRoadmapService phase1ExecutionRoadmapService =
         new AgentPhase1ExecutionRoadmapService();
     private final AgentVueReadinessControlPlaneService vueReadinessControlPlaneService =
@@ -172,6 +177,7 @@ class ObservabilityControllerTest {
         officialVersionProtocolWatchService,
         officialVersionProtocolWatchDashboardService,
         officialVersionProtocolWatchVueBindingSpecService,
+        topTierVueWorkbenchImplementationPackageService,
         phase1ExecutionRoadmapService,
         vueReadinessControlPlaneService,
         memoryRagReadinessService,
@@ -1337,6 +1343,75 @@ class ObservabilityControllerTest {
             .isEqualTo("agent-official-version-protocol-watch-dashboard.v1");
         assertThat(spec.toString())
             .contains("OfficialSourceCardGrid", "runtime-buttons-absent")
+            .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret");
+    }
+
+    @Test
+    void topTierVueWorkbenchImplementationPackage_shouldRequireAdminAndReturnFrontendImplementationPackage() {
+        ResponseEntity<ApiResponse<AgentTopTierVueWorkbenchImplementationPackageResponse>> anonymous =
+            controller.topTierVueWorkbenchImplementationPackage();
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentTopTierVueWorkbenchImplementationPackageResponse>> user =
+            controller.topTierVueWorkbenchImplementationPackage();
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        userPermissionContext.unbind();
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentTopTierVueWorkbenchImplementationPackageResponse>> admin =
+            controller.topTierVueWorkbenchImplementationPackage();
+
+        assertThat(admin.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(admin.getBody()).isNotNull();
+        AgentTopTierVueWorkbenchImplementationPackageResponse implementationPackage = admin.getBody().getData();
+        assertThat(implementationPackage.schemaVersion())
+            .isEqualTo("agent-top-tier-vue-workbench-implementation-package.v1");
+        assertThat(implementationPackage.packageStatus()).isEqualTo("IMPLEMENTATION_PACKAGE_READY");
+        assertThat(implementationPackage.routeSpecCount()).isEqualTo(2);
+        assertThat(implementationPackage.apiClientBindingCount()).isEqualTo(4);
+        assertThat(implementationPackage.pageAssemblyCount()).isEqualTo(2);
+        assertThat(implementationPackage.sharedComponentCount()).isEqualTo(7);
+        assertThat(implementationPackage.acceptanceFixtureCount()).isEqualTo(6);
+        assertThat(implementationPackage.runtimeControlAllowed()).isFalse();
+        assertThat(implementationPackage.routeSpecs()).extracting(route -> route.get("id"))
+            .contains("top-tier-official-version-protocol-watch",
+                "top-tier-advanced-technology-compatibility-matrix");
+        assertThat(implementationPackage.apiClientBindings()).extracting(client -> client.get("name"))
+            .contains("fetchOfficialWatchBindingSpec", "fetchCompatibilityMatrixBindingSpec");
+        assertThat(implementationPackage.forbiddenRuntimeControls()).allSatisfy(control -> assertThat(control)
+            .containsEntry("buttonVisible", false)
+            .containsEntry("clickHandlerAllowed", false)
+            .containsEntry("requiresSeparateReviewedSlice", true));
+        assertThat(implementationPackage.packagePolicy())
+            .containsEntry("implementationPackageOnly", true)
+            .containsEntry("runtimeButtonsAllowed", false)
+            .containsEntry("dependencyUpgradeButtonsAllowed", false);
+        assertThat(implementationPackage.safety())
+            .containsEntry("toolExecution", false)
+            .containsEntry("kubeManagerCalls", false)
+            .containsEntry("mcpToolsCall", false)
+            .containsEntry("retrievalExecuted", false)
+            .containsEntry("phase2NimHpcSlurmBcmTouched", false);
+        assertThat(implementationPackage.endpointMap())
+            .containsEntry("topTierVueWorkbenchImplementationPackage",
+                "/api/agent/observability/top-tier/vue-workbench-implementation-package")
+            .containsEntry("officialVersionProtocolWatchVueBindingSpec",
+                "/api/agent/observability/top-tier/official-version-protocol-watch/vue-binding-spec")
+            .containsEntry("advancedTechnologyCompatibilityMatrixVueBindingSpec",
+                "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/vue-binding-spec");
+        assertThat(implementationPackage.officialWatchBindingSpec().schemaVersion())
+            .isEqualTo("agent-official-version-protocol-watch-vue-binding-spec.v1");
+        assertThat(implementationPackage.compatibilityMatrixBindingSpec().schemaVersion())
+            .isEqualTo("agent-advanced-technology-compatibility-matrix-vue-binding-spec.v1");
+        assertThat(implementationPackage.toString())
+            .contains("runtime-buttons-absent-in-both-pages", "DisabledActionList")
             .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret");
     }
 

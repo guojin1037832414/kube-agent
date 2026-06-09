@@ -151,6 +151,7 @@ class AgentOfficialVersionProtocolWatchDashboardServiceTest {
             .containsExactly("official-sources", "technology-tracks", "adoption-gates", "blocked-shortcuts");
         assertThat(dashboard.recommendedWorkflow()).containsExactly(
             "official-version-protocol-watch-dashboard",
+            "top-tier-vue-workbench-implementation-package",
             "advanced-technology-adoption-contract",
             "phase1-execution-roadmap",
             "vue-readiness-control-plane",

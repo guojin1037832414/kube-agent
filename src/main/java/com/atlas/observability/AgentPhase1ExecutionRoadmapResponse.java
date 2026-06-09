@@ -65,6 +65,7 @@ public record AgentPhase1ExecutionRoadmapResponse(
                     "advanced-technology-compatibility-matrix-binding-spec",
                     "official-version-protocol-watch", "official-version-protocol-watch-dashboard",
                     "official-version-protocol-watch-binding-spec",
+                    "top-tier-vue-workbench-implementation-package",
                     "kube-manager-governance-workbench", "memory-rag-readiness",
                     "memory-rag-trace-set-curation-workbench")),
             step(2, "reviewed-eval-trace-evidence",
@@ -138,6 +139,8 @@ public record AgentPhase1ExecutionRoadmapResponse(
                 AgentOfficialVersionProtocolWatchDashboardResponse.DASHBOARD_ENDPOINT),
             vueTarget("official-version-protocol-watch-binding-spec",
                 AgentOfficialVersionProtocolWatchVueBindingSpecResponse.BINDING_SPEC_ENDPOINT),
+            vueTarget("top-tier-vue-workbench-implementation-package",
+                AgentTopTierVueWorkbenchImplementationPackageResponse.PACKAGE_ENDPOINT),
             vueTarget("phase1-roadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap"),
             vueTarget("vue-readiness-control-plane", "/api/agent/observability/top-tier/vue-readiness-control-plane"),
             vueTarget("kube-manager-governance", "/api/agent/observability/kube-manager/http-outlet/governance-workbench/overview"),
@@ -178,6 +181,8 @@ public record AgentPhase1ExecutionRoadmapResponse(
             AgentOfficialVersionProtocolWatchDashboardResponse.DASHBOARD_ENDPOINT);
         endpoints.put("officialVersionProtocolWatchVueBindingSpec",
             AgentOfficialVersionProtocolWatchVueBindingSpecResponse.BINDING_SPEC_ENDPOINT);
+        endpoints.put("topTierVueWorkbenchImplementationPackage",
+            AgentTopTierVueWorkbenchImplementationPackageResponse.PACKAGE_ENDPOINT);
         endpoints.put("kubeManagerGovernanceOverview", "/api/agent/observability/kube-manager/http-outlet/governance-workbench/overview");
         endpoints.put("evalWorkbenchOverview", "/api/agent/observability/eval/workbench/overview");
         endpoints.put("reviewedEvalTraceEvidence", "/api/agent/observability/eval/reviewed-trace-evidence");

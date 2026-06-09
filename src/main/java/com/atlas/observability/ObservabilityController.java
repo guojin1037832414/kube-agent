@@ -48,6 +48,7 @@ public class ObservabilityController {
     private final AgentOfficialVersionProtocolWatchService officialVersionProtocolWatchService;
     private final AgentOfficialVersionProtocolWatchDashboardService officialVersionProtocolWatchDashboardService;
     private final AgentOfficialVersionProtocolWatchVueBindingSpecService officialVersionProtocolWatchVueBindingSpecService;
+    private final AgentTopTierVueWorkbenchImplementationPackageService topTierVueWorkbenchImplementationPackageService;
     private final AgentPhase1ExecutionRoadmapService phase1ExecutionRoadmapService;
     private final AgentVueReadinessControlPlaneService vueReadinessControlPlaneService;
     private final AgentMemoryRagReadinessService memoryRagReadinessService;
@@ -89,10 +90,11 @@ public class ObservabilityController {
                                    AgentAdvancedTechnologyAdoptionContractService advancedTechnologyAdoptionContractService,
                                    AgentAdvancedTechnologyCompatibilityMatrixService advancedTechnologyCompatibilityMatrixService,
                                    AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecService advancedTechnologyCompatibilityMatrixVueBindingSpecService,
-                                   AgentOfficialVersionProtocolWatchService officialVersionProtocolWatchService,
-                                   AgentOfficialVersionProtocolWatchDashboardService officialVersionProtocolWatchDashboardService,
-                                   AgentOfficialVersionProtocolWatchVueBindingSpecService officialVersionProtocolWatchVueBindingSpecService,
-                                   AgentPhase1ExecutionRoadmapService phase1ExecutionRoadmapService,
+                                    AgentOfficialVersionProtocolWatchService officialVersionProtocolWatchService,
+                                    AgentOfficialVersionProtocolWatchDashboardService officialVersionProtocolWatchDashboardService,
+                                    AgentOfficialVersionProtocolWatchVueBindingSpecService officialVersionProtocolWatchVueBindingSpecService,
+                                    AgentTopTierVueWorkbenchImplementationPackageService topTierVueWorkbenchImplementationPackageService,
+                                    AgentPhase1ExecutionRoadmapService phase1ExecutionRoadmapService,
                                    AgentVueReadinessControlPlaneService vueReadinessControlPlaneService,
                                    AgentMemoryRagReadinessService memoryRagReadinessService,
                                    AgentMemoryRagCitationSourceContractService memoryRagCitationSourceContractService,
@@ -135,6 +137,7 @@ public class ObservabilityController {
         this.officialVersionProtocolWatchService = officialVersionProtocolWatchService;
         this.officialVersionProtocolWatchDashboardService = officialVersionProtocolWatchDashboardService;
         this.officialVersionProtocolWatchVueBindingSpecService = officialVersionProtocolWatchVueBindingSpecService;
+        this.topTierVueWorkbenchImplementationPackageService = topTierVueWorkbenchImplementationPackageService;
         this.phase1ExecutionRoadmapService = phase1ExecutionRoadmapService;
         this.vueReadinessControlPlaneService = vueReadinessControlPlaneService;
         this.memoryRagReadinessService = memoryRagReadinessService;
@@ -240,6 +243,17 @@ public class ObservabilityController {
             return guard;
         }
         return ResponseEntity.ok(ApiResponse.ok(officialVersionProtocolWatchVueBindingSpecService.spec()));
+    }
+
+    /** Publish the Vue implementation package for the top-tier latest-technology workbench. */
+    @GetMapping("/top-tier/vue-workbench-implementation-package")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentTopTierVueWorkbenchImplementationPackageResponse>> topTierVueWorkbenchImplementationPackage() {
+        ResponseEntity<ApiResponse<AgentTopTierVueWorkbenchImplementationPackageResponse>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return ResponseEntity.ok(ApiResponse.ok(topTierVueWorkbenchImplementationPackageService.implementationPackage()));
     }
 
     /** Publish the Phase 1 execution order as a read-only roadmap contract. */

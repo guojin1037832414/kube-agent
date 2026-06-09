@@ -282,6 +282,7 @@ public record AgentOfficialVersionProtocolWatchDashboardResponse(
     private static List<String> buildRecommendedWorkflow() {
         return List.of(
             "official-version-protocol-watch-dashboard",
+            "top-tier-vue-workbench-implementation-package",
             "advanced-technology-adoption-contract",
             "phase1-execution-roadmap",
             "vue-readiness-control-plane",
@@ -317,6 +318,8 @@ public record AgentOfficialVersionProtocolWatchDashboardResponse(
             AgentAdvancedTechnologyCompatibilityMatrixResponse.MATRIX_ENDPOINT);
         endpoints.put("advancedTechnologyCompatibilityMatrixVueBindingSpec",
             AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecResponse.BINDING_SPEC_ENDPOINT);
+        endpoints.put("topTierVueWorkbenchImplementationPackage",
+            AgentTopTierVueWorkbenchImplementationPackageResponse.PACKAGE_ENDPOINT);
         endpoints.put("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap");
         endpoints.put("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane");
         endpoints.put("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview");
