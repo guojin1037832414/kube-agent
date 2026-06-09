@@ -200,6 +200,7 @@ public record AgentMemoryRagReadinessResponse(
         evidence.put("durableStoreBound", false);
         evidence.put("vectorStoreBound", false);
         evidence.put("retrievalPolicyBound", false);
+        evidence.put("citationSourceContractDefined", true);
         evidence.put("citationContractBound", false);
         evidence.put("memoryRagEvalSuiteExists", false);
         evidence.put("vueWorkbenchBound", false);
@@ -209,6 +210,7 @@ public record AgentMemoryRagReadinessResponse(
     private static Map<String, Object> buildEndpointMap() {
         Map<String, Object> endpoints = new LinkedHashMap<>();
         endpoints.put("memoryRagReadiness", "/api/agent/observability/memory-rag/readiness");
+        endpoints.put("citationSourceContract", "/api/agent/observability/memory-rag/citation-source-contract");
         endpoints.put("memorySummaries", "/api/agent/memory/summaries");
         endpoints.put("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview");
         endpoints.put("evalWorkbenchCapabilities", "/api/agent/observability/eval/workbench/capabilities");

@@ -6,6 +6,24 @@
 
 ---
 
+## [M5.59-1] - Memory/RAG citation-source contract
+
+**Delivery**: Added an admin-only, read-only citation/source contract for future Memory/RAG retrieval evidence.
+**Changes**
+- Added `AgentMemoryRagCitationSourceContractResponse`.
+- Added `AgentMemoryRagCitationSourceContractService`.
+- Added `GET /api/agent/observability/memory-rag/citation-source-contract`.
+- Defined required future source evidence fields, citation fields, and prompt evidence rules before any retrieval evidence can influence answers.
+- Updated Memory/RAG readiness to expose `citationSourceContractDefined=true` and link to the new contract endpoint.
+- Added service, controller, source-contract, and MockMvc security coverage.
+**Verification**
+- `mvn -q "-Dtest=AgentMemoryRagCitationSourceContractServiceTest,AgentMemoryRagReadinessServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed during implementation.
+**Security**
+- `contractStatus=CONTRACT_DEFINED_NOT_BOUND`.
+- `boundToRetrievalRuntime=false`, `promptEvidenceAllowedNow=false`, `uncitedAnswerAllowed=false`, and `rawDocumentExposureAllowed=false`.
+- The endpoint is admin-only, read-only, contract-only, and fail-closed.
+- No real retrieval, vector store binding, embedding call, reranker call, LLM call, prompt mutation, memory write, document ingestion, raw document/prompt/chunk exposure, Tool execution, `SafeToolExecutor` invocation, HITL invocation, audit write, durable receipt issuance, kube-manager call, `RestClient`, `WebClient`, MCP runtime `tools/call`, or NIM / HPC / Slurm / BCM Phase 2 work is added.
+
 ## [M5.58-1] - Memory/RAG readiness contract
 
 **Delivery**: Added an admin-only, read-only Memory/RAG readiness contract for the Phase 1 top-tier Agent learning layer.

@@ -2,6 +2,32 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-09 M5.59 Memory/RAG Citation Source Contract
+
+M5.59 defines the chain-of-custody contract that future RAG evidence must satisfy before it can enter a prompt.
+
+```text
+future source evidence
+        |
+        | sourceId + sourceType + sourceDigest + tenantScope
+        | redactionStatus + retentionPolicy
+        v
+AgentMemoryRagCitationSourceContractService
+        |
+        | admin-only, read-only, contract-only
+        v
+/api/agent/observability/memory-rag/citation-source-contract
+```
+
+Key design:
+- `AgentMemoryRagCitationSourceContractResponse` publishes `schemaVersion=agent-memory-rag-citation-source-contract.v1` and `contractStatus=CONTRACT_DEFINED_NOT_BOUND`.
+- The contract defines source evidence fields, citation fields, prompt evidence rules, blocked-until conditions, and recommended build order.
+- It explicitly keeps `boundToRetrievalRuntime=false`, `promptEvidenceAllowedNow=false`, `uncitedAnswerAllowed=false`, and `rawDocumentExposureAllowed=false`.
+- The endpoint does not retrieve, embed, rerank, mutate prompts, ingest documents, write memory, call kube-manager, execute Tools, invoke HITL, or call LLMs.
+- M5.58 readiness now reports `citationSourceContractDefined=true`, while keeping `citationContractBound=false`.
+
+Learning point: RAG 的核心不是“把搜索结果塞进 prompt”，而是证据链。顶级 Agent 的每条证据都要能回答：来源是谁、属于哪个租户、是否已脱敏、哪个 digest 标识它、引用如何指回它、是否过期、是否通过 eval。M5.59 先把这条证据链变成后端契约。
+
 ## 2026-06-09 M5.58 Memory/RAG Readiness Contract
 
 M5.58 turns the Memory/RAG gap from a vague blocker into a backend-owned readiness contract. It keeps runtime retrieval closed while making the learning layer teachable and testable.

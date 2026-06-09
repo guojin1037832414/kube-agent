@@ -10,7 +10,41 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.58-1
+## Latest Phase 1 Core Memory - M5.59-1
+
+M5.59-1 adds the Phase 1 Memory/RAG citation-source contract.
+
+Delivered:
+
+- Added `AgentMemoryRagCitationSourceContractResponse`.
+- Added `AgentMemoryRagCitationSourceContractService`.
+- Added admin-only `GET /api/agent/observability/memory-rag/citation-source-contract`.
+- Updated Memory/RAG readiness so `citationSourceContractDefined=true` and `endpointMap.citationSourceContract` points to the new contract.
+- Added service, controller, source-contract, and MockMvc security coverage.
+
+Current state:
+
+- `schemaVersion=agent-memory-rag-citation-source-contract.v1`.
+- `contractStatus=CONTRACT_DEFINED_NOT_BOUND`.
+- `contractDefined=true`.
+- `boundToRetrievalRuntime=false`.
+- `citationRequired=true`.
+- `uncitedAnswerAllowed=false`.
+- `rawDocumentExposureAllowed=false`.
+- `promptEvidenceAllowedNow=false`.
+
+Security boundary:
+
+- The endpoint is admin-only, read-only, contract-only, and fail-closed.
+- It does not execute retrieval, bind a vector store, call embedding/reranker/LLM, mutate prompts, write memory, ingest documents, expose raw document/prompt/chunk content, execute Tools, invoke `SafeToolExecutor`, invoke HITL, write audit, issue durable receipts, call kube-manager, use `RestClient` / `WebClient`, expose MCP runtime `tools/call`, or touch NIM / HPC / Slurm / BCM Phase 2 scope.
+
+Learning point: citation/source governance is the chain-of-custody layer for RAG. A top-tier Agent must know where evidence came from, who may see it, how it was redacted, which digest identifies it, and which citation links an answer back to it before retrieval may influence runtime answers.
+
+Latest verified command:
+
+- `mvn -q "-Dtest=AgentMemoryRagCitationSourceContractServiceTest,AgentMemoryRagReadinessServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+## Previous Phase 1 Core Memory - M5.58-1
 
 M5.58-1 adds the Phase 1 Memory/RAG readiness contract.
 

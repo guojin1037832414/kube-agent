@@ -96,6 +96,8 @@ class ObservabilityControllerTest {
     private final ConversationSummaryMemoryStore memoryStore = new ConversationSummaryMemoryStore();
     private final AgentMemoryRagReadinessService memoryRagReadinessService =
         new AgentMemoryRagReadinessService(memoryStore);
+    private final AgentMemoryRagCitationSourceContractService memoryRagCitationSourceContractService =
+        new AgentMemoryRagCitationSourceContractService();
     private final AgentTopTierReadinessOverviewService topTierReadinessOverviewService =
         new AgentTopTierReadinessOverviewService(
             kubeManagerHttpOutletGovernanceWorkbenchOverviewService,
@@ -113,6 +115,7 @@ class ObservabilityControllerTest {
         kubeManagerHttpOutletGovernanceWorkbenchOverviewService,
         topTierReadinessOverviewService,
         memoryRagReadinessService,
+        memoryRagCitationSourceContractService,
         auditRecorder,
         auditRecorder,
         replayTimelineService,
@@ -904,7 +907,8 @@ class ObservabilityControllerTest {
         assertThat(readiness.currentEvidence())
             .containsEntry("trustedPrincipalOwner", true)
             .containsEntry("durableStoreBound", false)
-            .containsEntry("vectorStoreBound", false);
+            .containsEntry("vectorStoreBound", false)
+            .containsEntry("citationSourceContractDefined", true);
         assertThat(readiness.safety())
             .containsEntry("adminOnly", true)
             .containsEntry("readOnly", true)
@@ -919,6 +923,58 @@ class ObservabilityControllerTest {
         assertThat(readiness.toString())
             .contains("safe-summary-memory", "citation-and-source-contract")
             .doesNotContain("secret-value", "Bearer", "user-token");
+    }
+
+    @Test
+    void memoryRagCitationSourceContract_shouldRequireAdminAndReturnUnboundContract() {
+        ResponseEntity<ApiResponse<AgentMemoryRagCitationSourceContractResponse>> anonymous =
+            controller.memoryRagCitationSourceContract();
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentMemoryRagCitationSourceContractResponse>> user =
+            controller.memoryRagCitationSourceContract();
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        userPermissionContext.unbind();
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentMemoryRagCitationSourceContractResponse>> admin =
+            controller.memoryRagCitationSourceContract();
+
+        assertThat(admin.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(admin.getBody()).isNotNull();
+        AgentMemoryRagCitationSourceContractResponse contract = admin.getBody().getData();
+        assertThat(contract.schemaVersion()).isEqualTo("agent-memory-rag-citation-source-contract.v1");
+        assertThat(contract.contractStatus()).isEqualTo("CONTRACT_DEFINED_NOT_BOUND");
+        assertThat(contract.contractDefined()).isTrue();
+        assertThat(contract.boundToRetrievalRuntime()).isFalse();
+        assertThat(contract.promptEvidenceAllowedNow()).isFalse();
+        assertThat(contract.sourceEvidenceFields()).extracting(field -> field.get("id"))
+            .contains("sourceDigest", "tenantScope", "redactionStatus");
+        assertThat(contract.citationFields()).extracting(field -> field.get("id"))
+            .contains("citationId", "sourceDigest", "chunkDigest");
+        assertThat(contract.safety())
+            .containsEntry("adminOnly", true)
+            .containsEntry("readOnly", true)
+            .containsEntry("contractOnly", true)
+            .containsEntry("retrievalExecuted", false)
+            .containsEntry("llmUsed", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("kubeManagerCalls", false);
+        assertThat(contract.privacy())
+            .containsEntry("containsRawDocument", false)
+            .containsEntry("containsRawPrompt", false)
+            .containsEntry("containsSourceBody", false)
+            .containsEntry("containsToken", false);
+        assertThat(contract.toString())
+            .contains("citation-required-for-rag-answer", "sourceDigest")
+            .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret");
     }
 
     @Test

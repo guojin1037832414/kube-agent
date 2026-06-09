@@ -44,6 +44,7 @@ class ObservabilityControllerSecurityContractTest {
         assertThat(source).contains("@GetMapping(\"/kube-manager/http-outlet/governance-workbench/overview\")");
         assertThat(source).contains("@GetMapping(\"/top-tier/readiness-overview\")");
         assertThat(source).contains("@GetMapping(\"/memory-rag/readiness\")");
+        assertThat(source).contains("@GetMapping(\"/memory-rag/citation-source-contract\")");
         assertThat(source).contains("@GetMapping(\"/replay/trace/{traceId}\")");
         assertThat(source).contains("@GetMapping(\"/eval/trace/{traceId}\")");
         assertThat(source).contains("@PostMapping(\"/eval/suite\")");
@@ -75,6 +76,7 @@ class ObservabilityControllerSecurityContractTest {
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentKubeManagerHttpOutletGovernanceWorkbenchOverviewResponse>> kubeManagerHttpOutletGovernanceWorkbenchOverview()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentTopTierReadinessOverviewResponse>> topTierReadinessOverview()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentMemoryRagReadinessResponse>> memoryRagReadiness()");
+        assertThat(source).contains("public ResponseEntity<ApiResponse<AgentMemoryRagCitationSourceContractResponse>> memoryRagCitationSourceContract()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentReplayTimelineResponse>> replayByTraceId(@PathVariable String traceId,");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentEvalReportResponse>> evalByTraceId(@PathVariable String traceId,");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentEvalSuiteResponse>> evalSuite(@RequestBody(required = false) AgentEvalSuiteRequest request)");
@@ -95,6 +97,6 @@ class ObservabilityControllerSecurityContractTest {
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentEvalTraceSetPromotionWorkflowArtifact>> evalTraceSetPromotionWorkflow(");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentEvalTraceSetGateBundleArtifact>> evalTraceSetGateBundle(");
         assertThat(source.split("@PreAuthorize\\(\"hasAnyRole\\('ADMIN', 'SYS_ADMIN'\\)\"\\)", -1).length - 1)
-            .isGreaterThanOrEqualTo(32);
+            .isGreaterThanOrEqualTo(33);
     }
 }

@@ -9,6 +9,33 @@
 - 供应链、CI、SBOM、质量门禁进入工程默认路径；
 - Java / Spring / Agent 框架升级以兼容性矩阵推进，不用不可构建的版本号伪装先进。
 
+## 2026-06-09 M5.59 Citation-First RAG Rule
+
+M5.59 refines the Memory/RAG roadmap again: future retrieval must be citation-first and source-digest-first.
+
+Current mainline:
+- `GET /api/agent/observability/memory-rag/citation-source-contract` defines source/citation fields.
+- `GET /api/agent/observability/memory-rag/readiness` now reports `citationSourceContractDefined=true`.
+- Retrieval runtime remains closed.
+
+Required source chain:
+- source identity and bounded source type;
+- redacted source digest and chunk digest;
+- tenant/principal scope;
+- redaction status;
+- retention/delete/export policy;
+- citation id and freshness metadata;
+- eval coverage before runtime binding.
+
+Compatibility matrix:
+- Spring AI VectorStore and document metadata mapping;
+- hybrid retrieval with digest-preserving chunks;
+- reranker outputs with citation-preserving provenance;
+- GraphRAG source graph edges with tenant ACLs;
+- OTel GenAI retrieval spans mapped from stable internal evidence fields.
+
+Teaching conclusion: advanced RAG is a custody protocol. Search quality matters, but a top-tier Agent first needs evidence identity, tenant isolation, redaction, citations, freshness, evals, and operator visibility.
+
 ## 2026-06-09 M5.58 Memory/RAG Advanced Technology Rule
 
 M5.58 adds the Memory/RAG readiness contract and refines the advanced-technology rule for the learning layer:

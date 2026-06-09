@@ -63,6 +63,7 @@ class AgentMemoryRagReadinessServiceTest {
         );
         assertThat(readiness.endpointMap())
             .containsEntry("memoryRagReadiness", "/api/agent/observability/memory-rag/readiness")
+            .containsEntry("citationSourceContract", "/api/agent/observability/memory-rag/citation-source-contract")
             .containsEntry("memorySummaries", "/api/agent/memory/summaries");
         assertThat(readiness.currentEvidence())
             .containsEntry("safeSummaryMemoryControllerExists", true)
@@ -70,6 +71,7 @@ class AgentMemoryRagReadinessServiceTest {
             .containsEntry("rawSessionIdAsOwner", false)
             .containsEntry("durableStoreBound", false)
             .containsEntry("vectorStoreBound", false)
+            .containsEntry("citationSourceContractDefined", true)
             .containsEntry("citationContractBound", false);
         assertThat(readiness.futureEnablementProtocol())
             .containsEntry("runtimeRagAllowedNow", false)
