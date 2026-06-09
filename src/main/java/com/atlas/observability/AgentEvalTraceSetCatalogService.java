@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -59,6 +60,13 @@ public class AgentEvalTraceSetCatalogService {
         return AgentEvalTraceSetGateBundleArtifact.of(CATALOG_SOURCE, gates);
     }
 
+    public Optional<AgentEvalTraceSetCurationReviewArtifact> curationReview(String traceSetId,
+                                                                            AgentEvalSuiteRequest request) {
+        return findDefinition(traceSetId)
+            .flatMap(definition -> evalSuiteCatalogService.gate(definition.suiteId(), curationReviewRequest(request))
+                .map(gate -> AgentEvalTraceSetCurationReviewArtifact.from(definition, gate, CATALOG_SOURCE)));
+    }
+
     private Optional<AgentEvalTraceSetGateArtifact> gate(AgentEvalTraceSetDefinition definition,
                                                         AgentEvalSuiteRequest request) {
         AgentEvalSuiteRequest suiteRequest = new AgentEvalSuiteRequest(
@@ -69,6 +77,29 @@ public class AgentEvalTraceSetCatalogService {
         );
         return evalSuiteCatalogService.gate(definition.suiteId(), suiteRequest)
             .map(suiteGate -> AgentEvalTraceSetGateArtifact.from(definition, suiteGate, request, CATALOG_SOURCE));
+    }
+
+    private AgentEvalSuiteRequest curationReviewRequest(AgentEvalSuiteRequest request) {
+        return new AgentEvalSuiteRequest(
+            curationCandidateTraceIds(request != null ? request.traceIds() : null),
+            request != null ? request.limit() : null,
+            request != null ? request.minimumScore() : null,
+            request != null ? request.failOnWarnings() : null
+        );
+    }
+
+    private List<String> curationCandidateTraceIds(List<String> traceIds) {
+        if (traceIds == null || traceIds.isEmpty()) {
+            return List.of();
+        }
+        LinkedHashSet<String> accepted = new LinkedHashSet<>();
+        for (String traceId : traceIds) {
+            String candidate = AgentTraceContext.safeCandidateOrBlank(traceId);
+            if (!candidate.isBlank() && !AgentTraceContext.w3cTraceIdOrBlank(candidate).isBlank()) {
+                accepted.add(candidate);
+            }
+        }
+        return List.copyOf(accepted);
     }
 
     private List<AgentEvalTraceSetDefinition> loadDefinitions() {

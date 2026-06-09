@@ -1,10 +1,16 @@
 package com.atlas.observability;
 
+import com.atlas.audit.AgentAuditEvent;
+import com.atlas.audit.AgentAuditOutcome;
 import com.atlas.audit.InMemoryAgentAuditRecorder;
+import com.atlas.tool.annotation.AtlasToolMapping;
+import com.atlas.tool.execution.SafeToolExecutionSource;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
+import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -154,9 +160,117 @@ class AgentEvalTraceSetCatalogServiceTest {
             .doesNotContain("reports=", "replay=");
     }
 
+    @Test
+    void curationReview_shouldMarkPassingCandidatesReadyForCatalogReviewWithoutMutatingCatalog() {
+        String traceId = "trc_11111111111111111111111111111111";
+        InMemoryAgentAuditRecorder recorder = new InMemoryAgentAuditRecorder();
+        recordReadEvidence(recorder, traceId);
+        AgentEvalTraceSetCatalogService service = service(recorder);
+
+        AgentEvalTraceSetCurationReviewArtifact review = service.curationReview(
+            "phase1-core-golden",
+            new AgentEvalSuiteRequest(List.of(traceId), null, null, null)
+        ).orElseThrow();
+
+        assertThat(review.schemaVersion()).isEqualTo("agent-eval-trace-set-curation-review.v1");
+        assertThat(review.traceSetId()).isEqualTo("phase1-core-golden");
+        assertThat(review.suiteId()).isEqualTo("release-gate-strict");
+        assertThat(review.reviewVerdict()).isEqualTo("READY_FOR_CATALOG_REVIEW");
+        assertThat(review.readyForCatalogReview()).isTrue();
+        assertThat(review.catalogMutated()).isFalse();
+        assertThat(review.originalTraceSetTraceCount()).isZero();
+        assertThat(review.candidateTraceIds()).containsExactly(traceId);
+        assertThat(review.candidateGate().pass()).isTrue();
+        assertThat(review.curationPolicy())
+            .containsEntry("reviewOnly", true)
+            .containsEntry("catalogMutationAllowed", false)
+            .containsEntry("candidateTraceIdsPromotedToCatalog", false)
+            .containsEntry("requiresHumanReview", true)
+            .containsEntry("requiresGitReview", true)
+            .containsEntry("requiresPersistedRedactedReplayEvidence", true)
+            .containsEntry("readyForCatalogReview", true);
+        assertThat(service.findDefinition("phase1-core-golden").orElseThrow().traceIds()).isEmpty();
+        assertThat(review.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("deterministic", true)
+            .containsEntry("llmUsed", false)
+            .containsEntry("externalCalls", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("kubeManagerCalls", false);
+        assertThat(review.toString())
+            .contains(traceId)
+            .doesNotContain("conv-sensitive", "user-sensitive", "org-sensitive", "secret-token-value", "/api/org-sensitive")
+            .doesNotContain("reports=", "replay=");
+    }
+
+    @Test
+    void curationReview_shouldFilterNonW3cTraceCandidatesAndFailClosedWhenEmpty() {
+        AgentEvalTraceSetCatalogService service = service(new InMemoryAgentAuditRecorder());
+
+        AgentEvalTraceSetCurationReviewArtifact review = service.curationReview(
+            "phase1-core-golden",
+            new AgentEvalSuiteRequest(List.of(
+                "trc_not_w3c",
+                "secret-token-value",
+                "trc_22222222222222222222222222222222",
+                "trc_22222222222222222222222222222222"
+            ), null, null, null)
+        ).orElseThrow();
+
+        assertThat(review.reviewVerdict()).isEqualTo("REJECT_EVAL_GATE_FAILED");
+        assertThat(review.readyForCatalogReview()).isFalse();
+        assertThat(review.catalogMutated()).isFalse();
+        assertThat(review.candidateTraceIds()).containsExactly("trc_22222222222222222222222222222222");
+        assertThat(review.candidateGate().pass()).isFalse();
+        assertThat(review.candidateGate().warningReports()).isEqualTo(1);
+        assertThat(review.curationPolicy())
+            .containsEntry("candidateTraceIdsUsedForReview", true)
+            .containsEntry("candidateTraceIdsPromotedToCatalog", false)
+            .containsEntry("requestTraceIdOverrideAllowedForPublishedGate", false);
+        assertThat(review.toString())
+            .doesNotContain("trc_not_w3c", "secret-token-value");
+
+        AgentEvalTraceSetCurationReviewArtifact emptyReview = service.curationReview(
+            "phase1-core-golden",
+            new AgentEvalSuiteRequest(List.of("trc_not_w3c", "secret-token-value"), null, null, null)
+        ).orElseThrow();
+
+        assertThat(emptyReview.reviewVerdict()).isEqualTo("REJECT_EMPTY_CANDIDATES");
+        assertThat(emptyReview.emptyCandidates()).isTrue();
+        assertThat(emptyReview.candidateTraceIds()).isEmpty();
+    }
+
     private AgentEvalTraceSetCatalogService service(InMemoryAgentAuditRecorder recorder) {
         AgentEvalReportService evalReportService = new AgentEvalReportService(new AgentReplayTimelineService(recorder));
         AgentEvalSuiteCatalogService suiteCatalogService = new AgentEvalSuiteCatalogService(evalReportService);
         return new AgentEvalTraceSetCatalogService(suiteCatalogService, new ObjectMapper());
+    }
+
+    private void recordReadEvidence(InMemoryAgentAuditRecorder recorder, String traceId) {
+        recorder.record(new AgentAuditEvent(
+            "aud_curation_review",
+            Instant.parse("2026-06-09T00:00:00Z"),
+            traceId,
+            "conv-sensitive",
+            "user-sensitive",
+            "org-sensitive",
+            "intent",
+            "tool",
+            SafeToolExecutionSource.REACT_ENGINE,
+            "GET",
+            List.of("/api/org-sensitive/pod?token=secret-token-value"),
+            AtlasToolMapping.OperationType.READ,
+            false,
+            AgentAuditOutcome.SUCCESS,
+            true,
+            true,
+            "ok token=secret-token-value",
+            Map.of("count", 1, "keys", List.of(Map.of(
+                "name", "token",
+                "protected", true,
+                "type", "string",
+                "present", true
+            )))
+        ));
     }
 }

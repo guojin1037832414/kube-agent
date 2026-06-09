@@ -10,7 +10,33 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.38-1
+## Latest Phase 1 Core Memory - M5.39-1
+
+M5.39-1 adds a review-only curation artifact for candidate trace IDs before they can become versioned trace-set release evidence.
+
+Delivered:
+
+- Added `AgentEvalTraceSetCurationReviewArtifact`.
+- Added `AgentEvalTraceSetCatalogService#curationReview(...)`.
+- Added admin-only `POST /api/agent/observability/eval/trace-sets/{traceSetId}/curation-review`.
+- Candidate trace IDs are filtered to W3C-compatible anchors (`trc_` + 32 lowercase hex or 32 lowercase hex) before deterministic eval runs.
+- Review artifacts embed the compact candidate suite gate, expose `readyForCatalogReview`, and explicitly state `catalogMutationAllowed=false`, `catalogMutated=false`, and `candidateTraceIdsPromotedToCatalog=false`.
+
+Security boundary:
+
+- The curation-review endpoint is admin-only at URL and method levels.
+- It is deterministic, redacted-only, review-only, non-executing, `llmUsed=false`, `externalCalls=false`, `toolExecution=false`, and `kubeManagerCalls=false`.
+- It does not mutate `observability/eval-trace-sets.json`; a human/Git review must still patch the catalog.
+- No LLM, Tool execution, kube-manager call, network call, durable write, raw audit export, or runtime catalog mutation is added.
+- NIM / HPC / Slurm / BCM remain Phase 2 paused scope.
+
+Learning point: top-tier Agent eval needs a promotion protocol, not only a score. A candidate trace can be evaluated, but it becomes release evidence only after deterministic gate review plus human/Git catalog promotion.
+
+Latest verified command:
+
+- `mvn -q "-Dtest=AgentEvalTraceSetCatalogServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+## Previous Phase 1 Core Memory - M5.38-1
 
 M5.38-1 turns the versioned trace-set catalog into a CI-publishable gate bundle artifact.
 

@@ -759,6 +759,87 @@ class ObservabilityControllerTest {
     }
 
     @Test
+    void evalTraceSetCurationReview_shouldRequireAdminUserAndRejectUnknownTraceSet() {
+        ResponseEntity<ApiResponse<AgentEvalTraceSetCurationReviewArtifact>> anonymous =
+            controller.evalTraceSetCurationReview("phase1-core-golden", null);
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentEvalTraceSetCurationReviewArtifact>> missing =
+            controller.evalTraceSetCurationReview("missing-trace-set", null);
+
+        assertThat(missing.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(missing.getBody()).isNotNull();
+        assertThat(missing.getBody().isSuccess()).isFalse();
+    }
+
+    @Test
+    void evalTraceSetCurationReview_shouldReturnReviewOnlyArtifactForAdminCandidate() {
+        String traceId = "trc_33333333333333333333333333333333";
+        auditRecorder.record(new com.atlas.audit.AgentAuditEvent(
+            "aud_eval_trace_set_review",
+            java.time.Instant.parse("2026-06-09T00:00:00Z"),
+            traceId,
+            "conv-sensitive",
+            "user-sensitive",
+            "org-sensitive",
+            "intent",
+            "tool",
+            com.atlas.tool.execution.SafeToolExecutionSource.REACT_ENGINE,
+            "GET",
+            java.util.List.of("/api/org-sensitive/pod?token=secret-token-value"),
+            com.atlas.tool.annotation.AtlasToolMapping.OperationType.READ,
+            false,
+            com.atlas.audit.AgentAuditOutcome.SUCCESS,
+            true,
+            true,
+            "ok token=secret-token-value",
+            java.util.Map.of("count", 1, "keys", java.util.List.of(java.util.Map.of(
+                "name", "token",
+                "protected", true,
+                "type", "string",
+                "present", true
+            )))
+        ));
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentEvalTraceSetCurationReviewArtifact>> response =
+            controller.evalTraceSetCurationReview(
+                "phase1-core-golden",
+                new AgentEvalSuiteRequest(java.util.List.of(traceId, "secret-token-value"), null, null, null)
+            );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        AgentEvalTraceSetCurationReviewArtifact review = response.getBody().getData();
+        assertThat(review.schemaVersion()).isEqualTo("agent-eval-trace-set-curation-review.v1");
+        assertThat(review.reviewVerdict()).isEqualTo("READY_FOR_CATALOG_REVIEW");
+        assertThat(review.readyForCatalogReview()).isTrue();
+        assertThat(review.catalogMutated()).isFalse();
+        assertThat(review.candidateTraceIds()).containsExactly(traceId);
+        assertThat(review.candidateGate().pass()).isTrue();
+        assertThat(review.curationPolicy())
+            .containsEntry("reviewOnly", true)
+            .containsEntry("catalogMutationAllowed", false)
+            .containsEntry("candidateTraceIdsPromotedToCatalog", false)
+            .containsEntry("requiresGitReview", true);
+        assertThat(review.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("llmUsed", false)
+            .containsEntry("externalCalls", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("kubeManagerCalls", false);
+        assertThat(review.toString())
+            .contains(traceId)
+            .doesNotContain("secret-token-value", "conv-sensitive", "user-sensitive", "org-sensitive", "/api/org-sensitive")
+            .doesNotContain("reports=", "replay=");
+    }
+
+    @Test
     void evalTraceSetGateBundle_shouldRequireAdminUser() {
         ResponseEntity<ApiResponse<AgentEvalTraceSetGateBundleArtifact>> anonymous =
             controller.evalTraceSetGateBundle(null);

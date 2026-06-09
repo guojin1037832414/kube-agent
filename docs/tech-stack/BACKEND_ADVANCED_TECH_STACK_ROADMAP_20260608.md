@@ -421,3 +421,14 @@ M5.38-1 wires the trace-set gate catalog into backend quality evidence:
 - The bundle sets `ciBlockingEnabled=false` until curated trace sets contain real persisted redacted replay captures.
 
 Technology judgment: this is the correct intermediate step before strict CI blocking. A top-tier Agent should publish eval evidence early, but it should not convert empty trace-set catalogs into misleading release decisions. The next step is to populate curated trace IDs through safe capture jobs, then flip the CI policy from evidence-only to blocking once the evidence set is real and reviewed.
+
+## M5.39-1 Update - Trace-Set Curation Review Artifact
+
+M5.39-1 adds the missing promotion protocol between candidate trace evidence and versioned release evidence:
+
+- `POST /api/agent/observability/eval/trace-sets/{traceSetId}/curation-review` evaluates caller-provided candidate trace IDs against the trace set's attached named suite.
+- `AgentEvalTraceSetCurationReviewArtifact` records the candidate gate, review verdict, `readyForCatalogReview`, review-only policy, and privacy proof.
+- Candidate trace IDs are filtered to W3C-compatible anchors before evaluation, so arbitrary request text is not echoed as release evidence.
+- The endpoint never mutates `observability/eval-trace-sets.json`; promotion still requires human review and a Git catalog patch.
+
+Technology judgment: this is how advanced Agent eval moves safely toward blocking CI. The system can now prove that candidate traces are good enough for review, while still preventing ad-hoc runtime requests from silently becoming release evidence. The next step is a persisted redacted capture workflow that helps operators discover candidate trace IDs, then a reviewed catalog patch that lets M5.38's bundle become genuinely release-blocking.

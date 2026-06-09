@@ -2,6 +2,35 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-09 M5.39 Trace-Set Curation Review 复核协议
+
+M5.39 关闭的是 eval trace-set 从“候选证据”进入“版本化发布证据”之前的复核协议。M5.38 已经能把 trace-set gate bundle 上传为 CI 证据，但 trace set 仍然为空；如果直接让运行时请求覆盖 catalog，就会把临时诊断输入误当成 release evidence。
+
+```text
+Admin / Future Eval Workbench
+    |
+    | POST /api/agent/observability/eval/trace-sets/{traceSetId}/curation-review
+    | { traceIds, limit, minimumScore, failOnWarnings }
+    v
+AgentEvalTraceSetCatalogService
+    |
+    | filter W3C-compatible trace anchors only
+    v
+AgentEvalSuiteCatalogService#gate(...)
+    |
+    v
+AgentEvalTraceSetCurationReviewArtifact
+```
+
+关键设计：
+- curation review 会使用候选 traceIds 运行附着 suite gate，但不会改写 `observability/eval-trace-sets.json`。
+- 候选 traceId 只接受 `trc_` + 32 位小写 hex 或 32 位小写 hex，防止自由文本被回显成证据锚点。
+- `READY_FOR_CATALOG_REVIEW` 只表示候选证据通过 deterministic gate，可以进入人工/Git 复核；它不是自动发布许可。
+- artifact 明确写出 `catalogMutationAllowed=false`、`catalogMutated=false`、`candidateTraceIdsPromotedToCatalog=false`。
+- 正式 trace-set gate 仍然只读 catalog，并继续忽略请求 traceIds。
+
+学习重点：顶级 Agent 的 eval 不能只有“打分”，还要有“证据晋升协议”。候选证据通过评分只是第一步；它必须经过人工复核、Git 变更、CI bundle 再生成，才能成为阻断发布的版本化证据。
+
 ## 2026-06-09 M5.32-1 Replay Timeline 后端契约
 
 M5.32-1 把审计读模型继续推进到“前端可回放时间线”。这一步不是做一个普通列表接口，而是给顶级 Agent 建立统一证据词汇：执行前证据、最终结果、阻断、异常、业务失败，都由后端转换成稳定 DTO，前端不需要猜 raw log 的含义。

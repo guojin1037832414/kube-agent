@@ -6,6 +6,24 @@
 
 ---
 
+## [M5.39-1] - Eval trace-set curation review artifact
+
+**Delivery**: Added a review-only promotion artifact for candidate trace IDs before they can be patched into versioned eval trace sets.
+**Changes**
+- Added `AgentEvalTraceSetCurationReviewArtifact`.
+- Added `AgentEvalTraceSetCatalogService#curationReview(...)`.
+- Added admin-only `POST /api/agent/observability/eval/trace-sets/{traceSetId}/curation-review`.
+- Candidate trace IDs are filtered to W3C-compatible anchors before deterministic eval runs.
+- Review artifacts embed the compact candidate suite gate and never mutate `observability/eval-trace-sets.json`.
+- Added service, controller, source-contract, and MockMvc security coverage for the new review path.
+**Verification**
+- `mvn -q "-Dtest=AgentEvalTraceSetCatalogServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed.
+**Security**
+- The review endpoint is protected by observability admin URL rules plus method-level `@PreAuthorize`.
+- The artifact is review-only: `catalogMutationAllowed=false`, `catalogMutated=false`, and `candidateTraceIdsPromotedToCatalog=false`.
+- The path remains deterministic, redacted-only, non-executing, `llmUsed=false`, `externalCalls=false`, `toolExecution=false`, and `kubeManagerCalls=false`.
+- This slice adds no kube-manager write/create/delete/state-changing behavior and does not reopen NIM/HPC/Slurm/BCM scope.
+
 ## [M5.38-1] - Eval trace-set CI gate bundle artifact
 
 **Delivery**: Added a compact whole-catalog trace-set gate bundle artifact for CI and release workflow evidence.
