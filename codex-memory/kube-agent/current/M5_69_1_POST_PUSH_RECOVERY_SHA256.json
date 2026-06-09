@@ -1,0 +1,89 @@
+﻿{
+    "schemaVersion":  "kube-agent-post-push-recovery-sha256.v1",
+    "project":  "kube-agent",
+    "milestone":  "M5.69-1",
+    "title":  "Memory/RAG release-gate suite catalog post-push checkpoint",
+    "generatedAt":  "2026-06-09T19:52:38.8779459+08:00",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "pushedCommit":  "70a9590 feat(M5.69): add memory rag release gate suite catalog",
+    "pushedToRemote":  true,
+    "verification":  [
+                         "git diff --check",
+                         "mvn -q \"-Dtest=AgentEvalSuiteCatalogServiceTest,AgentMemoryRagEvalSuiteBindingContractServiceTest,AgentMemoryRagReadinessServiceTest,AgentEvalWorkbenchCapabilitiesServiceTest,AgentEvalWorkbenchOverviewServiceTest,AgentEvalWorkbenchGateBundleSummaryServiceTest,AgentPhase1ExecutionRoadmapServiceTest,AgentVueReadinessControlPlaneServiceTest,AgentAdvancedTechnologyAdoptionContractServiceTest,AgentTopTierReadinessOverviewServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest\" test",
+                         "mvn -q \"-DskipTests\" validate"
+                     ],
+    "files":  [
+                  {
+                      "path":  "CHANGELOG.md",
+                      "sha256":  "4EEA8EB03BF3FDD4320A6377D1E8E639B177CE73362B9B3327096D2DDBA107D4",
+                      "length":  358816,
+                      "lastWriteTime":  "2026-06-09T19:48:28.7902889+08:00"
+                  },
+                  {
+                      "path":  "docs/PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "C6F4D22B5BD861E33C031BE722ED16980A7B53FAB069402977F2F8E160FE0CBF",
+                      "length":  399217,
+                      "lastWriteTime":  "2026-06-09T19:48:41.9035565+08:00"
+                  },
+                  {
+                      "path":  "docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "FDCA8CACB5EC9A8D026AAF932572065DC8B2636D17765BB3409D433333DBCBA8",
+                      "length":  155820,
+                      "lastWriteTime":  "2026-06-09T19:48:56.5376028+08:00"
+                  },
+                  {
+                      "path":  "docs/tech-stack/BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "DDC7A57AA3E8999A4F0C408E3A2FA898913310C45E3D484F754AC20C3BF9122E",
+                      "length":  81489,
+                      "lastWriteTime":  "2026-06-09T19:49:09.3969064+08:00"
+                  },
+                  {
+                      "path":  "docs/M5_69_MEMORY_RAG_RELEASE_GATE_SUITE_CATALOG_20260609.md",
+                      "sha256":  "6AFC4FFCF1E320EAB39FFD357F972962C1C205C5890EA644440B161A7FB88E79",
+                      "length":  5240,
+                      "lastWriteTime":  "2026-06-09T19:49:22.3282524+08:00"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/CHANGELOG.md",
+                      "sha256":  "4EEA8EB03BF3FDD4320A6377D1E8E639B177CE73362B9B3327096D2DDBA107D4",
+                      "length":  358816,
+                      "lastWriteTime":  "2026-06-09T19:48:28.7902889+08:00"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "C6F4D22B5BD861E33C031BE722ED16980A7B53FAB069402977F2F8E160FE0CBF",
+                      "length":  399217,
+                      "lastWriteTime":  "2026-06-09T19:48:41.9035565+08:00"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "FDCA8CACB5EC9A8D026AAF932572065DC8B2636D17765BB3409D433333DBCBA8",
+                      "length":  155820,
+                      "lastWriteTime":  "2026-06-09T19:48:56.5376028+08:00"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "DDC7A57AA3E8999A4F0C408E3A2FA898913310C45E3D484F754AC20C3BF9122E",
+                      "length":  81489,
+                      "lastWriteTime":  "2026-06-09T19:49:09.3969064+08:00"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_M5_69_MEMORY_RAG_RELEASE_GATE_SUITE_CATALOG_20260609.md",
+                      "sha256":  "6AFC4FFCF1E320EAB39FFD357F972962C1C205C5890EA644440B161A7FB88E79",
+                      "length":  5240,
+                      "lastWriteTime":  "2026-06-09T19:49:22.3282524+08:00"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/RECOVERY_STATUS.md",
+                      "sha256":  "90C910B3A5B1E70F64750FDC657F64BB1E90693C9AC6A99A33235E7F54B96FC4",
+                      "length":  62794,
+                      "lastWriteTime":  "2026-06-09T19:52:18.9823176+08:00"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/M5_69_1_WORKSPACE_RECOVERY_SHA256.json",
+                      "sha256":  "B07EDC2F3711B2C9ECE33035334AA9C60EDCA82EC2E2F647FADC938FD031A672",
+                      "length":  8844,
+                      "lastWriteTime":  "2026-06-09T19:50:48.9748891+08:00"
+                  }
+              ]
+}
