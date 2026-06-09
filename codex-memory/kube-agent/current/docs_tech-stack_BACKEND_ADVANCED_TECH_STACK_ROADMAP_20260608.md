@@ -117,6 +117,16 @@ M5.53-1 adds the retry governance layer before any runtime retry binding:
 
 Technology judgment: top-tier Agent retry governance should be explicit before it is executable. The system now has typed contracts for idempotency, operation allowlist/RBAC/readback, failure classification, bounded retry predicate, and compensation guidance, but the runtime remains fail-closed until durable receipts, readback evidence, HITL/release evidence, eval gates, and operator observability are bound together.
 
+M5.54-1 adds the release gate layer before any runtime write binding:
+- `KubeManagerWriteReleaseGateCatalog` owns durable prewrite receipt and HITL/release evidence contracts.
+- New admin-only endpoint `GET /api/agent/observability/kube-manager/http-outlet/write-release-gate-contract` reports `CONTRACT_DEFINED_NOT_BOUND`.
+- The durable receipt contract lists required digest fields, but `issuerExists=false` and `durableStorageMutationAllowed=false`.
+- The release evidence contract requires server HITL confirmation, reviewer/release decision digest, eval gate bundle digest, operation safety digest, retry governance digest, operator intent digest, and tenant ownership digest.
+- Caller flags, LLM approval text, frontend checkbox-only claims, durable executor success claims, legacy migration reports, and post-write success responses are rejected as release evidence sources.
+- No HITL invocation, audit write, durable receipt issuance, release signature, runtime release switch, HTTP outlet binding, or write retry enablement is added.
+
+Technology judgment: this closes another dangerous gap in the generic write chain. A top-tier Agent must not let prompt text, UI flags, or successful side effects become release authority. Release authority must be a typed evidence contract that can later be bound to durable audit, HITL, eval gates, and Git/release review.
+
 M5.29-1 已把 Spring Security 推进到 HTTP 安全入口：
 
 - 新增 `AgentSecurityConfig`，用 `SecurityFilterChain` 承接标准 Web 安全主线；

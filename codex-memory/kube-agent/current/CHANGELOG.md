@@ -6,6 +6,30 @@
 
 ---
 
+## [M5.54-1] - Kube-manager write release gate contract
+
+**Delivery**: Added a review-only durable receipt and HITL/release evidence gate contract for future controlled kube-manager writes.
+**Changes**
+- Added `KubeManagerWriteDurableReceiptContract`.
+- Added `KubeManagerWriteReleaseEvidenceContract`.
+- Added `KubeManagerWriteReleaseGateCatalog`.
+- Added `AgentKubeManagerWriteReleaseGateContractResponse`.
+- Added `AgentKubeManagerWriteReleaseGateContractService`.
+- Added admin-only `GET /api/agent/observability/kube-manager/http-outlet/write-release-gate-contract`.
+- Updated write retry readiness to report durable receipt and release evidence contracts as defined but not bound to the HTTP outlet.
+- Added catalog, service, controller, source-contract, and MockMvc security coverage.
+**Verification**
+- `mvn -q "-Dtest=KubeManagerWriteReleaseGateCatalogTest,AgentKubeManagerWriteReleaseGateContractServiceTest,AgentKubeManagerWriteRetryReadinessServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed.
+**Security**
+- The catalog is pure Java, static, and review-only.
+- `contractStatus=CONTRACT_DEFINED_NOT_BOUND`.
+- Durable receipt issuer does not exist and no receipt is issued.
+- HITL/release evidence is required by contract but not bound to the HTTP outlet.
+- Runtime release gate open count remains `0`.
+- No kube-manager call, `KubeManagerHttpClient` binding, `RestClient`, `executeWrite`, Tool execution, HITL invocation, LLM call, external call, audit write, durable receipt issuance, HTTP header injection, readback execution, release switch opening, resilience registry mutation, runtime enable switch, compensation execution, or write retry enablement is added.
+- Raw principal, raw organization, raw backend path, raw request body, token, password, Authorization header, raw release evidence, and raw receipt are not exposed.
+- NIM / HPC / Slurm / BCM remain Phase 2 paused scope.
+
 ## [M5.53-1] - Kube-manager write retry governance contract
 
 **Delivery**: Added a review-only retry failure classification, bounded retry predicate, and compensation policy contract for future controlled kube-manager writes.

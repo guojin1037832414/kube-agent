@@ -10,7 +10,41 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.53-1
+## Latest Phase 1 Core Memory - M5.54-1
+
+M5.54-1 adds the generic kube-manager write release gate contract required before any future controlled write execution or write retry can be considered.
+
+Delivered:
+
+- Added `KubeManagerWriteDurableReceiptContract`.
+- Added `KubeManagerWriteReleaseEvidenceContract`.
+- Added `KubeManagerWriteReleaseGateCatalog`.
+- Added `AgentKubeManagerWriteReleaseGateContractResponse`.
+- Added `AgentKubeManagerWriteReleaseGateContractService`.
+- Added admin-only `GET /api/agent/observability/kube-manager/http-outlet/write-release-gate-contract`.
+- Updated M5.50 readiness so durable receipt and HITL/release evidence contracts are `exists=true` but `boundToHttpOutlet=false`.
+- Added catalog, service, controller, source-contract, and MockMvc security coverage.
+
+Security boundary:
+
+- The catalog is pure Java, static, and review-only.
+- `contractStatus=CONTRACT_DEFINED_NOT_BOUND`.
+- Runtime release gate open count remains `0`.
+- Durable receipt issuer does not exist, and the endpoint does not issue receipts.
+- HITL/release evidence is required by contract but not bound to kube-manager HTTP writes.
+- Caller-provided release evidence is not accepted.
+- The observability endpoint is admin-only, local-process-only, read-only, and summary-only.
+- No `KubeManagerHttpClient`, `RestClient`, kube-manager `8100`, `/api/login`, `executeWrite`, Tool, HITL invocation, LLM, external service, audit writer, durable receipt writer, HTTP header injection, readback executor, compensation executor, release switch, resilience registry mutation, runtime enable switch, or write retry enablement is added.
+- The contract does not expose raw principal, raw organization, raw backend path, raw request body, raw release evidence, raw receipt, token, password, or Authorization header.
+- NIM / HPC / Slurm / BCM remain Phase 2 paused scope.
+
+Learning point: top-tier Agent write authority needs a release gate before it needs a writer. Durable prewrite receipt and HITL/release evidence are not UI flags or LLM statements; they must be server-side evidence objects with digests, ownership proof, eval gate proof, and explicit blockers. M5.54 is successful because it makes the release gate visible while keeping it closed.
+
+Latest verified command:
+
+- `mvn -q "-Dtest=KubeManagerWriteReleaseGateCatalogTest,AgentKubeManagerWriteReleaseGateContractServiceTest,AgentKubeManagerWriteRetryReadinessServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+## Previous Phase 1 Core Memory - M5.53-1
 
 M5.53-1 adds the generic kube-manager write retry governance contract required before any future controlled write retry can be considered.
 

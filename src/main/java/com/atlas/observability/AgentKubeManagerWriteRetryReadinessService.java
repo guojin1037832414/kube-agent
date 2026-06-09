@@ -88,13 +88,13 @@ public class AgentKubeManagerWriteRetryReadinessService {
             requirement(
                 "durable-prewrite-receipt",
                 "PARTIAL",
-                "High-risk Tool execution has durable prewrite support, but generic kube-manager write retry still needs the receipt bound into the HTTP outlet.",
+                "A generic durable prewrite receipt contract exists, but no issuer is bound to the kube-manager HTTP outlet.",
                 false
             ),
             requirement(
                 "human-release-and-hitl-evidence",
-                "BLOCKING",
-                "High-risk state-changing operations need explicit human approval and release evidence before retry can amplify them.",
+                "PARTIAL",
+                "A generic HITL/release evidence contract exists, but it is not yet bound to kube-manager HTTP writes.",
                 false
             ),
             requirement(
@@ -147,6 +147,17 @@ public class AgentKubeManagerWriteRetryReadinessService {
         evidence.put("writeRetryBoundIntoExecutionPath", false);
         evidence.put("writePathCircuitBreakerAndBulkheadOnly", true);
         evidence.put("highRiskDurablePrewriteGateExists", true);
+        evidence.put("genericDurableReceiptContractExists", true);
+        evidence.put("genericDurableReceiptContractBoundToHttpOutlet", false);
+        evidence.put("genericDurableReceiptIssuerExists", false);
+        evidence.put("genericDurableReceiptIssuedByReadinessEndpoint", false);
+        evidence.put("genericDurableReceiptCanOpenReleaseGate", false);
+        evidence.put("genericReleaseEvidenceContractExists", true);
+        evidence.put("genericReleaseEvidenceContractBoundToHttpOutlet", false);
+        evidence.put("serverHitlConfirmationBoundToHttpOutlet", false);
+        evidence.put("callerProvidedReleaseEvidenceAccepted", false);
+        evidence.put("runtimeReleaseGateSwitchExists", false);
+        evidence.put("runtimeReleaseGateOpenCount", 0);
         evidence.put("adminAuditQueryExists", true);
         evidence.put("replayTimelineExists", true);
         evidence.put("evalGateBundleExists", true);
@@ -187,6 +198,10 @@ public class AgentKubeManagerWriteRetryReadinessService {
     private List<String> blockedReasons() {
         return List.of(
             "generic-kube-manager-idempotency-boundary-not-bound-to-http-outlet",
+            "generic-durable-receipt-contract-not-bound-to-http-outlet",
+            "generic-durable-receipt-issuer-missing",
+            "generic-release-evidence-contract-not-bound-to-http-outlet",
+            "server-hitl-confirmation-not-bound-to-http-outlet",
             "write-operation-allowlist-contract-not-bound-to-http-outlet",
             "write-operation-rbac-evidence-not-bound-to-http-outlet",
             "write-retry-predicate-contract-not-bound-to-http-outlet",
@@ -195,6 +210,7 @@ public class AgentKubeManagerWriteRetryReadinessService {
             "post-write-readback-executor-missing",
             "no-runtime-retry-eligible-write-operation",
             "release-and-hitl-evidence-not-bound-to-http-outlet",
+            "runtime-release-gate-switch-intentionally-absent",
             "compensation-policy-contract-not-bound-to-http-outlet",
             "compensation-executor-missing",
             "runtime-enable-switch-intentionally-absent"
@@ -227,6 +243,7 @@ public class AgentKubeManagerWriteRetryReadinessService {
         endpoints.put("writeIdempotencyContract", "/api/agent/observability/kube-manager/http-outlet/write-idempotency-contract");
         endpoints.put("writeOperationSafetyContract", "/api/agent/observability/kube-manager/http-outlet/write-operation-safety-contract");
         endpoints.put("writeRetryGovernanceContract", "/api/agent/observability/kube-manager/http-outlet/write-retry-governance-contract");
+        endpoints.put("writeReleaseGateContract", "/api/agent/observability/kube-manager/http-outlet/write-release-gate-contract");
         endpoints.put("writeRetryReadiness", "/api/agent/observability/kube-manager/http-outlet/write-retry-readiness");
         endpoints.put("auditByTrace", "/api/agent/observability/audit/trace/{traceId}");
         endpoints.put("replayByTrace", "/api/agent/observability/replay/trace/{traceId}");

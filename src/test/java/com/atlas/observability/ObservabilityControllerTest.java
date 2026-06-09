@@ -72,6 +72,8 @@ class ObservabilityControllerTest {
         new AgentKubeManagerWriteOperationSafetyContractService();
     private final AgentKubeManagerWriteRetryGovernanceContractService kubeManagerWriteRetryGovernanceContractService =
         new AgentKubeManagerWriteRetryGovernanceContractService();
+    private final AgentKubeManagerWriteReleaseGateContractService kubeManagerWriteReleaseGateContractService =
+        new AgentKubeManagerWriteReleaseGateContractService();
     private final ObservabilityController controller = new ObservabilityController(
         new AgentMetricsService(new SimpleMeterRegistry()),
         kubeManagerHttpOutletHealthSummaryService,
@@ -79,6 +81,7 @@ class ObservabilityControllerTest {
         kubeManagerWriteIdempotencyContractService,
         kubeManagerWriteOperationSafetyContractService,
         kubeManagerWriteRetryGovernanceContractService,
+        kubeManagerWriteReleaseGateContractService,
         auditRecorder,
         auditRecorder,
         replayTimelineService,
@@ -339,6 +342,17 @@ class ObservabilityControllerTest {
             .containsEntry("runtimeEnableEndpointPresent", false);
         assertThat(readiness.currentEvidence())
             .containsEntry("highRiskDurablePrewriteGateExists", true)
+            .containsEntry("genericDurableReceiptContractExists", true)
+            .containsEntry("genericDurableReceiptContractBoundToHttpOutlet", false)
+            .containsEntry("genericDurableReceiptIssuerExists", false)
+            .containsEntry("genericDurableReceiptIssuedByReadinessEndpoint", false)
+            .containsEntry("genericDurableReceiptCanOpenReleaseGate", false)
+            .containsEntry("genericReleaseEvidenceContractExists", true)
+            .containsEntry("genericReleaseEvidenceContractBoundToHttpOutlet", false)
+            .containsEntry("serverHitlConfirmationBoundToHttpOutlet", false)
+            .containsEntry("callerProvidedReleaseEvidenceAccepted", false)
+            .containsEntry("runtimeReleaseGateSwitchExists", false)
+            .containsEntry("runtimeReleaseGateOpenCount", 0)
             .containsEntry("genericKubeManagerIdempotencyBoundaryExists", true)
             .containsEntry("genericKubeManagerIdempotencyBoundaryBoundToHttpOutlet", false)
             .containsEntry("callerProvidedIdempotencyKeyAccepted", false)
@@ -363,15 +377,21 @@ class ObservabilityControllerTest {
             .containsEntry("nimHpcSlurmBcmPhase2Paused", true);
         assertThat(readiness.blockedReasons()).contains(
             "generic-kube-manager-idempotency-boundary-not-bound-to-http-outlet",
+            "generic-durable-receipt-contract-not-bound-to-http-outlet",
+            "generic-durable-receipt-issuer-missing",
+            "generic-release-evidence-contract-not-bound-to-http-outlet",
+            "server-hitl-confirmation-not-bound-to-http-outlet",
             "write-operation-allowlist-contract-not-bound-to-http-outlet",
             "write-retry-predicate-contract-not-bound-to-http-outlet",
             "no-runtime-retryable-failure-class",
             "post-write-readback-contract-not-bound-to-http-outlet",
+            "runtime-release-gate-switch-intentionally-absent",
             "compensation-policy-contract-not-bound-to-http-outlet",
             "compensation-executor-missing"
         );
         assertThat(readiness.endpointTemplates())
-            .containsEntry("writeRetryGovernanceContract", "/api/agent/observability/kube-manager/http-outlet/write-retry-governance-contract");
+            .containsEntry("writeRetryGovernanceContract", "/api/agent/observability/kube-manager/http-outlet/write-retry-governance-contract")
+            .containsEntry("writeReleaseGateContract", "/api/agent/observability/kube-manager/http-outlet/write-release-gate-contract");
         assertThat(readiness.safety())
             .containsEntry("localProcessOnly", true)
             .containsEntry("kubeManagerCalls", false)
@@ -589,6 +609,78 @@ class ObservabilityControllerTest {
             .containsEntry("containsRawRequestBody", false);
         assertThat(contract.toString())
             .contains("agent-kube-manager-write-retry-governance-contract.v1", "CONTRACT_DEFINED_NOT_BOUND")
+            .doesNotContain("secret-password", "Bearer", "user-token", "/api/login", "/api/100002");
+    }
+
+    @Test
+    void kubeManagerWriteReleaseGateContract_shouldRequireAdminAndReturnUnboundReleaseGateContract() {
+        ResponseEntity<ApiResponse<AgentKubeManagerWriteReleaseGateContractResponse>> anonymous =
+            controller.kubeManagerWriteReleaseGateContract();
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentKubeManagerWriteReleaseGateContractResponse>> user =
+            controller.kubeManagerWriteReleaseGateContract();
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        userPermissionContext.unbind();
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentKubeManagerWriteReleaseGateContractResponse>> admin =
+            controller.kubeManagerWriteReleaseGateContract();
+
+        assertThat(admin.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(admin.getBody()).isNotNull();
+        AgentKubeManagerWriteReleaseGateContractResponse contract = admin.getBody().getData();
+        assertThat(contract.schemaVersion()).isEqualTo("agent-kube-manager-write-release-gate-contract.v1");
+        assertThat(contract.contractStatus()).isEqualTo("CONTRACT_DEFINED_NOT_BOUND");
+        assertThat(contract.durableReceiptContractExists()).isTrue();
+        assertThat(contract.releaseEvidenceContractExists()).isTrue();
+        assertThat(contract.boundToHttpOutlet()).isFalse();
+        assertThat(contract.releaseGateOpen()).isFalse();
+        assertThat(contract.writeRetryEnabled()).isFalse();
+        assertThat(contract.runtimeReleaseGateOpenCount()).isZero();
+        assertThat(contract.durableReceiptContract())
+            .containsEntry("boundToHttpOutlet", false)
+            .containsEntry("issuerExists", false)
+            .containsEntry("issuedByReadinessEndpoint", false)
+            .containsEntry("durableStorageMutationAllowed", false);
+        assertThat(contract.releaseEvidenceContract())
+            .containsEntry("boundToHttpOutlet", false)
+            .containsEntry("hitlEvidenceRequired", true)
+            .containsEntry("releaseReviewRequired", true)
+            .containsEntry("callerProvidedReleaseEvidenceAccepted", false)
+            .containsEntry("canOpenReleaseSwitch", false);
+        assertThat(contract.bindingStatus())
+            .containsEntry("durableReceiptIssuerExists", false)
+            .containsEntry("serverHitlConfirmationBound", false)
+            .containsEntry("runtimeReleaseSwitchPresent", false)
+            .containsEntry("releaseGateOpen", false)
+            .containsEntry("writeRetryEnabled", false);
+        assertThat(contract.safety())
+            .containsEntry("kubeManagerCalls", false)
+            .containsEntry("restClientUsed", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("hitlInvocation", false)
+            .containsEntry("releaseDecisionSigned", false)
+            .containsEntry("auditWrite", false)
+            .containsEntry("durableReceiptIssued", false)
+            .containsEntry("durableStorageMutation", false)
+            .containsEntry("writeRetryEnablement", false)
+            .containsEntry("releaseGateOpen", false);
+        assertThat(contract.privacy())
+            .containsEntry("containsRawBaseUrl", false)
+            .containsEntry("containsToken", false)
+            .containsEntry("containsLoginPassword", false)
+            .containsEntry("containsRawReleaseEvidence", false)
+            .containsEntry("containsRawReceipt", false);
+        assertThat(contract.toString())
+            .contains("agent-kube-manager-write-release-gate-contract.v1", "CONTRACT_DEFINED_NOT_BOUND")
             .doesNotContain("secret-password", "Bearer", "user-token", "/api/login", "/api/100002");
     }
 

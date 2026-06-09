@@ -2,6 +2,31 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-09 M5.54 Kube-Manager Write Release Gate Contract
+
+M5.54 turns durable prewrite receipt and HITL/release evidence into a generic kube-manager write release gate contract.
+
+```text
+KubeManagerWriteReleaseGateCatalog
+    |
+    | durable receipt contract + HITL/release evidence contract
+    v
+AgentKubeManagerWriteReleaseGateContractService
+    |
+    | admin-only local read model
+    v
+/api/agent/observability/kube-manager/http-outlet/write-release-gate-contract
+```
+
+Key design:
+- `KubeManagerWriteDurableReceiptContract` records the fields future generic writes must bind before the first attempt: receipt id, audit event digest, request spec digest, principal/organization fingerprint, idempotency digest, HITL digest, release evidence digest, and created-at evidence.
+- `KubeManagerWriteReleaseEvidenceContract` records the trusted evidence needed before any release gate can open: server HITL confirmation digest, reviewer fingerprint, release decision digest, eval gate bundle digest, operation safety digest, retry governance digest, operator intent digest, and tenant ownership evidence digest.
+- Caller flags, LLM approval text, frontend checkbox-only claims, executor success claims, legacy migration reports, and post-write success responses are rejected as release evidence sources.
+- New endpoint returns `CONTRACT_DEFINED_NOT_BOUND`; there is no durable receipt issuer, no HITL invocation, no release signature, no runtime switch, and no write retry enablement.
+- M5.50 readiness now reports durable receipt and release evidence contracts as existing but unbound, so future Vue observability can show why write retry remains NOT_READY.
+
+Learning point: top-tier Agent write authority needs a release gate before it needs a writer. A durable receipt proves "we have pre-execution evidence"; HITL/release evidence proves "a trusted human/release process authorized this class of operation"; neither can come from prompt text or caller parameters.
+
 ## 2026-06-09 M5.53 Kube-Manager Write Retry Governance Contract
 
 M5.53 turns the remaining M5.50 write-retry prerequisites into source-owned contracts: failure classes, a bounded retry predicate, and review-only compensation policies.
