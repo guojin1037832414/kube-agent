@@ -444,6 +444,19 @@ M5.40-1 adds the candidate discovery step before M5.39 curation review:
 
 Technology judgment: this gives eval operations a real evidence workflow without granting new authority. Discovery is read-only and advisory, curation review is deterministic and review-only, and catalog promotion still requires a Git-reviewed patch. This separation is the mature Agent pattern for moving from observability data to release-blocking evidence.
 
+## M5.48-1 Update - Eval Workbench Gate Bundle Summary
+
+M5.48-1 adds the page-level gate bundle summary contract for the future `vue-kube-manager` eval workbench:
+
+- `GET /api/agent/observability/eval/workbench/gate-bundle-summary` returns `AgentEvalWorkbenchGateBundleSummaryResponse`.
+- `AgentEvalWorkbenchGateBundleSummaryService` wraps the current catalog gate bundle without accepting caller-provided trace IDs.
+- The response adds bundle summary, trace-set gate rows, CI artifact metadata, blocker summary, next actions, endpoint templates, workbench policy, and privacy proof.
+- The capability manifest now includes `workbench-gate-bundle-summary`, and the recommended workflow points Vue to this release-gate summary after catalog patch review.
+- Trace-set detail, promotion workflow, and catalog patch review responses now expose `workbenchGateBundleSummary`.
+- The contract remains admin-only, read-only, summary-only, no request trace-id override, no catalog mutation, no runtime catalog write, no CI blocking enablement, no Tool execution, no kube-manager call, no LLM/external call, and no embedded replay/report payloads.
+
+Technology judgment: top-tier Agent release governance needs a UI layer that explains CI evidence without becoming CI authority. `gate-bundle-summary` makes release readiness inspectable by humans while preserving Git review and reviewed trace evidence as the only path toward future blocking gates.
+
 ## M5.47-1 Update - Eval Workbench Catalog Patch Review Model
 
 M5.47-1 adds the page-level catalog patch review contract for the future `vue-kube-manager` eval workbench:

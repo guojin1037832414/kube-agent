@@ -123,6 +123,10 @@ class AgentSecurityConfigWebMvcTest {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
             .andExpect(status().isForbidden());
 
+        mockMvc.perform(get("/api/agent/observability/eval/workbench/gate-bundle-summary")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
+            .andExpect(status().isForbidden());
+
         mockMvc.perform(get("/api/agent/observability/eval/workbench/trace-sets/phase1-core-golden")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
             .andExpect(status().isForbidden());
@@ -230,6 +234,10 @@ class AgentSecurityConfigWebMvcTest {
             .andExpect(status().isOk());
 
         mockMvc.perform(get("/api/agent/observability/eval/workbench/overview")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token"))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/agent/observability/eval/workbench/gate-bundle-summary")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token"))
             .andExpect(status().isOk());
 
@@ -476,6 +484,11 @@ class AgentSecurityConfigWebMvcTest {
         @GetMapping("/api/agent/observability/eval/workbench/overview")
         String observabilityEvalWorkbenchOverview() {
             return "eval-workbench-overview";
+        }
+
+        @GetMapping("/api/agent/observability/eval/workbench/gate-bundle-summary")
+        String observabilityEvalWorkbenchGateBundleSummary() {
+            return "eval-workbench-gate-bundle-summary";
         }
 
         @GetMapping("/api/agent/observability/eval/workbench/trace-sets/{id}")

@@ -6,6 +6,26 @@
 
 ---
 
+## [M5.48-1] - Eval workbench gate bundle summary
+
+**Delivery**: Added an admin-only workbench-level gate bundle summary model for future `vue-kube-manager` eval workbench pages.
+**Changes**
+- Added `AgentEvalWorkbenchGateBundleSummaryResponse`.
+- Added `AgentEvalWorkbenchGateBundleSummaryService`.
+- Added admin-only `GET /api/agent/observability/eval/workbench/gate-bundle-summary`.
+- Extended the workbench capability manifest with `workbench-gate-bundle-summary` and made it part of the recommended UI workflow after catalog patch review.
+- Extended trace-set detail, workbench promotion workflow, and workbench catalog patch review endpoint templates with `workbenchGateBundleSummary`.
+- The response wraps the existing compact trace-set gate bundle with bundle summary, trace-set gate rows, CI artifact metadata, blocker summary, next actions, endpoint templates, policy proof, and privacy proof.
+- Added service, controller, source-contract, and MockMvc security coverage.
+**Verification**
+- `mvn -q "-Dtest=AgentEvalWorkbenchGateBundleSummaryServiceTest,AgentEvalWorkbenchCapabilitiesServiceTest,AgentEvalWorkbenchOverviewServiceTest,AgentEvalWorkbenchTraceSetDetailServiceTest,AgentEvalWorkbenchPromotionWorkflowServiceTest,AgentEvalWorkbenchCatalogPatchReviewServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed.
+**Security**
+- The workbench gate bundle summary endpoint is admin-only, read-only, and summary-only.
+- It does not accept caller trace IDs, mutate `observability/eval-trace-sets.json`, enable CI blocking, write catalog data, execute Tool code, call kube-manager, use LLMs, make external calls, or embed replay/report payloads.
+- Catalog promotion authority remains human Git review only.
+- `summaryOnly=true`, `requestTraceIdOverrideAllowed=false`, `catalogMutationAllowed=false`, `runtimeCatalogWrite=false`, `ciBlockingEnabled=false`, `toolExecution=false`, `kubeManagerCalls=false`, `llmUsed=false`, and `externalCalls=false`.
+- This slice adds no kube-manager write/create/delete/state-changing behavior and does not reopen NIM/HPC/Slurm/BCM scope.
+
 ## [M5.47-1] - Eval workbench catalog patch review model
 
 **Delivery**: Added an admin-only workbench-level catalog patch review model for future `vue-kube-manager` eval workbench pages.

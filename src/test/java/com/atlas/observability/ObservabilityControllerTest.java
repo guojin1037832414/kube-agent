@@ -43,6 +43,8 @@ class ObservabilityControllerTest {
         new AgentEvalWorkbenchPromotionWorkflowService(evalTraceSetCatalogService, traceSetPromotionWorkflowService);
     private final AgentEvalWorkbenchCatalogPatchReviewService evalWorkbenchCatalogPatchReviewService =
         new AgentEvalWorkbenchCatalogPatchReviewService(evalTraceSetCatalogService);
+    private final AgentEvalWorkbenchGateBundleSummaryService evalWorkbenchGateBundleSummaryService =
+        new AgentEvalWorkbenchGateBundleSummaryService(evalTraceSetCatalogService);
     private final ObservabilityController controller = new ObservabilityController(
         new AgentMetricsService(new SimpleMeterRegistry()),
         auditRecorder,
@@ -58,6 +60,7 @@ class ObservabilityControllerTest {
         evalWorkbenchTraceSetDetailService,
         evalWorkbenchPromotionWorkflowService,
         evalWorkbenchCatalogPatchReviewService,
+        evalWorkbenchGateBundleSummaryService,
         new AgentPrincipalResolver(userPermissionContext)
     );
 
@@ -742,7 +745,11 @@ class ObservabilityControllerTest {
             .containsEntry("toolExecution", false)
             .containsEntry("kubeManagerCalls", false);
         assertThat(capabilities.toString())
-            .contains("workbench-trace-set-detail", "agent-eval-workbench-promotion-workflow.v1")
+            .contains(
+                "workbench-trace-set-detail",
+                "agent-eval-workbench-promotion-workflow.v1",
+                "agent-eval-workbench-gate-bundle-summary.v1"
+            )
             .doesNotContain("secret-token-value", "conv-sensitive", "user-sensitive", "org-sensitive", "/api/org-sensitive");
     }
 
@@ -803,6 +810,69 @@ class ObservabilityControllerTest {
     }
 
     @Test
+    void evalWorkbenchGateBundleSummary_shouldRequireAdminUser() {
+        ResponseEntity<ApiResponse<AgentEvalWorkbenchGateBundleSummaryResponse>> anonymous =
+            controller.evalWorkbenchGateBundleSummary();
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentEvalWorkbenchGateBundleSummaryResponse>> user =
+            controller.evalWorkbenchGateBundleSummary();
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void evalWorkbenchGateBundleSummary_shouldReturnPageReadyCiEvidenceSummaryForAdminUser() {
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentEvalWorkbenchGateBundleSummaryResponse>> response =
+            controller.evalWorkbenchGateBundleSummary();
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        AgentEvalWorkbenchGateBundleSummaryResponse summary = response.getBody().getData();
+        assertThat(summary.schemaVersion()).isEqualTo("agent-eval-workbench-gate-bundle-summary.v1");
+        assertThat(summary.gateVerdict()).isEqualTo("FAIL");
+        assertThat(summary.releaseEligible()).isFalse();
+        assertThat(summary.traceSetCount()).isEqualTo(4);
+        assertThat(summary.emptyTraceSetIds()).containsExactlyElementsOf(summary.traceSetIds());
+        assertThat(summary.bundleSummary())
+            .containsEntry("ciBlockingEnabled", false)
+            .containsEntry("requestTraceIdOverrideAllowed", false)
+            .containsEntry("embeddedReports", false)
+            .containsEntry("embeddedReplay", false);
+        assertThat(summary.ciArtifact())
+            .containsEntry("path", "target/agent-eval/trace-set-gate-bundle.json")
+            .containsEntry("runtimeCatalogWrite", false);
+        assertThat(summary.blockerSummary())
+            .containsEntry("hasBlockingIssues", true)
+            .containsEntry("catalogMutationAllowed", false);
+        assertThat(summary.workbenchPolicy())
+            .containsEntry("summaryOnly", true)
+            .containsEntry("catalogMutationAllowed", false)
+            .containsEntry("runtimeCatalogWrite", false)
+            .containsEntry("requestTraceIdOverrideAllowed", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("kubeManagerCalls", false);
+        assertThat(summary.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("containsRawKubeManagerEndpoints", false)
+            .containsEntry("llmUsed", false)
+            .containsEntry("externalCalls", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("kubeManagerCalls", false);
+        assertThat(summary.toString())
+            .contains("gate-bundle-summary", "phase1-core-golden")
+            .doesNotContain("reports=", "replay=")
+            .doesNotContain("secret-token-value", "conv-sensitive", "user-sensitive", "org-sensitive", "/api/org-sensitive");
+    }
+
+    @Test
     void evalWorkbenchTraceSetDetail_shouldRequireAdminUserAndRejectUnknownTraceSet() {
         ResponseEntity<ApiResponse<AgentEvalWorkbenchTraceSetDetailResponse>> anonymous =
             controller.evalWorkbenchTraceSetDetail("phase1-core-golden");
@@ -847,6 +917,8 @@ class ObservabilityControllerTest {
                 "/api/agent/observability/eval/workbench/trace-sets/phase1-core-golden/promotion-workflow")
             .containsEntry("workbenchCatalogPatchReview",
                 "/api/agent/observability/eval/workbench/trace-sets/phase1-core-golden/catalog-patch-review")
+            .containsEntry("workbenchGateBundleSummary",
+                "/api/agent/observability/eval/workbench/gate-bundle-summary")
             .containsEntry("promotionWorkflow",
                 "/api/agent/observability/eval/trace-sets/phase1-core-golden/promotion-workflow");
         assertThat(detail.detailPolicy())

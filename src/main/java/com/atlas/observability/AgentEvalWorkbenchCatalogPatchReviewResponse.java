@@ -187,6 +187,8 @@ public record AgentEvalWorkbenchCatalogPatchReviewResponse(
             "/api/agent/observability/eval/workbench/trace-sets/" + id + "/catalog-patch-review");
         endpoints.put("rawCatalogPatchProposal",
             "/api/agent/observability/eval/trace-sets/" + id + "/catalog-patch-proposal");
+        endpoints.put("workbenchGateBundleSummary",
+            "/api/agent/observability/eval/workbench/gate-bundle-summary");
         endpoints.put("gateBundle", "/api/agent/observability/eval/trace-sets/gate-bundle");
         endpoints.put("replayTimeline", "/api/agent/observability/replay/trace/{traceId}?limit={limit}");
         endpoints.put("evalReport", "/api/agent/observability/eval/trace/{traceId}?limit={limit}");

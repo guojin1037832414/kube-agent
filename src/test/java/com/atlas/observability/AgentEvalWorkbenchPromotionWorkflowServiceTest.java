@@ -104,6 +104,8 @@ class AgentEvalWorkbenchPromotionWorkflowServiceTest {
         assertThat(workflow.endpointTemplates())
             .containsEntry("workbenchPromotionWorkflow",
                 "/api/agent/observability/eval/workbench/trace-sets/phase1-core-golden/promotion-workflow")
+            .containsEntry("workbenchGateBundleSummary",
+                "/api/agent/observability/eval/workbench/gate-bundle-summary")
             .containsEntry("rawPromotionWorkflow",
                 "/api/agent/observability/eval/trace-sets/phase1-core-golden/promotion-workflow");
         assertThat(workflow.workbenchPolicy())

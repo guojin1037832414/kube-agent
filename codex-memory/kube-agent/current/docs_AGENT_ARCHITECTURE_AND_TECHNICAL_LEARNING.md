@@ -2,6 +2,33 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-09 M5.48 Eval Workbench Gate Bundle Summary 摘要模型
+
+M5.48 把底层 compact trace-set gate bundle 包装成未来 `vue-kube-manager` 可以直接渲染的发布门禁摘要页面。底层 gate bundle 仍然是机器可读 CI artifact；新的 workbench summary 负责把它整理成 bundle summary、trace-set gate rows、CI artifact metadata、blocker summary 和 next actions。
+
+```text
+GET /api/agent/observability/eval/workbench/gate-bundle-summary
+    |
+    | current catalog + compact trace-set gate bundle
+    v
+AgentEvalWorkbenchGateBundleSummaryResponse
+    |
+    | bundleSummary + traceSetGateRows + ciArtifact + blockerSummary
+    v
+Vue release gate summary page
+```
+
+关键设计：
+- 新 endpoint 是 admin-only、summary-only、read-only，不接受请求 traceIds。
+- summary 只使用当前 versioned catalog 的 trace set gate bundle，避免页面参数影响 release evidence。
+- `ciArtifact` 显示 `target/agent-eval/trace-set-gate-bundle.json` 和 enablement condition，但 `ciBlockingEnabled=false`。
+- `blockerSummary` 把 empty trace set、failed trace set、缺少 reviewed real evidence 的状态显式化。
+- `traceSetGateRows` 给 Vue 表格直接渲染，但不嵌入 replay timeline 或 per-trace reports。
+- capability manifest 新增 `workbench-gate-bundle-summary`，推荐 UI 流程继续向 gate bundle 摘要闭环。
+- 安全证明继续声明 `requestTraceIdOverrideAllowed=false`、`catalogMutationAllowed=false`、`runtimeCatalogWrite=false`、`ciBlockingEnabled=false`、`toolExecution=false`、`kubeManagerCalls=false`、`llmUsed=false`、`externalCalls=false`。
+
+学习重点：顶级 Agent 的 release gate 不能只给机器 artifact，也不能把页面摘要变成发布开关。成熟做法是让 CI artifact、operator summary、human/Git review、CI blocking enablement 四层分离；每层都说明自己能做什么，不能做什么。
+
 ## 2026-06-09 M5.47 Eval Workbench Catalog Patch Review 审查模型
 
 M5.47 把已有的 review-only catalog patch proposal 再包装成未来 `vue-kube-manager` 可以直接渲染的 Git 审查页面模型。底层 proposal 仍然负责 RFC 6902 风格的 patch 证据；新的 workbench response 负责把 patch 证据整理成更适合页面使用的 sanitized patch operations、trace delta、candidate gate summary、review checklist 和 next actions。

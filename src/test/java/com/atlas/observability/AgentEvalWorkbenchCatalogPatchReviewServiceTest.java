@@ -108,6 +108,8 @@ class AgentEvalWorkbenchCatalogPatchReviewServiceTest {
         assertThat(review.endpointTemplates())
             .containsEntry("workbenchCatalogPatchReview",
                 "/api/agent/observability/eval/workbench/trace-sets/phase1-core-golden/catalog-patch-review")
+            .containsEntry("workbenchGateBundleSummary",
+                "/api/agent/observability/eval/workbench/gate-bundle-summary")
             .containsEntry("rawCatalogPatchProposal",
                 "/api/agent/observability/eval/trace-sets/phase1-core-golden/catalog-patch-proposal");
         assertThat(review.workbenchPolicy())

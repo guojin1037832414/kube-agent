@@ -47,6 +47,7 @@ public class ObservabilityController {
     private final AgentEvalWorkbenchTraceSetDetailService evalWorkbenchTraceSetDetailService;
     private final AgentEvalWorkbenchPromotionWorkflowService evalWorkbenchPromotionWorkflowService;
     private final AgentEvalWorkbenchCatalogPatchReviewService evalWorkbenchCatalogPatchReviewService;
+    private final AgentEvalWorkbenchGateBundleSummaryService evalWorkbenchGateBundleSummaryService;
     private final AgentPrincipalResolver principalResolver;
 
     public ObservabilityController(AgentMetricsService metricsService,
@@ -63,6 +64,7 @@ public class ObservabilityController {
                                    AgentEvalWorkbenchTraceSetDetailService evalWorkbenchTraceSetDetailService,
                                    AgentEvalWorkbenchPromotionWorkflowService evalWorkbenchPromotionWorkflowService,
                                    AgentEvalWorkbenchCatalogPatchReviewService evalWorkbenchCatalogPatchReviewService,
+                                   AgentEvalWorkbenchGateBundleSummaryService evalWorkbenchGateBundleSummaryService,
                                    AgentPrincipalResolver principalResolver) {
         this.metricsService = metricsService;
         this.auditSnapshotProvider = auditSnapshotProvider;
@@ -78,6 +80,7 @@ public class ObservabilityController {
         this.evalWorkbenchTraceSetDetailService = evalWorkbenchTraceSetDetailService;
         this.evalWorkbenchPromotionWorkflowService = evalWorkbenchPromotionWorkflowService;
         this.evalWorkbenchCatalogPatchReviewService = evalWorkbenchCatalogPatchReviewService;
+        this.evalWorkbenchGateBundleSummaryService = evalWorkbenchGateBundleSummaryService;
         this.principalResolver = principalResolver;
     }
 
@@ -252,6 +255,17 @@ public class ObservabilityController {
             return guard;
         }
         return ResponseEntity.ok(ApiResponse.ok(evalWorkbenchOverviewService.overview()));
+    }
+
+    /** Build a frontend-ready gate-bundle summary without accepting caller trace IDs. */
+    @GetMapping("/eval/workbench/gate-bundle-summary")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentEvalWorkbenchGateBundleSummaryResponse>> evalWorkbenchGateBundleSummary() {
+        ResponseEntity<ApiResponse<AgentEvalWorkbenchGateBundleSummaryResponse>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return ResponseEntity.ok(ApiResponse.ok(evalWorkbenchGateBundleSummaryService.summary()));
     }
 
     /** Build a frontend-ready detail view for one trace set in the eval workbench. */

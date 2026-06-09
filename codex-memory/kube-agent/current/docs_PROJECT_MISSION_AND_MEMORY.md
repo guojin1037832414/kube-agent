@@ -10,7 +10,36 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.47-1
+## Latest Phase 1 Core Memory - M5.48-1
+
+M5.48-1 adds an admin-only workbench-level gate bundle summary model for future `vue-kube-manager` eval workbench pages.
+
+Delivered:
+
+- Added `AgentEvalWorkbenchGateBundleSummaryResponse`.
+- Added `AgentEvalWorkbenchGateBundleSummaryService`.
+- Added admin-only `GET /api/agent/observability/eval/workbench/gate-bundle-summary`.
+- Extended `GET /api/agent/observability/eval/workbench/capabilities` with `workbench-gate-bundle-summary`.
+- Made `workbench-gate-bundle-summary` part of the recommended UI flow after `workbench-catalog-patch-review`.
+- Extended trace-set detail, workbench promotion workflow, and workbench catalog patch review endpoint templates with `workbenchGateBundleSummary`.
+- The response wraps the compact trace-set gate bundle with bundle summary, trace-set gate rows, CI artifact metadata, blocker summary, next actions, endpoint templates, policy proof, and privacy proof.
+
+Security boundary:
+
+- The endpoint is admin-only at URL and method levels.
+- It is a summary/read model over the current catalog gate bundle and does not accept caller trace IDs.
+- It does not mutate `observability/eval-trace-sets.json`, enable CI blocking, execute Tools, call kube-manager, use an LLM, make external calls, write catalog data, or embed replay timelines / per-trace eval reports.
+- Catalog promotion authority remains human Git review only.
+- `summaryOnly=true`, `requestTraceIdOverrideAllowed=false`, `catalogMutationAllowed=false`, `runtimeCatalogWrite=false`, `ciBlockingEnabled=false`, `toolExecution=false`, `kubeManagerCalls=false`, `llmUsed=false`, and `externalCalls=false`.
+- NIM / HPC / Slurm / BCM remain Phase 2 paused scope.
+
+Learning point: a top-tier Agent workbench should separate machine CI artifacts from operator summaries. The backend can make CI evidence understandable to humans, but a page view must not become a release switch or request-time trace override path.
+
+Latest verified command:
+
+- `mvn -q "-Dtest=AgentEvalWorkbenchGateBundleSummaryServiceTest,AgentEvalWorkbenchCapabilitiesServiceTest,AgentEvalWorkbenchOverviewServiceTest,AgentEvalWorkbenchTraceSetDetailServiceTest,AgentEvalWorkbenchPromotionWorkflowServiceTest,AgentEvalWorkbenchCatalogPatchReviewServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+## Previous Phase 1 Core Memory - M5.47-1
 
 M5.47-1 adds an admin-only workbench-level catalog patch review model for future `vue-kube-manager` eval workbench pages.
 
