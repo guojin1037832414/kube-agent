@@ -10,7 +10,36 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.54-1
+## Latest Phase 1 Core Memory - M5.55-1
+
+M5.55-1 adds the Vue-ready kube-manager HTTP outlet governance workbench overview.
+
+Delivered:
+
+- Added `AgentKubeManagerHttpOutletGovernanceWorkbenchOverviewResponse`.
+- Added `AgentKubeManagerHttpOutletGovernanceWorkbenchOverviewService`.
+- Added admin-only `GET /api/agent/observability/kube-manager/http-outlet/governance-workbench/overview`.
+- The overview composes M5.49 health summary, M5.50 write retry readiness, M5.51 idempotency, M5.52 operation safety, M5.53 retry governance, and M5.54 release gate contracts.
+- Added six governance cards, recommended workflow, next actions, workbench policy, and aggregate privacy proof for future `vue-kube-manager` rendering.
+- Added service, controller, source-contract, and MockMvc security coverage.
+
+Security boundary:
+
+- `workbenchStatus=WRITE_GOVERNANCE_NOT_READY`.
+- `governanceCardCount=6`, `blockingCardCount=5`, and `boundRuntimeContractCount=0`.
+- `releaseGateOpen=false`, `writeRetryEnabled=false`, `automaticWriteRetryAllowed=false`, `runtimeReleaseGateOpenCount=0`, `runtimeRetryableFailureClassCount=0`, and `automaticCompensationPolicyCount=0`.
+- The observability endpoint is admin-only, local-process-only, read-only, overview-only, and frontend-navigation-only.
+- No `KubeManagerHttpClient`, `RestClient`, kube-manager `8100`, `/api/login`, `executeWrite`, Tool, HITL invocation, LLM, external service, audit writer, durable receipt writer, durable storage mutation, HTTP header injection, readback executor, compensation executor, release switch, resilience registry mutation, runtime enable switch, or write retry enablement is added.
+- The overview does not expose raw principal, raw organization, raw backend path, raw endpoint, raw request/response body, raw release evidence, raw receipt, token, password, or Authorization header.
+- NIM / HPC / Slurm / BCM remain Phase 2 paused scope.
+
+Learning point: top-tier Agent frontend workbenches should render backend-owned governance contracts, not invent authority in Vue. M5.55 turns the write-safety chain into a single operator-facing control-plane read model while keeping every runtime write gate closed.
+
+Latest verified command:
+
+- `mvn -q "-Dtest=AgentKubeManagerHttpOutletGovernanceWorkbenchOverviewServiceTest,AgentKubeManagerHttpOutletHealthSummaryServiceTest,AgentKubeManagerWriteRetryReadinessServiceTest,AgentKubeManagerWriteIdempotencyContractServiceTest,AgentKubeManagerWriteOperationSafetyContractServiceTest,AgentKubeManagerWriteRetryGovernanceContractServiceTest,AgentKubeManagerWriteReleaseGateContractServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+## Previous Phase 1 Core Memory - M5.54-1
 
 M5.54-1 adds the generic kube-manager write release gate contract required before any future controlled write execution or write retry can be considered.
 

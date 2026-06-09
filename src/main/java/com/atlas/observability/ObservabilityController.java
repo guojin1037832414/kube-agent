@@ -40,6 +40,7 @@ public class ObservabilityController {
     private final AgentKubeManagerWriteOperationSafetyContractService kubeManagerWriteOperationSafetyContractService;
     private final AgentKubeManagerWriteRetryGovernanceContractService kubeManagerWriteRetryGovernanceContractService;
     private final AgentKubeManagerWriteReleaseGateContractService kubeManagerWriteReleaseGateContractService;
+    private final AgentKubeManagerHttpOutletGovernanceWorkbenchOverviewService kubeManagerHttpOutletGovernanceWorkbenchOverviewService;
     private final AgentAuditSnapshotProvider auditSnapshotProvider;
     private final AgentAuditQueryService auditQueryService;
     private final AgentReplayTimelineService replayTimelineService;
@@ -63,6 +64,7 @@ public class ObservabilityController {
                                    AgentKubeManagerWriteOperationSafetyContractService kubeManagerWriteOperationSafetyContractService,
                                    AgentKubeManagerWriteRetryGovernanceContractService kubeManagerWriteRetryGovernanceContractService,
                                    AgentKubeManagerWriteReleaseGateContractService kubeManagerWriteReleaseGateContractService,
+                                   AgentKubeManagerHttpOutletGovernanceWorkbenchOverviewService kubeManagerHttpOutletGovernanceWorkbenchOverviewService,
                                    AgentAuditSnapshotProvider auditSnapshotProvider,
                                    AgentAuditQueryService auditQueryService,
                                    AgentReplayTimelineService replayTimelineService,
@@ -85,6 +87,7 @@ public class ObservabilityController {
         this.kubeManagerWriteOperationSafetyContractService = kubeManagerWriteOperationSafetyContractService;
         this.kubeManagerWriteRetryGovernanceContractService = kubeManagerWriteRetryGovernanceContractService;
         this.kubeManagerWriteReleaseGateContractService = kubeManagerWriteReleaseGateContractService;
+        this.kubeManagerHttpOutletGovernanceWorkbenchOverviewService = kubeManagerHttpOutletGovernanceWorkbenchOverviewService;
         this.auditSnapshotProvider = auditSnapshotProvider;
         this.auditQueryService = auditQueryService;
         this.replayTimelineService = replayTimelineService;
@@ -167,6 +170,17 @@ public class ObservabilityController {
             return guard;
         }
         return ResponseEntity.ok(ApiResponse.ok(kubeManagerWriteReleaseGateContractService.contract()));
+    }
+
+    /** Build a Vue-ready governance overview without opening kube-manager writes. */
+    @GetMapping("/kube-manager/http-outlet/governance-workbench/overview")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentKubeManagerHttpOutletGovernanceWorkbenchOverviewResponse>> kubeManagerHttpOutletGovernanceWorkbenchOverview() {
+        ResponseEntity<ApiResponse<AgentKubeManagerHttpOutletGovernanceWorkbenchOverviewResponse>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return ResponseEntity.ok(ApiResponse.ok(kubeManagerHttpOutletGovernanceWorkbenchOverviewService.overview()));
     }
 
     @GetMapping("/snapshot")

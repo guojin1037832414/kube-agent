@@ -74,6 +74,15 @@ class ObservabilityControllerTest {
         new AgentKubeManagerWriteRetryGovernanceContractService();
     private final AgentKubeManagerWriteReleaseGateContractService kubeManagerWriteReleaseGateContractService =
         new AgentKubeManagerWriteReleaseGateContractService();
+    private final AgentKubeManagerHttpOutletGovernanceWorkbenchOverviewService kubeManagerHttpOutletGovernanceWorkbenchOverviewService =
+        new AgentKubeManagerHttpOutletGovernanceWorkbenchOverviewService(
+            kubeManagerHttpOutletHealthSummaryService,
+            kubeManagerWriteRetryReadinessService,
+            kubeManagerWriteIdempotencyContractService,
+            kubeManagerWriteOperationSafetyContractService,
+            kubeManagerWriteRetryGovernanceContractService,
+            kubeManagerWriteReleaseGateContractService
+        );
     private final ObservabilityController controller = new ObservabilityController(
         new AgentMetricsService(new SimpleMeterRegistry()),
         kubeManagerHttpOutletHealthSummaryService,
@@ -82,6 +91,7 @@ class ObservabilityControllerTest {
         kubeManagerWriteOperationSafetyContractService,
         kubeManagerWriteRetryGovernanceContractService,
         kubeManagerWriteReleaseGateContractService,
+        kubeManagerHttpOutletGovernanceWorkbenchOverviewService,
         auditRecorder,
         auditRecorder,
         replayTimelineService,
@@ -682,6 +692,83 @@ class ObservabilityControllerTest {
         assertThat(contract.toString())
             .contains("agent-kube-manager-write-release-gate-contract.v1", "CONTRACT_DEFINED_NOT_BOUND")
             .doesNotContain("secret-password", "Bearer", "user-token", "/api/login", "/api/100002");
+    }
+
+    @Test
+    void kubeManagerHttpOutletGovernanceWorkbenchOverview_shouldRequireAdminAndReturnVueReadModel() {
+        ResponseEntity<ApiResponse<AgentKubeManagerHttpOutletGovernanceWorkbenchOverviewResponse>> anonymous =
+            controller.kubeManagerHttpOutletGovernanceWorkbenchOverview();
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentKubeManagerHttpOutletGovernanceWorkbenchOverviewResponse>> user =
+            controller.kubeManagerHttpOutletGovernanceWorkbenchOverview();
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        userPermissionContext.unbind();
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentKubeManagerHttpOutletGovernanceWorkbenchOverviewResponse>> admin =
+            controller.kubeManagerHttpOutletGovernanceWorkbenchOverview();
+
+        assertThat(admin.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(admin.getBody()).isNotNull();
+        AgentKubeManagerHttpOutletGovernanceWorkbenchOverviewResponse overview = admin.getBody().getData();
+        assertThat(overview.schemaVersion())
+            .isEqualTo("agent-kube-manager-http-outlet-governance-workbench-overview.v1");
+        assertThat(overview.workbenchStatus()).isEqualTo("WRITE_GOVERNANCE_NOT_READY");
+        assertThat(overview.frontendTarget())
+            .isEqualTo("vue-kube-manager kube-manager HTTP outlet governance workbench");
+        assertThat(overview.httpOutletStatus()).isEqualTo("READY");
+        assertThat(overview.writeReadinessVerdict()).isEqualTo("NOT_READY");
+        assertThat(overview.releaseGateOpen()).isFalse();
+        assertThat(overview.writeRetryEnabled()).isFalse();
+        assertThat(overview.automaticWriteRetryAllowed()).isFalse();
+        assertThat(overview.governanceCardCount()).isEqualTo(6);
+        assertThat(overview.blockingCardCount()).isEqualTo(5);
+        assertThat(overview.boundRuntimeContractCount()).isZero();
+        assertThat(overview.governanceCards()).extracting(card -> card.get("id"))
+            .containsExactly(
+                "http-outlet-health",
+                "write-retry-readiness",
+                "write-idempotency-contract",
+                "write-operation-safety-contract",
+                "write-retry-governance-contract",
+                "write-release-gate-contract"
+            );
+        assertThat(overview.recommendedWorkflow())
+            .contains("governance-workbench-overview", "human-release-review-before-runtime-binding");
+        assertThat(overview.nextActions())
+            .contains("keep-kube-manager-write-retry-disabled", "keep-nim-hpc-slurm-bcm-paused-for-phase2");
+        assertThat(overview.workbenchPolicy())
+            .containsEntry("runtimeWriteBindingAllowed", false)
+            .containsEntry("runtimeReleaseGateSwitchPresent", false)
+            .containsEntry("writeRetryEnablementAllowed", false)
+            .containsEntry("kubeManagerCalls", false)
+            .containsEntry("remoteProbeExecuted", false)
+            .containsEntry("restClientUsed", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("llmUsed", false)
+            .containsEntry("externalCalls", false)
+            .containsEntry("auditWrite", false)
+            .containsEntry("durableReceiptIssued", false)
+            .containsEntry("hitlInvocation", false)
+            .containsEntry("phase2NimHpcSlurmBcmTouched", false);
+        assertThat(overview.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("containsRawBaseUrl", false)
+            .containsEntry("containsToken", false)
+            .containsEntry("containsLoginPassword", false)
+            .containsEntry("containsRawEndpoint", false)
+            .containsEntry("kubeManagerCalls", false);
+        assertThat(overview.toString())
+            .contains("governance-workbench-overview", "write-release-gate-contract")
+            .doesNotContain("kube-manager.internal", "secret-password", "Bearer", "user-token", "/api/login", "/api/100002");
     }
 
     @Test

@@ -127,6 +127,14 @@ M5.54-1 adds the release gate layer before any runtime write binding:
 
 Technology judgment: this closes another dangerous gap in the generic write chain. A top-tier Agent must not let prompt text, UI flags, or successful side effects become release authority. Release authority must be a typed evidence contract that can later be bound to durable audit, HITL, eval gates, and Git/release review.
 
+M5.55-1 adds the frontend workbench layer for this governance chain:
+- New admin-only endpoint `GET /api/agent/observability/kube-manager/http-outlet/governance-workbench/overview` composes M5.49-M5.54 into one Vue-ready read model.
+- The overview exposes six governance cards, recommended workflow, next actions, policy proof, and aggregate privacy proof.
+- Current state remains `WRITE_GOVERNANCE_NOT_READY`: `boundRuntimeContractCount=0`, `releaseGateOpen=false`, `writeRetryEnabled=false`, and `automaticWriteRetryAllowed=false`.
+- The endpoint is frontend-navigation-only. It does not call kube-manager, execute Tools, invoke HITL, issue receipts, mutate durable storage, mutate Resilience4j, open a release gate, or enable write retry.
+
+Technology judgment: advanced Agent platforms need UI-level governance contracts, not just backend endpoints. This keeps `vue-kube-manager` from guessing scattered safety states and keeps all write authority behind future code review, durable evidence, eval gates, and release review.
+
 M5.29-1 已把 Spring Security 推进到 HTTP 安全入口：
 
 - 新增 `AgentSecurityConfig`，用 `SecurityFilterChain` 承接标准 Web 安全主线；

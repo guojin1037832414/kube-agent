@@ -6,6 +6,27 @@
 
 ---
 
+## [M5.55-1] - Kube-manager HTTP outlet governance workbench overview
+
+**Delivery**: Added a Vue-ready, admin-only governance overview that composes the M5.49-M5.54 kube-manager HTTP outlet safety contracts into one operator workbench read model.
+**Changes**
+- Added `AgentKubeManagerHttpOutletGovernanceWorkbenchOverviewResponse`.
+- Added `AgentKubeManagerHttpOutletGovernanceWorkbenchOverviewService`.
+- Added admin-only `GET /api/agent/observability/kube-manager/http-outlet/governance-workbench/overview`.
+- The overview embeds health summary, write retry readiness, idempotency, operation safety, retry governance, and release gate contracts.
+- Added governance cards, recommended workflow, next actions, workbench policy, and aggregate privacy proof for future `vue-kube-manager` rendering.
+- Added service, controller, source-contract, and MockMvc security coverage.
+**Verification**
+- `mvn -q "-Dtest=AgentKubeManagerHttpOutletGovernanceWorkbenchOverviewServiceTest,AgentKubeManagerHttpOutletHealthSummaryServiceTest,AgentKubeManagerWriteRetryReadinessServiceTest,AgentKubeManagerWriteIdempotencyContractServiceTest,AgentKubeManagerWriteOperationSafetyContractServiceTest,AgentKubeManagerWriteRetryGovernanceContractServiceTest,AgentKubeManagerWriteReleaseGateContractServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed.
+**Security**
+- `workbenchStatus=WRITE_GOVERNANCE_NOT_READY`.
+- `governanceCardCount=6`, `blockingCardCount=5`, and `boundRuntimeContractCount=0`.
+- `releaseGateOpen=false`, `writeRetryEnabled=false`, `automaticWriteRetryAllowed=false`, `runtimeReleaseGateOpenCount=0`, `runtimeRetryableFailureClassCount=0`, and `automaticCompensationPolicyCount=0`.
+- The endpoint is admin-only, read-only, local-process-only, overview-only, and frontend-navigation-only.
+- No kube-manager call, `KubeManagerHttpClient` binding, `RestClient`, `executeWrite`, Tool execution, HITL invocation, LLM call, external call, audit write, durable receipt issuance, durable storage mutation, HTTP header injection, readback execution, release switch opening, resilience registry mutation, runtime enable switch, compensation execution, or write retry enablement is added.
+- Raw principal, raw organization, raw backend path, raw endpoint, raw request/response body, token, password, Authorization header, raw release evidence, and raw receipt are not exposed.
+- NIM / HPC / Slurm / BCM remain Phase 2 paused scope.
+
 ## [M5.54-1] - Kube-manager write release gate contract
 
 **Delivery**: Added a review-only durable receipt and HITL/release evidence gate contract for future controlled kube-manager writes.

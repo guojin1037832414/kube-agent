@@ -1,0 +1,108 @@
+{
+  "schemaVersion": "kube-agent-workspace-recovery-sha256.v1",
+  "project": "kube-agent",
+  "wave": "M5.55-1",
+  "title": "Kube-manager HTTP outlet governance workbench overview",
+  "generatedAt": "2026-06-09T13:50:00+08:00",
+  "branch": "codex/m521-29-top-agent-mission",
+  "status": "verified",
+  "notes": [
+    "M5.55 adds an admin-only Vue-ready governance workbench overview for kube-manager HTTP outlet write safety.",
+    "The overview composes M5.49 health summary, M5.50 write retry readiness, M5.51 idempotency, M5.52 operation safety, M5.53 retry governance, and M5.54 release gate contracts.",
+    "workbenchStatus=WRITE_GOVERNANCE_NOT_READY, governanceCardCount=6, blockingCardCount=5, boundRuntimeContractCount=0.",
+    "releaseGateOpen=false, writeRetryEnabled=false, automaticWriteRetryAllowed=false, runtimeReleaseGateOpenCount=0, runtimeRetryableFailureClassCount=0, automaticCompensationPolicyCount=0.",
+    "No kube-manager call, Tool execution, HITL invocation, audit write, durable receipt issuance, release switch, write retry enablement, or NIM/HPC/Slurm/BCM work is added."
+  ],
+  "files": [
+    {
+      "path": "src/main/java/com/atlas/observability/AgentKubeManagerHttpOutletGovernanceWorkbenchOverviewResponse.java",
+      "sha256": "EBA8F4439030BD1D050C5BA1185D0E873EE3FB7EA4EC630937F4A2B9E1DFF11A",
+      "length": 22592
+    },
+    {
+      "path": "src/main/java/com/atlas/observability/AgentKubeManagerHttpOutletGovernanceWorkbenchOverviewService.java",
+      "sha256": "94DFD38FF1F0C98A8CF7B11DBE9F724B442D1AD87AF8E5B52EEA2ABA889D5198",
+      "length": 4220
+    },
+    {
+      "path": "src/main/java/com/atlas/observability/ObservabilityController.java",
+      "sha256": "BA5DAA0B1DAA8F8923AEB1B35AFBF9C8BF81B2F629007B116407D95C13932CD0",
+      "length": 30993
+    },
+    {
+      "path": "src/test/java/com/atlas/observability/AgentKubeManagerHttpOutletGovernanceWorkbenchOverviewServiceTest.java",
+      "sha256": "7B4C05DFD011043BFF6CDF322FAEF41CC1157A9A9C9410DBCD73960733AEBD50",
+      "length": 11733
+    },
+    {
+      "path": "src/test/java/com/atlas/observability/ObservabilityControllerTest.java",
+      "sha256": "402E7D115FED62647CE30EFD80AD03AED71FBC65A05E285C4F1B42E4C296C230",
+      "length": 111154
+    },
+    {
+      "path": "src/test/java/com/atlas/observability/ObservabilityControllerSecurityContractTest.java",
+      "sha256": "267E8D09387739F0353BB783838E73EB962C46E400A15F6B953E9B9CDD7ADEA6",
+      "length": 8450
+    },
+    {
+      "path": "src/test/java/com/atlas/auth/AgentSecurityConfigWebMvcTest.java",
+      "sha256": "4AE651B83FE3978FAF25705B519D55B10D1D7E02FE30A8C4B58886226B862B6A",
+      "length": 31732
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "B1E2A1918B950B957203F70A376CB0CD12175D6FE1F92C50C90C26F770E79EFF",
+      "length": 331496
+    },
+    {
+      "path": "docs/PROJECT_MISSION_AND_MEMORY.md",
+      "sha256": "AEF4DDC64FE3B876D93997073C28596CB05B14C59BB7822A24FF9933F03D9AEE",
+      "length": 363051
+    },
+    {
+      "path": "docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+      "sha256": "A0F407556A1B911C568D0220419397AAD416F6422CA77DF3B9082F493DAF6188",
+      "length": 122799
+    },
+    {
+      "path": "docs/tech-stack/BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+      "sha256": "A085229ED41DF511AEDF29D89CF5F35364C6EB174C35B3F2D58DF0B82CA38D21",
+      "length": 57671
+    },
+    {
+      "path": "docs/M5_55_KUBE_MANAGER_HTTP_OUTLET_GOVERNANCE_WORKBENCH_OVERVIEW_20260609.md",
+      "sha256": "2C8220C4D9CA18D74AC2E6DA546545FD0EC9F214561328BF4C64D803018FA73C",
+      "length": 4472
+    },
+    {
+      "path": "codex-memory/kube-agent/current/RECOVERY_STATUS.md",
+      "sha256": "8516C9C5A5B424F1790F3F322BC8BE7C9F07C0F3268BB625237D54B66DFBED50",
+      "length": 42514
+    },
+    {
+      "path": "codex-memory/kube-agent/current/CHANGELOG.md",
+      "sha256": "B1E2A1918B950B957203F70A376CB0CD12175D6FE1F92C50C90C26F770E79EFF",
+      "length": 331496
+    },
+    {
+      "path": "codex-memory/kube-agent/current/docs_PROJECT_MISSION_AND_MEMORY.md",
+      "sha256": "AEF4DDC64FE3B876D93997073C28596CB05B14C59BB7822A24FF9933F03D9AEE",
+      "length": 363051
+    },
+    {
+      "path": "codex-memory/kube-agent/current/docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+      "sha256": "A0F407556A1B911C568D0220419397AAD416F6422CA77DF3B9082F493DAF6188",
+      "length": 122799
+    },
+    {
+      "path": "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+      "sha256": "A085229ED41DF511AEDF29D89CF5F35364C6EB174C35B3F2D58DF0B82CA38D21",
+      "length": 57671
+    },
+    {
+      "path": "codex-memory/kube-agent/current/docs_M5_55_KUBE_MANAGER_HTTP_OUTLET_GOVERNANCE_WORKBENCH_OVERVIEW_20260609.md",
+      "sha256": "2C8220C4D9CA18D74AC2E6DA546545FD0EC9F214561328BF4C64D803018FA73C",
+      "length": 4472
+    }
+  ]
+}

@@ -2,6 +2,31 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-09 M5.55 Kube-Manager HTTP Outlet Governance Workbench Overview
+
+M5.55 composes the M5.49-M5.54 kube-manager HTTP outlet safety contracts into one Vue-ready governance workbench overview.
+
+```text
+Health summary + write retry readiness + idempotency + operation safety
+        + retry governance + release gate
+        |
+        v
+AgentKubeManagerHttpOutletGovernanceWorkbenchOverviewService
+        |
+        | admin-only local read model
+        v
+/api/agent/observability/kube-manager/http-outlet/governance-workbench/overview
+```
+
+Key design:
+- `AgentKubeManagerHttpOutletGovernanceWorkbenchOverviewResponse` is a page-level contract for `vue-kube-manager`, not a runtime control API.
+- The response embeds the existing safe read models and adds six governance cards, `recommendedWorkflow`, `nextActions`, `workbenchPolicy`, and aggregate privacy proof.
+- The current state is intentionally `workbenchStatus=WRITE_GOVERNANCE_NOT_READY`, `blockingCardCount=5`, `boundRuntimeContractCount=0`, `releaseGateOpen=false`, and `writeRetryEnabled=false`.
+- The overview is frontend-navigation-only. It does not call kube-manager, execute Tools, invoke HITL, issue receipts, mutate audit/durable storage, mutate Resilience4j, or expose a retry/release switch.
+- NIM / HPC / Slurm / BCM remain Phase 2 paused scope.
+
+Learning point: advanced Agent UX should be contract-driven. Vue should not infer safety from scattered endpoints or create buttons that imply authority. The backend should publish a typed governance model that explains what exists, what is bound, what is blocked, and what review path comes next.
+
 ## 2026-06-09 M5.54 Kube-Manager Write Release Gate Contract
 
 M5.54 turns durable prewrite receipt and HITL/release evidence into a generic kube-manager write release gate contract.
