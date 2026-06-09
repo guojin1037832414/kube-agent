@@ -2,6 +2,48 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-09 M5.68 Memory/RAG Eval-Suite Binding Contract
+
+M5.68 implements the fourth M5.64 roadmap slice as a backend-owned Memory/RAG eval-suite binding contract. It answers the question between "we have Memory/RAG gate definitions" and "retrieval may affect prompts": are those gates mapped to deterministic suite checks and reviewed trace-set evidence?
+
+```text
+M5.62 Memory/RAG eval gate contract
+        |
+        +-- 9 required gate checks
+        |   citation fidelity, source digest, privacy, tenant isolation,
+        |   lifecycle, retrieval budget, unsupported answer, prompt boundary
+        |
+        v
+M5.68 eval-suite binding contract
+        |
+        +-- future suite check codes
+        +-- required trace-set ids
+        +-- current mapping gaps
+        |
+        v
+future reviewed traces + advisory gate bundle
+        |
+        v
+separate reviewed retrieval/runtime promotion
+```
+
+Endpoint:
+
+```text
+/api/agent/observability/memory-rag/eval-suite-binding-contract
+```
+
+Key design:
+- `AgentMemoryRagEvalSuiteBindingContractResponse` publishes `schemaVersion=agent-memory-rag-eval-suite-binding-contract.v1`.
+- Current state is fail-closed: `contractStatus=CONTRACT_DEFINED_NOT_BOUND`, `memoryRagEvalSuiteBound=false`, `memoryRagTraceSetBound=false`, `evalRuntimeExecuted=false`, `ciBlockingEnabled=false`, and `retrievalRuntimeAllowedNow=false`.
+- It maps the M5.62 gate checks to future codes such as `MEMORY_RAG_CITATION_FIDELITY`, `MEMORY_RAG_SOURCE_DIGEST_INTEGRITY`, and `MEMORY_RAG_PROMPT_INJECTION_BOUNDARY`.
+- It declares three future trace sets: `memory-rag-citation-fidelity`, `memory-rag-privacy-tenant`, and `memory-rag-lifecycle-policy`.
+- It integrates with Memory/RAG readiness, eval workbench capabilities, Phase 1 roadmap, Vue readiness control plane, advanced technology adoption, and top-tier readiness.
+
+Learning point: 顶级 RAG 的关键不是“先把向量库接上”。关键是先证明每个将来会影响回答的记忆证据都有 suite check、trace set、reviewed evidence、gate bundle 和 Vue 可见性。M5.68 把 gate intent 和 future runtime binding 之间的空白补成后端契约，所以后续 retrieval runtime 不会靠口头约定打开。
+
+Technology point: M5.68 is how the project safely absorbs the newest Agent stack into Phase 1. OpenAI Agents-style tools, handoffs, guardrails, tracing and eval loops; Spring AI Chat Memory, advisors, VectorStore RAG, MCP and observability; MCP tools/resources/prompts with consent; OTel GenAI spans; and A2A Agent Card/task/artifact provenance all remain in scope. The implementation still keeps runtime authority closed until project-owned contracts, deterministic evals, reviewed redacted traces, Vue operator visibility, and recovery memory prove the path.
+
 ## 2026-06-09 M5.67 Release-Blocking Eval Gate Contract
 
 M5.67 implements the third M5.64 roadmap slice as a backend-owned release-blocking eval gate contract. It answers a stricter release question: even if eval artifacts exist, are they mature enough to become a release blocker?

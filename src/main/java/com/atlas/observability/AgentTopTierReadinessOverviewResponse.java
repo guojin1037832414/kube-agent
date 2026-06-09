@@ -204,20 +204,22 @@ public record AgentTopTierReadinessOverviewResponse(
             "memory-rag-learning",
             "Persistent Memory and RAG learning layer",
             "BLOCKED",
-            "Safe summary memory, readiness, citation/source, source evidence digest, durable lifecycle, and eval gate contracts exist, but Phase 1 still needs runtime durable store binding, retrieval binding, and curated eval coverage.",
+            "Safe summary memory, readiness, citation/source, source evidence digest, durable lifecycle, eval gate, and eval-suite binding contracts exist, but Phase 1 still needs runtime durable store binding, retrieval binding, and curated eval coverage.",
             "/api/agent/observability/memory-rag/readiness",
-            List.of("conversation summary memory", "Memory/RAG readiness contract", "source evidence digest contract", "durable lifecycle contract", "eval gate contract", "future vector store"),
-            Map.of(
-                "readinessContractExists", true,
-                "durableMemoryImplemented", false,
-                "durableMemoryLifecycleContractImplemented", true,
-                "durableMemoryLifecycleContractBound", false,
-                "memoryRagEvalGateContractImplemented", true,
-                "memoryRagEvalGateContractBound", false,
-                "vectorRetrievalImplemented", false,
-                "citationContractImplemented", true,
-                "sourceEvidenceDigestContractImplemented", true,
-                "sourceEvidenceDigestBoundToRuntime", false
+            List.of("conversation summary memory", "Memory/RAG readiness contract", "source evidence digest contract", "durable lifecycle contract", "eval gate contract", "eval-suite binding contract", "future vector store"),
+            Map.ofEntries(
+                Map.entry("readinessContractExists", true),
+                Map.entry("durableMemoryImplemented", false),
+                Map.entry("durableMemoryLifecycleContractImplemented", true),
+                Map.entry("durableMemoryLifecycleContractBound", false),
+                Map.entry("memoryRagEvalGateContractImplemented", true),
+                Map.entry("memoryRagEvalGateContractBound", false),
+                Map.entry("memoryRagEvalSuiteBindingContractImplemented", true),
+                Map.entry("memoryRagEvalSuiteBindingContractBound", false),
+                Map.entry("vectorRetrievalImplemented", false),
+                Map.entry("citationContractImplemented", true),
+                Map.entry("sourceEvidenceDigestContractImplemented", true),
+                Map.entry("sourceEvidenceDigestBoundToRuntime", false)
             )
         ));
         cards.add(card(
@@ -309,7 +311,7 @@ public record AgentTopTierReadinessOverviewResponse(
             "wire-vue-readiness-control-plane",
             "populate-reviewed-redacted-eval-trace-evidence",
             "promote-eval-gate-bundle-from-evidence-only-to-reviewed-blocking",
-            "bind-memory-rag-eval-gate-before-retrieval-runtime",
+            "bind-memory-rag-eval-suite-before-retrieval-runtime",
             "bind-durable-memory-runtime-after-lifecycle-and-source-digest-contract",
             "add-mcp-tools-call-only-after-safe-tool-executor-consent-hitl-audit-eval-binding",
             "keep-nim-hpc-slurm-bcm-paused-until-phase-2"
@@ -345,6 +347,7 @@ public record AgentTopTierReadinessOverviewResponse(
         endpoints.put("memoryRagSourceEvidenceDigestContract", "/api/agent/observability/memory-rag/source-evidence-digest-contract");
         endpoints.put("memoryRagDurableMemoryLifecycleContract", "/api/agent/observability/memory-rag/durable-memory-lifecycle-contract");
         endpoints.put("memoryRagEvalGateContract", "/api/agent/observability/memory-rag/eval-gate-contract");
+        endpoints.put("memoryRagEvalSuiteBindingContract", "/api/agent/observability/memory-rag/eval-suite-binding-contract");
         endpoints.put("replayTimeline", "/api/agent/observability/replay/trace/{traceId}");
         endpoints.put("memorySummaries", "/api/agent/memory/summaries");
         return Map.copyOf(endpoints);

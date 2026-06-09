@@ -67,6 +67,7 @@ class AgentMemoryRagReadinessServiceTest {
             .containsEntry("sourceEvidenceDigestContract", "/api/agent/observability/memory-rag/source-evidence-digest-contract")
             .containsEntry("durableMemoryLifecycleContract", "/api/agent/observability/memory-rag/durable-memory-lifecycle-contract")
             .containsEntry("memoryRagEvalGateContract", "/api/agent/observability/memory-rag/eval-gate-contract")
+            .containsEntry("memoryRagEvalSuiteBindingContract", "/api/agent/observability/memory-rag/eval-suite-binding-contract")
             .containsEntry("memorySummaries", "/api/agent/memory/summaries");
         assertThat(readiness.currentEvidence())
             .containsEntry("safeSummaryMemoryControllerExists", true)
@@ -81,11 +82,14 @@ class AgentMemoryRagReadinessServiceTest {
             .containsEntry("sourceEvidenceDigestContractBound", false)
             .containsEntry("citationContractBound", false)
             .containsEntry("memoryRagEvalGateContractDefined", true)
-            .containsEntry("memoryRagEvalGateContractBound", false);
+            .containsEntry("memoryRagEvalGateContractBound", false)
+            .containsEntry("memoryRagEvalSuiteBindingContractDefined", true)
+            .containsEntry("memoryRagEvalSuiteBindingContractBound", false);
         assertThat(readiness.futureEnablementProtocol())
             .containsEntry("runtimeRagAllowedNow", false)
             .containsEntry("requiresDurableMemoryLifecycleContract", true)
             .containsEntry("requiresMemoryRagEvalGateContract", true)
+            .containsEntry("requiresMemoryRagEvalSuiteBindingContract", true)
             .containsEntry("missingEvidenceOutcome", "fail-closed-no-retrieval");
         assertThat(readiness.safety())
             .containsEntry("adminOnly", true)

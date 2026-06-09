@@ -9,6 +9,32 @@
 - 供应链、CI、SBOM、质量门禁进入工程默认路径；
 - Java / Spring / Agent 框架升级以兼容性矩阵推进，不用不可构建的版本号伪装先进。
 
+## 2026-06-09 M5.68 Memory-RAG-Eval-Suite-Binding-Before-Retrieval Rule
+
+M5.68 advances the fourth Phase 1 roadmap step with:
+
+```text
+GET /api/agent/observability/memory-rag/eval-suite-binding-contract
+```
+
+The advanced Agent stack now has an explicit Memory/RAG eval-suite binding contract before retrieval runtime can influence prompts:
+
+- The nine Memory/RAG gate checks from M5.62 must be mapped to deterministic suite check codes.
+- Future trace sets must cover citation fidelity, privacy/tenant isolation, and lifecycle policy evidence.
+- Current built-in suites do not yet contain the required Memory/RAG check codes, so the binding remains `CONTRACT_DEFINED_NOT_BOUND`.
+- CI blocking, eval runtime execution, retrieval runtime, vector-store binding, and prompt influence remain closed.
+- Vue can render exactly which gate checks and trace-set evidence are missing instead of guessing from scattered endpoints.
+
+Technology judgment: latest Agent technology is now represented as evidence contracts, not unchecked runtime wiring. OpenAI Agents SDK / Responses patterns, Spring AI Memory/RAG/MCP APIs, MCP latest tools/resources/prompts semantics, OpenTelemetry GenAI spans, and A2A artifact provenance are all Phase 1 targets. They become production authority only after deterministic suites, reviewed redacted traces, audit/replay evidence, Vue operator visibility, and recovery memory are in place.
+
+Official-version check on 2026-06-09:
+
+- OpenAI official Agent docs and Agents SDK docs emphasize tools, handoffs, guardrails, sessions, tracing, and eval loops as first-class Agent surfaces.
+- Spring AI official reference covers ChatClient, advisors, chat memory, VectorStore RAG, MCP, eval, and observability; the project keeps the verified Spring AI 1.1.x mainline and tracks Spring AI 2.x in the compatibility matrix.
+- MCP latest specification is `2025-11-25`; tools, resources, and prompts remain governed protocol surfaces rather than direct authority.
+- OpenTelemetry GenAI semantic conventions are still development-stage; `atlas.agent.*` remains the stable internal contract and maps outward through adapters.
+- A2A v1.0 exposes Agent Card, tasks, messages, streaming, artifacts, and security concepts; Phase 1 tracks this as future handoff/provenance after local evidence gates mature.
+
 ## 2026-06-09 M5.67 Release-Blocking-Eval-Gate-Before-CI Rule
 
 M5.67 advances the third Phase 1 roadmap step with:

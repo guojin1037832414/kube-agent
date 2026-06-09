@@ -56,6 +56,7 @@ class AgentVueReadinessControlPlaneServiceTest {
                 "reviewed-trace-evidence",
                 "release-blocking-gate-contract",
                 "memory-rag-eval-gate",
+                "memory-rag-eval-suite-binding",
                 "eval-gate-bundle-summary",
                 "mcp-manifest"
             );
@@ -87,6 +88,7 @@ class AgentVueReadinessControlPlaneServiceTest {
             .containsEntry("reviewedEvalTraceEvidence", "/api/agent/observability/eval/reviewed-trace-evidence")
             .containsEntry("releaseBlockingEvalGateContract", "/api/agent/observability/eval/release-blocking-gate-contract")
             .containsEntry("memoryRagEvalGateContract", "/api/agent/observability/memory-rag/eval-gate-contract")
+            .containsEntry("memoryRagEvalSuiteBindingContract", "/api/agent/observability/memory-rag/eval-suite-binding-contract")
             .containsEntry("mcpManifest", "/api/agent/mcp/manifest");
         assertThat(controlPlane.safety())
             .containsEntry("adminOnly", true)

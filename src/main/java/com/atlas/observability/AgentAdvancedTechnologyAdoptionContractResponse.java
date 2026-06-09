@@ -74,8 +74,11 @@ public record AgentAdvancedTechnologyAdoptionContractResponse(
                 "Deterministic eval suites, trace sets, gate bundles, and review artifacts stay in the release path.",
                 "quality gates and regression prevention"),
             technology("memory-rag-contract-stack", "MAINLINE_CONTRACT",
-                "Memory/RAG advances through readiness, citation, source digest, durable lifecycle, and eval-gate contracts.",
+                "Memory/RAG advances through readiness, citation, source digest, durable lifecycle, eval-gate, and eval-suite binding contracts.",
                 "safe learning layer before retrieval runtime"),
+            technology("memory-rag-eval-suite-binding", "MAINLINE_CONTRACT",
+                "Memory/RAG eval gates are mapped to future suite and trace-set evidence before retrieval runtime can bind.",
+                "deterministic RAG quality gates before prompt influence"),
             technology("mcp-manifest-governance", "MAINLINE_CONTRACT",
                 "MCP remains manifest/governance first; runtime tool calls need SafeToolExecutor and release evidence.",
                 "interoperability without authority bypass"),
@@ -163,10 +166,14 @@ public record AgentAdvancedTechnologyAdoptionContractResponse(
     private static Map<String, Object> buildStandardsAlignment() {
         Map<String, Object> standards = new LinkedHashMap<>();
         standards.put("openAiResponsesAndAgentsMappedToLocalContracts", true);
+        standards.put("openAiAgentsSdkToolsHandoffsGuardrailsTracingTracked", true);
         standards.put("openAiTracingAndEvalEvidenceMappedToReviewedTraceContracts", true);
+        standards.put("springAiChatMemoryVectorStoreMcpTracked", true);
         standards.put("springAiMainlineAndUpgradeMatrixSeparated", true);
+        standards.put("mcpLatestSpecConsentAndToolBoundaryTracked", true);
         standards.put("mcpDiscoverySeparatedFromRuntimeAuthority", true);
         standards.put("otelGenAiMappedThroughStableInternalFields", true);
+        standards.put("a2aAgentCardTaskArtifactProvenanceTracked", true);
         standards.put("owaspLlmSecurityThreatsMappedToGates", true);
         standards.put("javaSpringStillPreferredBackendControlPlane", true);
         standards.put("runtimeBound", false);
@@ -186,6 +193,7 @@ public record AgentAdvancedTechnologyAdoptionContractResponse(
         endpoints.put("mcpGovernanceOverview", "/api/agent/mcp/governance/overview");
         endpoints.put("memoryRagReadiness", "/api/agent/observability/memory-rag/readiness");
         endpoints.put("memoryRagEvalGateContract", "/api/agent/observability/memory-rag/eval-gate-contract");
+        endpoints.put("memoryRagEvalSuiteBindingContract", "/api/agent/observability/memory-rag/eval-suite-binding-contract");
         return Map.copyOf(endpoints);
     }
 

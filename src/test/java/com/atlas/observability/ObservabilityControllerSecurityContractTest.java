@@ -51,6 +51,7 @@ class ObservabilityControllerSecurityContractTest {
         assertThat(source).contains("@GetMapping(\"/memory-rag/source-evidence-digest-contract\")");
         assertThat(source).contains("@GetMapping(\"/memory-rag/durable-memory-lifecycle-contract\")");
         assertThat(source).contains("@GetMapping(\"/memory-rag/eval-gate-contract\")");
+        assertThat(source).contains("@GetMapping(\"/memory-rag/eval-suite-binding-contract\")");
         assertThat(source).contains("@GetMapping(\"/replay/trace/{traceId}\")");
         assertThat(source).contains("@GetMapping(\"/eval/trace/{traceId}\")");
         assertThat(source).contains("@PostMapping(\"/eval/suite\")");
@@ -91,6 +92,7 @@ class ObservabilityControllerSecurityContractTest {
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentMemoryRagSourceEvidenceDigestContractResponse>> memoryRagSourceEvidenceDigestContract()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentMemoryRagDurableMemoryLifecycleContractResponse>> memoryRagDurableMemoryLifecycleContract()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentMemoryRagEvalGateContractResponse>> memoryRagEvalGateContract()");
+        assertThat(source).contains("public ResponseEntity<ApiResponse<AgentMemoryRagEvalSuiteBindingContractResponse>> memoryRagEvalSuiteBindingContract()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentReplayTimelineResponse>> replayByTraceId(@PathVariable String traceId,");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentEvalReportResponse>> evalByTraceId(@PathVariable String traceId,");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentEvalSuiteResponse>> evalSuite(@RequestBody(required = false) AgentEvalSuiteRequest request)");

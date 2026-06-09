@@ -75,7 +75,7 @@ public record AgentVueReadinessControlPlaneResponse(
                 "/api/agent/observability/kube-manager/http-outlet/governance-workbench/overview",
                 List.of("governanceCards", "recommendedWorkflow", "nextActions", "workbenchPolicy")),
             dashboard("memory-rag-readiness", "READY_TO_BIND",
-                "Render Memory/RAG readiness, citation, source digest, lifecycle, and eval-gate blockers.",
+                "Render Memory/RAG readiness, citation, source digest, lifecycle, eval-gate, and eval-suite binding blockers.",
                 "/api/agent/observability/memory-rag/readiness",
                 List.of("readinessCards", "requiredEvidence", "endpointMap", "safety")),
             dashboard("eval-workbench", "READY_TO_BIND",
@@ -97,6 +97,7 @@ public record AgentVueReadinessControlPlaneResponse(
             apiBinding("kube-manager-governance", "/api/agent/observability/kube-manager/http-outlet/governance-workbench/overview", "GET", true),
             apiBinding("memory-rag-readiness", "/api/agent/observability/memory-rag/readiness", "GET", true),
             apiBinding("memory-rag-eval-gate", "/api/agent/observability/memory-rag/eval-gate-contract", "GET", true),
+            apiBinding("memory-rag-eval-suite-binding", "/api/agent/observability/memory-rag/eval-suite-binding-contract", "GET", true),
             apiBinding("eval-workbench-overview", "/api/agent/observability/eval/workbench/overview", "GET", true),
             apiBinding("reviewed-trace-evidence", "/api/agent/observability/eval/reviewed-trace-evidence", "GET", true),
             apiBinding("release-blocking-gate-contract", "/api/agent/observability/eval/release-blocking-gate-contract", "GET", true),
@@ -156,6 +157,7 @@ public record AgentVueReadinessControlPlaneResponse(
         endpoints.put("kubeManagerGovernanceOverview", "/api/agent/observability/kube-manager/http-outlet/governance-workbench/overview");
         endpoints.put("memoryRagReadiness", "/api/agent/observability/memory-rag/readiness");
         endpoints.put("memoryRagEvalGateContract", "/api/agent/observability/memory-rag/eval-gate-contract");
+        endpoints.put("memoryRagEvalSuiteBindingContract", "/api/agent/observability/memory-rag/eval-suite-binding-contract");
         endpoints.put("evalWorkbenchOverview", "/api/agent/observability/eval/workbench/overview");
         endpoints.put("reviewedEvalTraceEvidence", "/api/agent/observability/eval/reviewed-trace-evidence");
         endpoints.put("releaseBlockingEvalGateContract", "/api/agent/observability/eval/release-blocking-gate-contract");

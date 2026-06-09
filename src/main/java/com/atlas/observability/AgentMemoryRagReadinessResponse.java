@@ -145,11 +145,13 @@ public record AgentMemoryRagReadinessResponse(
                 "eval-and-observability",
                 "Memory/RAG eval and observability",
                 "PARTIAL",
-                "The Memory/RAG eval gate contract now defines citation, privacy, tenant, lifecycle, and stale retrieval checks; runtime eval suites and curated trace evidence are still unbound.",
-                List.of("eval gate contract", "deterministic eval", "red-team trace set", "privacy leakage check", "staleness check"),
+                "The Memory/RAG eval gate and eval-suite binding contracts now define citation, privacy, tenant, lifecycle, and stale retrieval checks; runtime eval suites and curated trace evidence are still unbound.",
+                List.of("eval gate contract", "eval-suite binding contract", "deterministic eval", "red-team trace set", "privacy leakage check", "staleness check"),
                 Map.of(
                     "memoryRagEvalGateContractDefined", true,
                     "memoryRagEvalGateContractBound", false,
+                    "memoryRagEvalSuiteBindingContractDefined", true,
+                    "memoryRagEvalSuiteBindingContractBound", false,
                     "memoryRagEvalSuiteExists", false,
                     "citationFidelityGateExists", false,
                     "privacyLeakageGateExists", false,
@@ -186,6 +188,7 @@ public record AgentMemoryRagReadinessResponse(
             "define-memory-rag-source-evidence-digest-contract",
             "define-durable-memory-lifecycle-contract",
             "define-memory-rag-eval-gate-contract",
+            "define-memory-rag-eval-suite-binding-contract",
             "bind-durable-memory-runtime-after-lifecycle-and-source-digest-contract",
             "bind-tenant-isolated-vector-store-through-reviewed-retrieval-policy",
             "add-redacted-runbook-and-kube-manager-doc-ingestion-pipeline",
@@ -218,6 +221,8 @@ public record AgentMemoryRagReadinessResponse(
         evidence.put("citationContractBound", false);
         evidence.put("memoryRagEvalGateContractDefined", true);
         evidence.put("memoryRagEvalGateContractBound", false);
+        evidence.put("memoryRagEvalSuiteBindingContractDefined", true);
+        evidence.put("memoryRagEvalSuiteBindingContractBound", false);
         evidence.put("memoryRagEvalSuiteExists", false);
         evidence.put("vueWorkbenchBound", false);
         return Map.copyOf(evidence);
@@ -230,6 +235,7 @@ public record AgentMemoryRagReadinessResponse(
         endpoints.put("sourceEvidenceDigestContract", "/api/agent/observability/memory-rag/source-evidence-digest-contract");
         endpoints.put("durableMemoryLifecycleContract", "/api/agent/observability/memory-rag/durable-memory-lifecycle-contract");
         endpoints.put("memoryRagEvalGateContract", "/api/agent/observability/memory-rag/eval-gate-contract");
+        endpoints.put("memoryRagEvalSuiteBindingContract", "/api/agent/observability/memory-rag/eval-suite-binding-contract");
         endpoints.put("memorySummaries", "/api/agent/memory/summaries");
         endpoints.put("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview");
         endpoints.put("evalWorkbenchCapabilities", "/api/agent/observability/eval/workbench/capabilities");
@@ -246,6 +252,7 @@ public record AgentMemoryRagReadinessResponse(
         protocol.put("requiresSourceEvidenceDigestContract", true);
         protocol.put("requiresDurableMemoryLifecycleContract", true);
         protocol.put("requiresMemoryRagEvalGateContract", true);
+        protocol.put("requiresMemoryRagEvalSuiteBindingContract", true);
         protocol.put("requiresRedactedIngestion", true);
         protocol.put("requiresEvalGate", true);
         protocol.put("requiresFrontendGovernance", true);
@@ -256,6 +263,7 @@ public record AgentMemoryRagReadinessResponse(
             "source evidence digest contract",
             "durable memory lifecycle contract",
             "Memory/RAG eval gate contract",
+            "Memory/RAG eval suite binding contract",
             "deterministic Memory/RAG eval suite"
         ));
         protocol.put("compatibilityMatrixCandidates", List.of(

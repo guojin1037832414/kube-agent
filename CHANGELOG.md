@@ -6,6 +6,25 @@
 
 ---
 
+## [M5.68-1] - Memory/RAG eval-suite binding contract
+
+**Delivery**: Added an admin-only Memory/RAG eval-suite binding contract before any retrieval runtime can use memory evidence.
+**Changes**
+- Added `AgentMemoryRagEvalSuiteBindingContractResponse`.
+- Added `AgentMemoryRagEvalSuiteBindingContractService`.
+- Added `GET /api/agent/observability/memory-rag/eval-suite-binding-contract`.
+- Mapped the nine M5.62 Memory/RAG gate checks to future deterministic suite check codes.
+- Published required future trace sets for citation fidelity, privacy/tenant isolation, and lifecycle policy evidence.
+- Updated Memory/RAG readiness, eval workbench capabilities, Phase 1 roadmap, Vue readiness control plane, advanced technology adoption, and top-tier readiness endpoint maps.
+- Added service, controller, source-contract, readiness/top-tier, roadmap, Vue, adoption contract, workbench, and MockMvc security coverage.
+**Verification**
+- `mvn -q "-Dtest=AgentMemoryRagEvalSuiteBindingContractServiceTest,AgentMemoryRagEvalGateContractServiceTest,AgentMemoryRagReadinessServiceTest,AgentEvalWorkbenchCapabilitiesServiceTest,AgentPhase1ExecutionRoadmapServiceTest,AgentVueReadinessControlPlaneServiceTest,AgentAdvancedTechnologyAdoptionContractServiceTest,AgentTopTierReadinessOverviewServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed during implementation.
+**Security**
+- `contractStatus=CONTRACT_DEFINED_NOT_BOUND`.
+- `evalSuiteBindingContractDefined=true`, `memoryRagEvalSuiteBound=false`, `memoryRagTraceSetBound=false`, `evalRuntimeExecuted=false`, `ciBlockingEnabled=false`, and `retrievalRuntimeAllowedNow=false`.
+- Current built-in eval suites do not yet contain the required Memory/RAG check codes, so `mappedGateCheckCount=0` and `missingGateCheckCount=9`.
+- No eval runtime execution, trace-set catalog mutation, CI blocking enablement, retrieval execution, vector-store binding, embedding/reranker/LLM call, prompt mutation, memory write, audit write, Tool execution, `SafeToolExecutor` invocation, HITL invocation, kube-manager call, MCP runtime `tools/call`, external call, dependency upgrade, or NIM / HPC / Slurm / BCM Phase 2 work is added.
+
 ## [M5.67-1] - Release-blocking eval gate contract
 
 **Delivery**: Added an admin-only release-blocking eval gate contract before CI can consume eval artifacts as release blockers.

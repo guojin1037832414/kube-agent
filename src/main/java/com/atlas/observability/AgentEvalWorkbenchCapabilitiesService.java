@@ -106,6 +106,17 @@ public class AgentEvalWorkbenchCapabilitiesService {
                 List.of("releaseGateChecks", "blockedReasons", "promotionPlan")
             ),
             capability(
+                "memory-rag-eval-suite-binding-contract",
+                "Memory/RAG eval-suite binding contract",
+                "release-gate",
+                "GET",
+                "/api/agent/observability/memory-rag/eval-suite-binding-contract",
+                "",
+                AgentMemoryRagEvalSuiteBindingContractResponse.SCHEMA_VERSION,
+                List.of("memoryRagEvalGateContract", "evalSuiteCatalog", "traceSetCatalog"),
+                List.of("bindingRows", "requiredTraceSets", "blockedReasons", "recommendedBuildOrder")
+            ),
+            capability(
                 "trace-set-candidate-discovery",
                 "Trace-set candidate discovery",
                 "discover",
@@ -194,6 +205,7 @@ public class AgentEvalWorkbenchCapabilitiesService {
                 "workbench-gate-bundle-summary",
                 "reviewed-trace-evidence",
                 "release-blocking-gate-contract",
+                "memory-rag-eval-suite-binding-contract",
                 "trace-set-catalog-patch-proposal",
                 "trace-set-gate-bundle",
                 "trace-replay-timeline",

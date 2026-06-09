@@ -10,7 +10,49 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.67-1
+## Latest Phase 1 Core Memory - M5.68-1
+
+M5.68-1 adds the Memory/RAG eval-suite binding contract.
+
+Delivered:
+
+- Added `AgentMemoryRagEvalSuiteBindingContractResponse`.
+- Added `AgentMemoryRagEvalSuiteBindingContractService`.
+- Added admin-only `GET /api/agent/observability/memory-rag/eval-suite-binding-contract`.
+- Mapped the nine M5.62 Memory/RAG gate checks to future deterministic eval-suite check codes.
+- Defined the required future Memory/RAG trace sets: `memory-rag-citation-fidelity`, `memory-rag-privacy-tenant`, and `memory-rag-lifecycle-policy`.
+- Updated Memory/RAG readiness, eval workbench capabilities, Phase 1 roadmap, Vue readiness control plane, advanced technology adoption, and top-tier readiness endpoint maps.
+- Added service, controller, source-contract, readiness/top-tier, roadmap, Vue, adoption contract, workbench, and MockMvc security coverage.
+
+Current state:
+
+- `schemaVersion=agent-memory-rag-eval-suite-binding-contract.v1`.
+- `contractStatus=CONTRACT_DEFINED_NOT_BOUND`.
+- `phase1TopTierGoalPreserved=true`.
+- `evalSuiteBindingContractDefined=true`.
+- `memoryRagEvalSuiteBound=false`.
+- `memoryRagTraceSetBound=false`.
+- `reviewedTraceEvidenceRequired=true`.
+- `evalRuntimeExecuted=false`.
+- `ciBlockingEnabled=false`.
+- `retrievalRuntimeAllowedNow=false`.
+- `mappedGateCheckCount=0`.
+- `missingGateCheckCount=9`.
+
+Security boundary:
+
+- The endpoint is admin-only, read-only, contract-only, summary-only, and fail-closed.
+- It does not run evals, call trace-set gates, mutate trace-set catalogs, enable CI blocking, execute retrieval, bind vector stores, call embedding/reranker/LLM, mutate prompts, write memory, write audit, issue durable receipts, execute Tools, invoke `SafeToolExecutor`, invoke HITL, call kube-manager, expose MCP runtime `tools/call`, call external services, upgrade dependencies, or touch NIM / HPC / Slurm / BCM Phase 2 scope.
+
+Learning point: top-tier Memory/RAG cannot jump from "we have an eval gate contract" directly to "retrieval can affect prompts." M5.68 teaches the binding layer between gate intent and real release evidence: every required RAG quality check needs a deterministic suite code, reviewed redacted trace sets, advisory gate bundles, Vue visibility, and a separate reviewed promotion before runtime retrieval can open.
+
+Latest technology note: on 2026-06-09, official references confirm that the latest Agent engineering surface includes OpenAI Agents SDK patterns for tools, handoffs, guardrails, tracing, eval loops, ChatKit, and MCP; Spring AI 1.1.7 documents ChatClient, advisors, chat memory, VectorStore RAG, MCP, eval, and observability; MCP latest spec is 2025-11-25 with tools/resources/prompts plus explicit consent and safety guidance; OpenTelemetry GenAI semantic conventions are still Development; A2A v1.0 exposes Agent Card, tasks, messages, streaming, artifacts, and security concepts. Phase 1 keeps all of these in scope, but runtime authority still enters only through backend-owned contracts, deterministic evals, reviewed evidence, Vue operator visibility, and recovery memory.
+
+Latest verified command:
+
+- `mvn -q "-Dtest=AgentMemoryRagEvalSuiteBindingContractServiceTest,AgentMemoryRagEvalGateContractServiceTest,AgentMemoryRagReadinessServiceTest,AgentEvalWorkbenchCapabilitiesServiceTest,AgentPhase1ExecutionRoadmapServiceTest,AgentVueReadinessControlPlaneServiceTest,AgentAdvancedTechnologyAdoptionContractServiceTest,AgentTopTierReadinessOverviewServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+## Previous Phase 1 Core Memory - M5.67-1
 
 M5.67-1 adds the release-blocking eval gate contract.
 

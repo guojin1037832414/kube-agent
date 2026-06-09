@@ -73,9 +73,9 @@ public record AgentPhase1ExecutionRoadmapResponse(
                 List.of("release-blocking-gate-contract", "eval-gate-bundle-summary", "promotion-workflow")),
             step(4, "memory-rag-eval-suite-binding",
                 "Implement Memory/RAG eval suites for citation, source digest, privacy, tenant isolation, lifecycle, and prompt-injection gates.",
-                "CONTRACT_DEFINED_NOT_BOUND",
-                List.of("memory-rag-eval-gate-contract", "source-evidence-digest-contract", "durable-lifecycle-contract"),
-                List.of("memory-rag-eval-gate-contract", "memory-rag-readiness")),
+                "BACKEND_CONTRACT_READY_BUT_NOT_BOUND",
+                List.of("memory-rag-eval-suite-binding-contract", "memory-rag-eval-gate-contract", "source-evidence-digest-contract", "durable-lifecycle-contract"),
+                List.of("memory-rag-eval-suite-binding-contract", "memory-rag-eval-gate-contract", "memory-rag-readiness")),
             step(5, "durable-memory-store-binding",
                 "Bind durable memory only after lifecycle, source digest, retention, delete/export/recovery, and eval gates are ready.",
                 "BLOCKED_BY_LIFECYCLE_AND_EVAL",
@@ -148,6 +148,7 @@ public record AgentPhase1ExecutionRoadmapResponse(
         endpoints.put("releaseBlockingEvalGateContract", "/api/agent/observability/eval/release-blocking-gate-contract");
         endpoints.put("memoryRagReadiness", "/api/agent/observability/memory-rag/readiness");
         endpoints.put("memoryRagEvalGateContract", "/api/agent/observability/memory-rag/eval-gate-contract");
+        endpoints.put("memoryRagEvalSuiteBindingContract", "/api/agent/observability/memory-rag/eval-suite-binding-contract");
         endpoints.put("mcpGovernanceOverview", "/api/agent/mcp/governance/overview");
         return Map.copyOf(endpoints);
     }

@@ -111,6 +111,12 @@ class ObservabilityControllerTest {
         new AgentMemoryRagDurableMemoryLifecycleContractService();
     private final AgentMemoryRagEvalGateContractService memoryRagEvalGateContractService =
         new AgentMemoryRagEvalGateContractService();
+    private final AgentMemoryRagEvalSuiteBindingContractService memoryRagEvalSuiteBindingContractService =
+        new AgentMemoryRagEvalSuiteBindingContractService(
+            memoryRagEvalGateContractService,
+            evalSuiteCatalogService,
+            evalTraceSetCatalogService
+        );
     private final AgentTopTierReadinessOverviewService topTierReadinessOverviewService =
         new AgentTopTierReadinessOverviewService(
             kubeManagerHttpOutletGovernanceWorkbenchOverviewService,
@@ -141,6 +147,7 @@ class ObservabilityControllerTest {
         memoryRagSourceEvidenceDigestContractService,
         memoryRagDurableMemoryLifecycleContractService,
         memoryRagEvalGateContractService,
+        memoryRagEvalSuiteBindingContractService,
         auditRecorder,
         auditRecorder,
         replayTimelineService,
@@ -1409,6 +1416,72 @@ class ObservabilityControllerTest {
             .containsEntry("containsToken", false);
         assertThat(contract.toString())
             .contains("citation-fidelity", "tenant-isolation", "MISSING_CITATION")
+            .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret", "raw document");
+    }
+
+    @Test
+    void memoryRagEvalSuiteBindingContract_shouldRequireAdminAndReturnUnboundContract() {
+        ResponseEntity<ApiResponse<AgentMemoryRagEvalSuiteBindingContractResponse>> anonymous =
+            controller.memoryRagEvalSuiteBindingContract();
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentMemoryRagEvalSuiteBindingContractResponse>> user =
+            controller.memoryRagEvalSuiteBindingContract();
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        userPermissionContext.unbind();
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentMemoryRagEvalSuiteBindingContractResponse>> admin =
+            controller.memoryRagEvalSuiteBindingContract();
+
+        assertThat(admin.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(admin.getBody()).isNotNull();
+        AgentMemoryRagEvalSuiteBindingContractResponse contract = admin.getBody().getData();
+        assertThat(contract.schemaVersion()).isEqualTo("agent-memory-rag-eval-suite-binding-contract.v1");
+        assertThat(contract.contractStatus()).isEqualTo("CONTRACT_DEFINED_NOT_BOUND");
+        assertThat(contract.memoryRagEvalSuiteBound()).isFalse();
+        assertThat(contract.memoryRagTraceSetBound()).isFalse();
+        assertThat(contract.evalRuntimeExecuted()).isFalse();
+        assertThat(contract.ciBlockingEnabled()).isFalse();
+        assertThat(contract.retrievalRuntimeAllowedNow()).isFalse();
+        assertThat(contract.bindingRows()).extracting(row -> row.get("gateCheckId"))
+            .contains("citation-fidelity", "source-digest-integrity", "privacy-leakage", "tenant-isolation");
+        assertThat(contract.requiredTraceSets()).extracting(row -> row.get("traceSetId"))
+            .contains("memory-rag-citation-fidelity", "memory-rag-privacy-tenant", "memory-rag-lifecycle-policy");
+        assertThat(contract.endpointMap())
+            .containsEntry("memoryRagEvalSuiteBindingContract", "/api/agent/observability/memory-rag/eval-suite-binding-contract")
+            .containsEntry("evalSuiteCatalog", "/api/agent/observability/eval/suites")
+            .containsEntry("traceSetCatalog", "/api/agent/observability/eval/trace-sets");
+        assertThat(contract.safety())
+            .containsEntry("adminOnly", true)
+            .containsEntry("readOnly", true)
+            .containsEntry("contractOnly", true)
+            .containsEntry("evalRuntimeExecuted", false)
+            .containsEntry("evalSuiteRunInvoked", false)
+            .containsEntry("traceSetGateInvoked", false)
+            .containsEntry("catalogMutationAllowed", false)
+            .containsEntry("retrievalExecuted", false)
+            .containsEntry("llmUsed", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("safeToolExecutorInvocation", false)
+            .containsEntry("kubeManagerCalls", false)
+            .containsEntry("mcpToolCall", false)
+            .containsEntry("phase2NimHpcSlurmBcmTouched", false);
+        assertThat(contract.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("containsRawDocument", false)
+            .containsEntry("containsRawPrompt", false)
+            .containsEntry("containsRawRetrievedChunk", false)
+            .containsEntry("containsToken", false);
+        assertThat(contract.toString())
+            .contains("memory-rag-eval-suite-binding-contract", "MEMORY_RAG_CITATION_FIDELITY")
             .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret", "raw document");
     }
 

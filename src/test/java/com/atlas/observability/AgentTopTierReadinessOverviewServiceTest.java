@@ -94,7 +94,7 @@ class AgentTopTierReadinessOverviewServiceTest {
             "wire-vue-readiness-control-plane",
             "populate-reviewed-redacted-eval-trace-evidence",
             "promote-eval-gate-bundle-from-evidence-only-to-reviewed-blocking",
-            "bind-memory-rag-eval-gate-before-retrieval-runtime",
+            "bind-memory-rag-eval-suite-before-retrieval-runtime",
             "bind-durable-memory-runtime-after-lifecycle-and-source-digest-contract",
             "add-mcp-tools-call-only-after-safe-tool-executor-consent-hitl-audit-eval-binding",
             "keep-nim-hpc-slurm-bcm-paused-until-phase-2"
@@ -111,6 +111,7 @@ class AgentTopTierReadinessOverviewServiceTest {
             .containsEntry("memoryRagSourceEvidenceDigestContract", "/api/agent/observability/memory-rag/source-evidence-digest-contract")
             .containsEntry("memoryRagDurableMemoryLifecycleContract", "/api/agent/observability/memory-rag/durable-memory-lifecycle-contract")
             .containsEntry("memoryRagEvalGateContract", "/api/agent/observability/memory-rag/eval-gate-contract")
+            .containsEntry("memoryRagEvalSuiteBindingContract", "/api/agent/observability/memory-rag/eval-suite-binding-contract")
             .containsEntry("kubeManagerGovernanceOverview", "/api/agent/observability/kube-manager/http-outlet/governance-workbench/overview");
         assertThat(overview.safety())
             .containsEntry("adminOnly", true)
@@ -169,6 +170,7 @@ class AgentTopTierReadinessOverviewServiceTest {
             .contains("durableMemoryImplemented")
             .contains("durableMemoryLifecycleContractImplemented")
             .contains("memoryRagEvalGateContractImplemented")
+            .contains("memoryRagEvalSuiteBindingContractImplemented")
             .doesNotContain("KubeManagerHttpClient")
             .doesNotContain("RestClient")
             .doesNotContain("WebClient")

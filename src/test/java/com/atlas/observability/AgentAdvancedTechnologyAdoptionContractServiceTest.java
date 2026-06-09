@@ -46,6 +46,7 @@ class AgentAdvancedTechnologyAdoptionContractServiceTest {
                 "safe-tool-executor-boundary",
                 "deterministic-eval-workbench",
                 "memory-rag-contract-stack",
+                "memory-rag-eval-suite-binding",
                 "mcp-manifest-governance",
                 "trace-audit-replay-observability",
                 "reviewed-eval-trace-evidence",
@@ -93,10 +94,14 @@ class AgentAdvancedTechnologyAdoptionContractServiceTest {
         );
         assertThat(contract.standardsAlignment())
             .containsEntry("openAiResponsesAndAgentsMappedToLocalContracts", true)
+            .containsEntry("openAiAgentsSdkToolsHandoffsGuardrailsTracingTracked", true)
             .containsEntry("openAiTracingAndEvalEvidenceMappedToReviewedTraceContracts", true)
+            .containsEntry("springAiChatMemoryVectorStoreMcpTracked", true)
             .containsEntry("springAiMainlineAndUpgradeMatrixSeparated", true)
+            .containsEntry("mcpLatestSpecConsentAndToolBoundaryTracked", true)
             .containsEntry("mcpDiscoverySeparatedFromRuntimeAuthority", true)
             .containsEntry("otelGenAiMappedThroughStableInternalFields", true)
+            .containsEntry("a2aAgentCardTaskArtifactProvenanceTracked", true)
             .containsEntry("owaspLlmSecurityThreatsMappedToGates", true)
             .containsEntry("javaSpringStillPreferredBackendControlPlane", true)
             .containsEntry("runtimeBound", false);
@@ -107,7 +112,8 @@ class AgentAdvancedTechnologyAdoptionContractServiceTest {
             .containsEntry("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview")
             .containsEntry("reviewedEvalTraceEvidence", "/api/agent/observability/eval/reviewed-trace-evidence")
             .containsEntry("releaseBlockingEvalGateContract", "/api/agent/observability/eval/release-blocking-gate-contract")
-            .containsEntry("memoryRagEvalGateContract", "/api/agent/observability/memory-rag/eval-gate-contract");
+            .containsEntry("memoryRagEvalGateContract", "/api/agent/observability/memory-rag/eval-gate-contract")
+            .containsEntry("memoryRagEvalSuiteBindingContract", "/api/agent/observability/memory-rag/eval-suite-binding-contract");
         assertThat(contract.safety())
             .containsEntry("adminOnly", true)
             .containsEntry("readOnly", true)
