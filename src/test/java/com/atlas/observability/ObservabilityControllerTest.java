@@ -37,6 +37,8 @@ class ObservabilityControllerTest {
         new AgentEvalWorkbenchCapabilitiesService();
     private final AgentEvalWorkbenchOverviewService evalWorkbenchOverviewService =
         new AgentEvalWorkbenchOverviewService(evalWorkbenchCapabilitiesService, evalTraceSetCatalogService);
+    private final AgentEvalWorkbenchTraceSetDetailService evalWorkbenchTraceSetDetailService =
+        new AgentEvalWorkbenchTraceSetDetailService(evalTraceSetCatalogService);
     private final ObservabilityController controller = new ObservabilityController(
         new AgentMetricsService(new SimpleMeterRegistry()),
         auditRecorder,
@@ -49,6 +51,7 @@ class ObservabilityControllerTest {
         traceSetPromotionWorkflowService,
         evalWorkbenchCapabilitiesService,
         evalWorkbenchOverviewService,
+        evalWorkbenchTraceSetDetailService,
         new AgentPrincipalResolver(userPermissionContext)
     );
 
@@ -711,9 +714,15 @@ class ObservabilityControllerTest {
         AgentEvalWorkbenchCapabilitiesResponse capabilities = response.getBody().getData();
         assertThat(capabilities.schemaVersion()).isEqualTo("agent-eval-workbench-capabilities.v1");
         assertThat(capabilities.capabilities()).extracting(AgentEvalWorkbenchCapability::id)
-            .contains("workbench-overview", "trace-set-promotion-workflow", "trace-set-gate-bundle", "trace-replay-timeline");
+            .contains(
+                "workbench-overview",
+                "workbench-trace-set-detail",
+                "trace-set-promotion-workflow",
+                "trace-set-gate-bundle",
+                "trace-replay-timeline"
+            );
         assertThat(capabilities.recommendedWorkflow())
-            .contains("workbench-overview", "trace-set-promotion-workflow", "trace-set-gate-bundle");
+            .contains("workbench-overview", "workbench-trace-set-detail", "trace-set-promotion-workflow", "trace-set-gate-bundle");
         assertThat(capabilities.workbenchPolicy())
             .containsEntry("frontendTarget", "vue-kube-manager eval workbench")
             .containsEntry("runtimeCatalogWrite", false)
@@ -726,7 +735,7 @@ class ObservabilityControllerTest {
             .containsEntry("toolExecution", false)
             .containsEntry("kubeManagerCalls", false);
         assertThat(capabilities.toString())
-            .contains("promotion-workflow", "agent-eval-trace-set-promotion-workflow.v1")
+            .contains("workbench-trace-set-detail", "agent-eval-workbench-trace-set-detail.v1")
             .doesNotContain("secret-token-value", "conv-sensitive", "user-sensitive", "org-sensitive", "/api/org-sensitive");
     }
 
@@ -762,7 +771,11 @@ class ObservabilityControllerTest {
         assertThat(overview.traceSetNeedsEvidenceCount()).isEqualTo(4);
         assertThat(overview.traceSets()).extracting(AgentEvalWorkbenchTraceSetView::status)
             .containsOnly("NEEDS_REDACTED_EVIDENCE");
-        assertThat(overview.recommendedWorkflow()).startsWith("workbench-overview", "trace-set-catalog");
+        assertThat(overview.recommendedWorkflow()).startsWith(
+            "workbench-overview",
+            "trace-set-catalog",
+            "workbench-trace-set-detail"
+        );
         assertThat(overview.workbenchPolicy())
             .containsEntry("frontendTarget", "vue-kube-manager eval workbench")
             .containsEntry("overviewOnly", true)
@@ -778,6 +791,68 @@ class ObservabilityControllerTest {
             .containsEntry("kubeManagerCalls", false);
         assertThat(overview.toString())
             .contains("workbench-overview", "phase1-core-golden")
+            .doesNotContain("reports=", "replay=")
+            .doesNotContain("secret-token-value", "conv-sensitive", "user-sensitive", "org-sensitive", "/api/org-sensitive");
+    }
+
+    @Test
+    void evalWorkbenchTraceSetDetail_shouldRequireAdminUserAndRejectUnknownTraceSet() {
+        ResponseEntity<ApiResponse<AgentEvalWorkbenchTraceSetDetailResponse>> anonymous =
+            controller.evalWorkbenchTraceSetDetail("phase1-core-golden");
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentEvalWorkbenchTraceSetDetailResponse>> user =
+            controller.evalWorkbenchTraceSetDetail("phase1-core-golden");
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        SecurityContextHolder.clearContext();
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentEvalWorkbenchTraceSetDetailResponse>> missing =
+            controller.evalWorkbenchTraceSetDetail("missing-trace-set");
+
+        assertThat(missing.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void evalWorkbenchTraceSetDetail_shouldReturnTraceSetDetailForAdminUser() {
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentEvalWorkbenchTraceSetDetailResponse>> response =
+            controller.evalWorkbenchTraceSetDetail("phase1-core-golden");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        AgentEvalWorkbenchTraceSetDetailResponse detail = response.getBody().getData();
+        assertThat(detail.schemaVersion()).isEqualTo("agent-eval-workbench-trace-set-detail.v1");
+        assertThat(detail.traceSetId()).isEqualTo("phase1-core-golden");
+        assertThat(detail.status()).isEqualTo("NEEDS_REDACTED_EVIDENCE");
+        assertThat(detail.curatedTraceCount()).isZero();
+        assertThat(detail.endpointTemplates())
+            .containsEntry("promotionWorkflow",
+                "/api/agent/observability/eval/trace-sets/phase1-core-golden/promotion-workflow");
+        assertThat(detail.detailPolicy())
+            .containsEntry("detailOnly", true)
+            .containsEntry("candidateDiscoveryExecuted", false)
+            .containsEntry("runtimeCatalogWrite", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("kubeManagerCalls", false);
+        assertThat(detail.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("containsRawKubeManagerEndpoints", false)
+            .containsEntry("llmUsed", false)
+            .containsEntry("externalCalls", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("kubeManagerCalls", false);
+        assertThat(detail.toString())
+            .contains("phase1-core-golden", "agent-eval-workbench-trace-set-detail.v1")
             .doesNotContain("reports=", "replay=")
             .doesNotContain("secret-token-value", "conv-sensitive", "user-sensitive", "org-sensitive", "/api/org-sensitive");
     }

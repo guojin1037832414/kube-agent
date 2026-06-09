@@ -43,6 +43,7 @@ class ObservabilityControllerSecurityContractTest {
         assertThat(source).contains("@PostMapping(\"/eval/suites/{suiteId}/gate\")");
         assertThat(source).contains("@GetMapping(\"/eval/workbench/capabilities\")");
         assertThat(source).contains("@GetMapping(\"/eval/workbench/overview\")");
+        assertThat(source).contains("@GetMapping(\"/eval/workbench/trace-sets/{traceSetId}\")");
         assertThat(source).contains("@GetMapping(\"/eval/trace-sets\")");
         assertThat(source).contains("@GetMapping(\"/eval/trace-sets/{traceSetId}/candidates\")");
         assertThat(source).contains("@PostMapping(\"/eval/trace-sets/{traceSetId}/gate\")");
@@ -61,6 +62,7 @@ class ObservabilityControllerSecurityContractTest {
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentEvalSuiteGateArtifact>> evalSuiteGate(@PathVariable String suiteId,");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentEvalWorkbenchCapabilitiesResponse>> evalWorkbenchCapabilities()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentEvalWorkbenchOverviewResponse>> evalWorkbenchOverview()");
+        assertThat(source).contains("public ResponseEntity<ApiResponse<AgentEvalWorkbenchTraceSetDetailResponse>> evalWorkbenchTraceSetDetail(");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentEvalTraceSetCatalogResponse>> evalTraceSets()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentEvalTraceSetCandidateDiscoveryResponse>> evalTraceSetCandidates(");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentEvalTraceSetGateArtifact>> evalTraceSetGate(@PathVariable String traceSetId,");
@@ -69,6 +71,6 @@ class ObservabilityControllerSecurityContractTest {
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentEvalTraceSetPromotionWorkflowArtifact>> evalTraceSetPromotionWorkflow(");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentEvalTraceSetGateBundleArtifact>> evalTraceSetGateBundle(");
         assertThat(source.split("@PreAuthorize\\(\"hasAnyRole\\('ADMIN', 'SYS_ADMIN'\\)\"\\)", -1).length - 1)
-            .isGreaterThanOrEqualTo(19);
+            .isGreaterThanOrEqualTo(20);
     }
 }

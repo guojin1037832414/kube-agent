@@ -44,6 +44,7 @@ public class ObservabilityController {
     private final AgentEvalTraceSetPromotionWorkflowService traceSetPromotionWorkflowService;
     private final AgentEvalWorkbenchCapabilitiesService evalWorkbenchCapabilitiesService;
     private final AgentEvalWorkbenchOverviewService evalWorkbenchOverviewService;
+    private final AgentEvalWorkbenchTraceSetDetailService evalWorkbenchTraceSetDetailService;
     private final AgentPrincipalResolver principalResolver;
 
     public ObservabilityController(AgentMetricsService metricsService,
@@ -57,6 +58,7 @@ public class ObservabilityController {
                                    AgentEvalTraceSetPromotionWorkflowService traceSetPromotionWorkflowService,
                                    AgentEvalWorkbenchCapabilitiesService evalWorkbenchCapabilitiesService,
                                    AgentEvalWorkbenchOverviewService evalWorkbenchOverviewService,
+                                   AgentEvalWorkbenchTraceSetDetailService evalWorkbenchTraceSetDetailService,
                                    AgentPrincipalResolver principalResolver) {
         this.metricsService = metricsService;
         this.auditSnapshotProvider = auditSnapshotProvider;
@@ -69,6 +71,7 @@ public class ObservabilityController {
         this.traceSetPromotionWorkflowService = traceSetPromotionWorkflowService;
         this.evalWorkbenchCapabilitiesService = evalWorkbenchCapabilitiesService;
         this.evalWorkbenchOverviewService = evalWorkbenchOverviewService;
+        this.evalWorkbenchTraceSetDetailService = evalWorkbenchTraceSetDetailService;
         this.principalResolver = principalResolver;
     }
 
@@ -243,6 +246,21 @@ public class ObservabilityController {
             return guard;
         }
         return ResponseEntity.ok(ApiResponse.ok(evalWorkbenchOverviewService.overview()));
+    }
+
+    /** Build a frontend-ready detail view for one trace set in the eval workbench. */
+    @GetMapping("/eval/workbench/trace-sets/{traceSetId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentEvalWorkbenchTraceSetDetailResponse>> evalWorkbenchTraceSetDetail(
+        @PathVariable String traceSetId) {
+        ResponseEntity<ApiResponse<AgentEvalWorkbenchTraceSetDetailResponse>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return evalWorkbenchTraceSetDetailService.detail(traceSetId)
+            .map(response -> ResponseEntity.ok(ApiResponse.ok(response)))
+            .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.fail("Unknown Agent eval trace set: " + traceSetId)));
     }
 
     /** List versioned golden/red-team trace sets that bind curated evidence anchors to eval suites. */

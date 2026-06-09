@@ -10,7 +10,34 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.44-1
+## Latest Phase 1 Core Memory - M5.45-1
+
+M5.45-1 adds an admin-only trace-set detail read model for future `vue-kube-manager` eval workbench pages.
+
+Delivered:
+
+- Added `AgentEvalWorkbenchTraceSetDetailResponse`.
+- Added `AgentEvalWorkbenchTraceSetDetailService`.
+- Added admin-only `GET /api/agent/observability/eval/workbench/trace-sets/{traceSetId}`.
+- Extended `GET /api/agent/observability/eval/workbench/capabilities` with `workbench-trace-set-detail`.
+- The detail response returns one trace-set UI row, curated trace anchors, evidence requirements, compact gate state, promotion checklist, next actions, endpoint templates, policy proof, and privacy proof.
+
+Security boundary:
+
+- The endpoint is admin-only at URL and method levels.
+- It is a read-only detail model and does not run candidate discovery, query raw audit storage, execute Tools, call kube-manager, use an LLM, make external calls, or mutate `observability/eval-trace-sets.json`.
+- It embeds compact gate evidence only; replay timelines and per-trace eval reports remain explicit admin-only drill-down requests.
+- No raw principal, organization, conversation, kube-manager endpoint, reason text, or parameter values are exposed.
+- `candidateDiscoveryExecuted=false`, `catalogMutationAllowed=false`, `runtimeCatalogWrite=false`, `toolExecution=false`, and `kubeManagerCalls=false`.
+- NIM / HPC / Slurm / BCM remain Phase 2 paused scope.
+
+Learning point: a top-tier Agent workbench should have a typed detail contract between overview and workflow execution. Detail pages explain evidence requirements and safe next actions; they do not silently discover, promote, or execute.
+
+Latest verified command:
+
+- `mvn -q "-Dtest=AgentEvalWorkbenchTraceSetDetailServiceTest,AgentEvalWorkbenchOverviewServiceTest,AgentEvalWorkbenchCapabilitiesServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+## Previous Phase 1 Core Memory - M5.44-1
 
 M5.44-1 adds an admin-only eval workbench overview read model for future `vue-kube-manager` integration.
 

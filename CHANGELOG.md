@@ -6,6 +6,25 @@
 
 ---
 
+## [M5.45-1] - Eval workbench trace-set detail read model
+
+**Delivery**: Added an admin-only trace-set detail read model for future `vue-kube-manager` eval workbench pages.
+**Changes**
+- Added `AgentEvalWorkbenchTraceSetDetailResponse`.
+- Added `AgentEvalWorkbenchTraceSetDetailService`.
+- Added admin-only `GET /api/agent/observability/eval/workbench/trace-sets/{traceSetId}`.
+- Extended the workbench capability manifest with `workbench-trace-set-detail`.
+- The detail response includes one trace-set UI row, curated evidence anchors, evidence requirements, compact gate state, promotion checklist, next actions, endpoint templates, policy proof, and privacy proof.
+- Added service, controller, source-contract, and MockMvc security coverage.
+**Verification**
+- `mvn -q "-Dtest=AgentEvalWorkbenchTraceSetDetailServiceTest,AgentEvalWorkbenchOverviewServiceTest,AgentEvalWorkbenchCapabilitiesServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed.
+**Security**
+- The detail read model is admin-only, read-only, and detail-only.
+- It never executes candidate discovery, queries raw audit storage, executes Tool code, calls kube-manager, uses LLMs, makes external calls, or mutates `observability/eval-trace-sets.json`.
+- It embeds compact gate evidence only, not replay timelines or per-trace eval reports.
+- `candidateDiscoveryExecuted=false`, `catalogMutationAllowed=false`, `runtimeCatalogWrite=false`, `toolExecution=false`, and `kubeManagerCalls=false`.
+- This slice adds no kube-manager write/create/delete/state-changing behavior and does not reopen NIM/HPC/Slurm/BCM scope.
+
 ## [M5.44-1] - Eval workbench overview read model
 
 **Delivery**: Added an admin-only eval workbench overview read model for future `vue-kube-manager` screens.

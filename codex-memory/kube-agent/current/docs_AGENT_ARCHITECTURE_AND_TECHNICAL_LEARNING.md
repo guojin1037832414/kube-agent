@@ -2,6 +2,31 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-09 M5.45 Eval Workbench Trace-Set Detail 详情读模型
+
+M5.45 补上了 overview 之后的下一层页面契约：当管理员在 eval workbench 首屏点击一个 trace set，后端返回这个 trace set 的详情读模型，而不是让前端自己拼 catalog、gate、promotion 路径和安全策略。
+
+```text
+GET /api/agent/observability/eval/workbench/trace-sets/{traceSetId}
+    |
+    | trace-set definition + compact gate + UI row
+    v
+AgentEvalWorkbenchTraceSetDetailResponse
+    |
+    | evidence requirements + checklist + endpoint templates
+    v
+Vue trace-set detail page
+```
+
+关键设计：
+- detail 是 `detailOnly=true`，只解释一个 trace set 的当前状态和下一步，不做候选发现、不生成补丁、不写 catalog。
+- 返回 `promotionChecklist` 和 `nextActions`，把人工/Git 审查路径显式化。
+- 返回 endpoint templates，让 Vue 页面可以从 detail 安全跳转到 candidates、promotion workflow、patch proposal、gate、replay 和 eval。
+- 嵌入 compact gate artifact，但不嵌入 replay timeline 或 per-trace reports，避免详情页隐式扩散排障 payload。
+- 空 trace set 仍然显示 `NEEDS_REDACTED_EVIDENCE`，不会因为 detail 页面存在就获得发布资格。
+
+学习重点：顶级 Agent 工作台不是“一个页面里什么都干”。更成熟的分层是 overview 负责列表状态，detail 负责证据解释和安全路径，workflow 负责审查 artifact，drill-down 负责具体 trace 排障。这样每一层的权限和数据体积都清楚。
+
 ## 2026-06-09 M5.44 Eval Workbench Overview 总览读模型
 
 M5.44 在 M5.43 capability manifest 之上，再给 `vue-kube-manager` eval workbench 一个可直接渲染首屏的 overview read model。它不是执行工作流，而是把 capabilities、trace-set catalog、compact gate bundle、next actions 和安全策略组合成一个前端可用的状态视图。

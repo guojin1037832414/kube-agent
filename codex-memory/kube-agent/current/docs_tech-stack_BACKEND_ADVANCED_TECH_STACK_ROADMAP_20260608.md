@@ -444,6 +444,18 @@ M5.40-1 adds the candidate discovery step before M5.39 curation review:
 
 Technology judgment: this gives eval operations a real evidence workflow without granting new authority. Discovery is read-only and advisory, curation review is deterministic and review-only, and catalog promotion still requires a Git-reviewed patch. This separation is the mature Agent pattern for moving from observability data to release-blocking evidence.
 
+## M5.45-1 Update - Eval Workbench Trace-Set Detail Read Model
+
+M5.45-1 adds the trace-set detail layer for the future `vue-kube-manager` eval workbench:
+
+- `GET /api/agent/observability/eval/workbench/trace-sets/{traceSetId}` returns `AgentEvalWorkbenchTraceSetDetailResponse`.
+- The detail response includes one UI row, curated trace anchors, evidence requirements, compact gate state, promotion checklist, next actions, endpoint templates, policy proof, and privacy proof.
+- The capability manifest now includes `workbench-trace-set-detail`, so Vue can move from overview to detail through backend-discovered contracts.
+- Detail stays read-only: no candidate discovery execution, no raw audit query, no Tool execution, no kube-manager call, no LLM/external call, and no catalog mutation.
+- Replay timeline and per-trace eval reports remain explicit drill-down payloads instead of being embedded into the detail page.
+
+Technology judgment: this closes a common frontend governance gap. A workbench needs a detail layer between overview and workflow execution, otherwise page code starts reconstructing release semantics from multiple APIs. Keeping detail as a typed read model preserves backend ownership of evidence rules while still giving operators an ergonomic UI path.
+
 ## M5.44-1 Update - Eval Workbench Overview Read Model
 
 M5.44-1 adds the frontend landing read model for the future `vue-kube-manager` eval workbench:

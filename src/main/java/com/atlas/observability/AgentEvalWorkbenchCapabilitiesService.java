@@ -40,6 +40,17 @@ public class AgentEvalWorkbenchCapabilitiesService {
                 List.of("traceSetId", "suiteId", "traceSetPolicy")
             ),
             capability(
+                "workbench-trace-set-detail",
+                "Eval workbench trace-set detail",
+                "orient",
+                "GET",
+                "/api/agent/observability/eval/workbench/trace-sets/{traceSetId}",
+                "",
+                AgentEvalWorkbenchTraceSetDetailResponse.SCHEMA_VERSION,
+                List.of("traceSetId", "traceSetCatalog", "traceSetGate"),
+                List.of("traceSetView", "promotionChecklist", "endpointTemplates")
+            ),
+            capability(
                 "trace-set-candidate-discovery",
                 "Trace-set candidate discovery",
                 "discover",
@@ -122,6 +133,7 @@ public class AgentEvalWorkbenchCapabilitiesService {
             List.of(
                 "workbench-overview",
                 "trace-set-catalog",
+                "workbench-trace-set-detail",
                 "trace-set-promotion-workflow",
                 "trace-set-catalog-patch-proposal",
                 "trace-set-gate-bundle",

@@ -27,13 +27,17 @@ class AgentEvalWorkbenchOverviewServiceTest {
 
         assertThat(overview.schemaVersion()).isEqualTo("agent-eval-workbench-overview.v1");
         assertThat(overview.evaluationVersion()).isEqualTo("deterministic-replay-eval.v1");
-        assertThat(overview.capabilityCount()).isEqualTo(9);
+        assertThat(overview.capabilityCount()).isEqualTo(10);
         assertThat(overview.traceSetCount()).isEqualTo(4);
         assertThat(overview.traceSetNeedsEvidenceCount()).isEqualTo(4);
         assertThat(overview.traceSetReadyCount()).isZero();
         assertThat(overview.gateVerdict()).isEqualTo("FAIL");
         assertThat(overview.releaseEligible()).isFalse();
-        assertThat(overview.recommendedWorkflow()).startsWith("workbench-overview", "trace-set-catalog");
+        assertThat(overview.recommendedWorkflow()).startsWith(
+            "workbench-overview",
+            "trace-set-catalog",
+            "workbench-trace-set-detail"
+        );
         assertThat(overview.nextActions())
             .contains(
                 "discover-redacted-candidates",
