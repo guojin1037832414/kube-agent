@@ -2,9 +2,9 @@
     "schemaVersion":  "kube-agent-workspace-recovery-sha256.v1",
     "milestone":  "M5.66-1",
     "title":  "Reviewed eval trace evidence contract",
-    "generatedAt":  "2026-06-09T10:17:40.0652616Z",
+    "generatedAt":  "2026-06-09T10:20:24.0733390Z",
     "branch":  "codex/m521-29-top-agent-mission",
-    "head":  "ab535de80aca23b831163ac76169f469f8d22800",
+    "head":  "55bd5bfa85012a55a3f5ddb2dc5f038cd314643b",
     "entries":  [
                     {
                         "path":  "CHANGELOG.md",
