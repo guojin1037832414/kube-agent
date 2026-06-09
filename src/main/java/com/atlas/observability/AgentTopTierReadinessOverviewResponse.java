@@ -149,6 +149,8 @@ public record AgentTopTierReadinessOverviewResponse(
                 "officialVersionProtocolWatchEndpoint", AgentOfficialVersionProtocolWatchResponse.WATCH_ENDPOINT,
                 "officialVersionProtocolWatchDashboardEndpoint",
                 AgentOfficialVersionProtocolWatchDashboardResponse.DASHBOARD_ENDPOINT,
+                "officialVersionProtocolWatchVueBindingSpecEndpoint",
+                AgentOfficialVersionProtocolWatchVueBindingSpecResponse.BINDING_SPEC_ENDPOINT,
                 "javaSpringControlPlanePreserved", true,
                 "runtimeUpgradePerformed", false,
                 "dependencyUpgradePerformed", false,
@@ -313,6 +315,7 @@ public record AgentTopTierReadinessOverviewResponse(
             "wire-vue-advanced-technology-adoption-contract",
             "wire-vue-official-version-protocol-watch",
             "wire-vue-official-version-protocol-watch-dashboard",
+            "wire-vue-official-version-protocol-watch-binding-spec",
             "wire-vue-phase1-execution-roadmap",
             "wire-vue-readiness-control-plane",
             "populate-reviewed-redacted-eval-trace-evidence",
@@ -342,6 +345,8 @@ public record AgentTopTierReadinessOverviewResponse(
         endpoints.put("officialVersionProtocolWatch", AgentOfficialVersionProtocolWatchResponse.WATCH_ENDPOINT);
         endpoints.put("officialVersionProtocolWatchDashboard",
             AgentOfficialVersionProtocolWatchDashboardResponse.DASHBOARD_ENDPOINT);
+        endpoints.put("officialVersionProtocolWatchVueBindingSpec",
+            AgentOfficialVersionProtocolWatchVueBindingSpecResponse.BINDING_SPEC_ENDPOINT);
         endpoints.put("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap");
         endpoints.put("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane");
         endpoints.put("kubeManagerGovernanceOverview", "/api/agent/observability/kube-manager/http-outlet/governance-workbench/overview");

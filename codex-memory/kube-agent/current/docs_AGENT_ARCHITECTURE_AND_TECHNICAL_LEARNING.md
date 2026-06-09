@@ -2,6 +2,75 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-09 M5.76 Official Version / Protocol Watch Vue Binding Spec
+
+M5.76 turns the M5.75 dashboard into a backend-owned frontend binding spec. It answers: how can `vue-kube-manager` implement the official technology/protocol watch page without duplicating or weakening backend governance logic?
+
+```text
+M5.74 official version/protocol watch
+        |
+        v
+M5.75 Vue-ready dashboard
+        |
+        +-- sourceCards
+        +-- technologyTrackCards
+        +-- adoptionGateRows
+        +-- blockedRuntimeShortcutRows
+        +-- disabledRuntimeActions
+        |
+        v
+M5.76 Vue binding spec
+        |
+        +-- componentSpecs
+        +-- fieldBindings
+        +-- tableColumnGroups
+        +-- stateRenderingRules
+        +-- disabledActionBindings
+        +-- testFixtures
+        |
+        v
+vue-kube-manager implements a read-only workbench with no runtime buttons
+```
+
+Endpoint:
+
+```text
+GET /api/agent/observability/top-tier/official-version-protocol-watch/vue-binding-spec
+```
+
+Current state:
+
+- `schemaVersion=agent-official-version-protocol-watch-vue-binding-spec.v1`
+- `bindingStatus=VUE_BINDING_SPEC_READY`
+- `componentSpecCount=7`
+- `fieldBindingCount=12`
+- `tableColumnGroupCount=4`
+- `disabledActionBindingCount=6`
+- `fixtureCount=4`
+- `runtimeControlAllowed=false`
+
+Key design:
+
+- The binding spec service composes only `AgentOfficialVersionProtocolWatchDashboardService.dashboard()`.
+- The response embeds the M5.75 `sourceDashboard`.
+- It publishes concrete frontend component names, renderer hints, field paths, table columns, disabled action bindings, and mock fixture requirements.
+- It integrates into the top-tier readiness recommended build order and the Vue readiness control plane as `official-version-protocol-watch-binding-spec`.
+- It keeps all runtime actions absent: dependency upgrades, MCP `tools/call`, A2A handoff, retrieval runtime, CI blocking, and Phase 2 domain reopening remain separate reviewed slices.
+
+Learning point: 顶级 Agent 的前端需要“后端权威绑定规格”。这样 Vue 既能做出好用的工作台，又不会把治理逻辑、运行时权限、官方来源解释、禁用动作原因散落在前端代码里。
+
+Technology point: 最新技术被引入系统的第一形态不一定是 runtime integration。对高风险 Agent 系统来说，官方源、契约、fixture、禁用动作和 Vue 证据面板也是先进技术的一部分，因为它们决定了未来 runtime 能否安全上线。
+
+Official references rechecked for this anchor:
+
+- Spring AI Reference: https://docs.spring.io/spring-ai/reference/
+- Spring Boot Documentation: https://docs.spring.io/spring-boot/index.html
+- OpenAI Agents SDK guide: https://platform.openai.com/docs/guides/agents
+- MCP latest specification: https://modelcontextprotocol.io/specification/latest
+- OpenTelemetry GenAI semantic conventions: https://opentelemetry.io/docs/specs/semconv/gen-ai/
+- A2A protocol specification: https://a2a-protocol.org/latest/specification/
+- OWASP Top 10 for LLM Applications: https://genai.owasp.org/llm-top-10/
+
 ## 2026-06-09 M5.75 Official Version / Protocol Watch Dashboard
 
 M5.75 turns the M5.74 official watch into a Vue-ready dashboard. It answers: how can `vue-kube-manager` show the newest Agent technology sources, security guidance, adoption tracks, gates, blockers, and disabled runtime actions without duplicating governance rules in the frontend?

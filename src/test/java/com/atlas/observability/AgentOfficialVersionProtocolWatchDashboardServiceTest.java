@@ -168,6 +168,8 @@ class AgentOfficialVersionProtocolWatchDashboardServiceTest {
         assertThat(dashboard.endpointMap())
             .containsEntry("officialVersionProtocolWatchDashboard",
                 "/api/agent/observability/top-tier/official-version-protocol-watch/dashboard")
+            .containsEntry("officialVersionProtocolWatchVueBindingSpec",
+                "/api/agent/observability/top-tier/official-version-protocol-watch/vue-binding-spec")
             .containsEntry("officialVersionProtocolWatch",
                 "/api/agent/observability/top-tier/official-version-protocol-watch")
             .containsEntry("advancedTechnologyAdoptionContract",

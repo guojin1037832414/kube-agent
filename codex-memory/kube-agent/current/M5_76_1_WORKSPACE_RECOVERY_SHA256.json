@@ -1,0 +1,160 @@
+﻿{
+    "milestone":  "M5.76-1",
+    "title":  "Official version/protocol watch Vue binding spec",
+    "generatedAt":  "2026-06-10T00:07:05.5357207+08:00",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "head":  "308d0d07e8fe95e014bbe68c297fb05a12e5f8b9",
+    "note":  "Workspace recovery manifest before M5.76 implementation commit; post-push manifest will be generated after push.",
+    "files":  [
+                  {
+                      "path":  "CHANGELOG.md",
+                      "sha256":  "39CE88A6390B580C46D42C1589DB5749CD3DCD74CA14940A0E686334733F7C00",
+                      "bytes":  376114
+                  },
+                  {
+                      "path":  "docs/PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "5CC7BDFE249BFD737EFF95CA02AA5DFE6BAE1C8F6FF036B99C7817DAC57E1FBF",
+                      "bytes":  430374
+                  },
+                  {
+                      "path":  "docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "72CECCAD944AA24356CEC4E3E15458453A5EC034C680AD310D66A6238C193885",
+                      "bytes":  180616
+                  },
+                  {
+                      "path":  "docs/tech-stack/BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "9DED53DD44CBD264867B8CBB496F5B17F6422EF31B74B60DCC7C81D35A506C27",
+                      "bytes":  103822
+                  },
+                  {
+                      "path":  "docs/M5_76_OFFICIAL_VERSION_PROTOCOL_WATCH_VUE_BINDING_SPEC_20260609.md",
+                      "sha256":  "034CE2B80098037B1FB4A1C455206192EDC2F7E643DA7427D3F7BF24E5A7F5AC",
+                      "bytes":  6810
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentOfficialVersionProtocolWatchVueBindingSpecResponse.java",
+                      "sha256":  "76E68F49A8655DE023CC05B0676A8230EA97EB644F20E4D3C36B132195D11EB5",
+                      "bytes":  20213
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentOfficialVersionProtocolWatchVueBindingSpecService.java",
+                      "sha256":  "7C8DE313A7985A409E2A6CB40452E09A93E046DA4AB39536FE62194F9C8A1CC3",
+                      "bytes":  1312
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentOfficialVersionProtocolWatchDashboardResponse.java",
+                      "sha256":  "488EAF6376B071ECEFE8F609A87E02D3D8668966B6A58947C9319112D334BF2B",
+                      "bytes":  21838
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentOfficialVersionProtocolWatchResponse.java",
+                      "sha256":  "FA8B5EDF7C83D99DF7C79B004FB303F4E458F113874EF49E76FCC76435BA1D55",
+                      "bytes":  18238
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentAdvancedTechnologyAdoptionContractResponse.java",
+                      "sha256":  "47B0C16512A61C2ACCD250770855826DBF6FDDB7752AC8B251C31F1C853B62F0",
+                      "bytes":  16243
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentTopTierReadinessOverviewResponse.java",
+                      "sha256":  "0820CFA2719D30E64F4A4E2DAEDCC84704A37B2155C037C5E3B4FEEDD3EDAC5F",
+                      "bytes":  21129
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentPhase1ExecutionRoadmapResponse.java",
+                      "sha256":  "AE38B83BD4EB611E02D84436744149574D2A53C6179D5D543336A3A273A00C33",
+                      "bytes":  15191
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentVueReadinessControlPlaneResponse.java",
+                      "sha256":  "CA86C33501765297885B2A25215B17F7A601B65295138D2D009A828428632F68",
+                      "bytes":  17191
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/ObservabilityController.java",
+                      "sha256":  "DF4F7A6ECAFBB169358E7EE6598F2518EB9E1DD827BA27E35D7D320754A36F22",
+                      "bytes":  48361
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/AgentOfficialVersionProtocolWatchVueBindingSpecServiceTest.java",
+                      "sha256":  "99A24D514825614139A1A1E7C0FE16255A3D5450821B6035FD7659B33B3E1043",
+                      "bytes":  10548
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/AgentOfficialVersionProtocolWatchDashboardServiceTest.java",
+                      "sha256":  "2492199EDE9EB3B4B3C8A96BF7538B56EAE9411A603E7E00773ACEE084F45E4C",
+                      "bytes":  14176
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/AgentOfficialVersionProtocolWatchServiceTest.java",
+                      "sha256":  "BD5AD8E1C4DC0903B8865F37EF18952E157270A7B029A4E8075AF299B2975935",
+                      "bytes":  8902
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/AgentAdvancedTechnologyAdoptionContractServiceTest.java",
+                      "sha256":  "66A1CDAEEF5327E4FF3CE5ABAC45A3ADF27B47B8825B6232B10A1B05AFE60376",
+                      "bytes":  10113
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/AgentTopTierReadinessOverviewServiceTest.java",
+                      "sha256":  "278CBCC3CDE71E002914059CE893D29E49F9E846CD52B04E00AD65BCC5B52CDC",
+                      "bytes":  15325
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/AgentPhase1ExecutionRoadmapServiceTest.java",
+                      "sha256":  "4F65B22B76545FA560CC32375FE156CE6B47A373FA3EE8F3493B96751E92A300",
+                      "bytes":  9114
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/AgentVueReadinessControlPlaneServiceTest.java",
+                      "sha256":  "142708E5D630F41A789467E55CFE5CC68D34A5AB268CC33A545C058A3A3D89DB",
+                      "bytes":  9209
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/ObservabilityControllerTest.java",
+                      "sha256":  "ABD88687400AFB86EAA1D917C93D734BEA31E74CCADAB204DCFF026B8457FBCB",
+                      "bytes":  195815
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/ObservabilityControllerSecurityContractTest.java",
+                      "sha256":  "F41316BD6E2D2B77C146AE1062543EE7BAED591768F8F0E70E165576810271BB",
+                      "bytes":  13013
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/auth/AgentSecurityConfigWebMvcTest.java",
+                      "sha256":  "584C209B02DC58D3ED40BC19F550D540F0FAFBFE5B0F39DC87D9961C3159A6AB",
+                      "bytes":  44342
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/RECOVERY_STATUS.md",
+                      "sha256":  "074B65E29DCA691059E95CA3FA8810D3A7B4A8B7D054D9A3652073A18F118EF8",
+                      "bytes":  78632
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/CHANGELOG.md",
+                      "sha256":  "39CE88A6390B580C46D42C1589DB5749CD3DCD74CA14940A0E686334733F7C00",
+                      "bytes":  376114
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "5CC7BDFE249BFD737EFF95CA02AA5DFE6BAE1C8F6FF036B99C7817DAC57E1FBF",
+                      "bytes":  430374
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "72CECCAD944AA24356CEC4E3E15458453A5EC034C680AD310D66A6238C193885",
+                      "bytes":  180616
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "9DED53DD44CBD264867B8CBB496F5B17F6422EF31B74B60DCC7C81D35A506C27",
+                      "bytes":  103822
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_M5_76_OFFICIAL_VERSION_PROTOCOL_WATCH_VUE_BINDING_SPEC_20260609.md",
+                      "sha256":  "034CE2B80098037B1FB4A1C455206192EDC2F7E643DA7427D3F7BF24E5A7F5AC",
+                      "bytes":  6810
+                  }
+              ]
+}

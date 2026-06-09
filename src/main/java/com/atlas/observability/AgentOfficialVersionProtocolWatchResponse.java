@@ -217,6 +217,8 @@ public record AgentOfficialVersionProtocolWatchResponse(
         endpoints.put("officialVersionProtocolWatch", WATCH_ENDPOINT);
         endpoints.put("officialVersionProtocolWatchDashboard",
             AgentOfficialVersionProtocolWatchDashboardResponse.DASHBOARD_ENDPOINT);
+        endpoints.put("officialVersionProtocolWatchVueBindingSpec",
+            AgentOfficialVersionProtocolWatchVueBindingSpecResponse.BINDING_SPEC_ENDPOINT);
         endpoints.put("advancedTechnologyAdoptionContract",
             "/api/agent/observability/top-tier/advanced-technology-adoption-contract");
         endpoints.put("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap");

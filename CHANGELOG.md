@@ -6,6 +6,23 @@
 
 ---
 
+## [M5.76-1] - Official version/protocol watch Vue binding spec
+
+**Delivery**: Added a backend-owned Vue binding specification for the official version/protocol watch dashboard so `vue-kube-manager` can implement the page without duplicating governance logic.
+**Changes**
+- Added `GET /api/agent/observability/top-tier/official-version-protocol-watch/vue-binding-spec`.
+- Added `AgentOfficialVersionProtocolWatchVueBindingSpecResponse` and `AgentOfficialVersionProtocolWatchVueBindingSpecService`.
+- Published 7 component specs, 12 field bindings, 4 table column groups, 5 state rendering rules, 6 disabled action bindings, 4 test fixtures, and a frontend implementation checklist.
+- Embedded the M5.75 dashboard as `sourceDashboard` so Vue can drill from binding rules back to official watch evidence.
+- Integrated the binding spec into official watch dashboard maps, official watch maps, advanced technology adoption, top-tier readiness, Phase 1 roadmap, and Vue readiness control plane.
+- Increased Vue readiness dashboard count to `12` and added `official-version-protocol-watch-binding-spec`.
+- Added service, Controller, source-security, WebMvc security, and aggregate-read-model coverage.
+**Verification**
+- `mvn -q "-Dtest=AgentOfficialVersionProtocolWatchVueBindingSpecServiceTest,AgentOfficialVersionProtocolWatchDashboardServiceTest,AgentOfficialVersionProtocolWatchServiceTest,AgentAdvancedTechnologyAdoptionContractServiceTest,AgentTopTierReadinessOverviewServiceTest,AgentPhase1ExecutionRoadmapServiceTest,AgentVueReadinessControlPlaneServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed during implementation.
+**Security**
+- The binding spec is admin-only, read-only, binding-spec-only, Vue-workbench-only, and external-call-free at request time.
+- It does not upgrade dependencies, run LLMs, execute Tools, invoke `SafeToolExecutor`, invoke HITL, call kube-manager or port `8100`, expose MCP runtime `tools/call`, run A2A handoff, execute retrieval/vector/reranker/GraphRAG, write memory, write audit, issue durable receipts, mutate catalogs, enable CI blocking, or touch NIM / HPC / Slurm / BCM Phase 2 work.
+
 ## [M5.75-1] - Official version/protocol watch dashboard
 
 **Delivery**: Added a Vue-ready, admin-only dashboard for the official version/protocol watch and refreshed the watch with the 2026-06 NSA MCP security guidance.

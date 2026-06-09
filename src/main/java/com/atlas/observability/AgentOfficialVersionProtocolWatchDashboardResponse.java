@@ -308,6 +308,8 @@ public record AgentOfficialVersionProtocolWatchDashboardResponse(
     private static Map<String, Object> buildEndpointMap() {
         Map<String, Object> endpoints = new LinkedHashMap<>();
         endpoints.put("officialVersionProtocolWatchDashboard", DASHBOARD_ENDPOINT);
+        endpoints.put("officialVersionProtocolWatchVueBindingSpec",
+            AgentOfficialVersionProtocolWatchVueBindingSpecResponse.BINDING_SPEC_ENDPOINT);
         endpoints.put("officialVersionProtocolWatch", AgentOfficialVersionProtocolWatchResponse.WATCH_ENDPOINT);
         endpoints.put("advancedTechnologyAdoptionContract",
             "/api/agent/observability/top-tier/advanced-technology-adoption-contract");

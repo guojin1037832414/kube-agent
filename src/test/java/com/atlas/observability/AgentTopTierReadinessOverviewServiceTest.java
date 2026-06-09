@@ -25,6 +25,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -92,6 +93,7 @@ class AgentTopTierReadinessOverviewServiceTest {
             "wire-vue-advanced-technology-adoption-contract",
             "wire-vue-official-version-protocol-watch",
             "wire-vue-official-version-protocol-watch-dashboard",
+            "wire-vue-official-version-protocol-watch-binding-spec",
             "wire-vue-phase1-execution-roadmap",
             "wire-vue-readiness-control-plane",
             "populate-reviewed-redacted-eval-trace-evidence",
@@ -107,6 +109,8 @@ class AgentTopTierReadinessOverviewServiceTest {
             .containsEntry("officialVersionProtocolWatch", "/api/agent/observability/top-tier/official-version-protocol-watch")
             .containsEntry("officialVersionProtocolWatchDashboard",
                 "/api/agent/observability/top-tier/official-version-protocol-watch/dashboard")
+            .containsEntry("officialVersionProtocolWatchVueBindingSpec",
+                "/api/agent/observability/top-tier/official-version-protocol-watch/vue-binding-spec")
             .containsEntry("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap")
             .containsEntry("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane")
             .containsEntry("mcpGovernanceOverview", "/api/agent/mcp/governance/overview")
@@ -142,6 +146,17 @@ class AgentTopTierReadinessOverviewServiceTest {
             .containsEntry("containsAuthorizationHeader", false)
             .containsEntry("containsToken", false)
             .containsEntry("containsPassword", false);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> advancedTechnologyEvidence = (Map<String, Object>) overview.capabilityCards().stream()
+            .filter(card -> "advanced-technology-adoption".equals(card.get("id")))
+            .findFirst()
+            .orElseThrow()
+            .get("evidence");
+        assertThat(advancedTechnologyEvidence)
+            .containsEntry("officialVersionProtocolWatchDashboardEndpoint",
+                "/api/agent/observability/top-tier/official-version-protocol-watch/dashboard")
+            .containsEntry("officialVersionProtocolWatchVueBindingSpecEndpoint",
+                "/api/agent/observability/top-tier/official-version-protocol-watch/vue-binding-spec");
         assertThat(overview.kubeManagerGovernance().workbenchStatus()).isEqualTo("WRITE_GOVERNANCE_NOT_READY");
         assertThat(overview.evalWorkbenchCapabilities().capabilityCount()).isGreaterThan(0);
         assertThat(overview.mcpGovernance().governanceStatus()).isEqualTo("MANIFEST_ONLY_NOT_CALLABLE");

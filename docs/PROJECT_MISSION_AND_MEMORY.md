@@ -10,6 +10,60 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
+## Latest Phase 1 Core Memory - M5.76-1
+
+M5.76-1 adds the backend-owned Vue binding specification for the official version/protocol watch dashboard. This is the missing bridge between the M5.75 Dashboard contract and future `vue-kube-manager` implementation: Vue now has component specs, field bindings, table column groups, disabled action bindings, fixtures, and implementation checklist from the backend.
+
+Endpoint:
+
+```text
+GET /api/agent/observability/top-tier/official-version-protocol-watch/vue-binding-spec
+```
+
+Delivered:
+
+- Added `AgentOfficialVersionProtocolWatchVueBindingSpecResponse`.
+- Added `AgentOfficialVersionProtocolWatchVueBindingSpecService`.
+- Added admin-only Controller method `officialVersionProtocolWatchVueBindingSpec()`.
+- Published 7 component specs, 12 field bindings, 4 table column groups, 5 state rendering rules, 6 disabled action bindings, 4 test fixtures, and an implementation checklist.
+- Embedded the M5.75 dashboard as `sourceDashboard`.
+- Integrated the endpoint into official watch dashboard maps, official watch maps, advanced technology adoption, top-tier readiness overview, Phase 1 roadmap, and Vue readiness control plane.
+- Updated Vue readiness dashboard count to `12`.
+- Added service, Controller, source-security, WebMvc security, advanced technology, top-tier readiness, roadmap, and Vue readiness tests.
+- Added the teaching document `docs/M5_76_OFFICIAL_VERSION_PROTOCOL_WATCH_VUE_BINDING_SPEC_20260609.md`.
+
+Current state:
+
+- `schemaVersion=agent-official-version-protocol-watch-vue-binding-spec.v1`.
+- `bindingStatus=VUE_BINDING_SPEC_READY`.
+- `componentSpecCount=7`.
+- `fieldBindingCount=12`.
+- `tableColumnGroupCount=4`.
+- `disabledActionBindingCount=6`.
+- `fixtureCount=4`.
+- `runtimeControlAllowed=false`.
+- `sourceDashboardEmbedded=true`.
+
+Security boundary:
+
+- M5.76 is admin-only, read-only, binding-spec-only, Vue-workbench-only, and reviewed-dashboard-only.
+- It does not perform network calls at request time; official sources remain reviewed during development/Git review.
+- It does not upgrade dependencies, bind external Agent runtimes, run LLMs, execute Tools, call `SafeToolExecutor`, invoke HITL, call kube-manager including port `8100`, expose MCP runtime `tools/call`, run A2A handoff, execute retrieval/vector/reranker/GraphRAG, write memory, write audit, issue durable receipts, mutate catalogs, enable CI blocking, or touch NIM / HPC / Slurm / BCM Phase 2 scope.
+
+Learning point: backend-owned Vue binding specs are a top-tier Agent pattern. They prevent the frontend from inventing governance logic, while still letting the UI become a rich learning/workbench surface.
+
+Latest verified command:
+
+- `mvn -q "-Dtest=AgentOfficialVersionProtocolWatchVueBindingSpecServiceTest,AgentOfficialVersionProtocolWatchDashboardServiceTest,AgentOfficialVersionProtocolWatchServiceTest,AgentAdvancedTechnologyAdoptionContractServiceTest,AgentTopTierReadinessOverviewServiceTest,AgentPhase1ExecutionRoadmapServiceTest,AgentVueReadinessControlPlaneServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+Next safe development order:
+
+- Wire `vue-kube-manager` to render the official version/protocol watch dashboard using the M5.76 binding spec.
+- Continue reviewed redacted eval and Memory/RAG trace evidence curation.
+- Add compatibility-matrix tests before any Java/Spring/Spring AI/OpenAI/MCP/A2A/OTel/RAG dependency/runtime upgrade.
+- Only after reviewed evidence exists, prototype MCP runtime, A2A handoff, retrieval runtime, and CI blocking in separate release-gated slices.
+- Keep NIM / HPC / Slurm / BCM paused for Phase 2.
+
 ## Latest Phase 1 Core Memory - M5.75-1
 
 M5.75-1 adds the Vue-ready dashboard for the official version/protocol watch. This turns the latest-technology watch into cards, rows, disabled runtime actions, render sections, and policy maps that `vue-kube-manager` can render directly.

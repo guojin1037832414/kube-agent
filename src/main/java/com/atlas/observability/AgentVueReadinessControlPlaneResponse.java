@@ -75,6 +75,11 @@ public record AgentVueReadinessControlPlaneResponse(
                 AgentOfficialVersionProtocolWatchDashboardResponse.DASHBOARD_ENDPOINT,
                 List.of("sourceCards", "technologyTrackCards", "adoptionGateRows",
                     "blockedRuntimeShortcutRows", "disabledRuntimeActions", "renderSections")),
+            dashboard("official-version-protocol-watch-binding-spec", "READY_TO_BIND",
+                "Render or test against the backend-owned Vue component, field, column, state, disabled-action, and fixture binding spec.",
+                AgentOfficialVersionProtocolWatchVueBindingSpecResponse.BINDING_SPEC_ENDPOINT,
+                List.of("componentSpecs", "fieldBindings", "tableColumnGroups", "stateRenderingRules",
+                    "disabledActionBindings", "testFixtures", "implementationChecklist")),
             dashboard("phase1-execution-roadmap", "READY_TO_BIND",
                 "Render the ordered Phase 1 execution steps and do-not-start-yet boundaries.",
                 "/api/agent/observability/top-tier/phase1-execution-roadmap",
@@ -114,6 +119,8 @@ public record AgentVueReadinessControlPlaneResponse(
             apiBinding("official-version-protocol-watch", AgentOfficialVersionProtocolWatchResponse.WATCH_ENDPOINT, "GET", true),
             apiBinding("official-version-protocol-watch-dashboard",
                 AgentOfficialVersionProtocolWatchDashboardResponse.DASHBOARD_ENDPOINT, "GET", true),
+            apiBinding("official-version-protocol-watch-binding-spec",
+                AgentOfficialVersionProtocolWatchVueBindingSpecResponse.BINDING_SPEC_ENDPOINT, "GET", true),
             apiBinding("phase1-roadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap", "GET", true),
             apiBinding("kube-manager-governance", "/api/agent/observability/kube-manager/http-outlet/governance-workbench/overview", "GET", true),
             apiBinding("memory-rag-readiness", "/api/agent/observability/memory-rag/readiness", "GET", true),
@@ -167,6 +174,7 @@ public record AgentVueReadinessControlPlaneResponse(
             "bind-advanced-technology-adoption-matrix",
             "bind-official-version-protocol-watch",
             "bind-official-version-protocol-watch-dashboard",
+            "bind-official-version-protocol-watch-binding-spec",
             "bind-phase1-execution-roadmap-timeline",
             "bind-kube-manager-governance-cards",
             "bind-memory-rag-readiness-and-contract-links",
@@ -186,6 +194,8 @@ public record AgentVueReadinessControlPlaneResponse(
         endpoints.put("officialVersionProtocolWatch", AgentOfficialVersionProtocolWatchResponse.WATCH_ENDPOINT);
         endpoints.put("officialVersionProtocolWatchDashboard",
             AgentOfficialVersionProtocolWatchDashboardResponse.DASHBOARD_ENDPOINT);
+        endpoints.put("officialVersionProtocolWatchVueBindingSpec",
+            AgentOfficialVersionProtocolWatchVueBindingSpecResponse.BINDING_SPEC_ENDPOINT);
         endpoints.put("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap");
         endpoints.put("kubeManagerGovernanceOverview", "/api/agent/observability/kube-manager/http-outlet/governance-workbench/overview");
         endpoints.put("memoryRagReadiness", "/api/agent/observability/memory-rag/readiness");

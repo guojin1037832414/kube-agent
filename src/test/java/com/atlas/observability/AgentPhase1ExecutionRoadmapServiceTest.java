@@ -66,6 +66,7 @@ class AgentPhase1ExecutionRoadmapServiceTest {
                 "technology-adoption",
                 "official-version-protocol-watch",
                 "official-version-protocol-watch-dashboard",
+                "official-version-protocol-watch-binding-spec",
                 "phase1-roadmap",
                 "vue-readiness-control-plane",
                 "kube-manager-governance",
@@ -91,6 +92,8 @@ class AgentPhase1ExecutionRoadmapServiceTest {
             .containsEntry("officialVersionProtocolWatch", "/api/agent/observability/top-tier/official-version-protocol-watch")
             .containsEntry("officialVersionProtocolWatchDashboard",
                 "/api/agent/observability/top-tier/official-version-protocol-watch/dashboard")
+            .containsEntry("officialVersionProtocolWatchVueBindingSpec",
+                "/api/agent/observability/top-tier/official-version-protocol-watch/vue-binding-spec")
             .containsEntry("reviewedEvalTraceEvidence", "/api/agent/observability/eval/reviewed-trace-evidence")
             .containsEntry("releaseBlockingEvalGateContract", "/api/agent/observability/eval/release-blocking-gate-contract")
             .containsEntry("memoryRagEvalGateContract", "/api/agent/observability/memory-rag/eval-gate-contract")

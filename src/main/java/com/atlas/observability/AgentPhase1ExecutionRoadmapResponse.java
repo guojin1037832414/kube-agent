@@ -62,6 +62,7 @@ public record AgentPhase1ExecutionRoadmapResponse(
                 List.of("backend-read-models-exist", "admin-auth-required", "official-source-watch-exists"),
                 List.of("top-tier-readiness-overview", "advanced-technology-adoption-contract",
                     "official-version-protocol-watch", "official-version-protocol-watch-dashboard",
+                    "official-version-protocol-watch-binding-spec",
                     "kube-manager-governance-workbench", "memory-rag-readiness",
                     "memory-rag-trace-set-curation-workbench")),
             step(2, "reviewed-eval-trace-evidence",
@@ -129,6 +130,8 @@ public record AgentPhase1ExecutionRoadmapResponse(
             vueTarget("official-version-protocol-watch", AgentOfficialVersionProtocolWatchResponse.WATCH_ENDPOINT),
             vueTarget("official-version-protocol-watch-dashboard",
                 AgentOfficialVersionProtocolWatchDashboardResponse.DASHBOARD_ENDPOINT),
+            vueTarget("official-version-protocol-watch-binding-spec",
+                AgentOfficialVersionProtocolWatchVueBindingSpecResponse.BINDING_SPEC_ENDPOINT),
             vueTarget("phase1-roadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap"),
             vueTarget("vue-readiness-control-plane", "/api/agent/observability/top-tier/vue-readiness-control-plane"),
             vueTarget("kube-manager-governance", "/api/agent/observability/kube-manager/http-outlet/governance-workbench/overview"),
@@ -163,6 +166,8 @@ public record AgentPhase1ExecutionRoadmapResponse(
         endpoints.put("officialVersionProtocolWatch", AgentOfficialVersionProtocolWatchResponse.WATCH_ENDPOINT);
         endpoints.put("officialVersionProtocolWatchDashboard",
             AgentOfficialVersionProtocolWatchDashboardResponse.DASHBOARD_ENDPOINT);
+        endpoints.put("officialVersionProtocolWatchVueBindingSpec",
+            AgentOfficialVersionProtocolWatchVueBindingSpecResponse.BINDING_SPEC_ENDPOINT);
         endpoints.put("kubeManagerGovernanceOverview", "/api/agent/observability/kube-manager/http-outlet/governance-workbench/overview");
         endpoints.put("evalWorkbenchOverview", "/api/agent/observability/eval/workbench/overview");
         endpoints.put("reviewedEvalTraceEvidence", "/api/agent/observability/eval/reviewed-trace-evidence");

@@ -9,6 +9,42 @@
 - 供应链、CI、SBOM、质量门禁进入工程默认路径；
 - Java / Spring / Agent 框架升级以兼容性矩阵推进，不用不可构建的版本号伪装先进。
 
+## 2026-06-09 M5.76 Official-Version-Protocol-Watch-Vue-Binding-Spec Rule
+
+M5.76 adds the backend-owned Vue binding spec for the latest-technology governance dashboard:
+
+```text
+GET /api/agent/observability/top-tier/official-version-protocol-watch/vue-binding-spec
+```
+
+This is now the Phase 1 frontend implementation rule for advanced Agent technology workbenches:
+
+- The backend publishes component specs, field bindings, table column groups, state rendering rules, disabled action bindings, fixtures, and implementation checklist.
+- `vue-kube-manager` should implement the page from the binding spec instead of inventing governance logic.
+- Runtime controls remain absent for dependency upgrades, MCP `tools/call`, A2A handoff, retrieval/vector/reranker/GraphRAG, CI blocking, kube-manager writes, and Phase 2 domain reopening.
+- The binding spec embeds the M5.75 source dashboard so the frontend can drill down from UI rules to official-source evidence.
+- The Vue readiness control plane now tracks 12 dashboard/workbench targets and includes `official-version-protocol-watch-binding-spec`.
+
+Technology judgment: the newest technology stack is now represented as watch -> dashboard -> binding spec -> fixture lane before runtime authority. This is the right advanced pattern for a top-tier Agent because the UI can become a high-quality learning and operator surface while the backend continues to own evidence, policy, and release gates.
+
+Official references rechecked for this anchor:
+
+- Spring AI reference: https://docs.spring.io/spring-ai/reference/
+- Spring Boot documentation: https://docs.spring.io/spring-boot/index.html
+- OpenAI Agents SDK guide: https://platform.openai.com/docs/guides/agents
+- Model Context Protocol latest specification: https://modelcontextprotocol.io/specification/latest
+- OpenTelemetry GenAI semantic conventions: https://opentelemetry.io/docs/specs/semconv/gen-ai/
+- A2A protocol specification: https://a2a-protocol.org/latest/specification/
+- OWASP Top 10 for LLM Applications: https://genai.owasp.org/llm-top-10/
+
+Next order after M5.76:
+
+- Wire `vue-kube-manager` to consume the binding spec and render the official version/protocol watch page.
+- Add Playwright/front-end contract fixtures once the frontend workspace is available.
+- Continue reviewed redacted eval and Memory/RAG trace evidence curation.
+- Run compatibility-matrix branches before Java/Spring/Spring AI/OpenAI/MCP/A2A/OTel/RAG runtime or dependency upgrades.
+- Keep NIM / HPC / Slurm / BCM paused for Phase 2.
+
 ## 2026-06-09 M5.75 Official-Version-Protocol-Watch-Dashboard Rule
 
 M5.75 adds the backend-owned Vue dashboard for latest-technology governance:

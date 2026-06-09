@@ -146,6 +146,8 @@ class ObservabilityControllerTest {
         new AgentOfficialVersionProtocolWatchService();
     private final AgentOfficialVersionProtocolWatchDashboardService officialVersionProtocolWatchDashboardService =
         new AgentOfficialVersionProtocolWatchDashboardService(officialVersionProtocolWatchService);
+    private final AgentOfficialVersionProtocolWatchVueBindingSpecService officialVersionProtocolWatchVueBindingSpecService =
+        new AgentOfficialVersionProtocolWatchVueBindingSpecService(officialVersionProtocolWatchDashboardService);
     private final AgentPhase1ExecutionRoadmapService phase1ExecutionRoadmapService =
         new AgentPhase1ExecutionRoadmapService();
     private final AgentVueReadinessControlPlaneService vueReadinessControlPlaneService =
@@ -163,6 +165,7 @@ class ObservabilityControllerTest {
         advancedTechnologyAdoptionContractService,
         officialVersionProtocolWatchService,
         officialVersionProtocolWatchDashboardService,
+        officialVersionProtocolWatchVueBindingSpecService,
         phase1ExecutionRoadmapService,
         vueReadinessControlPlaneService,
         memoryRagReadinessService,
@@ -1130,6 +1133,69 @@ class ObservabilityControllerTest {
             .containsEntry("containsPassword", false);
         assertThat(dashboard.toString())
             .contains("official-version-protocol-watch-dashboard", "blocked-shortcuts")
+            .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret");
+    }
+
+    @Test
+    void officialVersionProtocolWatchVueBindingSpec_shouldRequireAdminAndReturnBindingSpec() {
+        ResponseEntity<ApiResponse<AgentOfficialVersionProtocolWatchVueBindingSpecResponse>> anonymous =
+            controller.officialVersionProtocolWatchVueBindingSpec();
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentOfficialVersionProtocolWatchVueBindingSpecResponse>> user =
+            controller.officialVersionProtocolWatchVueBindingSpec();
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        userPermissionContext.unbind();
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentOfficialVersionProtocolWatchVueBindingSpecResponse>> admin =
+            controller.officialVersionProtocolWatchVueBindingSpec();
+
+        assertThat(admin.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(admin.getBody()).isNotNull();
+        AgentOfficialVersionProtocolWatchVueBindingSpecResponse spec = admin.getBody().getData();
+        assertThat(spec.schemaVersion()).isEqualTo("agent-official-version-protocol-watch-vue-binding-spec.v1");
+        assertThat(spec.bindingStatus()).isEqualTo("VUE_BINDING_SPEC_READY");
+        assertThat(spec.componentSpecCount()).isEqualTo(7);
+        assertThat(spec.fieldBindingCount()).isEqualTo(12);
+        assertThat(spec.disabledActionBindingCount()).isEqualTo(6);
+        assertThat(spec.runtimeControlAllowed()).isFalse();
+        assertThat(spec.componentSpecs()).extracting(component -> component.get("name"))
+            .contains("OfficialSourceCardGrid", "TechnologyTrackMatrix", "DisabledRuntimeActionList");
+        assertThat(spec.fieldBindings()).extracting(binding -> binding.get("fieldPath"))
+            .contains("sourceCards[].officialUrl", "technologyTrackCards[].disabledRuntimeActions",
+                "dashboardPolicy.runtimeControlAllowed");
+        assertThat(spec.disabledActionBindings()).allSatisfy(binding -> assertThat(binding)
+            .containsEntry("buttonVisible", false)
+            .containsEntry("clickHandlerAllowed", false));
+        assertThat(spec.testFixtures()).extracting(fixture -> fixture.get("id"))
+            .contains("mcp-security-source-visible", "runtime-buttons-absent");
+        assertThat(spec.endpointMap())
+            .containsEntry("officialVersionProtocolWatchVueBindingSpec",
+                "/api/agent/observability/top-tier/official-version-protocol-watch/vue-binding-spec")
+            .containsEntry("officialVersionProtocolWatchDashboard",
+                "/api/agent/observability/top-tier/official-version-protocol-watch/dashboard");
+        assertThat(spec.bindingPolicy())
+            .containsEntry("bindingSpecOnly", true)
+            .containsEntry("runtimeButtonsAllowed", false)
+            .containsEntry("mockedHttpFixturesRequired", true);
+        assertThat(spec.safety())
+            .containsEntry("toolExecution", false)
+            .containsEntry("kubeManagerCalls", false)
+            .containsEntry("mcpToolsCall", false)
+            .containsEntry("retrievalExecuted", false)
+            .containsEntry("phase2NimHpcSlurmBcmTouched", false);
+        assertThat(spec.sourceDashboard().schemaVersion())
+            .isEqualTo("agent-official-version-protocol-watch-dashboard.v1");
+        assertThat(spec.toString())
+            .contains("OfficialSourceCardGrid", "runtime-buttons-absent")
             .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret");
     }
 
