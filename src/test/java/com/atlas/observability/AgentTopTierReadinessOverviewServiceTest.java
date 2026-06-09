@@ -92,6 +92,7 @@ class AgentTopTierReadinessOverviewServiceTest {
             "wire-vue-top-tier-readiness-overview",
             "wire-vue-advanced-technology-adoption-contract",
             "wire-vue-advanced-technology-compatibility-matrix",
+            "wire-vue-advanced-technology-compatibility-matrix-binding-spec",
             "wire-vue-official-version-protocol-watch",
             "wire-vue-official-version-protocol-watch-dashboard",
             "wire-vue-official-version-protocol-watch-binding-spec",
@@ -109,6 +110,8 @@ class AgentTopTierReadinessOverviewServiceTest {
             .containsEntry("advancedTechnologyAdoptionContract", "/api/agent/observability/top-tier/advanced-technology-adoption-contract")
             .containsEntry("advancedTechnologyCompatibilityMatrix",
                 "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix")
+            .containsEntry("advancedTechnologyCompatibilityMatrixVueBindingSpec",
+                "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/vue-binding-spec")
             .containsEntry("officialVersionProtocolWatch", "/api/agent/observability/top-tier/official-version-protocol-watch")
             .containsEntry("officialVersionProtocolWatchDashboard",
                 "/api/agent/observability/top-tier/official-version-protocol-watch/dashboard")
@@ -158,6 +161,8 @@ class AgentTopTierReadinessOverviewServiceTest {
         assertThat(advancedTechnologyEvidence)
             .containsEntry("compatibilityMatrixEndpoint",
                 "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix")
+            .containsEntry("compatibilityMatrixVueBindingSpecEndpoint",
+                "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/vue-binding-spec")
             .containsEntry("officialVersionProtocolWatchDashboardEndpoint",
                 "/api/agent/observability/top-tier/official-version-protocol-watch/dashboard")
             .containsEntry("officialVersionProtocolWatchVueBindingSpecEndpoint",

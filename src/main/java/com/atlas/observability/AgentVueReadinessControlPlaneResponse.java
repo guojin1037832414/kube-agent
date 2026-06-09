@@ -71,6 +71,11 @@ public record AgentVueReadinessControlPlaneResponse(
                 AgentAdvancedTechnologyCompatibilityMatrixResponse.MATRIX_ENDPOINT,
                 List.of("sourceBaselines", "matrixItems", "migrationGates",
                     "blockedUpgradeShortcuts", "testLanes", "implementationChecklist")),
+            dashboard("advanced-technology-compatibility-matrix-binding-spec", "READY_TO_BIND",
+                "Render or test against the backend-owned Vue component, field, column, state, disabled-action, and fixture binding spec for the compatibility matrix.",
+                AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecResponse.BINDING_SPEC_ENDPOINT,
+                List.of("componentSpecs", "fieldBindings", "tableColumnGroups", "stateRenderingRules",
+                    "disabledActionBindings", "testFixtures", "implementationChecklist")),
             dashboard("official-version-protocol-watch", "READY_TO_BIND",
                 "Render official source review dates, protocol tracks, adoption decisions, and runtime blockers.",
                 AgentOfficialVersionProtocolWatchResponse.WATCH_ENDPOINT,
@@ -123,6 +128,8 @@ public record AgentVueReadinessControlPlaneResponse(
             apiBinding("advanced-technology-adoption", "/api/agent/observability/top-tier/advanced-technology-adoption-contract", "GET", true),
             apiBinding("advanced-technology-compatibility-matrix",
                 AgentAdvancedTechnologyCompatibilityMatrixResponse.MATRIX_ENDPOINT, "GET", true),
+            apiBinding("advanced-technology-compatibility-matrix-binding-spec",
+                AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecResponse.BINDING_SPEC_ENDPOINT, "GET", true),
             apiBinding("official-version-protocol-watch", AgentOfficialVersionProtocolWatchResponse.WATCH_ENDPOINT, "GET", true),
             apiBinding("official-version-protocol-watch-dashboard",
                 AgentOfficialVersionProtocolWatchDashboardResponse.DASHBOARD_ENDPOINT, "GET", true),
@@ -180,6 +187,7 @@ public record AgentVueReadinessControlPlaneResponse(
             "bind-readiness-overview-card-grid",
             "bind-advanced-technology-adoption-matrix",
             "bind-advanced-technology-compatibility-matrix",
+            "bind-advanced-technology-compatibility-matrix-binding-spec",
             "bind-official-version-protocol-watch",
             "bind-official-version-protocol-watch-dashboard",
             "bind-official-version-protocol-watch-binding-spec",
@@ -201,6 +209,8 @@ public record AgentVueReadinessControlPlaneResponse(
         endpoints.put("advancedTechnologyAdoptionContract", "/api/agent/observability/top-tier/advanced-technology-adoption-contract");
         endpoints.put("advancedTechnologyCompatibilityMatrix",
             AgentAdvancedTechnologyCompatibilityMatrixResponse.MATRIX_ENDPOINT);
+        endpoints.put("advancedTechnologyCompatibilityMatrixVueBindingSpec",
+            AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecResponse.BINDING_SPEC_ENDPOINT);
         endpoints.put("officialVersionProtocolWatch", AgentOfficialVersionProtocolWatchResponse.WATCH_ENDPOINT);
         endpoints.put("officialVersionProtocolWatchDashboard",
             AgentOfficialVersionProtocolWatchDashboardResponse.DASHBOARD_ENDPOINT);

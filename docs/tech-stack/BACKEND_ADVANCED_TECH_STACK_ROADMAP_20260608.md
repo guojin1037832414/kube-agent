@@ -9,6 +9,31 @@
 - 供应链、CI、SBOM、质量门禁进入工程默认路径；
 - Java / Spring / Agent 框架升级以兼容性矩阵推进，不用不可构建的版本号伪装先进。
 
+## 2026-06-10 M5.78 Compatibility-Matrix-Vue-Binding-Spec Rule
+
+M5.78 adds the backend-owned Vue binding spec for the advanced technology compatibility matrix:
+
+```text
+GET /api/agent/observability/top-tier/advanced-technology-compatibility-matrix/vue-binding-spec
+```
+
+This is now the Phase 1 frontend implementation rule for the latest-technology compatibility workbench:
+
+- `vue-kube-manager` should render M5.77 from backend-published component specs, field bindings, table column groups, state rendering rules, disabled action bindings, fixtures, and checklist.
+- The binding spec embeds `sourceMatrix`, so the frontend can drill from UI layout to official-source and migration-gate evidence.
+- Runtime/dependency buttons remain absent for Java/Spring/Spring AI upgrades, MCP `tools/call`, A2A handoff, retrieval/vector/reranker/GraphRAG, CI blocking, kube-manager writes, and Phase 2 domain reopening.
+- Frontend tests should use mocked HTTP fixtures and assert no runtime backend calls or kube-manager `8100` calls.
+- The Vue readiness control plane now tracks 14 dashboard/workbench targets and includes `advanced-technology-compatibility-matrix-binding-spec`.
+
+Technology judgment: the newest technology stack is now represented as watch -> dashboard -> binding spec and matrix -> binding spec. This keeps the UI rich and teachable while preserving backend-owned evidence, policy, and release gates.
+
+Next order after M5.78:
+
+- Wire `vue-kube-manager` to consume the matrix binding spec and render the compatibility matrix workbench.
+- Add frontend fixture tests for hidden runtime/dependency buttons.
+- Continue reviewed redacted eval and Memory/RAG trace evidence curation.
+- Keep runtime MCP, A2A, retrieval, CI blocking, kube-manager writes, and Phase 2 NIM/HPC/Slurm/BCM closed until their gates pass.
+
 ## 2026-06-10 M5.77 Advanced-Technology-Compatibility-Matrix Rule
 
 M5.77 adds the backend-owned compatibility matrix for latest technology adoption:

@@ -223,6 +223,8 @@ public record AgentOfficialVersionProtocolWatchResponse(
             "/api/agent/observability/top-tier/advanced-technology-adoption-contract");
         endpoints.put("advancedTechnologyCompatibilityMatrix",
             AgentAdvancedTechnologyCompatibilityMatrixResponse.MATRIX_ENDPOINT);
+        endpoints.put("advancedTechnologyCompatibilityMatrixVueBindingSpec",
+            AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecResponse.BINDING_SPEC_ENDPOINT);
         endpoints.put("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap");
         endpoints.put("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane");
         endpoints.put("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview");

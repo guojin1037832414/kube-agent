@@ -284,6 +284,8 @@ public record AgentAdvancedTechnologyCompatibilityMatrixResponse(
     private static Map<String, Object> buildEndpointMap() {
         Map<String, Object> endpoints = new LinkedHashMap<>();
         endpoints.put("advancedTechnologyCompatibilityMatrix", MATRIX_ENDPOINT);
+        endpoints.put("advancedTechnologyCompatibilityMatrixVueBindingSpec",
+            AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecResponse.BINDING_SPEC_ENDPOINT);
         endpoints.put("advancedTechnologyAdoptionContract",
             "/api/agent/observability/top-tier/advanced-technology-adoption-contract");
         endpoints.put("officialVersionProtocolWatch", AgentOfficialVersionProtocolWatchResponse.WATCH_ENDPOINT);

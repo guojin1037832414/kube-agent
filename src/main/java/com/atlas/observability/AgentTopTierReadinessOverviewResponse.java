@@ -144,20 +144,7 @@ public record AgentTopTierReadinessOverviewResponse(
             "/api/agent/observability/top-tier/advanced-technology-adoption-contract",
             List.of("Java/Spring control plane", "official source watch", "compatibility matrix",
                 "Responses/Agents mapping", "MCP runtime matrix", "OTel GenAI adapter", "A2A artifacts"),
-            Map.of(
-                "adoptionContractExists", true,
-                "compatibilityMatrixEndpoint", AgentAdvancedTechnologyCompatibilityMatrixResponse.MATRIX_ENDPOINT,
-                "officialVersionProtocolWatchExists", true,
-                "officialVersionProtocolWatchEndpoint", AgentOfficialVersionProtocolWatchResponse.WATCH_ENDPOINT,
-                "officialVersionProtocolWatchDashboardEndpoint",
-                AgentOfficialVersionProtocolWatchDashboardResponse.DASHBOARD_ENDPOINT,
-                "officialVersionProtocolWatchVueBindingSpecEndpoint",
-                AgentOfficialVersionProtocolWatchVueBindingSpecResponse.BINDING_SPEC_ENDPOINT,
-                "javaSpringControlPlanePreserved", true,
-                "runtimeUpgradePerformed", false,
-                "dependencyUpgradePerformed", false,
-                "phase2DomainPluginsPaused", true
-            )
+            buildAdvancedTechnologyEvidence()
         ));
         cards.add(card(
             "eval-release-gates",
@@ -282,6 +269,25 @@ public record AgentTopTierReadinessOverviewResponse(
         return Map.copyOf(card);
     }
 
+    private static Map<String, Object> buildAdvancedTechnologyEvidence() {
+        Map<String, Object> evidence = new LinkedHashMap<>();
+        evidence.put("adoptionContractExists", true);
+        evidence.put("compatibilityMatrixEndpoint", AgentAdvancedTechnologyCompatibilityMatrixResponse.MATRIX_ENDPOINT);
+        evidence.put("compatibilityMatrixVueBindingSpecEndpoint",
+            AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecResponse.BINDING_SPEC_ENDPOINT);
+        evidence.put("officialVersionProtocolWatchExists", true);
+        evidence.put("officialVersionProtocolWatchEndpoint", AgentOfficialVersionProtocolWatchResponse.WATCH_ENDPOINT);
+        evidence.put("officialVersionProtocolWatchDashboardEndpoint",
+            AgentOfficialVersionProtocolWatchDashboardResponse.DASHBOARD_ENDPOINT);
+        evidence.put("officialVersionProtocolWatchVueBindingSpecEndpoint",
+            AgentOfficialVersionProtocolWatchVueBindingSpecResponse.BINDING_SPEC_ENDPOINT);
+        evidence.put("javaSpringControlPlanePreserved", true);
+        evidence.put("runtimeUpgradePerformed", false);
+        evidence.put("dependencyUpgradePerformed", false);
+        evidence.put("phase2DomainPluginsPaused", true);
+        return Map.copyOf(evidence);
+    }
+
     private static String kubeManagerStatus(AgentKubeManagerHttpOutletGovernanceWorkbenchOverviewResponse overview) {
         if (overview == null) {
             return "BLOCKED";
@@ -316,6 +322,7 @@ public record AgentTopTierReadinessOverviewResponse(
             "wire-vue-top-tier-readiness-overview",
             "wire-vue-advanced-technology-adoption-contract",
             "wire-vue-advanced-technology-compatibility-matrix",
+            "wire-vue-advanced-technology-compatibility-matrix-binding-spec",
             "wire-vue-official-version-protocol-watch",
             "wire-vue-official-version-protocol-watch-dashboard",
             "wire-vue-official-version-protocol-watch-binding-spec",
@@ -347,6 +354,8 @@ public record AgentTopTierReadinessOverviewResponse(
         endpoints.put("advancedTechnologyAdoptionContract", "/api/agent/observability/top-tier/advanced-technology-adoption-contract");
         endpoints.put("advancedTechnologyCompatibilityMatrix",
             AgentAdvancedTechnologyCompatibilityMatrixResponse.MATRIX_ENDPOINT);
+        endpoints.put("advancedTechnologyCompatibilityMatrixVueBindingSpec",
+            AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecResponse.BINDING_SPEC_ENDPOINT);
         endpoints.put("officialVersionProtocolWatch", AgentOfficialVersionProtocolWatchResponse.WATCH_ENDPOINT);
         endpoints.put("officialVersionProtocolWatchDashboard",
             AgentOfficialVersionProtocolWatchDashboardResponse.DASHBOARD_ENDPOINT);

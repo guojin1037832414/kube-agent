@@ -44,6 +44,7 @@ public class ObservabilityController {
     private final AgentTopTierReadinessOverviewService topTierReadinessOverviewService;
     private final AgentAdvancedTechnologyAdoptionContractService advancedTechnologyAdoptionContractService;
     private final AgentAdvancedTechnologyCompatibilityMatrixService advancedTechnologyCompatibilityMatrixService;
+    private final AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecService advancedTechnologyCompatibilityMatrixVueBindingSpecService;
     private final AgentOfficialVersionProtocolWatchService officialVersionProtocolWatchService;
     private final AgentOfficialVersionProtocolWatchDashboardService officialVersionProtocolWatchDashboardService;
     private final AgentOfficialVersionProtocolWatchVueBindingSpecService officialVersionProtocolWatchVueBindingSpecService;
@@ -87,6 +88,7 @@ public class ObservabilityController {
                                    AgentTopTierReadinessOverviewService topTierReadinessOverviewService,
                                    AgentAdvancedTechnologyAdoptionContractService advancedTechnologyAdoptionContractService,
                                    AgentAdvancedTechnologyCompatibilityMatrixService advancedTechnologyCompatibilityMatrixService,
+                                   AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecService advancedTechnologyCompatibilityMatrixVueBindingSpecService,
                                    AgentOfficialVersionProtocolWatchService officialVersionProtocolWatchService,
                                    AgentOfficialVersionProtocolWatchDashboardService officialVersionProtocolWatchDashboardService,
                                    AgentOfficialVersionProtocolWatchVueBindingSpecService officialVersionProtocolWatchVueBindingSpecService,
@@ -129,6 +131,7 @@ public class ObservabilityController {
         this.topTierReadinessOverviewService = topTierReadinessOverviewService;
         this.advancedTechnologyAdoptionContractService = advancedTechnologyAdoptionContractService;
         this.advancedTechnologyCompatibilityMatrixService = advancedTechnologyCompatibilityMatrixService;
+        this.advancedTechnologyCompatibilityMatrixVueBindingSpecService = advancedTechnologyCompatibilityMatrixVueBindingSpecService;
         this.officialVersionProtocolWatchService = officialVersionProtocolWatchService;
         this.officialVersionProtocolWatchDashboardService = officialVersionProtocolWatchDashboardService;
         this.officialVersionProtocolWatchVueBindingSpecService = officialVersionProtocolWatchVueBindingSpecService;
@@ -193,6 +196,17 @@ public class ObservabilityController {
             return guard;
         }
         return ResponseEntity.ok(ApiResponse.ok(advancedTechnologyCompatibilityMatrixService.matrix()));
+    }
+
+    /** Publish the Vue binding spec for the advanced technology compatibility matrix. */
+    @GetMapping("/top-tier/advanced-technology-compatibility-matrix/vue-binding-spec")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecResponse>> advancedTechnologyCompatibilityMatrixVueBindingSpec() {
+        ResponseEntity<ApiResponse<AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecResponse>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return ResponseEntity.ok(ApiResponse.ok(advancedTechnologyCompatibilityMatrixVueBindingSpecService.spec()));
     }
 
     /** Publish the official version/protocol watch without external calls or runtime upgrades. */

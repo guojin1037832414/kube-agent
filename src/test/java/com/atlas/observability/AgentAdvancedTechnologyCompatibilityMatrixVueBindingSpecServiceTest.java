@@ -7,62 +7,62 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
-import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Official watch Vue binding-spec contract tests.
+ * Advanced technology compatibility matrix Vue binding-spec contract tests.
  */
-class AgentOfficialVersionProtocolWatchVueBindingSpecServiceTest {
+class AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecServiceTest {
 
     private static final Path SERVICE_SOURCE = Path.of(
-        "src/main/java/com/atlas/observability/AgentOfficialVersionProtocolWatchVueBindingSpecService.java"
+        "src/main/java/com/atlas/observability/AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecService.java"
     );
     private static final Path RESPONSE_SOURCE = Path.of(
-        "src/main/java/com/atlas/observability/AgentOfficialVersionProtocolWatchVueBindingSpecResponse.java"
+        "src/main/java/com/atlas/observability/AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecResponse.java"
     );
 
     @Test
     void spec_shouldPublishVueComponentFieldFixtureContractWithoutRuntimeAuthority() {
         AgentOfficialVersionProtocolWatchService watchService = new AgentOfficialVersionProtocolWatchService(
-            Clock.fixed(Instant.parse("2026-06-09T15:00:00Z"), ZoneOffset.UTC)
+            Clock.fixed(Instant.parse("2026-06-10T01:00:00Z"), ZoneOffset.UTC)
         );
-        AgentOfficialVersionProtocolWatchDashboardService dashboardService =
-            new AgentOfficialVersionProtocolWatchDashboardService(
+        AgentAdvancedTechnologyCompatibilityMatrixService matrixService =
+            new AgentAdvancedTechnologyCompatibilityMatrixService(
                 watchService,
-                Clock.fixed(Instant.parse("2026-06-09T15:30:00Z"), ZoneOffset.UTC)
+                Clock.fixed(Instant.parse("2026-06-10T01:30:00Z"), ZoneOffset.UTC)
             );
-        AgentOfficialVersionProtocolWatchVueBindingSpecService service =
-            new AgentOfficialVersionProtocolWatchVueBindingSpecService(
-                dashboardService,
-                Clock.fixed(Instant.parse("2026-06-09T16:00:00Z"), ZoneOffset.UTC)
+        AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecService service =
+            new AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecService(
+                matrixService,
+                Clock.fixed(Instant.parse("2026-06-10T02:00:00Z"), ZoneOffset.UTC)
             );
 
-        AgentOfficialVersionProtocolWatchVueBindingSpecResponse spec = service.spec();
+        AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecResponse spec = service.spec();
 
         assertThat(spec.schemaVersion())
-            .isEqualTo("agent-official-version-protocol-watch-vue-binding-spec.v1");
-        assertThat(spec.generatedAt()).isEqualTo(Instant.parse("2026-06-09T16:00:00Z"));
+            .isEqualTo("agent-advanced-technology-compatibility-matrix-vue-binding-spec.v1");
+        assertThat(spec.generatedAt()).isEqualTo(Instant.parse("2026-06-10T02:00:00Z"));
         assertThat(spec.bindingStatus()).isEqualTo("VUE_BINDING_SPEC_READY");
         assertThat(spec.frontendTarget())
-            .isEqualTo("vue-kube-manager official Agent technology/protocol watch dashboard binding");
-        assertThat(spec.sourceDashboardEmbedded()).isTrue();
+            .isEqualTo("vue-kube-manager advanced Agent technology compatibility matrix binding");
+        assertThat(spec.sourceMatrixEmbedded()).isTrue();
         assertThat(spec.runtimeControlAllowed()).isFalse();
-        assertThat(spec.componentSpecCount()).isEqualTo(7);
-        assertThat(spec.fieldBindingCount()).isEqualTo(12);
-        assertThat(spec.tableColumnGroupCount()).isEqualTo(4);
-        assertThat(spec.disabledActionBindingCount()).isEqualTo(6);
-        assertThat(spec.fixtureCount()).isEqualTo(4);
+        assertThat(spec.componentSpecCount()).isEqualTo(8);
+        assertThat(spec.fieldBindingCount()).isEqualTo(14);
+        assertThat(spec.tableColumnGroupCount()).isEqualTo(5);
+        assertThat(spec.disabledActionBindingCount()).isEqualTo(7);
+        assertThat(spec.fixtureCount()).isEqualTo(5);
         assertThat(spec.componentSpecs()).extracting(component -> component.get("name"))
             .containsExactly(
-                "OfficialWatchSummaryStrip",
-                "OfficialSourceCardGrid",
-                "TechnologyTrackMatrix",
-                "AdoptionGateTable",
-                "BlockedShortcutTable",
-                "DisabledRuntimeActionList",
-                "OfficialWatchSourceJsonPanel"
+                "AdvancedTechnologyMatrixSummaryStrip",
+                "SourceBaselineTable",
+                "CandidateUpgradeLaneMatrix",
+                "MigrationGateChecklist",
+                "BlockedUpgradeShortcutTable",
+                "CompatibilityTestLaneBoard",
+                "MatrixImplementationChecklistPanel",
+                "CompatibilityMatrixSourceJsonPanel"
             );
         assertThat(spec.componentSpecs()).allSatisfy(component -> assertThat(component)
             .containsEntry("readOnly", true)
@@ -70,42 +70,50 @@ class AgentOfficialVersionProtocolWatchVueBindingSpecServiceTest {
             .containsEntry("inlineEditAllowed", false));
         assertThat(spec.fieldBindings()).extracting(binding -> binding.get("fieldPath"))
             .contains(
-                "dashboardStatus",
-                "sourceCards[].officialUrl",
-                "technologyTrackCards[].disabledRuntimeActions",
-                "dashboardPolicy.runtimeControlAllowed",
-                "safety.mcpToolsCall"
+                "matrixStatus",
+                "sourceBaselines[].officialUrl",
+                "matrixItems[].readiness",
+                "matrixItems[].mainlineAllowedNow",
+                "blockedUpgradeShortcuts[].allowed",
+                "testLanes[].status",
+                "safety.runtimeControlAllowed"
             );
         assertThat(spec.tableColumnGroups()).extracting(group -> group.get("dataField"))
             .containsExactly(
-                "sourceCards",
-                "technologyTrackCards",
-                "adoptionGateRows",
-                "blockedRuntimeShortcutRows"
+                "sourceBaselines",
+                "matrixItems",
+                "migrationGates",
+                "blockedUpgradeShortcuts",
+                "testLanes"
             );
         assertThat(spec.stateRenderingRules()).extracting(rule -> rule.get("status"))
-            .contains("INFO", "BLOCKING", "REQUIRED_GATE", "BLOCKED_SHORTCUT", "OFFICIAL_SOURCE_REVIEWED");
+            .contains("MATRIX_DEFINED_NOT_EXECUTED", "COMPATIBILITY_REQUIRED", "CONTRACT_FIRST",
+                "RELEASE_GATED", "EVIDENCE_BLOCKED", "WRITE_AUTHORITY_CLOSED", "QUALITY_GATE_REQUIRED",
+                "BLOCKED_SHORTCUT");
         assertThat(spec.stateRenderingRules()).allSatisfy(rule -> assertThat(rule)
             .containsEntry("allowsRuntimeAction", false));
         assertThat(spec.disabledActionBindings()).extracting(binding -> binding.get("actionId"))
             .containsExactly(
-                "upgrade-dependencies-from-dashboard",
-                "enable-mcp-tools-call",
-                "enable-a2a-runtime-handoff",
-                "enable-retrieval-runtime",
-                "enable-ci-blocking",
-                "reopen-phase2-domain-plugins"
+                "upgrade-pom-from-readiness-page",
+                "treat-rc-preview-as-mainline",
+                "trust-mcp-tool-annotations",
+                "delegate-authority-to-external-agent",
+                "enable-retrieval-before-reviewed-traces",
+                "use-otel-experimental-fields-as-contract",
+                "enable-ci-blocking-with-empty-fixtures"
             );
         assertThat(spec.disabledActionBindings()).allSatisfy(binding -> assertThat(binding)
             .containsEntry("renderAs", "disabled-row")
             .containsEntry("buttonVisible", false)
             .containsEntry("clickHandlerAllowed", false)
-            .containsEntry("requiresSeparateReviewedSlice", true));
+            .containsEntry("requiresSeparateReviewedSlice", true)
+            .containsEntry("blocksTopTierClaim", true));
         assertThat(spec.testFixtures()).extracting(fixture -> fixture.get("id"))
             .containsExactly(
-                "happy-path-dashboard",
-                "mcp-security-source-visible",
+                "happy-path-matrix",
+                "major-upgrade-lanes-visible",
                 "runtime-buttons-absent",
+                "blocked-shortcuts-visible",
                 "source-watch-drilldown"
             );
         assertThat(spec.testFixtures()).allSatisfy(fixture -> assertThat(fixture)
@@ -113,31 +121,32 @@ class AgentOfficialVersionProtocolWatchVueBindingSpecServiceTest {
             .containsEntry("requiresRuntimeBackendCalls", false)
             .containsEntry("requiresKubeManager8100", false));
         assertThat(spec.implementationChecklist()).contains(
-            "fetch-dashboard-endpoint-with-admin-session",
-            "render-official-source-cards-with-external-link-only",
-            "hide-all-runtime-enable-buttons",
-            "add-fixtures-for-nsa-mcp-security-source-and-disabled-actions"
+            "fetch-matrix-endpoint-with-admin-session",
+            "render-candidate-upgrade-lanes-with-evidence-tags",
+            "render-test-lanes-without-start-buttons",
+            "hide-all-runtime-and-dependency-upgrade-buttons"
         );
         assertThat(spec.endpointMap())
-            .containsEntry("officialVersionProtocolWatchVueBindingSpec",
-                "/api/agent/observability/top-tier/official-version-protocol-watch/vue-binding-spec")
             .containsEntry("advancedTechnologyCompatibilityMatrixVueBindingSpec",
                 "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/vue-binding-spec")
-            .containsEntry("officialVersionProtocolWatchDashboard",
-                "/api/agent/observability/top-tier/official-version-protocol-watch/dashboard");
+            .containsEntry("advancedTechnologyCompatibilityMatrix",
+                "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix")
+            .containsEntry("officialVersionProtocolWatch",
+                "/api/agent/observability/top-tier/official-version-protocol-watch");
         assertThat(spec.bindingPolicy())
             .containsEntry("adminOnly", true)
             .containsEntry("readOnly", true)
             .containsEntry("bindingSpecOnly", true)
             .containsEntry("vueWorkbenchOnly", true)
-            .containsEntry("sourceDashboardEmbedded", true)
-            .containsEntry("componentSpecCount", 7)
-            .containsEntry("fieldBindingCount", 12)
-            .containsEntry("tableColumnGroupCount", 4)
-            .containsEntry("disabledActionBindingCount", 6)
-            .containsEntry("fixtureCount", 4)
+            .containsEntry("sourceMatrixEmbedded", true)
+            .containsEntry("componentSpecCount", 8)
+            .containsEntry("fieldBindingCount", 14)
+            .containsEntry("tableColumnGroupCount", 5)
+            .containsEntry("disabledActionBindingCount", 7)
+            .containsEntry("fixtureCount", 5)
             .containsEntry("runtimeControlAllowed", false)
             .containsEntry("runtimeButtonsAllowed", false)
+            .containsEntry("dependencyUpgradeButtonsAllowed", false)
             .containsEntry("inlineEditAllowed", false)
             .containsEntry("mockedHttpFixturesRequired", true);
         assertThat(spec.safety())
@@ -145,8 +154,10 @@ class AgentOfficialVersionProtocolWatchVueBindingSpecServiceTest {
             .containsEntry("readOnly", true)
             .containsEntry("bindingSpecOnly", true)
             .containsEntry("vueWorkbenchOnly", true)
-            .containsEntry("sourceDashboardReadOnly", true)
+            .containsEntry("sourceMatrixReadOnly", true)
             .containsEntry("runtimeMutationAllowed", false)
+            .containsEntry("runtimeUpgradeAllowedNow", false)
+            .containsEntry("dependencyUpgradeAllowedNow", false)
             .containsEntry("toolExecution", false)
             .containsEntry("safeToolExecutorInvocation", false)
             .containsEntry("hitlInvocation", false)
@@ -171,10 +182,11 @@ class AgentOfficialVersionProtocolWatchVueBindingSpecServiceTest {
             .containsEntry("containsAuthorizationHeader", false)
             .containsEntry("containsToken", false)
             .containsEntry("containsPassword", false);
-        assertThat(spec.sourceDashboard().schemaVersion())
-            .isEqualTo("agent-official-version-protocol-watch-dashboard.v1");
+        assertThat(spec.sourceMatrix().schemaVersion())
+            .isEqualTo("agent-advanced-technology-compatibility-matrix.v1");
         assertThat(spec.toString())
-            .contains("OfficialSourceCardGrid", "nsa-mcp-security-2026-06", "runtime-buttons-absent")
+            .contains("CandidateUpgradeLaneMatrix", "major-upgrade-lanes-visible",
+                "upgrade-pom-from-readiness-page")
             .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret");
     }
 
@@ -184,7 +196,7 @@ class AgentOfficialVersionProtocolWatchVueBindingSpecServiceTest {
         String responseSource = Files.readString(RESPONSE_SOURCE);
 
         assertThat(serviceSource)
-            .contains("dashboardService.dashboard()")
+            .contains("matrixService.matrix()")
             .doesNotContain("ChatClient")
             .doesNotContain("KubeManagerHttpClient")
             .doesNotContain("RestClient")
@@ -197,7 +209,7 @@ class AgentOfficialVersionProtocolWatchVueBindingSpecServiceTest {
             .doesNotContain("append(")
             .doesNotContain("recent(");
         assertThat(responseSource)
-            .contains("official-version-protocol-watch-vue-binding-spec")
+            .contains("advanced-technology-compatibility-matrix-vue-binding-spec")
             .contains("componentSpecs")
             .contains("fieldBindings")
             .contains("testFixtures")

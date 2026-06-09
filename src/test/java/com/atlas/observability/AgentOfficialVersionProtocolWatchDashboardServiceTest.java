@@ -172,6 +172,8 @@ class AgentOfficialVersionProtocolWatchDashboardServiceTest {
                 "/api/agent/observability/top-tier/official-version-protocol-watch/vue-binding-spec")
             .containsEntry("officialVersionProtocolWatch",
                 "/api/agent/observability/top-tier/official-version-protocol-watch")
+            .containsEntry("advancedTechnologyCompatibilityMatrixVueBindingSpec",
+                "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/vue-binding-spec")
             .containsEntry("advancedTechnologyAdoptionContract",
                 "/api/agent/observability/top-tier/advanced-technology-adoption-contract");
         assertThat(dashboard.dashboardPolicy())

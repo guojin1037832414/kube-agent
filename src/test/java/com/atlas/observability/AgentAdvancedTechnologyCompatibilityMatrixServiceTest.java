@@ -90,6 +90,8 @@ class AgentAdvancedTechnologyCompatibilityMatrixServiceTest {
         assertThat(matrix.endpointMap())
             .containsEntry("advancedTechnologyCompatibilityMatrix",
                 "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix")
+            .containsEntry("advancedTechnologyCompatibilityMatrixVueBindingSpec",
+                "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/vue-binding-spec")
             .containsEntry("officialVersionProtocolWatch",
                 "/api/agent/observability/top-tier/official-version-protocol-watch");
         assertThat(matrix.safety())

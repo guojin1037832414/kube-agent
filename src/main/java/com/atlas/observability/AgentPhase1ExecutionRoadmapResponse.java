@@ -62,6 +62,7 @@ public record AgentPhase1ExecutionRoadmapResponse(
                 List.of("backend-read-models-exist", "admin-auth-required", "official-source-watch-exists"),
                 List.of("top-tier-readiness-overview", "advanced-technology-adoption-contract",
                     "advanced-technology-compatibility-matrix",
+                    "advanced-technology-compatibility-matrix-binding-spec",
                     "official-version-protocol-watch", "official-version-protocol-watch-dashboard",
                     "official-version-protocol-watch-binding-spec",
                     "kube-manager-governance-workbench", "memory-rag-readiness",
@@ -130,6 +131,8 @@ public record AgentPhase1ExecutionRoadmapResponse(
             vueTarget("technology-adoption", "/api/agent/observability/top-tier/advanced-technology-adoption-contract"),
             vueTarget("advanced-technology-compatibility-matrix",
                 AgentAdvancedTechnologyCompatibilityMatrixResponse.MATRIX_ENDPOINT),
+            vueTarget("advanced-technology-compatibility-matrix-binding-spec",
+                AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecResponse.BINDING_SPEC_ENDPOINT),
             vueTarget("official-version-protocol-watch", AgentOfficialVersionProtocolWatchResponse.WATCH_ENDPOINT),
             vueTarget("official-version-protocol-watch-dashboard",
                 AgentOfficialVersionProtocolWatchDashboardResponse.DASHBOARD_ENDPOINT),
@@ -168,6 +171,8 @@ public record AgentPhase1ExecutionRoadmapResponse(
         endpoints.put("advancedTechnologyAdoptionContract", "/api/agent/observability/top-tier/advanced-technology-adoption-contract");
         endpoints.put("advancedTechnologyCompatibilityMatrix",
             AgentAdvancedTechnologyCompatibilityMatrixResponse.MATRIX_ENDPOINT);
+        endpoints.put("advancedTechnologyCompatibilityMatrixVueBindingSpec",
+            AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecResponse.BINDING_SPEC_ENDPOINT);
         endpoints.put("officialVersionProtocolWatch", AgentOfficialVersionProtocolWatchResponse.WATCH_ENDPOINT);
         endpoints.put("officialVersionProtocolWatchDashboard",
             AgentOfficialVersionProtocolWatchDashboardResponse.DASHBOARD_ENDPOINT);

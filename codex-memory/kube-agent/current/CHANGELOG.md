@@ -6,6 +6,22 @@
 
 ---
 
+## [M5.78-1] - Advanced technology compatibility matrix Vue binding spec
+
+**Delivery**: Added a backend-owned Vue binding specification for the advanced technology compatibility matrix so `vue-kube-manager` can render the latest-technology workbench without inventing governance logic or runtime controls.
+**Changes**
+- Added `GET /api/agent/observability/top-tier/advanced-technology-compatibility-matrix/vue-binding-spec`.
+- Added `AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecResponse` and `AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecService`.
+- Published 8 component specs, 14 field bindings, 5 table column groups, 8 state rendering rules, 7 disabled action bindings, 5 test fixtures, and an implementation checklist.
+- Embedded the M5.77 compatibility matrix as `sourceMatrix`.
+- Integrated the binding spec into advanced technology adoption, matrix, official watch, official watch dashboard, official watch binding spec, top-tier readiness, Phase 1 roadmap, Vue readiness control plane, Controller, and security contracts.
+- Updated Vue readiness dashboard count to `14` and added `advanced-technology-compatibility-matrix-binding-spec`.
+**Verification**
+- `mvn -q "-Dtest=AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecServiceTest,AgentAdvancedTechnologyCompatibilityMatrixServiceTest,AgentAdvancedTechnologyAdoptionContractServiceTest,AgentOfficialVersionProtocolWatchServiceTest,AgentOfficialVersionProtocolWatchDashboardServiceTest,AgentOfficialVersionProtocolWatchVueBindingSpecServiceTest,AgentTopTierReadinessOverviewServiceTest,AgentPhase1ExecutionRoadmapServiceTest,AgentVueReadinessControlPlaneServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed during implementation.
+**Security**
+- The binding spec is admin-only, read-only, binding-spec-only, Vue-workbench-only, and external-call-free at request time.
+- It does not modify `pom.xml`, upgrade dependencies, switch Java/Spring/Spring AI baselines, run LLMs, execute Tools, invoke `SafeToolExecutor`, invoke HITL, call kube-manager or port `8100`, expose MCP runtime `tools/call`, run A2A handoff, execute retrieval/vector/reranker/GraphRAG, write memory, write audit, issue durable receipts, mutate catalogs, enable CI blocking, or touch NIM / HPC / Slurm / BCM Phase 2 work.
+
 ## [M5.77-1] - Advanced technology compatibility matrix
 
 **Delivery**: Added a backend-owned compatibility matrix for adopting latest Agent technologies without blind dependency/runtime upgrades.

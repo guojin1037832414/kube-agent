@@ -2,6 +2,56 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-10 M5.78 Compatibility Matrix Vue Binding Spec
+
+M5.78 turns the M5.77 compatibility matrix into a backend-owned frontend binding specification. It answers: how can `vue-kube-manager` render the latest-technology compatibility workbench without duplicating backend governance logic or accidentally adding runtime controls?
+
+```text
+M5.77 compatibility matrix
+        |
+        v
+M5.78 Vue binding spec
+        |
+        +-- componentSpecs
+        +-- fieldBindings
+        +-- tableColumnGroups
+        +-- stateRenderingRules
+        +-- disabledActionBindings
+        +-- testFixtures
+        |
+        v
+vue-kube-manager renders a read-only learning/operator workbench
+```
+
+Endpoint:
+
+```text
+GET /api/agent/observability/top-tier/advanced-technology-compatibility-matrix/vue-binding-spec
+```
+
+Current state:
+
+- `schemaVersion=agent-advanced-technology-compatibility-matrix-vue-binding-spec.v1`
+- `bindingStatus=VUE_BINDING_SPEC_READY`
+- `componentSpecCount=8`
+- `fieldBindingCount=14`
+- `tableColumnGroupCount=5`
+- `disabledActionBindingCount=7`
+- `fixtureCount=5`
+- `runtimeControlAllowed=false`
+
+Key design:
+
+- The binding spec service composes only `AgentAdvancedTechnologyCompatibilityMatrixService.matrix()`.
+- The spec embeds the matrix as `sourceMatrix`, so Vue can drill from UI rules back to backend evidence.
+- It defines table columns for `sourceBaselines`, `matrixItems`, `migrationGates`, `blockedUpgradeShortcuts`, and `testLanes`.
+- It explicitly renders blocked upgrade shortcuts as disabled rows, not buttons.
+- Fixtures require mocked HTTP and explicitly state no runtime backend calls or kube-manager `8100` access.
+
+Learning point: 顶级 Agent 前端不是“想渲染什么就渲染什么”，而是由后端发布可验证绑定契约。这样学习者能看到最新技术路线，也能看到为什么某些按钮不该出现。
+
+Technology point: 先进技术工作台应该把 Java/Spring/OpenAI/MCP/A2A/RAG/CI 的候选线展示出来，但把执行权留在 release gate 后面。这是 operator UX、教学 UX 和安全架构的交汇点。
+
 ## 2026-06-10 M5.77 Advanced Technology Compatibility Matrix
 
 M5.77 adds a backend-owned compatibility matrix for advanced Agent technologies. It answers: how can this project use latest frameworks and Agent protocols while keeping the mainline buildable, secure, testable, and recoverable?

@@ -146,6 +146,8 @@ class ObservabilityControllerTest {
         new AgentOfficialVersionProtocolWatchService();
     private final AgentAdvancedTechnologyCompatibilityMatrixService advancedTechnologyCompatibilityMatrixService =
         new AgentAdvancedTechnologyCompatibilityMatrixService(officialVersionProtocolWatchService);
+    private final AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecService advancedTechnologyCompatibilityMatrixVueBindingSpecService =
+        new AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecService(advancedTechnologyCompatibilityMatrixService);
     private final AgentOfficialVersionProtocolWatchDashboardService officialVersionProtocolWatchDashboardService =
         new AgentOfficialVersionProtocolWatchDashboardService(officialVersionProtocolWatchService);
     private final AgentOfficialVersionProtocolWatchVueBindingSpecService officialVersionProtocolWatchVueBindingSpecService =
@@ -166,6 +168,7 @@ class ObservabilityControllerTest {
         topTierReadinessOverviewService,
         advancedTechnologyAdoptionContractService,
         advancedTechnologyCompatibilityMatrixService,
+        advancedTechnologyCompatibilityMatrixVueBindingSpecService,
         officialVersionProtocolWatchService,
         officialVersionProtocolWatchDashboardService,
         officialVersionProtocolWatchVueBindingSpecService,
@@ -983,6 +986,8 @@ class ObservabilityControllerTest {
             .containsEntry("advancedTechnologyAdoptionContract", "/api/agent/observability/top-tier/advanced-technology-adoption-contract")
             .containsEntry("advancedTechnologyCompatibilityMatrix",
                 "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix")
+            .containsEntry("advancedTechnologyCompatibilityMatrixVueBindingSpec",
+                "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/vue-binding-spec")
             .containsEntry("officialVersionProtocolWatch", "/api/agent/observability/top-tier/official-version-protocol-watch")
             .containsEntry("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap")
             .containsEntry("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane");
@@ -1049,6 +1054,8 @@ class ObservabilityControllerTest {
         assertThat(matrix.endpointMap())
             .containsEntry("advancedTechnologyCompatibilityMatrix",
                 "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix")
+            .containsEntry("advancedTechnologyCompatibilityMatrixVueBindingSpec",
+                "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/vue-binding-spec")
             .containsEntry("officialVersionProtocolWatch",
                 "/api/agent/observability/top-tier/official-version-protocol-watch");
         assertThat(matrix.safety())
@@ -1064,6 +1071,74 @@ class ObservabilityControllerTest {
             .isEqualTo("agent-official-version-protocol-watch.v1");
         assertThat(matrix.toString())
             .contains("spring-ai-access-layer", "mcp-runtime-call-plane", "upgrade-pom-from-readiness-page")
+            .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret");
+    }
+
+    @Test
+    void advancedTechnologyCompatibilityMatrixVueBindingSpec_shouldRequireAdminAndReturnBindingSpec() {
+        ResponseEntity<ApiResponse<AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecResponse>> anonymous =
+            controller.advancedTechnologyCompatibilityMatrixVueBindingSpec();
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecResponse>> user =
+            controller.advancedTechnologyCompatibilityMatrixVueBindingSpec();
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        userPermissionContext.unbind();
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecResponse>> admin =
+            controller.advancedTechnologyCompatibilityMatrixVueBindingSpec();
+
+        assertThat(admin.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(admin.getBody()).isNotNull();
+        AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecResponse spec = admin.getBody().getData();
+        assertThat(spec.schemaVersion())
+            .isEqualTo("agent-advanced-technology-compatibility-matrix-vue-binding-spec.v1");
+        assertThat(spec.bindingStatus()).isEqualTo("VUE_BINDING_SPEC_READY");
+        assertThat(spec.componentSpecCount()).isEqualTo(8);
+        assertThat(spec.fieldBindingCount()).isEqualTo(14);
+        assertThat(spec.disabledActionBindingCount()).isEqualTo(7);
+        assertThat(spec.fixtureCount()).isEqualTo(5);
+        assertThat(spec.runtimeControlAllowed()).isFalse();
+        assertThat(spec.componentSpecs()).extracting(component -> component.get("name"))
+            .contains("CandidateUpgradeLaneMatrix", "CompatibilityTestLaneBoard",
+                "CompatibilityMatrixSourceJsonPanel");
+        assertThat(spec.fieldBindings()).extracting(binding -> binding.get("fieldPath"))
+            .contains("matrixItems[].readiness", "blockedUpgradeShortcuts[].allowed",
+                "safety.runtimeControlAllowed");
+        assertThat(spec.disabledActionBindings()).allSatisfy(binding -> assertThat(binding)
+            .containsEntry("buttonVisible", false)
+            .containsEntry("clickHandlerAllowed", false)
+            .containsEntry("blocksTopTierClaim", true));
+        assertThat(spec.testFixtures()).extracting(fixture -> fixture.get("id"))
+            .contains("major-upgrade-lanes-visible", "runtime-buttons-absent");
+        assertThat(spec.endpointMap())
+            .containsEntry("advancedTechnologyCompatibilityMatrixVueBindingSpec",
+                "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/vue-binding-spec")
+            .containsEntry("advancedTechnologyCompatibilityMatrix",
+                "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix");
+        assertThat(spec.bindingPolicy())
+            .containsEntry("bindingSpecOnly", true)
+            .containsEntry("runtimeButtonsAllowed", false)
+            .containsEntry("dependencyUpgradeButtonsAllowed", false)
+            .containsEntry("mockedHttpFixturesRequired", true);
+        assertThat(spec.safety())
+            .containsEntry("toolExecution", false)
+            .containsEntry("kubeManagerCalls", false)
+            .containsEntry("mcpToolsCall", false)
+            .containsEntry("retrievalExecuted", false)
+            .containsEntry("phase2NimHpcSlurmBcmTouched", false);
+        assertThat(spec.sourceMatrix().schemaVersion())
+            .isEqualTo("agent-advanced-technology-compatibility-matrix.v1");
+        assertThat(spec.toString())
+            .contains("CandidateUpgradeLaneMatrix", "runtime-buttons-absent")
             .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret");
     }
 
