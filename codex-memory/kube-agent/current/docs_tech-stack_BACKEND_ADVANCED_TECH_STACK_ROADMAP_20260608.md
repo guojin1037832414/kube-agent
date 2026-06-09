@@ -9,6 +9,45 @@
 - 供应链、CI、SBOM、质量门禁进入工程默认路径；
 - Java / Spring / Agent 框架升级以兼容性矩阵推进，不用不可构建的版本号伪装先进。
 
+## 2026-06-09 M5.74 Official-Version-Protocol-Watch Rule
+
+M5.74 adds the backend-owned official version/protocol watch:
+
+```text
+GET /api/agent/observability/top-tier/official-version-protocol-watch
+```
+
+This is the Phase 1 rule for adopting the latest Agent technologies without destabilizing the governed Java/Spring control plane:
+
+- Official source claims are now explicit read-model data:
+  Spring AI reference, OpenAI Responses migration guide, OpenAI Agents SDK guide, MCP 2025-11-25 specification, A2A latest specification, OpenTelemetry GenAI semantic conventions, and OWASP LLM Top 10.
+- The watch publishes eight technology tracks:
+  Java/Spring governed control plane, Spring AI Memory/RAG/MCP, OpenAI Responses/Agents interop, MCP runtime call plane, A2A handoff provenance, OTel GenAI adapter, OWASP LLM risk controls, and advanced RAG/GraphRAG/rerankers/vector stores.
+- It introduces explicit adoption gates:
+  official-source review, compatibility matrix before upgrade, contract before runtime, safe authority boundary, trace/audit/replay before prompt or tool influence, Vue read model before controls, and Phase 2 domain pause.
+- It blocks shortcuts:
+  blind latest-version bump, direct MCP `tools/call`, direct A2A runtime authority, direct retrieval prompt influence, OTel GenAI as primary schema while still development-level, and replacing the Java/Spring control plane with an external Agent runtime.
+- It integrates with the advanced technology adoption contract, top-tier readiness overview, Phase 1 roadmap, and Vue readiness control plane.
+
+Technology judgment: this is the correct interpretation of "引入全部最先进技术" for a top-tier Agent. The latest official technologies are now visible and teachable, but runtime authority still requires evidence. Java/Spring remains the mainline because identity, RBAC, audit, eval gates, release governance, and recovery memory need a stable typed control plane. OpenAI Responses/Agents, MCP runtime, A2A, Spring AI RAG/VectorStore/MCP, OTel GenAI, OWASP LLM controls, GraphRAG, rerankers, and vector stores move through watch -> matrix -> contract -> evidence -> Vue -> reviewed runtime binding.
+
+Official references checked for this anchor:
+
+- Spring AI reference: https://docs.spring.io/spring-ai/reference/
+- OpenAI Responses migration guide: https://platform.openai.com/docs/guides/migrate-to-responses
+- OpenAI Agents SDK guide: https://platform.openai.com/docs/guides/agents-sdk/
+- Model Context Protocol specification: https://modelcontextprotocol.io/specification/2025-11-25
+- A2A protocol specification: https://a2a-protocol.org/latest/specification/
+- OpenTelemetry GenAI semantic conventions: https://opentelemetry.io/docs/specs/semconv/gen-ai/
+- OWASP Top 10 for LLM Applications: https://genai.owasp.org/llm-top-10/
+
+Next order after M5.74:
+
+- Wire `vue-kube-manager` to render the official version/protocol watch dashboard.
+- Keep collecting reviewed redacted eval and Memory/RAG trace evidence.
+- Only after reviewed evidence exists, prototype MCP `tools/call`, A2A handoff, retrieval runtime, or CI blocking as separate release-gated slices.
+- Keep NIM / HPC / Slurm / BCM paused for Phase 2.
+
 ## 2026-06-09 M5.73 Memory-RAG-Reviewed-Trace-Evidence-Manifest Rule
 
 M5.73 adds the backend-owned reviewed trace-evidence manifest:

@@ -66,6 +66,10 @@ public record AgentVueReadinessControlPlaneResponse(
                 "Show stable mainline technologies, compatibility matrix, gates, and rejected shortcuts.",
                 "/api/agent/observability/top-tier/advanced-technology-adoption-contract",
                 List.of("mainlineTechnologies", "compatibilityMatrix", "adoptionGates", "rejectedShortcuts")),
+            dashboard("official-version-protocol-watch", "READY_TO_BIND",
+                "Render official source review dates, protocol tracks, adoption decisions, and runtime blockers.",
+                AgentOfficialVersionProtocolWatchResponse.WATCH_ENDPOINT,
+                List.of("officialSources", "technologyTracks", "adoptionGates", "blockedRuntimeShortcuts")),
             dashboard("phase1-execution-roadmap", "READY_TO_BIND",
                 "Render the ordered Phase 1 execution steps and do-not-start-yet boundaries.",
                 "/api/agent/observability/top-tier/phase1-execution-roadmap",
@@ -102,6 +106,7 @@ public record AgentVueReadinessControlPlaneResponse(
         return List.of(
             apiBinding("readiness-overview", "/api/agent/observability/top-tier/readiness-overview", "GET", true),
             apiBinding("advanced-technology-adoption", "/api/agent/observability/top-tier/advanced-technology-adoption-contract", "GET", true),
+            apiBinding("official-version-protocol-watch", AgentOfficialVersionProtocolWatchResponse.WATCH_ENDPOINT, "GET", true),
             apiBinding("phase1-roadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap", "GET", true),
             apiBinding("kube-manager-governance", "/api/agent/observability/kube-manager/http-outlet/governance-workbench/overview", "GET", true),
             apiBinding("memory-rag-readiness", "/api/agent/observability/memory-rag/readiness", "GET", true),
@@ -153,6 +158,7 @@ public record AgentVueReadinessControlPlaneResponse(
             "create-vue-top-tier-agent-navigation",
             "bind-readiness-overview-card-grid",
             "bind-advanced-technology-adoption-matrix",
+            "bind-official-version-protocol-watch",
             "bind-phase1-execution-roadmap-timeline",
             "bind-kube-manager-governance-cards",
             "bind-memory-rag-readiness-and-contract-links",
@@ -169,6 +175,7 @@ public record AgentVueReadinessControlPlaneResponse(
         endpoints.put("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane");
         endpoints.put("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview");
         endpoints.put("advancedTechnologyAdoptionContract", "/api/agent/observability/top-tier/advanced-technology-adoption-contract");
+        endpoints.put("officialVersionProtocolWatch", AgentOfficialVersionProtocolWatchResponse.WATCH_ENDPOINT);
         endpoints.put("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap");
         endpoints.put("kubeManagerGovernanceOverview", "/api/agent/observability/kube-manager/http-outlet/governance-workbench/overview");
         endpoints.put("memoryRagReadiness", "/api/agent/observability/memory-rag/readiness");

@@ -140,11 +140,13 @@ public record AgentTopTierReadinessOverviewResponse(
             "advanced-technology-adoption",
             "Advanced Agent technology adoption gate",
             "READY",
-            "Phase 1 keeps the Java/Spring control plane stable while tracking Responses/Agents, Spring AI 2, MCP runtime, OTel GenAI, A2A, and advanced RAG in a compatibility matrix.",
+            "Phase 1 keeps the Java/Spring control plane stable while tracking official Responses/Agents, Spring AI, MCP, OTel GenAI, A2A, OWASP LLM, and advanced RAG sources in a compatibility matrix.",
             "/api/agent/observability/top-tier/advanced-technology-adoption-contract",
-            List.of("Java/Spring control plane", "Responses/Agents mapping", "MCP runtime matrix", "OTel GenAI adapter", "A2A artifacts"),
+            List.of("Java/Spring control plane", "official source watch", "Responses/Agents mapping", "MCP runtime matrix", "OTel GenAI adapter", "A2A artifacts"),
             Map.of(
                 "adoptionContractExists", true,
+                "officialVersionProtocolWatchExists", true,
+                "officialVersionProtocolWatchEndpoint", AgentOfficialVersionProtocolWatchResponse.WATCH_ENDPOINT,
                 "javaSpringControlPlanePreserved", true,
                 "runtimeUpgradePerformed", false,
                 "dependencyUpgradePerformed", false,
@@ -307,6 +309,7 @@ public record AgentTopTierReadinessOverviewResponse(
         return List.of(
             "wire-vue-top-tier-readiness-overview",
             "wire-vue-advanced-technology-adoption-contract",
+            "wire-vue-official-version-protocol-watch",
             "wire-vue-phase1-execution-roadmap",
             "wire-vue-readiness-control-plane",
             "populate-reviewed-redacted-eval-trace-evidence",
@@ -333,6 +336,7 @@ public record AgentTopTierReadinessOverviewResponse(
         Map<String, Object> endpoints = new LinkedHashMap<>();
         endpoints.put("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview");
         endpoints.put("advancedTechnologyAdoptionContract", "/api/agent/observability/top-tier/advanced-technology-adoption-contract");
+        endpoints.put("officialVersionProtocolWatch", AgentOfficialVersionProtocolWatchResponse.WATCH_ENDPOINT);
         endpoints.put("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap");
         endpoints.put("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane");
         endpoints.put("kubeManagerGovernanceOverview", "/api/agent/observability/kube-manager/http-outlet/governance-workbench/overview");

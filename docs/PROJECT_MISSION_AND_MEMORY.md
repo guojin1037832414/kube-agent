@@ -10,6 +10,80 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
+## Latest Phase 1 Core Memory - M5.74-1
+
+M5.74-1 adds the official version/protocol watch for top-tier Agent technology adoption. This turns "use all the latest advanced technologies" into a backend-owned, admin-only, read-only contract instead of a blind dependency upgrade.
+
+Endpoint:
+
+```text
+GET /api/agent/observability/top-tier/official-version-protocol-watch
+```
+
+Delivered:
+
+- Added `AgentOfficialVersionProtocolWatchResponse`.
+- Added `AgentOfficialVersionProtocolWatchService`.
+- Added admin-only Controller method `officialVersionProtocolWatch()`.
+- Integrated the watch into `AgentAdvancedTechnologyAdoptionContractResponse`, `AgentTopTierReadinessOverviewResponse`, `AgentPhase1ExecutionRoadmapResponse`, and `AgentVueReadinessControlPlaneResponse`.
+- Added service, Controller, source-security, advanced technology, top-tier readiness, roadmap, and Vue readiness tests.
+- Added the teaching document `docs/M5_74_OFFICIAL_VERSION_PROTOCOL_WATCH_20260609.md`.
+
+Current state:
+
+- `schemaVersion=agent-official-version-protocol-watch.v1`.
+- `watchStatus=OFFICIAL_WATCH_DEFINED_NOT_RUNTIME_BOUND`.
+- `sourceReviewDate=2026-06-09`.
+- `officialSourcesOnly=true`.
+- `officialSourceCount=7`.
+- `technologyTrackCount=8`.
+- `phase1TopTierGoalPreserved=true`.
+- `javaSpringControlPlanePreserved=true`.
+- `phase2NimHpcSlurmBcmPaused=true`.
+- `runtimeUpgradePerformed=false`.
+- `dependencyUpgradePerformed=false`.
+- `externalCallsPerformed=false`.
+
+Official source tracks:
+
+- Spring AI Reference: https://docs.spring.io/spring-ai/reference/
+- OpenAI Responses API migration guide: https://platform.openai.com/docs/guides/migrate-to-responses
+- OpenAI Agents SDK guide: https://platform.openai.com/docs/guides/agents-sdk/
+- MCP specification 2025-11-25: https://modelcontextprotocol.io/specification/2025-11-25
+- A2A latest specification: https://a2a-protocol.org/latest/specification/
+- OpenTelemetry GenAI semantic conventions: https://opentelemetry.io/docs/specs/semconv/gen-ai/
+- OWASP Top 10 for LLM Applications: https://genai.owasp.org/llm-top-10/
+
+Technology tracks:
+
+- `java-spring-governed-control-plane`
+- `spring-ai-memory-rag-mcp`
+- `openai-responses-agents-interop`
+- `mcp-runtime-call-plane`
+- `a2a-handoff-provenance`
+- `otel-genai-observability-adapter`
+- `owasp-llm-risk-controls`
+- `advanced-rag-graphrag-rerankers-vector-stores`
+
+Security boundary:
+
+- M5.74 is admin-only, read-only, watch-only, and reviewed-source-only.
+- It does not perform network calls at request time; official sources are reviewed during development/Git review.
+- It does not upgrade Java/Spring/Spring AI/OpenAI dependencies, bind external Agent runtimes, run LLMs, execute Tools, call `SafeToolExecutor`, invoke HITL, call kube-manager including port `8100`, expose MCP runtime `tools/call`, run A2A handoff, execute retrieval, bind vector stores, write memory, write audit, issue durable receipts, mutate catalogs, enable CI blocking, or touch NIM / HPC / Slurm / BCM Phase 2 scope.
+
+Learning point: a top-tier Agent does not chase version numbers for their own sake. It turns each official technology source into a reviewed adoption track with maturity, safety gates, trace/eval/replay evidence, Vue visibility, and recovery memory. This is how the project can stay current without sacrificing production-grade governance.
+
+Latest verified command:
+
+- `mvn -q "-Dtest=AgentOfficialVersionProtocolWatchServiceTest,AgentAdvancedTechnologyAdoptionContractServiceTest,AgentTopTierReadinessOverviewServiceTest,AgentPhase1ExecutionRoadmapServiceTest,AgentVueReadinessControlPlaneServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest" test`
+
+Next safe development order:
+
+- Add a Vue dashboard for the official version/protocol watch.
+- Continue reviewed redacted eval and Memory/RAG trace evidence curation.
+- Only after reviewed evidence exists, prototype MCP runtime, A2A handoff, retrieval runtime, and CI blocking in separate release-gated slices.
+- Keep NIM / HPC / Slurm / BCM paused for Phase 2.
+
 ## Latest Phase 1 Core Memory - M5.73-1
 
 M5.73-1 adds a Vue-ready Memory/RAG reviewed trace-evidence manifest. This is the evidence intake checklist between the M5.72 workbench overview and future human/Git-reviewed trace IDs.

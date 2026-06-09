@@ -37,11 +37,12 @@ class AgentVueReadinessControlPlaneServiceTest {
         assertThat(controlPlane.phase2NimHpcSlurmBcmPaused()).isTrue();
         assertThat(controlPlane.vueBindingReady()).isTrue();
         assertThat(controlPlane.runtimeControlAllowed()).isFalse();
-        assertThat(controlPlane.dashboardCount()).isEqualTo(9);
+        assertThat(controlPlane.dashboardCount()).isEqualTo(10);
         assertThat(controlPlane.dashboards()).extracting(dashboard -> dashboard.get("id"))
             .containsExactly(
                 "top-tier-command-center",
                 "advanced-technology-adoption",
+                "official-version-protocol-watch",
                 "phase1-execution-roadmap",
                 "kube-manager-governance",
                 "memory-rag-readiness",
@@ -54,6 +55,7 @@ class AgentVueReadinessControlPlaneServiceTest {
             .contains(
                 "readiness-overview",
                 "advanced-technology-adoption",
+                "official-version-protocol-watch",
                 "phase1-roadmap",
                 "reviewed-trace-evidence",
                 "release-blocking-gate-contract",
@@ -80,6 +82,7 @@ class AgentVueReadinessControlPlaneServiceTest {
             "create-vue-top-tier-agent-navigation",
             "bind-readiness-overview-card-grid",
             "bind-advanced-technology-adoption-matrix",
+            "bind-official-version-protocol-watch",
             "bind-phase1-execution-roadmap-timeline",
             "bind-kube-manager-governance-cards",
             "bind-memory-rag-readiness-and-contract-links",
@@ -91,6 +94,7 @@ class AgentVueReadinessControlPlaneServiceTest {
         );
         assertThat(controlPlane.endpointMap())
             .containsEntry("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane")
+            .containsEntry("officialVersionProtocolWatch", "/api/agent/observability/top-tier/official-version-protocol-watch")
             .containsEntry("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap")
             .containsEntry("reviewedEvalTraceEvidence", "/api/agent/observability/eval/reviewed-trace-evidence")
             .containsEntry("releaseBlockingEvalGateContract", "/api/agent/observability/eval/release-blocking-gate-contract")

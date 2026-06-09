@@ -6,6 +6,23 @@
 
 ---
 
+## [M5.74-1] - Official version/protocol watch
+
+**Delivery**: Added an admin-only, read-only official source watch for the latest Agent technology and protocol adoption path.
+**Changes**
+- Added `GET /api/agent/observability/top-tier/official-version-protocol-watch`.
+- Added `AgentOfficialVersionProtocolWatchResponse` and `AgentOfficialVersionProtocolWatchService`.
+- Published reviewed official source entries for Spring AI, OpenAI Responses, OpenAI Agents SDK, MCP 2025-11-25, A2A, OpenTelemetry GenAI, and OWASP LLM Top 10.
+- Published technology tracks for Java/Spring governed control plane, Spring AI Memory/RAG/MCP, OpenAI Responses/Agents interop, MCP runtime call plane, A2A handoff provenance, OTel GenAI adapter, OWASP LLM risk controls, and advanced RAG/GraphRAG/rerankers/vector stores.
+- Added adoption gates and blocked runtime shortcuts so latest-technology claims require official source review, compatibility matrix evidence, typed contracts, trace/audit/replay, eval gates, Vue visibility, and Git-reviewed runtime binding.
+- Integrated the watch into advanced technology adoption, top-tier readiness, Phase 1 roadmap, and Vue readiness endpoint maps.
+- Added direct controller coverage, source-level security contract coverage, and read-model service coverage.
+**Verification**
+- `mvn -q "-Dtest=AgentOfficialVersionProtocolWatchServiceTest,AgentAdvancedTechnologyAdoptionContractServiceTest,AgentTopTierReadinessOverviewServiceTest,AgentPhase1ExecutionRoadmapServiceTest,AgentVueReadinessControlPlaneServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest" test` passed during implementation.
+**Security**
+- The watch is admin-only, read-only, watch-only, and external-call-free at request time.
+- It does not upgrade dependencies, run LLMs, execute Tools, invoke `SafeToolExecutor`, invoke HITL, call kube-manager or port `8100`, expose MCP runtime `tools/call`, run A2A handoff, execute retrieval, bind vector stores, write memory, write audit, issue durable receipts, mutate catalogs, enable CI blocking, or touch NIM / HPC / Slurm / BCM Phase 2 work.
+
 ## [M5.73-1] - Memory/RAG reviewed trace-evidence manifest
 
 **Delivery**: Added a Vue-ready, admin-only Memory/RAG reviewed trace-evidence manifest that defines the authoritative fixture intake checklist before any reviewed trace IDs are promoted.

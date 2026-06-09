@@ -67,6 +67,9 @@ public record AgentAdvancedTechnologyAdoptionContractResponse(
             technology("spring-ai-1-1-access-layer", "MAINLINE_STABLE",
                 "Spring AI 1.1.x stays as the verified model and ToolCallback access layer.",
                 "model access, local compatibility, and future provider abstraction"),
+            technology("official-version-protocol-watch", "MAINLINE_CONTRACT",
+                "Official Spring AI, OpenAI, MCP, A2A, OTel GenAI, and OWASP LLM sources are tracked as a reviewed adoption watch.",
+                "evidence-first latest-technology governance"),
             technology("safe-tool-executor-boundary", "MAINLINE_STABLE",
                 "All real Tool authority must stay behind SafeToolExecutor, HITL, audit, and protected-parameter guards.",
                 "tool execution safety"),
@@ -154,6 +157,7 @@ public record AgentAdvancedTechnologyAdoptionContractResponse(
         return List.of(
             "publish-advanced-technology-adoption-contract",
             "keep-java-spring-control-plane-as-phase1-mainline",
+            "publish-official-version-protocol-watch",
             "add-official-version-and-protocol-watch-to-compatibility-matrix",
             "bind-memory-rag-eval-suite-before-retrieval-runtime",
             "wire-vue-top-tier-readiness-and-technology-adoption-workbench",
@@ -175,6 +179,7 @@ public record AgentAdvancedTechnologyAdoptionContractResponse(
         standards.put("otelGenAiMappedThroughStableInternalFields", true);
         standards.put("a2aAgentCardTaskArtifactProvenanceTracked", true);
         standards.put("owaspLlmSecurityThreatsMappedToGates", true);
+        standards.put("officialVersionProtocolWatchTracked", true);
         standards.put("javaSpringStillPreferredBackendControlPlane", true);
         standards.put("runtimeBound", false);
         return Map.copyOf(standards);
@@ -183,6 +188,7 @@ public record AgentAdvancedTechnologyAdoptionContractResponse(
     private static Map<String, Object> buildEndpointMap() {
         Map<String, Object> endpoints = new LinkedHashMap<>();
         endpoints.put("advancedTechnologyAdoptionContract", "/api/agent/observability/top-tier/advanced-technology-adoption-contract");
+        endpoints.put("officialVersionProtocolWatch", AgentOfficialVersionProtocolWatchResponse.WATCH_ENDPOINT);
         endpoints.put("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap");
         endpoints.put("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane");
         endpoints.put("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview");

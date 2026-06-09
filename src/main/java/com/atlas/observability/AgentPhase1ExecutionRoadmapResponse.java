@@ -57,10 +57,11 @@ public record AgentPhase1ExecutionRoadmapResponse(
     private static List<Map<String, Object>> buildExecutionSteps() {
         return List.of(
             step(1, "vue-readiness-control-plane",
-                "Wire Vue to render top-tier readiness, technology adoption, kube-manager governance, MCP governance, and Memory/RAG contracts.",
+                "Wire Vue to render top-tier readiness, technology adoption, official version/protocol watch, kube-manager governance, MCP governance, and Memory/RAG contracts.",
                 "PARTIAL_BACKEND_READY",
-                List.of("backend-read-models-exist", "admin-auth-required"),
+                List.of("backend-read-models-exist", "admin-auth-required", "official-source-watch-exists"),
                 List.of("top-tier-readiness-overview", "advanced-technology-adoption-contract",
+                    "official-version-protocol-watch",
                     "kube-manager-governance-workbench", "memory-rag-readiness",
                     "memory-rag-trace-set-curation-workbench")),
             step(2, "reviewed-eval-trace-evidence",
@@ -111,6 +112,7 @@ public record AgentPhase1ExecutionRoadmapResponse(
     private static List<Map<String, Object>> buildDependencyGates() {
         return List.of(
             gate("admin-auth-required", "Every roadmap endpoint remains admin-only and read-only."),
+            gate("official-source-review", "Latest technology claims must cite reviewed official sources before runtime adoption."),
             gate("safe-tool-executor-only", "No Tool or external protocol may bypass SafeToolExecutor when execution is later enabled."),
             gate("trace-audit-replay-required", "New runtime influence needs trace, redacted audit, and replay evidence."),
             gate("eval-before-runtime", "Prompt influence, retrieval, MCP calls, and handoffs need deterministic eval coverage first."),
@@ -124,6 +126,7 @@ public record AgentPhase1ExecutionRoadmapResponse(
         return List.of(
             vueTarget("top-tier-overview", "/api/agent/observability/top-tier/readiness-overview"),
             vueTarget("technology-adoption", "/api/agent/observability/top-tier/advanced-technology-adoption-contract"),
+            vueTarget("official-version-protocol-watch", AgentOfficialVersionProtocolWatchResponse.WATCH_ENDPOINT),
             vueTarget("phase1-roadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap"),
             vueTarget("vue-readiness-control-plane", "/api/agent/observability/top-tier/vue-readiness-control-plane"),
             vueTarget("kube-manager-governance", "/api/agent/observability/kube-manager/http-outlet/governance-workbench/overview"),
@@ -155,6 +158,7 @@ public record AgentPhase1ExecutionRoadmapResponse(
         endpoints.put("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane");
         endpoints.put("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview");
         endpoints.put("advancedTechnologyAdoptionContract", "/api/agent/observability/top-tier/advanced-technology-adoption-contract");
+        endpoints.put("officialVersionProtocolWatch", AgentOfficialVersionProtocolWatchResponse.WATCH_ENDPOINT);
         endpoints.put("kubeManagerGovernanceOverview", "/api/agent/observability/kube-manager/http-outlet/governance-workbench/overview");
         endpoints.put("evalWorkbenchOverview", "/api/agent/observability/eval/workbench/overview");
         endpoints.put("reviewedEvalTraceEvidence", "/api/agent/observability/eval/reviewed-trace-evidence");

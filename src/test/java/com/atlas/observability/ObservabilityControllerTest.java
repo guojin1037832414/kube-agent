@@ -142,6 +142,8 @@ class ObservabilityControllerTest {
         );
     private final AgentAdvancedTechnologyAdoptionContractService advancedTechnologyAdoptionContractService =
         new AgentAdvancedTechnologyAdoptionContractService();
+    private final AgentOfficialVersionProtocolWatchService officialVersionProtocolWatchService =
+        new AgentOfficialVersionProtocolWatchService();
     private final AgentPhase1ExecutionRoadmapService phase1ExecutionRoadmapService =
         new AgentPhase1ExecutionRoadmapService();
     private final AgentVueReadinessControlPlaneService vueReadinessControlPlaneService =
@@ -157,6 +159,7 @@ class ObservabilityControllerTest {
         kubeManagerHttpOutletGovernanceWorkbenchOverviewService,
         topTierReadinessOverviewService,
         advancedTechnologyAdoptionContractService,
+        officialVersionProtocolWatchService,
         phase1ExecutionRoadmapService,
         vueReadinessControlPlaneService,
         memoryRagReadinessService,
@@ -896,6 +899,7 @@ class ObservabilityControllerTest {
         assertThat(overview.endpointMap())
             .containsEntry("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview")
             .containsEntry("advancedTechnologyAdoptionContract", "/api/agent/observability/top-tier/advanced-technology-adoption-contract")
+            .containsEntry("officialVersionProtocolWatch", "/api/agent/observability/top-tier/official-version-protocol-watch")
             .containsEntry("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap")
             .containsEntry("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane")
             .containsEntry("memoryRagReadiness", "/api/agent/observability/memory-rag/readiness")
@@ -968,6 +972,7 @@ class ObservabilityControllerTest {
             .contains("source-owned-contract", "eval-before-release", "phase2-domain-pause");
         assertThat(contract.endpointMap())
             .containsEntry("advancedTechnologyAdoptionContract", "/api/agent/observability/top-tier/advanced-technology-adoption-contract")
+            .containsEntry("officialVersionProtocolWatch", "/api/agent/observability/top-tier/official-version-protocol-watch")
             .containsEntry("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap")
             .containsEntry("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane");
         assertThat(contract.safety())
@@ -987,6 +992,69 @@ class ObservabilityControllerTest {
             .containsEntry("containsPassword", false);
         assertThat(contract.toString())
             .contains("java-spring-control-plane", "COMPATIBILITY_MATRIX", "source-owned-contract")
+            .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret");
+    }
+
+    @Test
+    void officialVersionProtocolWatch_shouldRequireAdminAndReturnOfficialSourceWatch() {
+        ResponseEntity<ApiResponse<AgentOfficialVersionProtocolWatchResponse>> anonymous =
+            controller.officialVersionProtocolWatch();
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentOfficialVersionProtocolWatchResponse>> user =
+            controller.officialVersionProtocolWatch();
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        userPermissionContext.unbind();
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentOfficialVersionProtocolWatchResponse>> admin =
+            controller.officialVersionProtocolWatch();
+
+        assertThat(admin.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(admin.getBody()).isNotNull();
+        AgentOfficialVersionProtocolWatchResponse watch = admin.getBody().getData();
+        assertThat(watch.schemaVersion()).isEqualTo("agent-official-version-protocol-watch.v1");
+        assertThat(watch.watchStatus()).isEqualTo("OFFICIAL_WATCH_DEFINED_NOT_RUNTIME_BOUND");
+        assertThat(watch.officialSourcesOnly()).isTrue();
+        assertThat(watch.runtimeUpgradePerformed()).isFalse();
+        assertThat(watch.dependencyUpgradePerformed()).isFalse();
+        assertThat(watch.externalCallsPerformed()).isFalse();
+        assertThat(watch.officialSources()).extracting(source -> source.get("id"))
+            .contains("spring-ai-reference", "openai-agents-sdk", "mcp-2025-11-25",
+                "a2a-latest-spec", "otel-genai-semconv", "owasp-llm-top-10-2025");
+        assertThat(watch.technologyTracks()).extracting(track -> track.get("id"))
+            .contains("java-spring-governed-control-plane", "mcp-runtime-call-plane",
+                "a2a-handoff-provenance", "advanced-rag-graphrag-rerankers-vector-stores");
+        assertThat(watch.endpointMap())
+            .containsEntry("officialVersionProtocolWatch",
+                "/api/agent/observability/top-tier/official-version-protocol-watch")
+            .containsEntry("advancedTechnologyAdoptionContract",
+                "/api/agent/observability/top-tier/advanced-technology-adoption-contract");
+        assertThat(watch.safety())
+            .containsEntry("adminOnly", true)
+            .containsEntry("readOnly", true)
+            .containsEntry("watchOnly", true)
+            .containsEntry("runtimeMutationAllowed", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("mcpToolsCall", false)
+            .containsEntry("a2aRuntimeHandoff", false)
+            .containsEntry("llmUsed", false)
+            .containsEntry("externalCalls", false)
+            .containsEntry("nimHpcSlurmBcmTouched", false);
+        assertThat(watch.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("containsAuthorizationHeader", false)
+            .containsEntry("containsToken", false)
+            .containsEntry("containsPassword", false);
+        assertThat(watch.toString())
+            .contains("official-source-review", "mcp-2025-11-25", "otel-genai-semconv")
             .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret");
     }
 
@@ -1036,6 +1104,7 @@ class ObservabilityControllerTest {
             .containsEntry("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap")
             .containsEntry("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane")
             .containsEntry("advancedTechnologyAdoptionContract", "/api/agent/observability/top-tier/advanced-technology-adoption-contract")
+            .containsEntry("officialVersionProtocolWatch", "/api/agent/observability/top-tier/official-version-protocol-watch")
             .containsEntry("memoryRagEvalGateContract", "/api/agent/observability/memory-rag/eval-gate-contract")
             .containsEntry("memoryRagTraceSetCurationContract",
                 "/api/agent/observability/memory-rag/trace-set-curation-contract")
@@ -1096,6 +1165,7 @@ class ObservabilityControllerTest {
             .contains(
                 "top-tier-command-center",
                 "advanced-technology-adoption",
+                "official-version-protocol-watch",
                 "phase1-execution-roadmap",
                 "kube-manager-governance",
                 "memory-rag-readiness",
@@ -1108,6 +1178,7 @@ class ObservabilityControllerTest {
                 "run-memory-rag-trace-set-curation-workbench-action");
         assertThat(controlPlane.endpointMap())
             .containsEntry("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane")
+            .containsEntry("officialVersionProtocolWatch", "/api/agent/observability/top-tier/official-version-protocol-watch")
             .containsEntry("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap")
             .containsEntry("memoryRagTraceSetCurationWorkbenchOverview",
                 "/api/agent/observability/memory-rag/workbench/trace-set-curation/overview")

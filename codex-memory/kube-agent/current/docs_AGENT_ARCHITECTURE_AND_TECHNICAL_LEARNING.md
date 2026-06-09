@@ -2,6 +2,70 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-09 M5.74 Official Version / Protocol Watch
+
+M5.74 adds a backend-owned official source watch for the latest Agent technology stack. It answers: how do we keep the project aligned with current Spring AI, OpenAI Responses/Agents, MCP, A2A, OpenTelemetry GenAI, OWASP LLM, and advanced RAG directions without blindly upgrading the only recoverable mainline?
+
+```text
+official technology source
+        |
+        +-- review date
+        +-- official URL
+        +-- current finding
+        +-- adoption mode
+        |
+        v
+M5.74 official version/protocol watch
+        |
+        +-- officialSources
+        +-- technologyTracks
+        +-- adoptionGates
+        +-- blockedRuntimeShortcuts
+        +-- standardsAlignment
+        |
+        v
+compatibility matrix / typed contracts / Vue read-only dashboard
+        |
+        v
+future runtime binding only after reviewed eval and safety evidence
+```
+
+Endpoint:
+
+```text
+GET /api/agent/observability/top-tier/official-version-protocol-watch
+```
+
+Current state:
+- `schemaVersion=agent-official-version-protocol-watch.v1`
+- `watchStatus=OFFICIAL_WATCH_DEFINED_NOT_RUNTIME_BOUND`
+- `sourceReviewDate=2026-06-09`
+- `officialSourceCount=7`
+- `technologyTrackCount=8`
+- `runtimeUpgradePerformed=false`
+- `dependencyUpgradePerformed=false`
+- `externalCallsPerformed=false`
+
+Key design:
+- The service is static/read-only and uses only `Clock`; it does not fetch official docs at request time.
+- The response records official source URLs for Spring AI, OpenAI Responses, OpenAI Agents SDK, MCP 2025-11-25, A2A latest spec, OTel GenAI semconv, and OWASP LLM Top 10.
+- It divides adoption into tracks: Java/Spring control plane, Spring AI Memory/RAG/MCP, OpenAI Responses/Agents interop, MCP runtime call plane, A2A provenance, OTel GenAI adapter, OWASP risk controls, and advanced RAG/GraphRAG/reranker/vector stores.
+- It integrates into advanced technology adoption, top-tier readiness, Phase 1 roadmap, and Vue readiness so the frontend can render the watch as a learning/workbench surface.
+- It keeps runtime authority closed: no Tool execution, no MCP `tools/call`, no A2A handoff, no retrieval, no vector store, no LLM, no kube-manager call, no audit/memory write, no dependency upgrade.
+
+Learning point: 最新技术不是“越新越好”的版本竞赛，而是“官方来源 -> 采纳判断 -> 安全门禁 -> 可测试契约 -> 可观测证据 -> 前端只读可见 -> 独立运行时绑定”的工程链路。M5.74 是这条链路的入口。
+
+Technology point: Java/Spring remains the Phase 1 governed control plane, while the newest Agent ecosystem is tracked as evidence-first interop lanes. This is how a production-grade learning project can stay current without sacrificing security, auditability, and recovery.
+
+Official references:
+- Spring AI Reference: https://docs.spring.io/spring-ai/reference/
+- OpenAI Responses API migration guide: https://platform.openai.com/docs/guides/migrate-to-responses
+- OpenAI Agents SDK guide: https://platform.openai.com/docs/guides/agents-sdk/
+- MCP specification 2025-11-25: https://modelcontextprotocol.io/specification/2025-11-25
+- OpenTelemetry GenAI semantic conventions: https://opentelemetry.io/docs/specs/semconv/gen-ai/
+- A2A protocol specification: https://a2a-protocol.org/latest/specification/
+- OWASP Top 10 for LLM Applications: https://genai.owasp.org/llm-top-10/
+
 ## 2026-06-09 M5.73 Memory/RAG Reviewed Trace-Evidence Manifest
 
 M5.73 adds the evidence intake manifest that sits below the M5.72 workbench overview. It answers: before we add reviewed redacted trace IDs to `eval-trace-sets.json`, what exact fixture schema, digest evidence, review workflow, and advanced technology mappings must a human reviewer see?

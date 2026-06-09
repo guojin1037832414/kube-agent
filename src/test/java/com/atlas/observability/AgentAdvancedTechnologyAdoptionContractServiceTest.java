@@ -43,6 +43,7 @@ class AgentAdvancedTechnologyAdoptionContractServiceTest {
             .containsExactly(
                 "java-spring-control-plane",
                 "spring-ai-1-1-access-layer",
+                "official-version-protocol-watch",
                 "safe-tool-executor-boundary",
                 "deterministic-eval-workbench",
                 "memory-rag-contract-stack",
@@ -85,6 +86,7 @@ class AgentAdvancedTechnologyAdoptionContractServiceTest {
         assertThat(contract.recommendedBuildOrder()).containsExactly(
             "publish-advanced-technology-adoption-contract",
             "keep-java-spring-control-plane-as-phase1-mainline",
+            "publish-official-version-protocol-watch",
             "add-official-version-and-protocol-watch-to-compatibility-matrix",
             "bind-memory-rag-eval-suite-before-retrieval-runtime",
             "wire-vue-top-tier-readiness-and-technology-adoption-workbench",
@@ -103,10 +105,12 @@ class AgentAdvancedTechnologyAdoptionContractServiceTest {
             .containsEntry("otelGenAiMappedThroughStableInternalFields", true)
             .containsEntry("a2aAgentCardTaskArtifactProvenanceTracked", true)
             .containsEntry("owaspLlmSecurityThreatsMappedToGates", true)
+            .containsEntry("officialVersionProtocolWatchTracked", true)
             .containsEntry("javaSpringStillPreferredBackendControlPlane", true)
             .containsEntry("runtimeBound", false);
         assertThat(contract.endpointMap())
             .containsEntry("advancedTechnologyAdoptionContract", "/api/agent/observability/top-tier/advanced-technology-adoption-contract")
+            .containsEntry("officialVersionProtocolWatch", "/api/agent/observability/top-tier/official-version-protocol-watch")
             .containsEntry("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap")
             .containsEntry("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane")
             .containsEntry("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview")

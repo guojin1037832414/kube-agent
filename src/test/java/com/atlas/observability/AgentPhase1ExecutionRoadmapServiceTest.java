@@ -52,6 +52,7 @@ class AgentPhase1ExecutionRoadmapServiceTest {
         assertThat(roadmap.dependencyGates()).extracting(gate -> gate.get("id"))
             .contains(
                 "admin-auth-required",
+                "official-source-review",
                 "safe-tool-executor-only",
                 "trace-audit-replay-required",
                 "eval-before-runtime",
@@ -63,6 +64,7 @@ class AgentPhase1ExecutionRoadmapServiceTest {
             .contains(
                 "top-tier-overview",
                 "technology-adoption",
+                "official-version-protocol-watch",
                 "phase1-roadmap",
                 "vue-readiness-control-plane",
                 "kube-manager-governance",
@@ -85,6 +87,7 @@ class AgentPhase1ExecutionRoadmapServiceTest {
             .containsEntry("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane")
             .containsEntry("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview")
             .containsEntry("advancedTechnologyAdoptionContract", "/api/agent/observability/top-tier/advanced-technology-adoption-contract")
+            .containsEntry("officialVersionProtocolWatch", "/api/agent/observability/top-tier/official-version-protocol-watch")
             .containsEntry("reviewedEvalTraceEvidence", "/api/agent/observability/eval/reviewed-trace-evidence")
             .containsEntry("releaseBlockingEvalGateContract", "/api/agent/observability/eval/release-blocking-gate-contract")
             .containsEntry("memoryRagEvalGateContract", "/api/agent/observability/memory-rag/eval-gate-contract")
