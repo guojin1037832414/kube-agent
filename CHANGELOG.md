@@ -6,6 +6,23 @@
 
 ---
 
+## [M5.61-1] - Memory/RAG durable memory lifecycle contract
+
+**Delivery**: Added an admin-only durable Memory/RAG lifecycle contract before any persistent memory runtime is bound.
+**Changes**
+- Added `AgentMemoryRagDurableMemoryLifecycleContractResponse`.
+- Added `AgentMemoryRagDurableMemoryLifecycleContractService`.
+- Added `GET /api/agent/observability/memory-rag/durable-memory-lifecycle-contract`.
+- Defined future lifecycle fields for tenant partition, source evidence digest, retention policy, delete proof, export proof, recovery checkpoint, and eval gate evidence.
+- Updated Memory/RAG readiness and top-tier readiness endpoint maps to reference the lifecycle contract.
+- Added service, controller, source-contract, readiness/top-tier, and MockMvc security coverage.
+**Verification**
+- `mvn -q "-Dtest=AgentMemoryRagDurableMemoryLifecycleContractServiceTest,AgentMemoryRagSourceEvidenceDigestContractServiceTest,AgentMemoryRagCitationSourceContractServiceTest,AgentMemoryRagReadinessServiceTest,AgentTopTierReadinessOverviewServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed during implementation.
+**Security**
+- `contractStatus=CONTRACT_DEFINED_NOT_BOUND`.
+- `lifecycleContractDefined=true`, `boundToDurableStoreRuntime=false`, `retentionEnforcedNow=false`, `deleteEndpointImplemented=false`, `exportEndpointImplemented=false`, `recoveryCheckpointBound=false`, and `promptEvidenceAllowedNow=false`.
+- No durable store, DB write, vector store binding, embedding/reranker/LLM call, retrieval execution, prompt mutation, memory write, retention/delete/export/recovery job, Tool execution, `SafeToolExecutor` invocation, HITL invocation, audit write, durable receipt issuance, kube-manager call, `RestClient`, `WebClient`, MCP runtime `tools/call`, or NIM / HPC / Slurm / BCM Phase 2 work is added.
+
 ## [M5.60-1] - Memory/RAG source evidence digest contract
 
 **Delivery**: Added a pure Java source evidence digest derivation contract and an admin-only read model for future cited Memory/RAG retrieval.

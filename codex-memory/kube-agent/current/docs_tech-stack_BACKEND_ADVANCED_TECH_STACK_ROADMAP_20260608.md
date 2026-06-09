@@ -9,6 +9,35 @@
 - 供应链、CI、SBOM、质量门禁进入工程默认路径；
 - Java / Spring / Agent 框架升级以兼容性矩阵推进，不用不可构建的版本号伪装先进。
 
+## 2026-06-09 M5.61 Durable-Memory-Lifecycle-First Rule
+
+M5.61 refines the Memory/RAG roadmap again: future persistent memory must be lifecycle-first before it is storage-first or vector-first.
+
+Current mainline:
+- `GET /api/agent/observability/memory-rag/durable-memory-lifecycle-contract` exposes the admin-only read model.
+- `GET /api/agent/observability/memory-rag/readiness` reports `durableMemoryLifecycleContractDefined=true` and `durableMemoryLifecycleContractBound=false`.
+- The top-tier readiness overview links the new lifecycle contract from the Memory/RAG card.
+- Durable store, retrieval runtime, delete/export/recovery jobs, and prompt evidence injection remain closed.
+
+Required lifecycle chain:
+- stable `memoryRecordId`;
+- tenant partition digest derived from trusted principal / organization / policy facts;
+- source evidence digest from M5.60;
+- retention policy id with TTL and legal-hold separation;
+- delete tombstone proof digest;
+- redacted export proof digest;
+- recovery checkpoint digest;
+- eval gate digest before prompt influence.
+
+Compatibility matrix:
+- Spring AI `VectorStore` metadata can later carry lifecycle fields alongside source/chunk digests;
+- MCP resources can expose memory/resource metadata without opening runtime `tools/call`;
+- A2A artifacts can carry export/recovery proof digests for cross-agent provenance;
+- OTel GenAI retrieval spans can map lifecycle digests without raw memory/source text;
+- OpenAI Agents SDK-style tracing and guardrails can require lifecycle evidence before handoff or prompt evidence injection.
+
+Teaching conclusion: advanced durable memory is not "pick PostgreSQL, Redis, or a vector DB." It is a lifecycle protocol. Storage is implementation detail; top-tier behavior comes from tenant isolation, retention, delete/export proofs, recovery, eval gates, and operator visibility.
+
 ## 2026-06-09 M5.60 Source-Evidence-Digest-First RAG Rule
 
 M5.60 refines the Memory/RAG roadmap from citation-first to digest-first + citation-first.

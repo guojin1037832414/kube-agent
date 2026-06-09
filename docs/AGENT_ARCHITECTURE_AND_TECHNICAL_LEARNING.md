@@ -2,6 +2,35 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-09 M5.61 Memory/RAG Durable Memory Lifecycle Contract
+
+M5.61 defines the lifecycle evidence that future persistent memory must satisfy before a durable store, vector retrieval, export/delete workflow, or prompt evidence injection can be runtime-bound.
+
+```text
+Memory/RAG readiness + citation/source + source evidence digest
+        |
+        | lifecycle contract
+        v
+tenant partition digest + retention policy + delete proof
+        + export proof + recovery checkpoint + eval gate digest
+        |
+        | admin-only, read-only, contract-only
+        v
+/api/agent/observability/memory-rag/durable-memory-lifecycle-contract
+```
+
+Key design:
+- `AgentMemoryRagDurableMemoryLifecycleContractResponse` publishes `schemaVersion=agent-memory-rag-durable-memory-lifecycle-contract.v1` and `contractStatus=CONTRACT_DEFINED_NOT_BOUND`.
+- The contract fields are `memoryRecordId`, `tenantPartitionDigest`, `sourceEvidenceDigest`, `retentionPolicyId`, `deleteProofDigest`, `exportProofDigest`, `recoveryCheckpointDigest`, and `evalGateDigest`.
+- The rule groups cover tenant partition, retention, deletion proof, export proof, recovery, and eval gates.
+- M5.58 readiness now reports `durableMemoryLifecycleContractDefined=true` and `durableMemoryLifecycleContractBound=false`; the durable memory lifecycle card is `PARTIAL`, not `READY`.
+- M5.57 top-tier overview now exposes `durableMemoryLifecycleContractImplemented=true` and links to the contract endpoint.
+- The endpoint does not create storage, execute delete/export/recovery jobs, run retrieval, bind vector store, call LLM, call kube-manager, or execute Tools.
+
+Learning point: 顶级 Agent 的长期记忆不是“把摘要写进数据库”这么简单。真正成熟的 durable memory 需要生命周期证据：谁拥有、哪个租户、从哪个已脱敏来源来、保留多久、如何删除、如何导出、如何恢复、如何通过 eval 才能进入 prompt。M5.61 把这些条件变成后端契约，让后续实现不靠口头约定。
+
+Technology point: 这一步把 OpenAI Agents SDK 风格的 tracing/guardrails/handoffs、MCP resource lifecycle、A2A artifact provenance、Spring AI VectorStore metadata lifecycle、OpenTelemetry GenAI retrieval lifecycle 统一成 Java 主线可测试的证据字段。先进技术先以 contract 进入稳定主线，运行时绑定留给后续受控切片。
+
 ## 2026-06-09 M5.60 Memory/RAG Source Evidence Digest Contract
 
 M5.60 defines the deterministic digest contract that future RAG source evidence must satisfy before ingestion or retrieval can be runtime-bound.

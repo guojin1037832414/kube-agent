@@ -100,6 +100,8 @@ class ObservabilityControllerTest {
         new AgentMemoryRagCitationSourceContractService();
     private final AgentMemoryRagSourceEvidenceDigestContractService memoryRagSourceEvidenceDigestContractService =
         new AgentMemoryRagSourceEvidenceDigestContractService();
+    private final AgentMemoryRagDurableMemoryLifecycleContractService memoryRagDurableMemoryLifecycleContractService =
+        new AgentMemoryRagDurableMemoryLifecycleContractService();
     private final AgentTopTierReadinessOverviewService topTierReadinessOverviewService =
         new AgentTopTierReadinessOverviewService(
             kubeManagerHttpOutletGovernanceWorkbenchOverviewService,
@@ -119,6 +121,7 @@ class ObservabilityControllerTest {
         memoryRagReadinessService,
         memoryRagCitationSourceContractService,
         memoryRagSourceEvidenceDigestContractService,
+        memoryRagDurableMemoryLifecycleContractService,
         auditRecorder,
         auditRecorder,
         replayTimelineService,
@@ -845,6 +848,7 @@ class ObservabilityControllerTest {
         assertThat(overview.endpointMap())
             .containsEntry("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview")
             .containsEntry("memoryRagReadiness", "/api/agent/observability/memory-rag/readiness")
+            .containsEntry("memoryRagDurableMemoryLifecycleContract", "/api/agent/observability/memory-rag/durable-memory-lifecycle-contract")
             .containsEntry("mcpGovernanceOverview", "/api/agent/mcp/governance/overview");
         assertThat(overview.safety())
             .containsEntry("adminOnly", true)
@@ -910,10 +914,14 @@ class ObservabilityControllerTest {
         assertThat(readiness.currentEvidence())
             .containsEntry("trustedPrincipalOwner", true)
             .containsEntry("durableStoreBound", false)
+            .containsEntry("durableMemoryLifecycleContractDefined", true)
+            .containsEntry("durableMemoryLifecycleContractBound", false)
             .containsEntry("vectorStoreBound", false)
             .containsEntry("citationSourceContractDefined", true)
             .containsEntry("sourceEvidenceDigestContractDefined", true)
             .containsEntry("sourceEvidenceDigestContractBound", false);
+        assertThat(readiness.endpointMap())
+            .containsEntry("durableMemoryLifecycleContract", "/api/agent/observability/memory-rag/durable-memory-lifecycle-contract");
         assertThat(readiness.safety())
             .containsEntry("adminOnly", true)
             .containsEntry("readOnly", true)
@@ -1038,6 +1046,75 @@ class ObservabilityControllerTest {
             .containsEntry("containsToken", false);
         assertThat(contract.toString())
             .contains("sourceDigest", "citationSeed")
+            .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret", "raw document");
+    }
+
+    @Test
+    void memoryRagDurableMemoryLifecycleContract_shouldRequireAdminAndReturnUnboundContract() {
+        ResponseEntity<ApiResponse<AgentMemoryRagDurableMemoryLifecycleContractResponse>> anonymous =
+            controller.memoryRagDurableMemoryLifecycleContract();
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentMemoryRagDurableMemoryLifecycleContractResponse>> user =
+            controller.memoryRagDurableMemoryLifecycleContract();
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        userPermissionContext.unbind();
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentMemoryRagDurableMemoryLifecycleContractResponse>> admin =
+            controller.memoryRagDurableMemoryLifecycleContract();
+
+        assertThat(admin.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(admin.getBody()).isNotNull();
+        AgentMemoryRagDurableMemoryLifecycleContractResponse contract = admin.getBody().getData();
+        assertThat(contract.schemaVersion()).isEqualTo("agent-memory-rag-durable-memory-lifecycle-contract.v1");
+        assertThat(contract.contractStatus()).isEqualTo("CONTRACT_DEFINED_NOT_BOUND");
+        assertThat(contract.lifecycleContractDefined()).isTrue();
+        assertThat(contract.boundToDurableStoreRuntime()).isFalse();
+        assertThat(contract.retentionEnforcedNow()).isFalse();
+        assertThat(contract.deleteEndpointImplemented()).isFalse();
+        assertThat(contract.exportEndpointImplemented()).isFalse();
+        assertThat(contract.recoveryCheckpointBound()).isFalse();
+        assertThat(contract.promptEvidenceAllowedNow()).isFalse();
+        assertThat(contract.lifecycleFields()).extracting(field -> field.get("id"))
+            .contains("memoryRecordId", "tenantPartitionDigest", "sourceEvidenceDigest", "deleteProofDigest");
+        assertThat(contract.deletionProofRules()).extracting(rule -> rule.get("id"))
+            .contains("delete-tombstone-required", "delete-runtime-disabled-now");
+        assertThat(contract.exportProofRules()).extracting(rule -> rule.get("id"))
+            .contains("redacted-export-only", "export-runtime-disabled-now");
+        assertThat(contract.recoveryRules()).extracting(rule -> rule.get("id"))
+            .contains("recovery-manifest-required", "recovery-runtime-disabled-now");
+        assertThat(contract.endpointMap())
+            .containsEntry("durableMemoryLifecycleContract", "/api/agent/observability/memory-rag/durable-memory-lifecycle-contract")
+            .containsEntry("memoryRagReadiness", "/api/agent/observability/memory-rag/readiness");
+        assertThat(contract.safety())
+            .containsEntry("adminOnly", true)
+            .containsEntry("readOnly", true)
+            .containsEntry("contractOnly", true)
+            .containsEntry("memoryWrite", false)
+            .containsEntry("durableStoreCalls", false)
+            .containsEntry("deleteExecuted", false)
+            .containsEntry("exportExecuted", false)
+            .containsEntry("recoveryExecuted", false)
+            .containsEntry("retrievalExecuted", false)
+            .containsEntry("llmUsed", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("kubeManagerCalls", false);
+        assertThat(contract.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("containsRawConversation", false)
+            .containsEntry("containsRawDocument", false)
+            .containsEntry("containsRawPrompt", false)
+            .containsEntry("containsToken", false);
+        assertThat(contract.toString())
+            .contains("tenantPartitionDigest", "deleteProofDigest", "exportProofDigest")
             .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret", "raw document");
     }
 

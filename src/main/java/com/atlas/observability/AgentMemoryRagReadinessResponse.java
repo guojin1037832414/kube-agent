@@ -86,15 +86,18 @@ public record AgentMemoryRagReadinessResponse(
             ),
             card(
                 "durable-memory-store",
-                "Durable memory store",
-                "BLOCKED",
-                "Phase 1 still needs a durable store with retention, deletion, export metadata, and recovery semantics before memory can be called top-tier.",
-                List.of("future JDBC/Redis/vector metadata store", "retention policy", "delete/export contract"),
+                "Durable memory lifecycle",
+                "PARTIAL",
+                "A durable lifecycle contract now defines tenant partition, retention, delete proof, export proof, recovery, and eval gate evidence; runtime storage is still unbound.",
+                List.of("durable lifecycle contract", "tenant partition digest", "retention policy", "delete/export proof"),
                 Map.of(
+                    "durableMemoryLifecycleContractDefined", true,
+                    "durableMemoryLifecycleContractBound", false,
                     "durableStoreImplemented", false,
                     "retentionPolicyImplemented", false,
                     "deleteEndpointImplemented", false,
-                    "exportEndpointImplemented", false
+                    "exportEndpointImplemented", false,
+                    "recoveryCheckpointBound", false
                 )
             ),
             card(
@@ -179,7 +182,8 @@ public record AgentMemoryRagReadinessResponse(
         return List.of(
             "define-memory-rag-citation-source-contract",
             "define-memory-rag-source-evidence-digest-contract",
-            "add-durable-memory-store-with-retention-delete-export-metadata",
+            "define-durable-memory-lifecycle-contract",
+            "bind-durable-memory-runtime-after-lifecycle-and-source-digest-contract",
             "bind-tenant-isolated-vector-store-through-reviewed-retrieval-policy",
             "add-redacted-runbook-and-kube-manager-doc-ingestion-pipeline",
             "add-memory-rag-eval-suite-for-citation-privacy-tenant-isolation-staleness",
@@ -200,6 +204,8 @@ public record AgentMemoryRagReadinessResponse(
         evidence.put("maxSummariesPerUser", maxSummariesPerUser);
         evidence.put("currentStore", "caffeine-in-memory");
         evidence.put("currentTtlDays", 30);
+        evidence.put("durableMemoryLifecycleContractDefined", true);
+        evidence.put("durableMemoryLifecycleContractBound", false);
         evidence.put("durableStoreBound", false);
         evidence.put("vectorStoreBound", false);
         evidence.put("retrievalPolicyBound", false);
@@ -217,6 +223,7 @@ public record AgentMemoryRagReadinessResponse(
         endpoints.put("memoryRagReadiness", "/api/agent/observability/memory-rag/readiness");
         endpoints.put("citationSourceContract", "/api/agent/observability/memory-rag/citation-source-contract");
         endpoints.put("sourceEvidenceDigestContract", "/api/agent/observability/memory-rag/source-evidence-digest-contract");
+        endpoints.put("durableMemoryLifecycleContract", "/api/agent/observability/memory-rag/durable-memory-lifecycle-contract");
         endpoints.put("memorySummaries", "/api/agent/memory/summaries");
         endpoints.put("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview");
         endpoints.put("evalWorkbenchCapabilities", "/api/agent/observability/eval/workbench/capabilities");
@@ -231,6 +238,7 @@ public record AgentMemoryRagReadinessResponse(
         protocol.put("requiresTenantPartition", true);
         protocol.put("requiresCitationContract", true);
         protocol.put("requiresSourceEvidenceDigestContract", true);
+        protocol.put("requiresDurableMemoryLifecycleContract", true);
         protocol.put("requiresRedactedIngestion", true);
         protocol.put("requiresEvalGate", true);
         protocol.put("requiresFrontendGovernance", true);
@@ -239,6 +247,7 @@ public record AgentMemoryRagReadinessResponse(
             "Spring AI VectorStore abstraction",
             "tenant-aware document metadata",
             "source evidence digest contract",
+            "durable memory lifecycle contract",
             "deterministic Memory/RAG eval suite"
         ));
         protocol.put("compatibilityMatrixCandidates", List.of(

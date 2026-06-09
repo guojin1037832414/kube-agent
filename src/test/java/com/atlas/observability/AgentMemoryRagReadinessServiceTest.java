@@ -64,17 +64,24 @@ class AgentMemoryRagReadinessServiceTest {
         assertThat(readiness.endpointMap())
             .containsEntry("memoryRagReadiness", "/api/agent/observability/memory-rag/readiness")
             .containsEntry("citationSourceContract", "/api/agent/observability/memory-rag/citation-source-contract")
+            .containsEntry("sourceEvidenceDigestContract", "/api/agent/observability/memory-rag/source-evidence-digest-contract")
+            .containsEntry("durableMemoryLifecycleContract", "/api/agent/observability/memory-rag/durable-memory-lifecycle-contract")
             .containsEntry("memorySummaries", "/api/agent/memory/summaries");
         assertThat(readiness.currentEvidence())
             .containsEntry("safeSummaryMemoryControllerExists", true)
             .containsEntry("trustedPrincipalOwner", true)
             .containsEntry("rawSessionIdAsOwner", false)
+            .containsEntry("durableMemoryLifecycleContractDefined", true)
+            .containsEntry("durableMemoryLifecycleContractBound", false)
             .containsEntry("durableStoreBound", false)
             .containsEntry("vectorStoreBound", false)
             .containsEntry("citationSourceContractDefined", true)
+            .containsEntry("sourceEvidenceDigestContractDefined", true)
+            .containsEntry("sourceEvidenceDigestContractBound", false)
             .containsEntry("citationContractBound", false);
         assertThat(readiness.futureEnablementProtocol())
             .containsEntry("runtimeRagAllowedNow", false)
+            .containsEntry("requiresDurableMemoryLifecycleContract", true)
             .containsEntry("missingEvidenceOutcome", "fail-closed-no-retrieval");
         assertThat(readiness.safety())
             .containsEntry("adminOnly", true)
@@ -95,7 +102,7 @@ class AgentMemoryRagReadinessServiceTest {
             .containsEntry("containsRawRetrievedChunk", false)
             .containsEntry("containsToken", false);
         assertThat(readiness.toString())
-            .contains("MEMORY_RAG_CONTRACT_DEFINED_NOT_READY", "safe-summary-memory", "citation-and-source-contract")
+            .contains("MEMORY_RAG_CONTRACT_DEFINED_NOT_READY", "safe-summary-memory", "durable-memory-store", "citation-and-source-contract")
             .doesNotContain("token=secret", "password:abc", "Bearer raw-secret-value", "raw-session-id");
     }
 

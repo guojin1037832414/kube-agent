@@ -10,7 +10,45 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.60-1
+## Latest Phase 1 Core Memory - M5.61-1
+
+M5.61-1 adds the Phase 1 Memory/RAG durable memory lifecycle contract.
+
+Delivered:
+
+- Added `AgentMemoryRagDurableMemoryLifecycleContractResponse`.
+- Added `AgentMemoryRagDurableMemoryLifecycleContractService`.
+- Added admin-only `GET /api/agent/observability/memory-rag/durable-memory-lifecycle-contract`.
+- Updated `ObservabilityController` to expose the new endpoint behind the same admin guard.
+- Updated Memory/RAG readiness so `durableMemoryLifecycleContractDefined=true`, `durableMemoryLifecycleContractBound=false`, and the durable lifecycle card is `PARTIAL` while runtime storage remains unbound.
+- Updated top-tier readiness so the Memory/RAG card exposes `durableMemoryLifecycleContractImplemented=true`, `durableMemoryLifecycleContractBound=false`, and links to the new endpoint.
+- Added service, controller, source-contract, readiness/top-tier, and MockMvc security coverage.
+
+Current state:
+
+- `schemaVersion=agent-memory-rag-durable-memory-lifecycle-contract.v1`.
+- `contractStatus=CONTRACT_DEFINED_NOT_BOUND`.
+- `lifecycleContractDefined=true`.
+- `boundToDurableStoreRuntime=false`.
+- `retentionEnforcedNow=false`.
+- `deleteEndpointImplemented=false`.
+- `exportEndpointImplemented=false`.
+- `recoveryCheckpointBound=false`.
+- `promptEvidenceAllowedNow=false`.
+
+Security boundary:
+
+- The endpoint is admin-only, read-only, contract-only, and fail-closed.
+- It defines future lifecycle evidence for tenant partition, retention policy, delete tombstone proof, redacted export proof, recovery checkpoint proof, source ACL, and Memory/RAG eval gate.
+- It does not create DB tables, bind a durable store, write memory, execute retention/delete/export/recovery jobs, bind a vector store, call embedding/reranker/LLM, execute retrieval, mutate prompts, execute Tools, invoke `SafeToolExecutor`, invoke HITL, write audit, issue durable receipts, call kube-manager, use `RestClient` / `WebClient`, expose MCP runtime `tools/call`, or touch NIM / HPC / Slurm / BCM Phase 2 scope.
+
+Learning point: durable Memory/RAG is a lifecycle governance system. A top-tier Agent must prove who owns a memory, which tenant partition can retrieve it, which redacted source evidence created it, when it expires, how deletion/export/recovery are proven, and which eval gate allows it to influence a prompt.
+
+Latest verified command:
+
+- `mvn -q "-Dtest=AgentMemoryRagDurableMemoryLifecycleContractServiceTest,AgentMemoryRagSourceEvidenceDigestContractServiceTest,AgentMemoryRagCitationSourceContractServiceTest,AgentMemoryRagReadinessServiceTest,AgentTopTierReadinessOverviewServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+## Previous Phase 1 Core Memory - M5.60-1
 
 M5.60-1 adds the Phase 1 Memory/RAG source evidence digest contract.
 
