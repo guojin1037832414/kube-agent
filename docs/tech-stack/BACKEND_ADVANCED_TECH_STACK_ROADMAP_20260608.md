@@ -9,6 +9,43 @@
 - 供应链、CI、SBOM、质量门禁进入工程默认路径；
 - Java / Spring / Agent 框架升级以兼容性矩阵推进，不用不可构建的版本号伪装先进。
 
+## 2026-06-09 M5.58 Memory/RAG Advanced Technology Rule
+
+M5.58 adds the Memory/RAG readiness contract and refines the advanced-technology rule for the learning layer:
+
+```text
+advanced Memory/RAG direction
+        |
+        +-- current mainline: safe summary memory + readiness contract
+        |
+        +-- required before runtime: durable store + tenant partition + citation + eval
+        |
+        +-- compatibility matrix: Spring AI VectorStore, GraphRAG, reranker, hybrid search
+```
+
+Current mainline:
+- `ConversationSummaryMemoryStore` remains the only active memory store.
+- `GET /api/agent/observability/memory-rag/readiness` reports readiness and gaps.
+- The endpoint is admin-only, read-only, no-retrieval, no-LLM, no-vector-store, no-kube-manager-call.
+
+Required before runtime Memory/RAG:
+- durable memory store with retention, delete, export, and recovery metadata;
+- tenant-aware persistent partitioning and per-source ACLs;
+- redacted ingestion pipeline for kube-manager docs/runbooks and future operator evidence;
+- citation/source contract with source type, digest, tenant scope, redaction status, and prompt evidence budget;
+- deterministic evals for citation fidelity, privacy leakage, tenant isolation, and stale retrieval;
+- Vue readiness workbench that renders backend-owned state without creating retrieval/write authority.
+
+Compatibility matrix:
+- Spring AI VectorStore abstraction;
+- hybrid lexical/vector retrieval;
+- reranker and multi-vector retrieval;
+- GraphRAG and source graph enrichment;
+- OpenTelemetry GenAI retrieval span mapping;
+- Java 21/25 and Spring Boot 4 / Spring AI 2 compatibility branches.
+
+Teaching conclusion: "引入全部最先进技术" does not mean enabling every retrieval component today. For top-tier Agent work, advanced means every memory or retrieved fact is governed by owner, source, retention, citation, privacy, eval, and replay evidence before it can affect runtime answers.
+
 ## 2026-06-09 M5.57 最新顶级技术引入规则
 
 M5.57 把“引入全部最先进的技术，然后完成最新修订的终极目标”落成一条工程规则：

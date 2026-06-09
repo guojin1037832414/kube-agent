@@ -117,6 +117,10 @@ class AgentSecurityConfigWebMvcTest {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
             .andExpect(status().isForbidden());
 
+        mockMvc.perform(get("/api/agent/observability/memory-rag/readiness")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
+            .andExpect(status().isForbidden());
+
         mockMvc.perform(get("/api/agent/observability/replay/trace/trc_123")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
             .andExpect(status().isForbidden());
@@ -555,6 +559,11 @@ class AgentSecurityConfigWebMvcTest {
         @GetMapping("/api/agent/observability/top-tier/readiness-overview")
         String observabilityTopTierReadinessOverview() {
             return "top-tier-readiness-overview";
+        }
+
+        @GetMapping("/api/agent/observability/memory-rag/readiness")
+        String observabilityMemoryRagReadiness() {
+            return "memory-rag-readiness";
         }
 
         @GetMapping("/api/agent/observability/replay/trace/{id}")

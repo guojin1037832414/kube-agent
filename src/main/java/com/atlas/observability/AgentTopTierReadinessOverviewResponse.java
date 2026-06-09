@@ -187,10 +187,11 @@ public record AgentTopTierReadinessOverviewResponse(
             "memory-rag-learning",
             "Persistent Memory and RAG learning layer",
             "BLOCKED",
-            "Conversation memory exists, but Phase 1 still needs durable memory, retrieval citations, redacted RAG evidence, and eval coverage.",
-            "/api/agent/memory/summaries",
-            List.of("conversation summary memory", "future vector store", "future citation contract"),
+            "Safe summary memory and a readiness contract exist, but Phase 1 still needs durable memory, retrieval citations, redacted RAG evidence, and eval coverage.",
+            "/api/agent/observability/memory-rag/readiness",
+            List.of("conversation summary memory", "Memory/RAG readiness contract", "future vector store", "future citation contract"),
             Map.of(
+                "readinessContractExists", true,
                 "durableMemoryImplemented", false,
                 "vectorRetrievalImplemented", false,
                 "citationContractImplemented", false
@@ -307,6 +308,7 @@ public record AgentTopTierReadinessOverviewResponse(
         endpoints.put("evalWorkbenchOverview", "/api/agent/observability/eval/workbench/overview");
         endpoints.put("mcpGovernanceOverview", "/api/agent/mcp/governance/overview");
         endpoints.put("mcpManifest", "/api/agent/mcp/manifest");
+        endpoints.put("memoryRagReadiness", "/api/agent/observability/memory-rag/readiness");
         endpoints.put("replayTimeline", "/api/agent/observability/replay/trace/{traceId}");
         endpoints.put("memorySummaries", "/api/agent/memory/summaries");
         return Map.copyOf(endpoints);

@@ -2,6 +2,36 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-09 M5.58 Memory/RAG Readiness Contract
+
+M5.58 turns the Memory/RAG gap from a vague blocker into a backend-owned readiness contract. It keeps runtime retrieval closed while making the learning layer teachable and testable.
+
+```text
+ConversationSummaryMemoryStore
+        |
+        | userCount + MAX_SUMMARIES_PER_USER only
+        v
+AgentMemoryRagReadinessService
+        |
+        | admin-only, read-only, no retrieval
+        v
+/api/agent/observability/memory-rag/readiness
+        |
+        v
+Top-tier readiness card: memory-rag-learning
+```
+
+Key design:
+- `AgentMemoryRagReadinessResponse` publishes `schemaVersion=agent-memory-rag-readiness.v1` and `readinessVerdict=MEMORY_RAG_CONTRACT_DEFINED_NOT_READY`.
+- The current state is honest: safe summary memory exists, but durable memory, RAG retrieval, citation contract, and eval coverage are not ready.
+- Six readiness cards separate the capability into `safe-summary-memory`, `durable-memory-store`, `tenant-and-privacy-governance`, `rag-retrieval-layer`, `citation-and-source-contract`, and `eval-and-observability`.
+- The service reads only bounded memory facts. It does not call `recent(...)`, write memory, query a vector store, call embedding/reranker/LLM, execute Tools, invoke HITL, write audit, or call kube-manager.
+- The top-tier readiness overview now links `memory-rag-learning` to this endpoint and records `readinessContractExists=true`, so the master map can point operators to the exact blocker.
+
+Learning point: 顶级 Agent 的长期记忆和 RAG 不能只靠“能搜到东西”。成熟做法是先定义证据准入：tenant ownership、retention/delete/export、redaction、source digest、citation、eval、replay 和 frontend governance 都要可测试。M5.58 的价值是先把未来 RAG 的门槛写成可验证合约，而不是悄悄把检索接进 prompt。
+
+Technology point: Spring AI VectorStore、GraphRAG、reranker、多向量检索、OpenTelemetry GenAI retrieval spans 都是一期需要跟进的先进方向，但当前只进入 compatibility/readiness 语义。真正 runtime-bound 之前必须先有 durable memory、citation contract、privacy proof、eval gate 和 Vue workbench。
+
 ## 2026-06-09 M5.57 Top-Tier Agent Readiness Overview
 
 M5.57 adds the master read model for the Phase 1 top-tier Agent objective. It answers a question that a mature Agent project must make explicit: "What is ready, what is partial, what is blocked, and what is intentionally postponed?"

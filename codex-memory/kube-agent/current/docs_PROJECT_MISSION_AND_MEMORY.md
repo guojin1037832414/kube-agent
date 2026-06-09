@@ -10,7 +10,41 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.57-1
+## Latest Phase 1 Core Memory - M5.58-1
+
+M5.58-1 adds the Phase 1 Memory/RAG readiness contract.
+
+Delivered:
+
+- Added `AgentMemoryRagReadinessResponse`.
+- Added `AgentMemoryRagReadinessService`.
+- Added admin-only `GET /api/agent/observability/memory-rag/readiness`.
+- Updated the top-tier readiness overview so the `memory-rag-learning` card links to this readiness contract and exposes `readinessContractExists=true`.
+- Added service, controller, source-contract, and MockMvc security coverage.
+
+Current readiness:
+
+- `schemaVersion=agent-memory-rag-readiness.v1`.
+- `readinessVerdict=MEMORY_RAG_CONTRACT_DEFINED_NOT_READY`.
+- `currentSafeSummaryMemoryEnabled=true`.
+- `durableMemoryReady=false`.
+- `ragReady=false`.
+- `citationContractReady=false`.
+- `evalCoverageReady=false`.
+
+Security boundary:
+
+- The endpoint is admin-only, read-only, summary-only, local-process-only, and fail-closed-no-retrieval.
+- It reads only bounded safe summary-memory statistics from `ConversationSummaryMemoryStore`.
+- It does not execute retrieval, bind a vector store, call embedding/reranker/LLM, write memory, expose raw conversation/document/chunk content, execute Tools, invoke `SafeToolExecutor`, invoke HITL, write audit, issue durable receipts, call kube-manager, use `RestClient` / `WebClient`, expose MCP runtime `tools/call`, or touch NIM / HPC / Slurm / BCM Phase 2 scope.
+
+Learning point: durable Memory/RAG is not just "add a vector database." For a top-tier Agent, any remembered or retrieved fact must carry tenant ownership, retention/delete/export metadata, redaction proof, source digest, citation contract, eval coverage, and replay evidence before it can influence runtime answers.
+
+Latest verified command:
+
+- `mvn -q "-Dtest=AgentMemoryRagReadinessServiceTest,AgentTopTierReadinessOverviewServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+## Previous Phase 1 Core Memory - M5.57-1
 
 M5.57-1 adds the Phase 1 top-tier Agent readiness overview as the master control-plane read model.
 

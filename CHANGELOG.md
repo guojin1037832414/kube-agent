@@ -6,6 +6,25 @@
 
 ---
 
+## [M5.58-1] - Memory/RAG readiness contract
+
+**Delivery**: Added an admin-only, read-only Memory/RAG readiness contract for the Phase 1 top-tier Agent learning layer.
+**Changes**
+- Added `AgentMemoryRagReadinessResponse`.
+- Added `AgentMemoryRagReadinessService`.
+- Added `GET /api/agent/observability/memory-rag/readiness`.
+- The readiness contract reports the current safe summary memory state and the missing evidence required before durable Memory/RAG can enter runtime prompts.
+- Updated the top-tier readiness overview so `memory-rag-learning` links to the new Memory/RAG readiness endpoint and records `readinessContractExists=true`.
+- Added service, controller, source-contract, and MockMvc security coverage.
+**Verification**
+- `mvn -q "-Dtest=AgentMemoryRagReadinessServiceTest,AgentTopTierReadinessOverviewServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed during implementation.
+**Security**
+- `readinessVerdict=MEMORY_RAG_CONTRACT_DEFINED_NOT_READY`.
+- `currentSafeSummaryMemoryEnabled=true`, `durableMemoryReady=false`, `ragReady=false`, `citationContractReady=false`, and `evalCoverageReady=false`.
+- The endpoint is admin-only, read-only, summary-only, local-process-only, and fail-closed-no-retrieval.
+- It reads only bounded summary-memory statistics: `ConversationSummaryMemoryStore.userCount()` and `MAX_SUMMARIES_PER_USER`.
+- No vector store binding, retrieval execution, embedding call, reranker call, LLM call, memory write, raw conversation/document/chunk exposure, Tool execution, `SafeToolExecutor` invocation, HITL invocation, audit write, durable receipt issuance, kube-manager call, `RestClient`, `WebClient`, MCP runtime `tools/call`, or NIM / HPC / Slurm / BCM Phase 2 work is added.
+
 ## [M5.57-1] - Top-tier Agent readiness overview
 
 **Delivery**: Added an admin-only, read-only master readiness overview for the Phase 1 top-tier kube-manager Agent Core.

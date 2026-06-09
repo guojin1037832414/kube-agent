@@ -42,6 +42,7 @@ public class ObservabilityController {
     private final AgentKubeManagerWriteReleaseGateContractService kubeManagerWriteReleaseGateContractService;
     private final AgentKubeManagerHttpOutletGovernanceWorkbenchOverviewService kubeManagerHttpOutletGovernanceWorkbenchOverviewService;
     private final AgentTopTierReadinessOverviewService topTierReadinessOverviewService;
+    private final AgentMemoryRagReadinessService memoryRagReadinessService;
     private final AgentAuditSnapshotProvider auditSnapshotProvider;
     private final AgentAuditQueryService auditQueryService;
     private final AgentReplayTimelineService replayTimelineService;
@@ -67,6 +68,7 @@ public class ObservabilityController {
                                    AgentKubeManagerWriteReleaseGateContractService kubeManagerWriteReleaseGateContractService,
                                    AgentKubeManagerHttpOutletGovernanceWorkbenchOverviewService kubeManagerHttpOutletGovernanceWorkbenchOverviewService,
                                    AgentTopTierReadinessOverviewService topTierReadinessOverviewService,
+                                   AgentMemoryRagReadinessService memoryRagReadinessService,
                                    AgentAuditSnapshotProvider auditSnapshotProvider,
                                    AgentAuditQueryService auditQueryService,
                                    AgentReplayTimelineService replayTimelineService,
@@ -91,6 +93,7 @@ public class ObservabilityController {
         this.kubeManagerWriteReleaseGateContractService = kubeManagerWriteReleaseGateContractService;
         this.kubeManagerHttpOutletGovernanceWorkbenchOverviewService = kubeManagerHttpOutletGovernanceWorkbenchOverviewService;
         this.topTierReadinessOverviewService = topTierReadinessOverviewService;
+        this.memoryRagReadinessService = memoryRagReadinessService;
         this.auditSnapshotProvider = auditSnapshotProvider;
         this.auditQueryService = auditQueryService;
         this.replayTimelineService = replayTimelineService;
@@ -117,6 +120,17 @@ public class ObservabilityController {
             return guard;
         }
         return ResponseEntity.ok(ApiResponse.ok(topTierReadinessOverviewService.overview()));
+    }
+
+    /** 构建 Memory/RAG 学习层就绪契约，不执行检索、不调用向量库。 */
+    @GetMapping("/memory-rag/readiness")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentMemoryRagReadinessResponse>> memoryRagReadiness() {
+        ResponseEntity<ApiResponse<AgentMemoryRagReadinessResponse>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return ResponseEntity.ok(ApiResponse.ok(memoryRagReadinessService.readiness()));
     }
 
     /** Describe kube-manager HTTP outlet resilience state without probing kube-manager. */

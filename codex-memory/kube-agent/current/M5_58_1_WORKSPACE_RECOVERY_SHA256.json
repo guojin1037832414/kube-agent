@@ -1,0 +1,133 @@
+﻿{
+    "schemaVersion":  "kube-agent-workspace-recovery-sha256.v1",
+    "project":  "kube-agent",
+    "milestone":  "M5.58-1",
+    "title":  "Memory/RAG readiness contract",
+    "generatedAt":  "2026-06-09T07:29:42.6526405Z",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "baseCommit":  "1713940",
+    "workspace":  "F:\\gitProject\\kube-agent",
+    "fileCount":  20,
+    "files":  [
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentMemoryRagReadinessResponse.java",
+                      "sha256":  "43F2253F777D81CCB4C097EA053181B0FDE1D13D1D5C069B9413AD9005B0EC19",
+                      "length":  12740,
+                      "lastWriteTimeUtc":  "2026-06-09T07:14:29.0216726Z"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentMemoryRagReadinessService.java",
+                      "sha256":  "6F1893D8909F9604F3FCE8C7F385EFA76AD1624C52D41AC52C7510FD2F682842",
+                      "length":  1209,
+                      "lastWriteTimeUtc":  "2026-06-09T07:11:40.0766910Z"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentTopTierReadinessOverviewResponse.java",
+                      "sha256":  "3632A641258A8AF4B32463DA3EB1A3F8A96A4138B79461AA41864EC2702A27AC",
+                      "length":  16701,
+                      "lastWriteTimeUtc":  "2026-06-09T07:12:02.1494621Z"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/ObservabilityController.java",
+                      "sha256":  "C1DF0323257AECA9D65BC9E3966DF3D2D11E27649C5985EB2BBE00826477B2A2",
+                      "length":  32559,
+                      "lastWriteTimeUtc":  "2026-06-09T07:12:02.0967527Z"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/AgentMemoryRagReadinessServiceTest.java",
+                      "sha256":  "3D72A8D8C2660A570E1976BE042149760120AF69F6023AD6A753CC0976C35085",
+                      "length":  5925,
+                      "lastWriteTimeUtc":  "2026-06-09T07:17:47.9696672Z"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/AgentTopTierReadinessOverviewServiceTest.java",
+                      "sha256":  "AEBB9EDA03C08CB5AEB4CB5FC1D90CAB39E7627A678CE79FB8D2BD586C24C946",
+                      "length":  12164,
+                      "lastWriteTimeUtc":  "2026-06-09T07:04:55.5122105Z"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/ObservabilityControllerTest.java",
+                      "sha256":  "48CA411C3C81B7E3FD3AD713894E11FA23A1296A5F032E0638A7EB3A2CE28D4B",
+                      "length":  118973,
+                      "lastWriteTimeUtc":  "2026-06-09T07:13:10.4153969Z"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/ObservabilityControllerSecurityContractTest.java",
+                      "sha256":  "2FE8DB5B5A479344E67E9E56A6F7A1EC4BD422889D55FE8C604BBDFE5505788A",
+                      "length":  8885,
+                      "lastWriteTimeUtc":  "2026-06-09T07:13:10.4664788Z"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/auth/AgentSecurityConfigWebMvcTest.java",
+                      "sha256":  "BD84D9FBF0FDA9A99081A58C5A4F406DE52A889F2ADDBF81F5C640A3EBE62422",
+                      "length":  33128,
+                      "lastWriteTimeUtc":  "2026-06-09T07:13:21.8276294Z"
+                  },
+                  {
+                      "path":  "docs/M5_58_MEMORY_RAG_READINESS_20260609.md",
+                      "sha256":  "044CE94AC9A09694154C2AC20544A0B7CA7A7349823CFA95BF800DD8A234A4B3",
+                      "length":  4900,
+                      "lastWriteTimeUtc":  "2026-06-09T07:24:33.4083612Z"
+                  },
+                  {
+                      "path":  "docs/PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "1B18BABE8AB3D38F5A21BC6FB8F8903A3C7B83629B9B7AC9355A9FC3EF962DC5",
+                      "length":  368880,
+                      "lastWriteTimeUtc":  "2026-06-09T07:26:06.7582312Z"
+                  },
+                  {
+                      "path":  "docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "D1CB14198BDCD98D3AD92D3175EF05AE7ED18F88CC0AA72B71C5F93CC13C08ED",
+                      "length":  129634,
+                      "lastWriteTimeUtc":  "2026-06-09T07:26:36.4508613Z"
+                  },
+                  {
+                      "path":  "docs/tech-stack/BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "06174E482A56FC505BF639BFB68AF21BBF9FE16B675905B97710959302C40F23",
+                      "length":  63740,
+                      "lastWriteTimeUtc":  "2026-06-09T07:27:36.6617060Z"
+                  },
+                  {
+                      "path":  "CHANGELOG.md",
+                      "sha256":  "8EC671A54B002CABB192D525E166749AD7E967154A91BEF42C5D7BF5D967C214",
+                      "length":  336610,
+                      "lastWriteTimeUtc":  "2026-06-09T07:25:30.9790794Z"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_M5_58_MEMORY_RAG_READINESS_20260609.md",
+                      "sha256":  "044CE94AC9A09694154C2AC20544A0B7CA7A7349823CFA95BF800DD8A234A4B3",
+                      "length":  4900,
+                      "lastWriteTimeUtc":  "2026-06-09T07:24:33.4580185Z"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "1B18BABE8AB3D38F5A21BC6FB8F8903A3C7B83629B9B7AC9355A9FC3EF962DC5",
+                      "length":  368880,
+                      "lastWriteTimeUtc":  "2026-06-09T07:26:06.8129760Z"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "D1CB14198BDCD98D3AD92D3175EF05AE7ED18F88CC0AA72B71C5F93CC13C08ED",
+                      "length":  129634,
+                      "lastWriteTimeUtc":  "2026-06-09T07:26:36.5025227Z"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "06174E482A56FC505BF639BFB68AF21BBF9FE16B675905B97710959302C40F23",
+                      "length":  63740,
+                      "lastWriteTimeUtc":  "2026-06-09T07:27:36.7160795Z"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/CHANGELOG.md",
+                      "sha256":  "8EC671A54B002CABB192D525E166749AD7E967154A91BEF42C5D7BF5D967C214",
+                      "length":  336610,
+                      "lastWriteTimeUtc":  "2026-06-09T07:25:31.0306292Z"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/RECOVERY_STATUS.md",
+                      "sha256":  "9A2FC5939359EF30B501F57C9ABDC5390DC7D4A921688368D31EB7D48504DD87",
+                      "length":  46499,
+                      "lastWriteTimeUtc":  "2026-06-09T07:29:20.9259459Z"
+                  }
+              ]
+}

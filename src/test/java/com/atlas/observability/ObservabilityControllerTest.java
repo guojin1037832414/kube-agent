@@ -4,6 +4,7 @@ import com.atlas.audit.InMemoryAgentAuditRecorder;
 import com.atlas.auth.AgentPrincipalResolver;
 import com.atlas.auth.UserPermissionContext;
 import com.atlas.dto.ApiResponse;
+import com.atlas.memory.ConversationSummaryMemoryStore;
 import com.atlas.mcp.McpGovernanceOverviewService;
 import com.atlas.mcp.McpToolManifestService;
 import com.atlas.tool.core.ToolRegistry;
@@ -92,6 +93,9 @@ class ObservabilityControllerTest {
         );
     private final McpGovernanceOverviewService mcpGovernanceOverviewService =
         new McpGovernanceOverviewService(new McpToolManifestService(mcpToolRegistry()));
+    private final ConversationSummaryMemoryStore memoryStore = new ConversationSummaryMemoryStore();
+    private final AgentMemoryRagReadinessService memoryRagReadinessService =
+        new AgentMemoryRagReadinessService(memoryStore);
     private final AgentTopTierReadinessOverviewService topTierReadinessOverviewService =
         new AgentTopTierReadinessOverviewService(
             kubeManagerHttpOutletGovernanceWorkbenchOverviewService,
@@ -108,6 +112,7 @@ class ObservabilityControllerTest {
         kubeManagerWriteReleaseGateContractService,
         kubeManagerHttpOutletGovernanceWorkbenchOverviewService,
         topTierReadinessOverviewService,
+        memoryRagReadinessService,
         auditRecorder,
         auditRecorder,
         replayTimelineService,
@@ -833,6 +838,7 @@ class ObservabilityControllerTest {
             .contains("eval-release-gates", "memory-rag-learning", "vue-operator-workbench");
         assertThat(overview.endpointMap())
             .containsEntry("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview")
+            .containsEntry("memoryRagReadiness", "/api/agent/observability/memory-rag/readiness")
             .containsEntry("mcpGovernanceOverview", "/api/agent/mcp/governance/overview");
         assertThat(overview.safety())
             .containsEntry("adminOnly", true)
@@ -857,6 +863,62 @@ class ObservabilityControllerTest {
         assertThat(overview.toString())
             .contains("top-tier", "memory-rag-learning", "mcp-interoperability")
             .doesNotContain("kube-manager.internal", "secret-password", "Bearer", "user-token", "/api/login", "/api/100002");
+    }
+
+    @Test
+    void memoryRagReadiness_shouldRequireAdminAndReturnFailClosedContract() {
+        ResponseEntity<ApiResponse<AgentMemoryRagReadinessResponse>> anonymous =
+            controller.memoryRagReadiness();
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentMemoryRagReadinessResponse>> user =
+            controller.memoryRagReadiness();
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        userPermissionContext.unbind();
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+        memoryStore.append("boss", "conv-1", "安全摘要 token=secret-value");
+
+        ResponseEntity<ApiResponse<AgentMemoryRagReadinessResponse>> admin =
+            controller.memoryRagReadiness();
+
+        assertThat(admin.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(admin.getBody()).isNotNull();
+        AgentMemoryRagReadinessResponse readiness = admin.getBody().getData();
+        assertThat(readiness.schemaVersion()).isEqualTo("agent-memory-rag-readiness.v1");
+        assertThat(readiness.readinessVerdict()).isEqualTo("MEMORY_RAG_CONTRACT_DEFINED_NOT_READY");
+        assertThat(readiness.currentSafeSummaryMemoryEnabled()).isTrue();
+        assertThat(readiness.ragReady()).isFalse();
+        assertThat(readiness.blockingGaps()).contains(
+            "durable-memory-store",
+            "rag-retrieval-layer",
+            "citation-and-source-contract",
+            "eval-and-observability"
+        );
+        assertThat(readiness.currentEvidence())
+            .containsEntry("trustedPrincipalOwner", true)
+            .containsEntry("durableStoreBound", false)
+            .containsEntry("vectorStoreBound", false);
+        assertThat(readiness.safety())
+            .containsEntry("adminOnly", true)
+            .containsEntry("readOnly", true)
+            .containsEntry("memoryWrite", false)
+            .containsEntry("retrievalExecuted", false)
+            .containsEntry("llmUsed", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("kubeManagerCalls", false);
+        assertThat(readiness.privacy())
+            .containsEntry("containsRawConversation", false)
+            .containsEntry("containsToken", false);
+        assertThat(readiness.toString())
+            .contains("safe-summary-memory", "citation-and-source-contract")
+            .doesNotContain("secret-value", "Bearer", "user-token");
     }
 
     @Test
