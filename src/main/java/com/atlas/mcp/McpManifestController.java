@@ -23,9 +23,12 @@ import java.util.Map;
 public class McpManifestController {
 
     private final McpToolManifestService manifestService;
+    private final McpGovernanceOverviewService governanceOverviewService;
 
-    public McpManifestController(McpToolManifestService manifestService) {
+    public McpManifestController(McpToolManifestService manifestService,
+                                 McpGovernanceOverviewService governanceOverviewService) {
         this.manifestService = manifestService;
+        this.governanceOverviewService = governanceOverviewService;
     }
 
     /**
@@ -34,5 +37,15 @@ public class McpManifestController {
     @GetMapping("/manifest")
     public ResponseEntity<ApiResponse<Map<String, Object>>> manifest() {
         return ResponseEntity.ok(ApiResponse.ok(manifestService.buildSafeManifest()));
+    }
+
+    /**
+     * Query MCP governance status without enabling MCP runtime calls.
+     *
+     * <p>中文说明：该端点只用于查询治理状态，不接受外部 Tool 调用参数，也不会打开 MCP 执行面。</p>
+     */
+    @GetMapping("/governance/overview")
+    public ResponseEntity<ApiResponse<McpGovernanceOverviewResponse>> governanceOverview() {
+        return ResponseEntity.ok(ApiResponse.ok(governanceOverviewService.overview()));
     }
 }

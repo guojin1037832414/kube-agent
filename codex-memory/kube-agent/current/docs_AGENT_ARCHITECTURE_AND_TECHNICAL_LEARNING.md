@@ -2,6 +2,37 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-09 M5.56 MCP Governance Overview
+
+M5.56 adds an authenticated, read-only MCP governance overview. It turns the current MCP integration from "safe manifest only" into a clearer, teachable capability stack without opening `tools/call`.
+
+```text
+ToolRegistry metadata
+        |
+        | fail-closed export rule:
+        | permission=PUBLIC && operationType=READ
+        v
+McpToolManifestService
+        |
+        | safe-readonly-manifest
+        v
+McpGovernanceOverviewService
+        |
+        | authenticated read model
+        v
+/api/agent/mcp/governance/overview
+```
+
+Key design:
+- `McpGovernanceOverviewResponse` reports `governanceStatus=MANIFEST_ONLY_NOT_CALLABLE`, exported/blocked tool counts, governance cards, blocked capabilities, future enablement protocol, safety proof, and privacy proof.
+- The endpoint is authenticated and read-only. It does not expose a live MCP server, does not implement `tools/list` as a runtime protocol endpoint, and does not accept `tools/call`.
+- The current MCP layer is deliberately split into two safe surfaces: `manifest/list` style discovery and a governance overview that explains why execution remains blocked.
+- Future `tools/call` must be a separate reviewed code release that binds identity, tenant, consent, HITL, durable audit, eval gates, rate limits/timeouts, and `SafeToolExecutor`.
+- The response explicitly blocks MCP runtime server, streaming call plane, external Agent tool execution, caller-provided tool-call arguments, write-tool export, sensitive-read export, and runtime Tool registry mutation.
+- NIM / HPC / Slurm / BCM remain Phase 2 paused scope.
+
+Learning point: MCP is a powerful interoperability protocol, not a shortcut around Agent safety. The mature path is to make discovery, governance, and execution separate layers. M5.56 teaches that a top-tier Agent can adopt the latest protocol direction while still keeping execution authority closed until all evidence gates exist.
+
 ## 2026-06-09 M5.55 Kube-Manager HTTP Outlet Governance Workbench Overview
 
 M5.55 composes the M5.49-M5.54 kube-manager HTTP outlet safety contracts into one Vue-ready governance workbench overview.

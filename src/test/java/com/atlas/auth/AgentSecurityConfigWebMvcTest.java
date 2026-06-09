@@ -418,12 +418,19 @@ class AgentSecurityConfigWebMvcTest {
         mockMvc.perform(get("/api/agent/mcp/manifest"))
             .andExpect(status().isForbidden());
 
+        mockMvc.perform(get("/api/agent/mcp/governance/overview"))
+            .andExpect(status().isForbidden());
+
         mockMvc.perform(get("/api/agent/memory/summaries")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
             .andExpect(status().isOk());
 
         String sessionId = sessionStore.createSession("session-token", "session-user", "100002", "user", Set.of());
         mockMvc.perform(get("/api/agent/mcp/manifest")
+                .header("X-Session-Id", sessionId))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/agent/mcp/governance/overview")
                 .header("X-Session-Id", sessionId))
             .andExpect(status().isOk());
     }
@@ -655,6 +662,11 @@ class AgentSecurityConfigWebMvcTest {
         @GetMapping("/api/agent/mcp/manifest")
         String mcpManifest() {
             return "mcp";
+        }
+
+        @GetMapping("/api/agent/mcp/governance/overview")
+        String mcpGovernanceOverview() {
+            return "mcp-governance";
         }
 
         @GetMapping("/api/agent/conversations")

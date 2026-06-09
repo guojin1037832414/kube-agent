@@ -1,0 +1,95 @@
+﻿{
+    "schemaVersion":  "kube-agent-recovery-sha256.v1",
+    "milestone":  "M5.56-1",
+    "title":  "MCP governance overview contract",
+    "generatedAt":  "2026-06-09T14:33:09+08:00",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "commitBeforeCheckpoint":  "651a52c2382cba949b2f5de241ed687b1f77d215",
+    "files":  [
+                  {
+                      "path":  "CHANGELOG.md",
+                      "sha256":  "8dd6f82b38d8d8d774e557c964b12b8490f99dc1e3631bf7830951b9874a74c8",
+                      "bytes":  333051
+                  },
+                  {
+                      "path":  "docs/PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "0b3b7c63a3f7e3aa1e3b62c8be08bbef8b6bfcc1a1dbe7e706ef5c16c017b6bd",
+                      "bytes":  364865
+                  },
+                  {
+                      "path":  "docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "1327d521eb6c2038468ce7d71b50876ea2eaf39a6a5e160fa8622670d2cfdf95",
+                      "bytes":  124759
+                  },
+                  {
+                      "path":  "docs/tech-stack/BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "59dbbdbcdd20495587d42d2b0f02f7fb199a8e2e9e8a95ffbe35f660ebd53a8b",
+                      "bytes":  59032
+                  },
+                  {
+                      "path":  "docs/M5_56_MCP_GOVERNANCE_OVERVIEW_20260609.md",
+                      "sha256":  "383de1389f5371ea9014153b522d18b46659cd8ebe5cfcd63c9bab77c8dbdb6f",
+                      "bytes":  2822
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/mcp/McpManifestController.java",
+                      "sha256":  "d18111d1825d55ac324368fba04e82b2801cc7a5b2ee73973fb3db7340cb1db2",
+                      "bytes":  1983
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/mcp/McpGovernanceOverviewResponse.java",
+                      "sha256":  "98f2febf02a3e9f95b708953a7b707e66cb675074d04be0d81162a05314f7081",
+                      "bytes":  9999
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/mcp/McpGovernanceOverviewService.java",
+                      "sha256":  "548e19c2e981950b2ecc333d17d710cbb674f24f3bdf501e99917363fb488e33",
+                      "bytes":  1324
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/mcp/McpGovernanceOverviewServiceTest.java",
+                      "sha256":  "a37ede94b148e65716ca8d26516e043951bbf86ee92151285430627ea0688518",
+                      "bytes":  6715
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/mcp/M520McpManifestSafetyContractTest.java",
+                      "sha256":  "8bc5ea87fb3f885b2f9ef6776d1df87764dcb2c93e5eee7d30299458b17d068e",
+                      "bytes":  3867
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/auth/AgentSecurityConfigWebMvcTest.java",
+                      "sha256":  "37ece0cf258707f5da9b093ac6e92ab417ed1afd71c0bfeb44fb9acbca4017d5",
+                      "bytes":  32155
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/CHANGELOG.md",
+                      "sha256":  "8dd6f82b38d8d8d774e557c964b12b8490f99dc1e3631bf7830951b9874a74c8",
+                      "bytes":  333051
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/RECOVERY_STATUS.md",
+                      "sha256":  "7ab274bc38351746f7408d474a88557ee3b09b3657cd167cb5a90b143b56d5e6",
+                      "bytes":  43733
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "0b3b7c63a3f7e3aa1e3b62c8be08bbef8b6bfcc1a1dbe7e706ef5c16c017b6bd",
+                      "bytes":  364865
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "1327d521eb6c2038468ce7d71b50876ea2eaf39a6a5e160fa8622670d2cfdf95",
+                      "bytes":  124759
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "59dbbdbcdd20495587d42d2b0f02f7fb199a8e2e9e8a95ffbe35f660ebd53a8b",
+                      "bytes":  59032
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_M5_56_MCP_GOVERNANCE_OVERVIEW_20260609.md",
+                      "sha256":  "383de1389f5371ea9014153b522d18b46659cd8ebe5cfcd63c9bab77c8dbdb6f",
+                      "bytes":  2822
+                  }
+              ]
+}

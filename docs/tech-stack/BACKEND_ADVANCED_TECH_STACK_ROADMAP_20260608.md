@@ -135,6 +135,14 @@ M5.55-1 adds the frontend workbench layer for this governance chain:
 
 Technology judgment: advanced Agent platforms need UI-level governance contracts, not just backend endpoints. This keeps `vue-kube-manager` from guessing scattered safety states and keeps all write authority behind future code review, durable evidence, eval gates, and release review.
 
+M5.56-1 adds the next MCP interoperability layer without opening execution:
+- New authenticated endpoint `GET /api/agent/mcp/governance/overview` composes the existing safe MCP manifest into a governance read model.
+- The overview reports `governanceStatus=MANIFEST_ONLY_NOT_CALLABLE`, `manifestMode=safe-readonly-manifest`, exported/blocked tool counts, governance cards, blocked capabilities, future enablement protocol, safety proof, and privacy proof.
+- Current state remains discovery/governance only: `mcpServerRuntimeEnabled=false`, `toolsCallEnabled=false`, `externalToolExecutionEnabled=false`, and `callerProvidedToolCallAccepted=false`.
+- The endpoint does not add a real MCP server, `tools/call`, streaming call plane, Tool execution, `SafeToolExecutor` invocation, HITL invocation, audit write, durable receipt issuance, runtime registry mutation, kube-manager call, `RestClient`, or `WebClient`.
+
+Technology judgment: the latest MCP spec line makes `tools/list`, `tools/call`, structured content, annotations, output schema, and security controls first-class concerns. A top-tier Java Agent should adopt that direction through contract-first layers: safe manifest, governance overview, then a future separately reviewed `tools/call` binding through identity, tenant, consent, HITL, durable audit, eval gates, rate limits, and `SafeToolExecutor`.
+
 M5.29-1 已把 Spring Security 推进到 HTTP 安全入口：
 
 - 新增 `AgentSecurityConfig`，用 `SecurityFilterChain` 承接标准 Web 安全主线；

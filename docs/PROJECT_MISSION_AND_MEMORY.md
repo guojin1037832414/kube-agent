@@ -10,7 +10,33 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.55-1
+## Latest Phase 1 Core Memory - M5.56-1
+
+M5.56-1 adds a read-only MCP governance overview for future interoperability.
+
+Delivered:
+
+- Added `McpGovernanceOverviewResponse`.
+- Added `McpGovernanceOverviewService`.
+- Added authenticated `GET /api/agent/mcp/governance/overview`.
+- The overview composes the existing safe MCP manifest and reports exported/blocked tool counts, governance cards, blocked capabilities, future enablement protocol, safety proof, and privacy proof.
+- Added service, manifest, and MockMvc security coverage.
+
+Security boundary:
+
+- `governanceStatus=MANIFEST_ONLY_NOT_CALLABLE`.
+- `mcpServerRuntimeEnabled=false`, `toolsCallEnabled=false`, `externalToolExecutionEnabled=false`, and `callerProvidedToolCallAccepted=false`.
+- The endpoint is authenticated, read-only, and manifest-only.
+- No MCP runtime server, `tools/call` handler, streaming call plane, external Agent tool execution, Tool execution, `SafeToolExecutor` invocation, HITL invocation, audit write, durable receipt issuance, external call, LLM call, runtime Tool registry mutation, write-tool export, sensitive-read Tool export, kube-manager call, `RestClient`, or `WebClient` is added.
+- Raw endpoint, backend path, Authorization header, token, password, raw principal, raw organization, raw request body, and raw response body are not exposed.
+
+Learning point: MCP support should arrive in layers. First expose a safe manifest. Then expose governance explaining blocked capabilities and future requirements. Only later, through a reviewed release, should `tools/call` bind to identity, tenant, consent, HITL, durable audit, eval gates, rate limits, and `SafeToolExecutor`.
+
+Latest verified command:
+
+- `mvn -q "-Dtest=McpGovernanceOverviewServiceTest,M520McpManifestSafetyContractTest,AgentSecurityConfigWebMvcTest" test`
+
+## Previous Phase 1 Core Memory - M5.55-1
 
 M5.55-1 adds the Vue-ready kube-manager HTTP outlet governance workbench overview.
 

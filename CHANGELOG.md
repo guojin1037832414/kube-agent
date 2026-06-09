@@ -6,6 +6,24 @@
 
 ---
 
+## [M5.56-1] - MCP governance overview contract
+
+**Delivery**: Added an authenticated, read-only MCP governance overview that explains why the current MCP surface remains manifest-only and what evidence is required before any future `tools/call` runtime.
+**Changes**
+- Added `McpGovernanceOverviewResponse`.
+- Added `McpGovernanceOverviewService`.
+- Added `GET /api/agent/mcp/governance/overview`.
+- The overview composes the existing safe MCP manifest and reports exported/blocked tool counts, governance cards, blocked capabilities, future enablement protocol, safety proof, and privacy proof.
+- Added service, manifest, and MockMvc security coverage.
+**Verification**
+- `mvn -q "-Dtest=McpGovernanceOverviewServiceTest,M520McpManifestSafetyContractTest,AgentSecurityConfigWebMvcTest" test` passed.
+**Security**
+- `governanceStatus=MANIFEST_ONLY_NOT_CALLABLE`.
+- `mcpServerRuntimeEnabled=false`, `toolsCallEnabled=false`, `externalToolExecutionEnabled=false`, and `callerProvidedToolCallAccepted=false`.
+- The endpoint is authenticated, read-only, manifest-only, and does not execute Tools.
+- No MCP runtime server, `tools/call` handler, Tool execution, `SafeToolExecutor` invocation, HITL invocation, audit write, durable receipt issuance, external call, LLM call, runtime registry mutation, write-tool export, sensitive-read export, kube-manager call, `RestClient`, or `WebClient` is added.
+- Raw endpoint, backend path, Authorization header, token, password, raw principal, raw organization, raw request body, and raw response body are not exposed.
+
 ## [M5.55-1] - Kube-manager HTTP outlet governance workbench overview
 
 **Delivery**: Added a Vue-ready, admin-only governance overview that composes the M5.49-M5.54 kube-manager HTTP outlet safety contracts into one operator workbench read model.

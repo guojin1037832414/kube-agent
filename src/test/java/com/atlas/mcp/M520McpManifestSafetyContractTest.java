@@ -54,4 +54,36 @@ class M520McpManifestSafetyContractTest {
         assertThat(policy.get("blockedOperationTypes").toString())
             .contains("SENSITIVE_READ", "DELETE", "ACTION", "UNKNOWN");
     }
+
+    @Test
+    void governanceOverview_shouldRemainManifestOnlyAndNotCallable() {
+        ToolRegistry registry = new ToolRegistry(List.of(
+            new NodeQueryTool(null),
+            new MigConfigListTool(null),
+            new UserQueryTool(null),
+            new DeployDeleteTool(null)
+        ), new UserPermissionContext());
+        registry.init();
+
+        McpGovernanceOverviewResponse overview = new McpGovernanceOverviewService(
+            new McpToolManifestService(registry),
+            java.time.Clock.fixed(
+                java.time.Instant.parse("2026-06-09T00:00:00Z"),
+                java.time.ZoneOffset.UTC
+            )
+        ).overview();
+
+        assertThat(overview.governanceStatus()).isEqualTo("MANIFEST_ONLY_NOT_CALLABLE");
+        assertThat(overview.exportedToolCount()).isEqualTo(1);
+        assertThat(overview.blockedToolCount()).isEqualTo(3);
+        assertThat(overview.toolsCallEnabled()).isFalse();
+        assertThat(overview.externalToolExecutionEnabled()).isFalse();
+        assertThat(overview.blockedCapabilities()).contains("mcp-tools-call", "write-tool-export");
+        assertThat(overview.safety())
+            .containsEntry("manifestOnly", true)
+            .containsEntry("toolsCallRuntimeEnabled", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("auditWrite", false);
+        assertThat(overview.toString()).doesNotContain("/api/100002", "Bearer", "secret-token-value");
+    }
 }
