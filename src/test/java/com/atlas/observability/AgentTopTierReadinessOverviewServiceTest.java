@@ -90,6 +90,7 @@ class AgentTopTierReadinessOverviewServiceTest {
         assertThat(overview.recommendedBuildOrder()).containsExactly(
             "wire-vue-top-tier-readiness-overview",
             "wire-vue-advanced-technology-adoption-contract",
+            "wire-vue-phase1-execution-roadmap",
             "populate-reviewed-redacted-eval-trace-evidence",
             "promote-eval-gate-bundle-from-evidence-only-to-reviewed-blocking",
             "bind-memory-rag-eval-gate-before-retrieval-runtime",
@@ -100,6 +101,7 @@ class AgentTopTierReadinessOverviewServiceTest {
         assertThat(overview.endpointMap())
             .containsEntry("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview")
             .containsEntry("advancedTechnologyAdoptionContract", "/api/agent/observability/top-tier/advanced-technology-adoption-contract")
+            .containsEntry("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap")
             .containsEntry("mcpGovernanceOverview", "/api/agent/mcp/governance/overview")
             .containsEntry("memoryRagCitationSourceContract", "/api/agent/observability/memory-rag/citation-source-contract")
             .containsEntry("memoryRagSourceEvidenceDigestContract", "/api/agent/observability/memory-rag/source-evidence-digest-contract")

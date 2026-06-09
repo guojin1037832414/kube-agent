@@ -9,6 +9,33 @@
 - 供应链、CI、SBOM、质量门禁进入工程默认路径；
 - Java / Spring / Agent 框架升级以兼容性矩阵推进，不用不可构建的版本号伪装先进。
 
+## 2026-06-09 M5.64 Phase 1 Execution Roadmap Gate
+
+M5.64 adds the backend-owned roadmap endpoint:
+
+```text
+GET /api/agent/observability/top-tier/phase1-execution-roadmap
+```
+
+This makes the advanced-tech strategy executable in order:
+
+- First wire Vue to backend-owned read models: readiness overview, advanced technology adoption, phase roadmap, kube-manager governance, Memory/RAG readiness, eval workbench, and MCP governance.
+- Then curate reviewed redacted eval trace evidence.
+- Then promote deterministic eval gates from advisory evidence to reviewed release gates.
+- Then bind Memory/RAG eval suites, durable memory lifecycle evidence, and retrieval only after citation/source/digest/privacy gates are ready.
+- Then prototype MCP runtime `tools/list` and `tools/call` only through identity, consent, HITL, audit, eval, rate limits, and `SafeToolExecutor`.
+- Then add Agent handoff/A2A provenance after local authority and eval evidence are stable.
+
+Technology judgment: this is the practical way to "introduce all advanced technologies" without lowering Phase 1 quality. The mainline remains buildable and auditable while latest Spring AI, MCP, Responses/Agents-style tracing/tools/handoffs, OTel GenAI, A2A, GraphRAG, rerankers, and vector stores move through evidence gates.
+
+Do not start yet: NIM runtime reopening, HPC/Slurm/BCM plugins, kube-manager state-changing writes, unsafe MCP tool calls, retrieval prompt influence before eval gates, or blind Spring Boot 4 / Spring AI 2 mainline migration.
+
+Official-version check on 2026-06-09:
+- Spring Boot docs list `4.0.6` and `3.5.14` as stable lines.
+- Spring AI docs list `1.1.7` as stable and `2.0.0-RC1` as preview.
+- MCP tools spec defines `tools/list` and `tools/call` plus human-in-the-loop safety expectations.
+- OpenTelemetry GenAI semantic conventions remain `Development`, so internal stable fields stay the mainline contract.
+
 ## 2026-06-09 M5.63 Advanced Technology Adoption Gate
 
 M5.63 makes the advanced-technology strategy queryable from the backend:

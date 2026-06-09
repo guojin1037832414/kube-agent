@@ -43,6 +43,7 @@ public class ObservabilityController {
     private final AgentKubeManagerHttpOutletGovernanceWorkbenchOverviewService kubeManagerHttpOutletGovernanceWorkbenchOverviewService;
     private final AgentTopTierReadinessOverviewService topTierReadinessOverviewService;
     private final AgentAdvancedTechnologyAdoptionContractService advancedTechnologyAdoptionContractService;
+    private final AgentPhase1ExecutionRoadmapService phase1ExecutionRoadmapService;
     private final AgentMemoryRagReadinessService memoryRagReadinessService;
     private final AgentMemoryRagCitationSourceContractService memoryRagCitationSourceContractService;
     private final AgentMemoryRagSourceEvidenceDigestContractService memoryRagSourceEvidenceDigestContractService;
@@ -74,6 +75,7 @@ public class ObservabilityController {
                                    AgentKubeManagerHttpOutletGovernanceWorkbenchOverviewService kubeManagerHttpOutletGovernanceWorkbenchOverviewService,
                                    AgentTopTierReadinessOverviewService topTierReadinessOverviewService,
                                    AgentAdvancedTechnologyAdoptionContractService advancedTechnologyAdoptionContractService,
+                                   AgentPhase1ExecutionRoadmapService phase1ExecutionRoadmapService,
                                    AgentMemoryRagReadinessService memoryRagReadinessService,
                                    AgentMemoryRagCitationSourceContractService memoryRagCitationSourceContractService,
                                    AgentMemoryRagSourceEvidenceDigestContractService memoryRagSourceEvidenceDigestContractService,
@@ -104,6 +106,7 @@ public class ObservabilityController {
         this.kubeManagerHttpOutletGovernanceWorkbenchOverviewService = kubeManagerHttpOutletGovernanceWorkbenchOverviewService;
         this.topTierReadinessOverviewService = topTierReadinessOverviewService;
         this.advancedTechnologyAdoptionContractService = advancedTechnologyAdoptionContractService;
+        this.phase1ExecutionRoadmapService = phase1ExecutionRoadmapService;
         this.memoryRagReadinessService = memoryRagReadinessService;
         this.memoryRagCitationSourceContractService = memoryRagCitationSourceContractService;
         this.memoryRagSourceEvidenceDigestContractService = memoryRagSourceEvidenceDigestContractService;
@@ -146,6 +149,17 @@ public class ObservabilityController {
             return guard;
         }
         return ResponseEntity.ok(ApiResponse.ok(advancedTechnologyAdoptionContractService.contract()));
+    }
+
+    /** Publish the Phase 1 execution order as a read-only roadmap contract. */
+    @GetMapping("/top-tier/phase1-execution-roadmap")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentPhase1ExecutionRoadmapResponse>> phase1ExecutionRoadmap() {
+        ResponseEntity<ApiResponse<AgentPhase1ExecutionRoadmapResponse>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return ResponseEntity.ok(ApiResponse.ok(phase1ExecutionRoadmapService.roadmap()));
     }
 
     /** 构建 Memory/RAG 学习层就绪契约，不执行检索、不调用向量库。 */

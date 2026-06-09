@@ -112,6 +112,8 @@ class ObservabilityControllerTest {
         );
     private final AgentAdvancedTechnologyAdoptionContractService advancedTechnologyAdoptionContractService =
         new AgentAdvancedTechnologyAdoptionContractService();
+    private final AgentPhase1ExecutionRoadmapService phase1ExecutionRoadmapService =
+        new AgentPhase1ExecutionRoadmapService();
     private final ObservabilityController controller = new ObservabilityController(
         new AgentMetricsService(new SimpleMeterRegistry()),
         kubeManagerHttpOutletHealthSummaryService,
@@ -123,6 +125,7 @@ class ObservabilityControllerTest {
         kubeManagerHttpOutletGovernanceWorkbenchOverviewService,
         topTierReadinessOverviewService,
         advancedTechnologyAdoptionContractService,
+        phase1ExecutionRoadmapService,
         memoryRagReadinessService,
         memoryRagCitationSourceContractService,
         memoryRagSourceEvidenceDigestContractService,
@@ -854,6 +857,7 @@ class ObservabilityControllerTest {
         assertThat(overview.endpointMap())
             .containsEntry("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview")
             .containsEntry("advancedTechnologyAdoptionContract", "/api/agent/observability/top-tier/advanced-technology-adoption-contract")
+            .containsEntry("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap")
             .containsEntry("memoryRagReadiness", "/api/agent/observability/memory-rag/readiness")
             .containsEntry("memoryRagDurableMemoryLifecycleContract", "/api/agent/observability/memory-rag/durable-memory-lifecycle-contract")
             .containsEntry("memoryRagEvalGateContract", "/api/agent/observability/memory-rag/eval-gate-contract")
@@ -923,7 +927,8 @@ class ObservabilityControllerTest {
         assertThat(contract.adoptionGates()).extracting(gate -> gate.get("id"))
             .contains("source-owned-contract", "eval-before-release", "phase2-domain-pause");
         assertThat(contract.endpointMap())
-            .containsEntry("advancedTechnologyAdoptionContract", "/api/agent/observability/top-tier/advanced-technology-adoption-contract");
+            .containsEntry("advancedTechnologyAdoptionContract", "/api/agent/observability/top-tier/advanced-technology-adoption-contract")
+            .containsEntry("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap");
         assertThat(contract.safety())
             .containsEntry("adminOnly", true)
             .containsEntry("readOnly", true)
@@ -941,6 +946,72 @@ class ObservabilityControllerTest {
             .containsEntry("containsPassword", false);
         assertThat(contract.toString())
             .contains("java-spring-control-plane", "COMPATIBILITY_MATRIX", "source-owned-contract")
+            .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret");
+    }
+
+    @Test
+    void phase1ExecutionRoadmap_shouldRequireAdminAndReturnReadOnlyRoadmap() {
+        ResponseEntity<ApiResponse<AgentPhase1ExecutionRoadmapResponse>> anonymous =
+            controller.phase1ExecutionRoadmap();
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentPhase1ExecutionRoadmapResponse>> user =
+            controller.phase1ExecutionRoadmap();
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        userPermissionContext.unbind();
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentPhase1ExecutionRoadmapResponse>> admin =
+            controller.phase1ExecutionRoadmap();
+
+        assertThat(admin.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(admin.getBody()).isNotNull();
+        AgentPhase1ExecutionRoadmapResponse roadmap = admin.getBody().getData();
+        assertThat(roadmap.schemaVersion()).isEqualTo("agent-phase1-execution-roadmap.v1");
+        assertThat(roadmap.roadmapStatus()).isEqualTo("PHASE_1_TOP_TIER_ROADMAP_ACTIVE");
+        assertThat(roadmap.phase1TopTierGoalPreserved()).isTrue();
+        assertThat(roadmap.phase2NimHpcSlurmBcmPaused()).isTrue();
+        assertThat(roadmap.roadmapOnly()).isTrue();
+        assertThat(roadmap.runtimeMutationAllowed()).isFalse();
+        assertThat(roadmap.executionSteps()).extracting(step -> step.get("id"))
+            .containsExactly(
+                "vue-readiness-control-plane",
+                "reviewed-eval-trace-evidence",
+                "release-blocking-eval-gates",
+                "memory-rag-eval-suite-binding",
+                "durable-memory-store-binding",
+                "retrieval-runtime-binding",
+                "mcp-runtime-safe-call-plane",
+                "agent-handoff-and-a2a-provenance"
+            );
+        assertThat(roadmap.endpointMap())
+            .containsEntry("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap")
+            .containsEntry("advancedTechnologyAdoptionContract", "/api/agent/observability/top-tier/advanced-technology-adoption-contract")
+            .containsEntry("memoryRagEvalGateContract", "/api/agent/observability/memory-rag/eval-gate-contract");
+        assertThat(roadmap.safety())
+            .containsEntry("adminOnly", true)
+            .containsEntry("readOnly", true)
+            .containsEntry("roadmapOnly", true)
+            .containsEntry("runtimeMutationAllowed", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("llmUsed", false)
+            .containsEntry("kubeManagerCalls", false)
+            .containsEntry("mcpToolCall", false)
+            .containsEntry("nimHpcSlurmBcmTouched", false);
+        assertThat(roadmap.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("containsAuthorizationHeader", false)
+            .containsEntry("containsToken", false)
+            .containsEntry("containsPassword", false);
+        assertThat(roadmap.toString())
+            .contains("vue-readiness-control-plane", "memory-rag-eval-suite-binding", "mcp-runtime-safe-call-plane")
             .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret");
     }
 

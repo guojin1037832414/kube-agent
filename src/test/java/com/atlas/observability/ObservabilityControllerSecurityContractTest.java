@@ -44,6 +44,7 @@ class ObservabilityControllerSecurityContractTest {
         assertThat(source).contains("@GetMapping(\"/kube-manager/http-outlet/governance-workbench/overview\")");
         assertThat(source).contains("@GetMapping(\"/top-tier/readiness-overview\")");
         assertThat(source).contains("@GetMapping(\"/top-tier/advanced-technology-adoption-contract\")");
+        assertThat(source).contains("@GetMapping(\"/top-tier/phase1-execution-roadmap\")");
         assertThat(source).contains("@GetMapping(\"/memory-rag/readiness\")");
         assertThat(source).contains("@GetMapping(\"/memory-rag/citation-source-contract\")");
         assertThat(source).contains("@GetMapping(\"/memory-rag/source-evidence-digest-contract\")");
@@ -80,6 +81,7 @@ class ObservabilityControllerSecurityContractTest {
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentKubeManagerHttpOutletGovernanceWorkbenchOverviewResponse>> kubeManagerHttpOutletGovernanceWorkbenchOverview()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentTopTierReadinessOverviewResponse>> topTierReadinessOverview()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentAdvancedTechnologyAdoptionContractResponse>> advancedTechnologyAdoptionContract()");
+        assertThat(source).contains("public ResponseEntity<ApiResponse<AgentPhase1ExecutionRoadmapResponse>> phase1ExecutionRoadmap()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentMemoryRagReadinessResponse>> memoryRagReadiness()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentMemoryRagCitationSourceContractResponse>> memoryRagCitationSourceContract()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentMemoryRagSourceEvidenceDigestContractResponse>> memoryRagSourceEvidenceDigestContract()");

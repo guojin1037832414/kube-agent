@@ -2,6 +2,40 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-09 M5.64 Phase 1 Execution Roadmap Contract
+
+M5.64 adds the backend-owned roadmap for the next Phase 1 execution order. It answers a practical top-tier Agent question: after accepting all advanced technologies into scope, which ones are allowed to become runtime capabilities first?
+
+```text
+top-tier readiness overview + advanced technology adoption contract
+        |
+        v
+phase1 execution roadmap
+        |
+        +-- Vue read models first
+        +-- reviewed eval evidence before release gates
+        +-- Memory/RAG eval and lifecycle before retrieval
+        +-- MCP runtime only behind safe execution gates
+        +-- Agent handoff/A2A only after provenance is stable
+```
+
+Endpoint:
+
+```text
+/api/agent/observability/top-tier/phase1-execution-roadmap
+```
+
+Key design:
+- `AgentPhase1ExecutionRoadmapResponse` publishes `schemaVersion=agent-phase1-execution-roadmap.v1` and `roadmapStatus=PHASE_1_TOP_TIER_ROADMAP_ACTIVE`.
+- The roadmap exposes eight ordered steps from Vue readiness control plane through Agent handoff/A2A provenance.
+- It publishes dependency gates for admin auth, `SafeToolExecutor`, trace/audit/replay, eval-before-runtime, Vue read-model-first, closed kube-manager write authority, and Phase 2 pause.
+- It publishes a `doNotStartYet` list that keeps NIM, HPC, Slurm, BCM, kube-manager state-changing writes, blind major framework upgrades, unsafe MCP calls, and retrieval prompt influence closed.
+- The top-tier readiness overview and advanced technology adoption contract now link to this roadmap.
+
+Learning point: 顶级 Agent 的计划不能只靠口头约定。计划也要进入后端契约、测试、前端可消费 read model、恢复记忆和 changelog。这样你学习 Agent 开发时看到的不只是功能堆叠，而是工程系统如何把“愿景”变成可验证的顺序、门禁和禁止项。
+
+Technology point: M5.64 keeps the latest Agent directions in scope: Spring AI Memory/RAG, MCP runtime, OpenAI Responses/Agents-style tools/tracing/handoffs, OTel GenAI, A2A, GraphRAG and rerankers. But each direction must pass project-owned contracts first. Runtime capability enters only after identity, tenant/privacy, trace/audit/replay, deterministic eval, Vue visibility, and recovery memory are ready.
+
 ## 2026-06-09 M5.63 Advanced Technology Adoption Contract
 
 M5.63 adds a top-tier adoption gate for the owner's latest requirement: Phase 1 must stay top-tier while adopting the newest Agent engineering direction.

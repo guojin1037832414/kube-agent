@@ -6,6 +6,24 @@
 
 ---
 
+## [M5.64-1] - Phase 1 execution roadmap contract
+
+**Delivery**: Added an admin-only Phase 1 execution roadmap contract for the top-tier Agent goal.
+**Changes**
+- Added `AgentPhase1ExecutionRoadmapResponse`.
+- Added `AgentPhase1ExecutionRoadmapService`.
+- Added `GET /api/agent/observability/top-tier/phase1-execution-roadmap`.
+- Updated the top-tier readiness overview recommended build order and endpoint map to include the roadmap.
+- Updated the advanced technology adoption contract endpoint map to point to the roadmap.
+- Published the ordered Phase 1 sequence: Vue readiness control plane, reviewed eval trace evidence, release-blocking eval gates, Memory/RAG eval suite binding, durable memory binding, retrieval runtime binding, MCP safe call plane, and Agent handoff/A2A provenance.
+- Added service, controller, top-tier overview, adoption contract, source-contract, and MockMvc security coverage.
+**Verification**
+- `mvn -q "-Dtest=AgentPhase1ExecutionRoadmapServiceTest,AgentAdvancedTechnologyAdoptionContractServiceTest,AgentTopTierReadinessOverviewServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed during implementation.
+**Security**
+- `roadmapStatus=PHASE_1_TOP_TIER_ROADMAP_ACTIVE`.
+- `phase1TopTierGoalPreserved=true`, `phase2NimHpcSlurmBcmPaused=true`, `roadmapOnly=true`, and `runtimeMutationAllowed=false`.
+- No eval runtime, trace-set mutation, retrieval runtime, vector store binding, Tool execution, `SafeToolExecutor` invocation, HITL invocation, kube-manager call, MCP runtime `tools/call`, LLM call, external call, audit write, durable receipt issuance, memory write, dependency upgrade, or NIM / HPC / Slurm / BCM Phase 2 work is added.
+
 ## [M5.63-1] - Advanced technology adoption contract
 
 **Delivery**: Added an admin-only top-tier advanced-technology adoption contract for Phase 1.

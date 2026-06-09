@@ -10,7 +10,51 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.63-1
+## Latest Phase 1 Core Memory - M5.64-1
+
+M5.64-1 adds the Phase 1 execution roadmap contract.
+
+Delivered:
+
+- Added `AgentPhase1ExecutionRoadmapResponse`.
+- Added `AgentPhase1ExecutionRoadmapService`.
+- Added admin-only `GET /api/agent/observability/top-tier/phase1-execution-roadmap`.
+- Updated top-tier readiness so its recommended build order includes `wire-vue-phase1-execution-roadmap`.
+- Updated top-tier readiness and advanced technology adoption endpoint maps to include the roadmap.
+
+Current state:
+
+- `schemaVersion=agent-phase1-execution-roadmap.v1`.
+- `roadmapStatus=PHASE_1_TOP_TIER_ROADMAP_ACTIVE`.
+- `phase1TopTierGoalPreserved=true`.
+- `phase2NimHpcSlurmBcmPaused=true`.
+- `roadmapOnly=true`.
+- `runtimeMutationAllowed=false`.
+- `stepCount=8`.
+
+Execution order:
+
+1. `vue-readiness-control-plane`.
+2. `reviewed-eval-trace-evidence`.
+3. `release-blocking-eval-gates`.
+4. `memory-rag-eval-suite-binding`.
+5. `durable-memory-store-binding`.
+6. `retrieval-runtime-binding`.
+7. `mcp-runtime-safe-call-plane`.
+8. `agent-handoff-and-a2a-provenance`.
+
+Security boundary:
+
+- The endpoint is admin-only, read-only, roadmap-only, and fail-closed.
+- It does not run evals, mutate trace sets, change CI blocking, execute retrieval, bind vector stores, call embedding/reranker/LLM, mutate prompts, write memory, call durable stores, ingest documents, execute Tools, invoke `SafeToolExecutor`, invoke HITL, write audit, issue durable receipts, call kube-manager, use `RestClient` / `WebClient`, expose MCP runtime `tools/call`, upgrade dependencies, or touch NIM / HPC / Slurm / BCM Phase 2 scope.
+
+Learning point: top-tier planning belongs in backend contracts, not only in discussion. M5.64 makes the next development sequence recoverable, testable, and consumable by Vue.
+
+Latest verified command:
+
+- `mvn -q "-Dtest=AgentPhase1ExecutionRoadmapServiceTest,AgentAdvancedTechnologyAdoptionContractServiceTest,AgentTopTierReadinessOverviewServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+## Previous Phase 1 Core Memory - M5.63-1
 
 M5.63-1 adds the Phase 1 advanced technology adoption contract.
 
