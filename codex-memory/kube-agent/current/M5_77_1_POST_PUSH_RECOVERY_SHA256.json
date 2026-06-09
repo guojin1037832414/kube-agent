@@ -1,0 +1,92 @@
+﻿{
+    "milestone":  "M5.77-1",
+    "title":  "Advanced technology compatibility matrix post-push recovery checkpoint",
+    "generatedAt":  "2026-06-10T00:29:17.1829777+08:00",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "head":  "4f5bd766c516fa5dc6ae190fe01781c99f4fabe2",
+    "implementationCommit":  "4f5bd76",
+    "pushedTo":  "origin/codex/m521-29-top-agent-mission",
+    "verification":  [
+                         "git diff --check",
+                         "mvn -q \"-DskipTests\" validate",
+                         "mvn -q \"-Dtest=AgentAdvancedTechnologyCompatibilityMatrixServiceTest,AgentAdvancedTechnologyAdoptionContractServiceTest,AgentOfficialVersionProtocolWatchServiceTest,AgentOfficialVersionProtocolWatchDashboardServiceTest,AgentOfficialVersionProtocolWatchVueBindingSpecServiceTest,AgentTopTierReadinessOverviewServiceTest,AgentPhase1ExecutionRoadmapServiceTest,AgentVueReadinessControlPlaneServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest\" test"
+                     ],
+    "note":  "Post-push workspace-local recovery manifest after M5.77 implementation push.",
+    "files":  [
+                  {
+                      "path":  "CHANGELOG.md",
+                      "sha256":  "AB590EA788A0DAECF5AA74C5F93F53AA8599C5D53E154A0C16FEDB0E91C3D0A3",
+                      "bytes":  378142
+                  },
+                  {
+                      "path":  "docs/PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "9A6C2F5415FC1E6F19A507C291804FA83DCA802B1797EF26BB4E035C6E5BAB85",
+                      "bytes":  434023
+                  },
+                  {
+                      "path":  "docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "C7FD99E0093A7D3110C259D45D046CE4A92F8903D609E782E8F11FE3242960C8",
+                      "bytes":  182746
+                  },
+                  {
+                      "path":  "docs/tech-stack/BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "304FEC54ED2D3A1D0C5C0F4435302DFA04FD0D47489E50C0B22C3645CC5027E5",
+                      "bytes":  105588
+                  },
+                  {
+                      "path":  "docs/M5_77_ADVANCED_TECHNOLOGY_COMPATIBILITY_MATRIX_20260610.md",
+                      "sha256":  "71DB1131F394B09B0FFBC878918F081A2D1EC58B7069BAFB4673784E2CA02185",
+                      "bytes":  6199
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/CHANGELOG.md",
+                      "sha256":  "AB590EA788A0DAECF5AA74C5F93F53AA8599C5D53E154A0C16FEDB0E91C3D0A3",
+                      "bytes":  378142
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/RECOVERY_STATUS.md",
+                      "sha256":  "8F8F749F55E1CAE20F9D9241495489D62A5AB7A751CB56D212F1DF0D689B8898",
+                      "bytes":  80381
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "9A6C2F5415FC1E6F19A507C291804FA83DCA802B1797EF26BB4E035C6E5BAB85",
+                      "bytes":  434023
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "C7FD99E0093A7D3110C259D45D046CE4A92F8903D609E782E8F11FE3242960C8",
+                      "bytes":  182746
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "304FEC54ED2D3A1D0C5C0F4435302DFA04FD0D47489E50C0B22C3645CC5027E5",
+                      "bytes":  105588
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_M5_77_ADVANCED_TECHNOLOGY_COMPATIBILITY_MATRIX_20260610.md",
+                      "sha256":  "71DB1131F394B09B0FFBC878918F081A2D1EC58B7069BAFB4673784E2CA02185",
+                      "bytes":  6199
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/M5_77_1_WORKSPACE_RECOVERY_SHA256.json",
+                      "sha256":  "491834EE87457645A115BDEEED46204870EE6D898F3FED0513FAB6CD45C0680D",
+                      "bytes":  9915
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentAdvancedTechnologyCompatibilityMatrixResponse.java",
+                      "sha256":  "86A46C67F6B8BCD0BE75BA015F8F9D84C6C25EF7AD6D98E2E2BE495271F34D39",
+                      "bytes":  18971
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentAdvancedTechnologyCompatibilityMatrixService.java",
+                      "sha256":  "1AE6CE3E78CBEB3E74BA34A08996D9F0890A9E3A53DBE749A878C447574EDDB7",
+                      "bytes":  1399
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/AgentAdvancedTechnologyCompatibilityMatrixServiceTest.java",
+                      "sha256":  "6765F4B4962A166D92B261D6B8022C59CC3D73B9892D770DA1FDE9B4DF3EEC08",
+                      "bytes":  8468
+                  }
+              ]
+}
