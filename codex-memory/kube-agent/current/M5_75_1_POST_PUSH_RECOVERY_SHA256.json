@@ -1,0 +1,48 @@
+﻿{
+    "milestone":  "M5.75-1",
+    "title":  "Official version/protocol watch dashboard post-push checkpoint",
+    "generatedAt":  "2026-06-09T23:47:55.7187590+08:00",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "head":  "05336efd1a5c7f4a5cc9f8e13496e03bf2cb8331",
+    "implementationCommit":  "05336ef",
+    "remote":  "origin/codex/m521-29-top-agent-mission",
+    "pushed":  true,
+    "note":  "Post-push recovery manifest after M5.75 implementation commit was pushed.",
+    "files":  [
+                  {
+                      "path":  "codex-memory/kube-agent/current/RECOVERY_STATUS.md",
+                      "sha256":  "7D02B37D76B869A624439E70A1A6D3B8A2B3B508D3DDB29F79DF2E8969C6095C",
+                      "bytes":  76769
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/CHANGELOG.md",
+                      "sha256":  "F5988B237B862517B517EF0C07E3C751EBEB67A048B539CC529EFF3BACF01ED2",
+                      "bytes":  373912
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "3044ACDDA00D5420844E311BAC6D269F077307C745E178EF1435D3836281FAC6",
+                      "bytes":  426711
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "B2FD98475F87330760A0444E0504A163DD396BA79A01CBC0C9A3163C53E3B8F2",
+                      "bytes":  177547
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "0EC1B0C68D48EE3004C08036F65D54994C970E7A45A6D6BC8905B7EBE6E5ABF6",
+                      "bytes":  101301
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_M5_75_OFFICIAL_VERSION_PROTOCOL_WATCH_DASHBOARD_20260609.md",
+                      "sha256":  "2F25F057625099A0C4E8166430048B1D3C4297E9542B37E4FDCC41157E982265",
+                      "bytes":  3714
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/M5_75_1_WORKSPACE_RECOVERY_SHA256.json",
+                      "sha256":  "22FEBAE2E05669811B5CA29440EC68CA7D70523FFA8C40A9E7F9107FC66C7E4E",
+                      "bytes":  8650
+                  }
+              ]
+}
