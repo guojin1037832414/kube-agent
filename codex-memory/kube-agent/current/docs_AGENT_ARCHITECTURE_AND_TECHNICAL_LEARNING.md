@@ -2,6 +2,35 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-09 M5.41 Trace-Set Catalog Patch Proposal 补丁提案
+
+M5.41 把 eval trace-set 的证据晋升链路补成一个更完整的 release governance 闭环。之前 M5.40 能发现候选，M5.39 能评审候选，但系统还缺一个“把评审通过的候选表达成可审查 catalog 变更”的 typed artifact。
+
+```text
+GET /trace-sets/{id}/candidates
+    |
+    v
+POST /trace-sets/{id}/curation-review
+    |
+    v
+POST /trace-sets/{id}/catalog-patch-proposal
+    |
+    | RFC 6902 JSON Patch proposal only
+    v
+human/Git review -> eval-trace-sets.json -> gate bundle
+```
+
+关键设计：
+- `AgentEvalTraceSetCatalogPatchProposalArtifact` 只生成补丁提案，不写 catalog。
+- 只有 curation review 通过并且存在新 trace anchor 时，proposal 才会进入 `READY_FOR_GIT_REVIEW`。
+- JSON Patch 指向 classpath catalog 的数组位置，例如 `replace /0/traceIds`。
+- artifact 显式声明 `catalogMutationAllowed=false`、`catalogMutated=false`、`runtimeCatalogWrite=false`。
+- 不嵌入 replay timeline，不嵌入 per-trace report，不调用 kube-manager，不执行 Tool，不使用 LLM。
+
+学习重点：顶级 Agent 的“证据晋升”必须是有类型、有审查、有 Git 轨迹的流程。runtime 只能产生候选和提案，不能直接获得 release authority。这样可以防止一次临时排障、一次本地请求、一个伪造 traceId 变成未来 CI 的发布依据。
+
+技术基线备注：2026-06-09 查阅官方文档后，当前主线继续使用已验证的 Spring Boot 3.5.14 / Spring AI 1.1.7；Spring Boot 4.0.6、Spring AI 2.0.0-RC1、MCP 2025-11-25、OpenTelemetry semantic conventions 1.41.1 进入兼容矩阵和后续 contract-first 适配，不做无测试的盲升。
+
 ## 2026-06-09 M5.40 Trace-Set Candidate Discovery 候选发现
 
 M5.40 补上的是 M5.39 前面的一步：管理员不应该靠猜测 traceId 来做 curation review，而应该从脱敏审计读模型里发现“值得复核”的候选 trace。这个能力仍然是 read-only advisory，不是 release authority。

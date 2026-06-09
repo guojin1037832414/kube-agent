@@ -272,6 +272,22 @@ public class ObservabilityController {
                 .body(ApiResponse.fail("Unknown Agent eval trace set: " + traceSetId)));
     }
 
+    /** Produce a review-only JSON Patch proposal for a Git catalog update. */
+    @PostMapping("/eval/trace-sets/{traceSetId}/catalog-patch-proposal")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentEvalTraceSetCatalogPatchProposalArtifact>> evalTraceSetCatalogPatchProposal(
+        @PathVariable String traceSetId,
+        @RequestBody(required = false) AgentEvalSuiteRequest request) {
+        ResponseEntity<ApiResponse<AgentEvalTraceSetCatalogPatchProposalArtifact>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return evalTraceSetCatalogService.catalogPatchProposal(traceSetId, request)
+            .map(response -> ResponseEntity.ok(ApiResponse.ok(response)))
+            .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.fail("Unknown Agent eval trace set: " + traceSetId)));
+    }
+
     /** Produce a compact CI/release-gate bundle for every versioned trace set. */
     @PostMapping("/eval/trace-sets/gate-bundle")
     @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")

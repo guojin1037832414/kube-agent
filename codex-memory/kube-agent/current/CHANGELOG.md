@@ -6,6 +6,24 @@
 
 ---
 
+## [M5.41-1] - Eval trace-set catalog patch proposal
+
+**Delivery**: Added a review-only JSON Patch proposal artifact for promoting curated trace anchors through human/Git review.
+**Changes**
+- Added `AgentEvalTraceSetCatalogPatchProposalArtifact`.
+- Added `AgentEvalTraceSetCatalogService#catalogPatchProposal(...)`.
+- Added admin-only `POST /api/agent/observability/eval/trace-sets/{traceSetId}/catalog-patch-proposal`.
+- The proposal reuses M5.39 curation review and emits `READY_FOR_GIT_REVIEW` only when the candidate gate passes and new trace IDs would be added.
+- JSON Patch operations target `observability/eval-trace-sets.json` by trace-set array index, for example `replace /0/traceIds`.
+- Added service, controller, source-contract, and MockMvc security coverage.
+**Verification**
+- `mvn -q "-Dtest=AgentEvalTraceSetCatalogServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed.
+**Security**
+- The artifact is review-only and never mutates `observability/eval-trace-sets.json`.
+- The response remains deterministic, redacted-only, non-executing, `llmUsed=false`, `externalCalls=false`, `toolExecution=false`, and `kubeManagerCalls=false`.
+- `catalogMutationAllowed=false`, `catalogMutated=false`, `runtimeCatalogWrite=false`, and Git review remains mandatory.
+- This slice adds no kube-manager write/create/delete/state-changing behavior and does not reopen NIM/HPC/Slurm/BCM scope.
+
 ## [M5.40-1] - Eval trace-set candidate discovery
 
 **Delivery**: Added admin-only redacted trace candidate discovery before curation review.

@@ -1,0 +1,81 @@
+﻿{
+    "schemaVersion":  "kube-agent-recovery-sha256.v1",
+    "generatedAt":  "2026-06-09T01:27:06.5962175Z",
+    "milestone":  "M5.41-1",
+    "title":  "Eval trace-set catalog patch proposal",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "files":  [
+                  {
+                      "path":  "CHANGELOG.md",
+                      "sha256":  "bc45503fdc40e35f767f5c59503297a7131996cfc74b0dcdcaf8206fa95dd867"
+                  },
+                  {
+                      "path":  "docs/PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "667291e6457aa58985b02a0d0cd4cad05e270d2301b9d32ceb4f29b7d8eda192"
+                  },
+                  {
+                      "path":  "docs/tech-stack/BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "9f974af53d7a85c4cdef7cf09ac42871c21b86493757649e32d137f8feaeefd2"
+                  },
+                  {
+                      "path":  "docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "0ff8b8a3c8326789e218f6066cb660c4120484ed3de507c3138703a8abdc22f7"
+                  },
+                  {
+                      "path":  "docs/M5_41_EVAL_TRACE_SET_CATALOG_PATCH_PROPOSAL_20260609.md",
+                      "sha256":  "b7f25b4c050693789f4d1f256286b0b016d8e4b9e71a5819cc697effa7c09f5e"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentEvalTraceSetCatalogPatchProposalArtifact.java",
+                      "sha256":  "6dcaf53720df102202045194cbd2ef79b9cb8ac4c7c94ab226e422c61f7010c9"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentEvalTraceSetCatalogService.java",
+                      "sha256":  "d28dd76e1430a0b775799ed6a98c0dd2e1aaa08bc0706d89a56194504368b1c0"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/ObservabilityController.java",
+                      "sha256":  "0e912c11a9e48b2c34d5098d9949bf6d834739d3c4c7e2b7c283935754f534e0"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/AgentEvalTraceSetCatalogServiceTest.java",
+                      "sha256":  "d714edc8854a6806ccc67a7e6ee1b16136fd830509ca3b88dc86884c2373a2d9"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/ObservabilityControllerTest.java",
+                      "sha256":  "3b8d2b73e183b40ddeff9c4ca72b3b6052c0b9498fcc3e49c095e53dc9080550"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/ObservabilityControllerSecurityContractTest.java",
+                      "sha256":  "b811e754a1f593ffa6412f19480caeba40c36b7e6268543d0cb7472a27c1351f"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/auth/AgentSecurityConfigWebMvcTest.java",
+                      "sha256":  "3ef9ebc897b0319f54fecd8bcf3a76b6d9e4eafbdb08d1a69cce0a2a4e5c11d8"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/CHANGELOG.md",
+                      "sha256":  "bc45503fdc40e35f767f5c59503297a7131996cfc74b0dcdcaf8206fa95dd867"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "667291e6457aa58985b02a0d0cd4cad05e270d2301b9d32ceb4f29b7d8eda192"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "9f974af53d7a85c4cdef7cf09ac42871c21b86493757649e32d137f8feaeefd2"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "0ff8b8a3c8326789e218f6066cb660c4120484ed3de507c3138703a8abdc22f7"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_M5_41_EVAL_TRACE_SET_CATALOG_PATCH_PROPOSAL_20260609.md",
+                      "sha256":  "b7f25b4c050693789f4d1f256286b0b016d8e4b9e71a5819cc697effa7c09f5e"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/RECOVERY_STATUS.md",
+                      "sha256":  "0e687195f9d74f43895339543baea0ab5725de821abbec9ef345e9119c9aaf14"
+                  }
+              ]
+}

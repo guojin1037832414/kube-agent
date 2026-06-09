@@ -135,6 +135,12 @@ class AgentSecurityConfigWebMvcTest {
                 .content("{\"traceIds\":[\"trc_11111111111111111111111111111111\"]}"))
             .andExpect(status().isForbidden());
 
+        mockMvc.perform(post("/api/agent/observability/eval/trace-sets/phase1-core-golden/catalog-patch-proposal")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer user-token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"traceIds\":[\"trc_11111111111111111111111111111111\"]}"))
+            .andExpect(status().isForbidden());
+
         mockMvc.perform(post("/api/agent/observability/eval/trace-sets/gate-bundle")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer user-token")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -215,6 +221,17 @@ class AgentSecurityConfigWebMvcTest {
             .andExpect(status().isOk());
 
         mockMvc.perform(post("/api/agent/observability/eval/trace-sets/phase1-core-golden/curation-review")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token")
+                .contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/agent/observability/eval/trace-sets/phase1-core-golden/catalog-patch-proposal")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"traceIds\":[\"trc_11111111111111111111111111111111\"]}"))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/agent/observability/eval/trace-sets/phase1-core-golden/catalog-patch-proposal")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token")
                 .contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk());
@@ -393,6 +410,11 @@ class AgentSecurityConfigWebMvcTest {
 
         @PostMapping("/api/agent/observability/eval/trace-sets/{id}/curation-review")
         String observabilityEvalTraceSetCurationReview(@PathVariable String id, @RequestBody(required = false) String body) {
+            return id + body;
+        }
+
+        @PostMapping("/api/agent/observability/eval/trace-sets/{id}/catalog-patch-proposal")
+        String observabilityEvalTraceSetCatalogPatchProposal(@PathVariable String id, @RequestBody(required = false) String body) {
             return id + body;
         }
 

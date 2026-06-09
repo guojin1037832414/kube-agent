@@ -240,6 +240,74 @@ class AgentEvalTraceSetCatalogServiceTest {
         assertThat(emptyReview.candidateTraceIds()).isEmpty();
     }
 
+    @Test
+    void catalogPatchProposal_shouldGenerateReviewOnlyJsonPatchWithoutMutatingCatalog() {
+        String traceId = "trc_33333333333333333333333333333333";
+        InMemoryAgentAuditRecorder recorder = new InMemoryAgentAuditRecorder();
+        recordReadEvidence(recorder, traceId);
+        AgentEvalTraceSetCatalogService service = service(recorder);
+
+        AgentEvalTraceSetCatalogPatchProposalArtifact proposal = service.catalogPatchProposal(
+            "phase1-core-golden",
+            new AgentEvalSuiteRequest(List.of(traceId, "secret-token-value", traceId), null, null, null)
+        ).orElseThrow();
+
+        assertThat(proposal.schemaVersion()).isEqualTo("agent-eval-trace-set-catalog-patch-proposal.v1");
+        assertThat(proposal.traceSetId()).isEqualTo("phase1-core-golden");
+        assertThat(proposal.proposalVerdict()).isEqualTo("READY_FOR_GIT_REVIEW");
+        assertThat(proposal.readyForGitReview()).isTrue();
+        assertThat(proposal.catalogMutated()).isFalse();
+        assertThat(proposal.traceSetIndex()).isZero();
+        assertThat(proposal.originalTraceIds()).isEmpty();
+        assertThat(proposal.candidateTraceIds()).containsExactly(traceId);
+        assertThat(proposal.addedTraceIds()).containsExactly(traceId);
+        assertThat(proposal.proposedTraceIds()).containsExactly(traceId);
+        assertThat(proposal.jsonPatch()).hasSize(1);
+        assertThat(proposal.jsonPatch().get(0))
+            .containsEntry("op", "replace")
+            .containsEntry("path", "/0/traceIds")
+            .containsEntry("value", List.of(traceId));
+        assertThat(proposal.curationReview().readyForCatalogReview()).isTrue();
+        assertThat(proposal.proposalPolicy())
+            .containsEntry("reviewOnly", true)
+            .containsEntry("catalogMutationAllowed", false)
+            .containsEntry("requiresHumanReview", true)
+            .containsEntry("requiresGitReview", true)
+            .containsEntry("runtimeCatalogWrite", false)
+            .containsEntry("requiresCiGateBundleRegeneration", true);
+        assertThat(service.findDefinition("phase1-core-golden").orElseThrow().traceIds()).isEmpty();
+        assertThat(proposal.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("deterministic", true)
+            .containsEntry("llmUsed", false)
+            .containsEntry("externalCalls", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("kubeManagerCalls", false);
+        assertThat(proposal.toString())
+            .contains(traceId, "observability/eval-trace-sets.json")
+            .doesNotContain("secret-token-value", "conv-sensitive", "user-sensitive", "org-sensitive", "/api/org-sensitive")
+            .doesNotContain("reports=", "replay=");
+    }
+
+    @Test
+    void catalogPatchProposal_shouldStayEmptyWhenCurationReviewFails() {
+        AgentEvalTraceSetCatalogService service = service(new InMemoryAgentAuditRecorder());
+
+        AgentEvalTraceSetCatalogPatchProposalArtifact proposal = service.catalogPatchProposal(
+            "phase1-core-golden",
+            new AgentEvalSuiteRequest(List.of("trc_44444444444444444444444444444444"), null, null, null)
+        ).orElseThrow();
+
+        assertThat(proposal.readyForGitReview()).isFalse();
+        assertThat(proposal.proposalVerdict()).isEqualTo("REJECT_EVAL_GATE_FAILED");
+        assertThat(proposal.jsonPatch()).isEmpty();
+        assertThat(proposal.catalogMutated()).isFalse();
+        assertThat(proposal.proposalPolicy())
+            .containsEntry("readyForGitReview", false)
+            .containsEntry("catalogMutationAllowed", false)
+            .containsEntry("requiresCiGateBundleRegeneration", false);
+    }
+
     private AgentEvalTraceSetCatalogService service(InMemoryAgentAuditRecorder recorder) {
         AgentEvalReportService evalReportService = new AgentEvalReportService(new AgentReplayTimelineService(recorder));
         AgentEvalSuiteCatalogService suiteCatalogService = new AgentEvalSuiteCatalogService(evalReportService);

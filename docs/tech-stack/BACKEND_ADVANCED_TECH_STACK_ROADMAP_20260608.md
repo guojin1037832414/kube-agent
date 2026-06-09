@@ -443,3 +443,25 @@ M5.40-1 adds the candidate discovery step before M5.39 curation review:
 - Recommendation logic is trace-set aware: golden read traces, redaction traces, high-risk prewrite traces, and red-team safety traces are surfaced differently.
 
 Technology judgment: this gives eval operations a real evidence workflow without granting new authority. Discovery is read-only and advisory, curation review is deterministic and review-only, and catalog promotion still requires a Git-reviewed patch. This separation is the mature Agent pattern for moving from observability data to release-blocking evidence.
+
+## M5.41-1 Update - Catalog Patch Proposal Artifact
+
+M5.41-1 closes the next eval release-governance gap: reviewed candidates can now be converted into a typed JSON Patch proposal without mutating the catalog at runtime.
+
+- `POST /api/agent/observability/eval/trace-sets/{traceSetId}/catalog-patch-proposal` returns `AgentEvalTraceSetCatalogPatchProposalArtifact`.
+- The artifact reuses curation review and becomes `READY_FOR_GIT_REVIEW` only when the candidate suite gate passes and new trace IDs would be added.
+- JSON Patch targets `src/main/resources/observability/eval-trace-sets.json` by JSON Pointer, for example `/0/traceIds`.
+- The contract stays `artifactOnly=true`, `reviewOnly=true`, `catalogMutationAllowed=false`, `runtimeCatalogWrite=false`, `redactedOnly=true`, `llmUsed=false`, `externalCalls=false`, `toolExecution=false`, and `kubeManagerCalls=false`.
+
+Technology judgment: top-tier Agent release evidence should flow through typed promotion artifacts instead of runtime mutation. This is the safer bridge from observability data to Git-reviewed CI evidence. The next advanced steps are Vue eval workbench integration, catalog patch preview UX, real curated trace population from safe local captures, and then flipping the gate bundle from evidence-only to blocking once the catalog has reviewed real evidence.
+
+## 2026-06-09 Latest Official Technology Check
+
+The Phase 1 mainline continues to follow "stable verified core + compatibility matrix":
+
+- Spring Boot official docs list stable `4.0.6` and `3.5.14`; this repository remains on verified `3.5.14` while tracking Boot 4 migration under tests.
+- Spring AI official docs list stable `1.1.7` and preview `2.0.0-RC1`; this repository remains on verified `1.1.7` while tracking Spring AI 2 under compatibility work.
+- MCP `latest` specification redirects to `2025-11-25`; Phase 1 should keep MCP work behind safe manifest/schema adapters until authorization, consent, and Tool safety contracts are complete.
+- OpenTelemetry semantic conventions are at `1.41.1` and include Generative AI / MCP areas; the mainline keeps stable `atlas.agent.*` attributes and isolates experimental semconv attributes until contract tests prove they are safe.
+
+Rule: a technology is "introduced" into this project only after it has a typed contract, security boundary, tests, documentation, recovery memory, and CI/release evidence. Version-chasing without those gates is not top-tier engineering.

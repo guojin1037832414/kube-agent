@@ -10,7 +10,41 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.40-1
+## Latest Phase 1 Core Memory - M5.41-1
+
+M5.41-1 adds a review-only catalog patch proposal artifact so curated trace IDs can move from curation review toward Git-reviewed catalog promotion without runtime mutation.
+
+Delivered:
+
+- Added `AgentEvalTraceSetCatalogPatchProposalArtifact`.
+- Added `AgentEvalTraceSetCatalogService#catalogPatchProposal(...)`.
+- Added admin-only `POST /api/agent/observability/eval/trace-sets/{traceSetId}/catalog-patch-proposal`.
+- Patch proposals reuse M5.39 curation review and emit `READY_FOR_GIT_REVIEW` only when candidate evidence passes the attached suite gate and would add new trace IDs.
+- The proposal returns RFC 6902 JSON Patch style operations such as `replace /0/traceIds`.
+
+Security boundary:
+
+- The endpoint is admin-only at URL and method levels.
+- It is review-only / artifact-only and never mutates `observability/eval-trace-sets.json`.
+- `catalogMutationAllowed=false`, `catalogMutated=false`, `runtimeCatalogWrite=false`, and Git review remains mandatory.
+- No raw principal, organization, conversation, endpoint, reason text, or parameter values are exposed.
+- No LLM, Tool execution, kube-manager call, network call, durable write, raw audit export, or runtime catalog mutation is added.
+- NIM / HPC / Slurm / BCM remain Phase 2 paused scope.
+
+Learning point: top-tier Agent release evidence needs a typed promotion path. Discovery finds evidence, curation review evaluates it, patch proposal expresses the intended catalog change, and only human/Git review can turn that proposal into versioned release evidence.
+
+Latest verified command:
+
+- `mvn -q "-Dtest=AgentEvalTraceSetCatalogServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+Latest official technology check on 2026-06-09:
+
+- Spring Boot docs list stable `4.0.6` and `3.5.14`; this repo keeps verified mainline on `3.5.14` while tracking Boot 4 in compatibility matrix.
+- Spring AI docs list stable `1.1.7` and preview `2.0.0-RC1`; this repo keeps verified mainline on `1.1.7` while tracking Spring AI 2 in compatibility matrix.
+- MCP latest specification redirects to `2025-11-25`; Phase 1 keeps a safe adapter/manifest posture before full external MCP broker behavior.
+- OpenTelemetry semantic conventions docs show `1.41.1`, including Generative AI and MCP registry areas; this repo keeps stable `atlas.agent.*` attributes while isolating experimental OTel/GenAI attributes.
+
+## Previous Phase 1 Core Memory - M5.40-1
 
 M5.40-1 adds redacted trace-set candidate discovery so operators can find candidate trace IDs before running M5.39 curation review.
 

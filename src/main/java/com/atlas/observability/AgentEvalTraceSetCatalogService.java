@@ -67,6 +67,19 @@ public class AgentEvalTraceSetCatalogService {
                 .map(gate -> AgentEvalTraceSetCurationReviewArtifact.from(definition, gate, CATALOG_SOURCE)));
     }
 
+    public Optional<AgentEvalTraceSetCatalogPatchProposalArtifact> catalogPatchProposal(String traceSetId,
+                                                                                        AgentEvalSuiteRequest request) {
+        return findDefinition(traceSetId)
+            .flatMap(definition -> curationReview(definition.id(), request)
+                .map(review -> AgentEvalTraceSetCatalogPatchProposalArtifact.from(
+                    definition,
+                    definitionIndex(definition.id()),
+                    review,
+                    CATALOG_SOURCE,
+                    CATALOG_RESOURCE
+                )));
+    }
+
     private Optional<AgentEvalTraceSetGateArtifact> gate(AgentEvalTraceSetDefinition definition,
                                                         AgentEvalSuiteRequest request) {
         AgentEvalSuiteRequest suiteRequest = new AgentEvalSuiteRequest(
@@ -100,6 +113,16 @@ public class AgentEvalTraceSetCatalogService {
             }
         }
         return List.copyOf(accepted);
+    }
+
+    private int definitionIndex(String traceSetId) {
+        String normalized = normalizeId(traceSetId);
+        for (int i = 0; i < definitions.size(); i++) {
+            if (normalized.equals(definitions.get(i).id())) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     private List<AgentEvalTraceSetDefinition> loadDefinitions() {
