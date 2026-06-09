@@ -43,6 +43,7 @@ public class ObservabilityController {
     private final AgentEvalTraceSetCandidateDiscoveryService traceSetCandidateDiscoveryService;
     private final AgentEvalTraceSetPromotionWorkflowService traceSetPromotionWorkflowService;
     private final AgentEvalWorkbenchCapabilitiesService evalWorkbenchCapabilitiesService;
+    private final AgentEvalWorkbenchOverviewService evalWorkbenchOverviewService;
     private final AgentPrincipalResolver principalResolver;
 
     public ObservabilityController(AgentMetricsService metricsService,
@@ -55,6 +56,7 @@ public class ObservabilityController {
                                    AgentEvalTraceSetCandidateDiscoveryService traceSetCandidateDiscoveryService,
                                    AgentEvalTraceSetPromotionWorkflowService traceSetPromotionWorkflowService,
                                    AgentEvalWorkbenchCapabilitiesService evalWorkbenchCapabilitiesService,
+                                   AgentEvalWorkbenchOverviewService evalWorkbenchOverviewService,
                                    AgentPrincipalResolver principalResolver) {
         this.metricsService = metricsService;
         this.auditSnapshotProvider = auditSnapshotProvider;
@@ -66,6 +68,7 @@ public class ObservabilityController {
         this.traceSetCandidateDiscoveryService = traceSetCandidateDiscoveryService;
         this.traceSetPromotionWorkflowService = traceSetPromotionWorkflowService;
         this.evalWorkbenchCapabilitiesService = evalWorkbenchCapabilitiesService;
+        this.evalWorkbenchOverviewService = evalWorkbenchOverviewService;
         this.principalResolver = principalResolver;
     }
 
@@ -229,6 +232,17 @@ public class ObservabilityController {
             return guard;
         }
         return ResponseEntity.ok(ApiResponse.ok(evalWorkbenchCapabilitiesService.capabilities()));
+    }
+
+    /** Build a frontend-ready eval workbench overview without executing Tools or mutating catalogs. */
+    @GetMapping("/eval/workbench/overview")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentEvalWorkbenchOverviewResponse>> evalWorkbenchOverview() {
+        ResponseEntity<ApiResponse<AgentEvalWorkbenchOverviewResponse>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return ResponseEntity.ok(ApiResponse.ok(evalWorkbenchOverviewService.overview()));
     }
 
     /** List versioned golden/red-team trace sets that bind curated evidence anchors to eval suites. */

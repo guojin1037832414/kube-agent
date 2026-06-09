@@ -10,7 +10,35 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.43-1
+## Latest Phase 1 Core Memory - M5.44-1
+
+M5.44-1 adds an admin-only eval workbench overview read model for future `vue-kube-manager` integration.
+
+Delivered:
+
+- Added `AgentEvalWorkbenchTraceSetView`.
+- Added `AgentEvalWorkbenchOverviewResponse`.
+- Added `AgentEvalWorkbenchOverviewService`.
+- Added admin-only `GET /api/agent/observability/eval/workbench/overview`.
+- Extended `GET /api/agent/observability/eval/workbench/capabilities` with a `workbench-overview` capability.
+- The overview returns trace-set rows, compact gate-bundle state, recommended workflow, next actions, endpoint templates, and policy/privacy evidence for the frontend.
+
+Security boundary:
+
+- The endpoint is admin-only at URL and method levels.
+- It is a read-only overview and does not discover candidates, query raw audit storage, execute Tools, call kube-manager, use an LLM, make external calls, or mutate `observability/eval-trace-sets.json`.
+- It embeds no replay timeline and no per-trace eval reports. Drill-down still requires explicit admin-only replay/eval requests by trace id.
+- No raw principal, organization, conversation, kube-manager endpoint, reason text, or parameter values are exposed.
+- `catalogMutationAllowed=false`, `runtimeCatalogWrite=false`, `toolExecution=false`, and `kubeManagerCalls=false`.
+- NIM / HPC / Slurm / BCM remain Phase 2 paused scope.
+
+Learning point: top-tier Agent workbenches should separate navigation, overview, workflow artifacts, and drill-down payloads. The overview tells operators what state the eval system is in; it does not silently run release-changing actions.
+
+Latest verified command:
+
+- `mvn -q "-Dtest=AgentEvalWorkbenchOverviewServiceTest,AgentEvalWorkbenchCapabilitiesServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+## Previous Phase 1 Core Memory - M5.43-1
 
 M5.43-1 adds an admin-only eval workbench capability manifest for future `vue-kube-manager` integration.
 

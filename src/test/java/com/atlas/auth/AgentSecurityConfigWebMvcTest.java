@@ -119,6 +119,10 @@ class AgentSecurityConfigWebMvcTest {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
             .andExpect(status().isForbidden());
 
+        mockMvc.perform(get("/api/agent/observability/eval/workbench/overview")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
+            .andExpect(status().isForbidden());
+
         mockMvc.perform(get("/api/agent/observability/eval/trace-sets")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
             .andExpect(status().isForbidden());
@@ -206,6 +210,10 @@ class AgentSecurityConfigWebMvcTest {
             .andExpect(status().isOk());
 
         mockMvc.perform(get("/api/agent/observability/eval/workbench/capabilities")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token"))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/agent/observability/eval/workbench/overview")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token"))
             .andExpect(status().isOk());
 
@@ -421,6 +429,11 @@ class AgentSecurityConfigWebMvcTest {
         @GetMapping("/api/agent/observability/eval/workbench/capabilities")
         String observabilityEvalWorkbenchCapabilities() {
             return "eval-workbench-capabilities";
+        }
+
+        @GetMapping("/api/agent/observability/eval/workbench/overview")
+        String observabilityEvalWorkbenchOverview() {
+            return "eval-workbench-overview";
         }
 
         @GetMapping("/api/agent/observability/eval/trace-sets")

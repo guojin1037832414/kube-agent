@@ -6,6 +6,26 @@
 
 ---
 
+## [M5.44-1] - Eval workbench overview read model
+
+**Delivery**: Added an admin-only eval workbench overview read model for future `vue-kube-manager` screens.
+**Changes**
+- Added `AgentEvalWorkbenchTraceSetView`.
+- Added `AgentEvalWorkbenchOverviewResponse`.
+- Added `AgentEvalWorkbenchOverviewService`.
+- Added admin-only `GET /api/agent/observability/eval/workbench/overview`.
+- Extended the workbench capability manifest with `workbench-overview`.
+- The overview composes capability metadata, trace-set catalog rows, compact gate-bundle status, workflow stages, next actions, and safety policy flags.
+- Added service, controller, source-contract, and MockMvc security coverage.
+**Verification**
+- `mvn -q "-Dtest=AgentEvalWorkbenchOverviewServiceTest,AgentEvalWorkbenchCapabilitiesServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed.
+**Security**
+- The overview is admin-only, read-only, and artifact-only.
+- It never queries raw audit storage, discovers candidates, executes Tool code, calls kube-manager, uses LLMs, makes external calls, or mutates `observability/eval-trace-sets.json`.
+- It embeds no replay timeline or per-trace report payloads; drill-down remains explicit through existing admin-only replay/eval endpoints.
+- `catalogMutationAllowed=false`, `runtimeCatalogWrite=false`, `toolExecution=false`, and `kubeManagerCalls=false`.
+- This slice adds no kube-manager write/create/delete/state-changing behavior and does not reopen NIM/HPC/Slurm/BCM scope.
+
 ## [M5.43-1] - Eval workbench capabilities manifest
 
 **Delivery**: Added an admin-only capability manifest for future `vue-kube-manager` eval workbench integration.

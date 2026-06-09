@@ -18,6 +18,17 @@ public class AgentEvalWorkbenchCapabilitiesService {
     public AgentEvalWorkbenchCapabilitiesResponse capabilities() {
         List<AgentEvalWorkbenchCapability> capabilities = List.of(
             capability(
+                "workbench-overview",
+                "Eval workbench overview",
+                "orient",
+                "GET",
+                "/api/agent/observability/eval/workbench/overview",
+                "",
+                AgentEvalWorkbenchOverviewResponse.SCHEMA_VERSION,
+                List.of("traceSetCatalog", "capabilityManifest", "gateBundle"),
+                List.of("traceSetWorkbenchRows", "nextActions", "workbenchPolicy")
+            ),
+            capability(
                 "trace-set-catalog",
                 "Trace-set catalog",
                 "discover",
@@ -109,6 +120,7 @@ public class AgentEvalWorkbenchCapabilitiesService {
         return AgentEvalWorkbenchCapabilitiesResponse.of(
             capabilities,
             List.of(
+                "workbench-overview",
                 "trace-set-catalog",
                 "trace-set-promotion-workflow",
                 "trace-set-catalog-patch-proposal",

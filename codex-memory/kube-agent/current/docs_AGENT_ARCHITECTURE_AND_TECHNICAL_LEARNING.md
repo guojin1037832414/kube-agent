@@ -2,6 +2,31 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-09 M5.44 Eval Workbench Overview 总览读模型
+
+M5.44 在 M5.43 capability manifest 之上，再给 `vue-kube-manager` eval workbench 一个可直接渲染首屏的 overview read model。它不是执行工作流，而是把 capabilities、trace-set catalog、compact gate bundle、next actions 和安全策略组合成一个前端可用的状态视图。
+
+```text
+GET /api/agent/observability/eval/workbench/overview
+    |
+    | capabilities + trace-set catalog + compact gate bundle
+    v
+AgentEvalWorkbenchOverviewResponse
+    |
+    | trace-set rows + nextActions + endpoint templates
+    v
+Vue eval workbench landing view
+```
+
+关键设计：
+- `AgentEvalWorkbenchOverviewService` 只组合已有 safe artifacts，不查原始审计，不发现候选，不执行 Tool。
+- `AgentEvalWorkbenchTraceSetView` 把 trace set 变成 UI row：状态、nextAction、promotionWorkflowPath、gatePath、replay/eval drill-down path template 直接给前端。
+- overview 嵌入 compact gate bundle，但不嵌入 per-trace reports 或 replay timeline，避免首屏过重，也避免隐性扩散诊断细节。
+- 空 curated trace set 会显式显示 `NEEDS_REDACTED_EVIDENCE`，不会把 empty catalog 伪装成可 blocking CI 的 PASS。
+- capability manifest 新增 `workbench-overview`，前端可以先 discover 再 render，不需要硬编码新入口。
+
+学习重点：顶级 Agent 工作台要分清四层契约：capability manifest 告诉“能做什么”；overview 告诉“现在是什么状态”；workflow artifact 告诉“怎样进入人工/Git 审查”；drill-down payload 才展示具体 replay/eval 细节。分层以后，导航、状态、执行和发布授权不会混在页面逻辑里。
+
 ## 2026-06-09 M5.43 Eval Workbench Capabilities 能力清单
 
 M5.43 给未来 `vue-kube-manager` eval workbench 增加一个后端自描述能力清单。它回答的问题不是“现在执行哪条 trace”，而是“这个后端工作台支持哪些安全能力、每个能力的 endpoint 和 schemaVersion 是什么、推荐 UI 流程怎么走”。
