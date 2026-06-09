@@ -60,7 +60,9 @@ public record AgentPhase1ExecutionRoadmapResponse(
                 "Wire Vue to render top-tier readiness, technology adoption, kube-manager governance, MCP governance, and Memory/RAG contracts.",
                 "PARTIAL_BACKEND_READY",
                 List.of("backend-read-models-exist", "admin-auth-required"),
-                List.of("top-tier-readiness-overview", "advanced-technology-adoption-contract", "kube-manager-governance-workbench", "memory-rag-readiness")),
+                List.of("top-tier-readiness-overview", "advanced-technology-adoption-contract",
+                    "kube-manager-governance-workbench", "memory-rag-readiness",
+                    "memory-rag-trace-set-curation-workbench")),
             step(2, "reviewed-eval-trace-evidence",
                 "Curate reviewed redacted traces so eval gates stop being schema-only evidence.",
                 "BACKEND_CONTRACT_READY",
@@ -75,9 +77,11 @@ public record AgentPhase1ExecutionRoadmapResponse(
                 "Implement Memory/RAG eval suites for citation, source digest, privacy, tenant isolation, lifecycle, and prompt-injection gates.",
                 "BACKEND_CONTRACT_READY_BUT_NOT_BOUND",
                 List.of("memory-rag-eval-suite-binding-contract", "memory-rag-trace-set-curation-contract",
+                    "memory-rag-trace-set-curation-workbench",
                     "memory-rag-eval-gate-contract", "source-evidence-digest-contract", "durable-lifecycle-contract"),
                 List.of("memory-rag-eval-suite-binding-contract", "memory-rag-trace-set-curation-contract",
-                    "memory-rag-eval-gate-contract", "memory-rag-readiness")),
+                    "memory-rag-trace-set-curation-workbench", "memory-rag-eval-gate-contract",
+                    "memory-rag-readiness")),
             step(5, "durable-memory-store-binding",
                 "Bind durable memory only after lifecycle, source digest, retention, delete/export/recovery, and eval gates are ready.",
                 "BLOCKED_BY_LIFECYCLE_AND_EVAL",
@@ -121,6 +125,8 @@ public record AgentPhase1ExecutionRoadmapResponse(
             vueTarget("vue-readiness-control-plane", "/api/agent/observability/top-tier/vue-readiness-control-plane"),
             vueTarget("kube-manager-governance", "/api/agent/observability/kube-manager/http-outlet/governance-workbench/overview"),
             vueTarget("memory-rag-readiness", "/api/agent/observability/memory-rag/readiness"),
+            vueTarget("memory-rag-trace-set-curation-workbench",
+                AgentMemoryRagTraceSetCurationWorkbenchOverviewResponse.OVERVIEW_ENDPOINT),
             vueTarget("eval-workbench", "/api/agent/observability/eval/workbench/overview"),
             vueTarget("mcp-governance", "/api/agent/mcp/governance/overview")
         );
@@ -153,6 +159,8 @@ public record AgentPhase1ExecutionRoadmapResponse(
         endpoints.put("memoryRagEvalSuiteBindingContract", "/api/agent/observability/memory-rag/eval-suite-binding-contract");
         endpoints.put("memoryRagTraceSetCurationContract",
             "/api/agent/observability/memory-rag/trace-set-curation-contract");
+        endpoints.put("memoryRagTraceSetCurationWorkbenchOverview",
+            AgentMemoryRagTraceSetCurationWorkbenchOverviewResponse.OVERVIEW_ENDPOINT);
         endpoints.put("mcpGovernanceOverview", "/api/agent/mcp/governance/overview");
         return Map.copyOf(endpoints);
     }

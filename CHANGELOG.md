@@ -6,6 +6,29 @@
 
 ---
 
+## [M5.72-1] - Memory/RAG trace-set curation workbench
+
+**Delivery**: Added a Vue-ready, admin-only Memory/RAG trace-set curation workbench overview without opening eval runtime, retrieval runtime, CI blocking, or catalog mutation.
+**Changes**
+- Added `GET /api/agent/observability/memory-rag/workbench/trace-set-curation/overview`.
+- Added `AgentMemoryRagTraceSetCurationWorkbenchOverviewResponse` and `AgentMemoryRagTraceSetCurationWorkbenchOverviewService`.
+- The workbench composes only safe read models:
+  `AgentMemoryRagTraceSetCurationContractService.contract()`,
+  `AgentMemoryRagEvalSuiteBindingContractService.contract()`, and
+  `AgentMemoryRagReadinessService.readiness()`.
+- Published Vue-ready curation cards for `memory-rag-citation-fidelity`,
+  `memory-rag-privacy-tenant`, and `memory-rag-lifecycle-policy`.
+- Published `suiteLatchCard`, `recommendedWorkflow`, `nextActions`, `endpointMap`,
+  `workbenchPolicy`, `safety`, and `privacy` for direct Vue rendering.
+- Added disabled runtime action descriptors so Vue can show the governance state without rendering enabled buttons for candidate discovery, curation review, trace-set gate, or gate bundle.
+- Integrated the workbench into Memory/RAG readiness, the Phase 1 execution roadmap, the Vue readiness control plane, and the M5.71 curation contract endpoint map.
+- Added direct controller coverage, source-level security contract coverage, WebMvc security coverage, and read-model service coverage.
+**Verification**
+- `mvn -q "-Dtest=AgentMemoryRagTraceSetCurationWorkbenchOverviewServiceTest,AgentMemoryRagTraceSetCurationContractServiceTest,AgentMemoryRagReadinessServiceTest,AgentPhase1ExecutionRoadmapServiceTest,AgentVueReadinessControlPlaneServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed during implementation.
+**Security**
+- The workbench is admin-only, read-only, overview-only, Vue-workbench-only, and fail-closed.
+- It does not run evals, call `gateBundle`, query raw audit, discover candidates, execute curation review, accept caller trace IDs, mutate `observability/eval-trace-sets.json`, enable CI blocking, execute retrieval, bind vector stores, call embedding/reranker/LLM, mutate prompts, write memory, write audit, issue durable receipts, execute Tools, invoke `SafeToolExecutor`, invoke HITL, call kube-manager, expose MCP runtime `tools/call`, call external services, upgrade dependencies, or touch NIM / HPC / Slurm / BCM Phase 2 work.
+
 ## [M5.71-1] - Memory/RAG trace-set curation contract
 
 **Delivery**: Added an admin-only, read-only Memory/RAG trace-set curation contract for Vue/Git-review visibility before reviewed trace IDs are promoted.

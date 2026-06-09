@@ -9,6 +9,41 @@
 - 供应链、CI、SBOM、质量门禁进入工程默认路径；
 - Java / Spring / Agent 框架升级以兼容性矩阵推进，不用不可构建的版本号伪装先进。
 
+## 2026-06-09 M5.72 Memory-RAG-Trace-Set-Curation-Workbench Rule
+
+M5.72 adds the backend-owned Vue workbench:
+
+```text
+GET /api/agent/observability/memory-rag/workbench/trace-set-curation/overview
+```
+
+The advanced Agent stack now has an operator-facing Memory/RAG curation surface before reviewed trace IDs, advisory gate bundles, retrieval runtime, or CI blocking are promoted:
+
+- It composes only `AgentMemoryRagTraceSetCurationContractService.contract()`, `AgentMemoryRagEvalSuiteBindingContractService.contract()`, and `AgentMemoryRagReadinessService.readiness()`.
+- It publishes three Vue curation cards for citation fidelity, privacy/tenant isolation, and lifecycle policy.
+- It publishes `suiteLatchCard`, `disabledRuntimeActions`, `renderHints`, `workbenchPolicy`, `safety`, and `privacy`.
+- It makes candidate discovery, curation review, trace-set gate, and gate bundle explicit disabled actions for the UI.
+- It integrates with the Vue readiness control plane, Phase 1 roadmap, Memory/RAG readiness, and the underlying curation contract endpoint map.
+- Phase 2 NIM / HPC / Slurm / BCM remains paused and is not reopened by this workbench.
+
+Technology judgment: Java/Spring remains the right Phase 1 mainline because the project needs a governed Agent control plane. The newest Agent technologies are not rejected; they are staged behind evidence. Spring AI RAG/VectorStore/MCP, MCP runtime tools/resources/prompts, OpenTelemetry GenAI adapters, OpenAI Agents SDK-style guardrails/tracing/handoffs/evals, A2A provenance, GraphRAG, rerankers, and vector stores move through contracts, read models, eval evidence, Vue visibility, and compatibility matrices before runtime authority.
+
+Official references checked for this anchor:
+
+- Spring AI reference: https://docs.spring.io/spring-ai/reference/
+- Model Context Protocol specification: https://modelcontextprotocol.io/specification/2025-11-25
+- OpenTelemetry GenAI semantic conventions: https://opentelemetry.io/docs/specs/semconv/gen-ai/
+- OpenAI Agents SDK: https://openai.github.io/openai-agents-python/
+- A2A protocol specification: https://a2a-protocol.org/latest/specification/
+
+Next order after M5.72:
+
+- Curate reviewed redacted trace IDs through human/Git review.
+- Generate advisory Memory/RAG gate-bundle evidence only after reviewed trace IDs exist.
+- Promote CI blocking only in a separate reviewed slice.
+- Bind durable memory store and retrieval runtime only after source digest, lifecycle, tenant/privacy, eval evidence, Vue visibility, and recovery memory pass.
+- Run separate compatibility spikes for Java 21/25, Spring Boot 4, Spring AI 2, MCP runtime, A2A, GraphRAG, rerankers, and vector stores.
+
 ## 2026-06-09 M5.71 Memory-RAG-Trace-Set-Curation-Contract Rule
 
 M5.71 adds the backend-owned curation contract:

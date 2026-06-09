@@ -37,7 +37,7 @@ class AgentVueReadinessControlPlaneServiceTest {
         assertThat(controlPlane.phase2NimHpcSlurmBcmPaused()).isTrue();
         assertThat(controlPlane.vueBindingReady()).isTrue();
         assertThat(controlPlane.runtimeControlAllowed()).isFalse();
-        assertThat(controlPlane.dashboardCount()).isEqualTo(7);
+        assertThat(controlPlane.dashboardCount()).isEqualTo(8);
         assertThat(controlPlane.dashboards()).extracting(dashboard -> dashboard.get("id"))
             .containsExactly(
                 "top-tier-command-center",
@@ -45,6 +45,7 @@ class AgentVueReadinessControlPlaneServiceTest {
                 "phase1-execution-roadmap",
                 "kube-manager-governance",
                 "memory-rag-readiness",
+                "memory-rag-trace-set-curation-workbench",
                 "eval-workbench",
                 "mcp-governance"
             );
@@ -55,6 +56,7 @@ class AgentVueReadinessControlPlaneServiceTest {
                 "phase1-roadmap",
                 "reviewed-trace-evidence",
                 "release-blocking-gate-contract",
+                "memory-rag-trace-set-curation-workbench",
                 "memory-rag-eval-gate",
                 "memory-rag-eval-suite-binding",
                 "eval-gate-bundle-summary",
@@ -68,6 +70,7 @@ class AgentVueReadinessControlPlaneServiceTest {
                 "trigger-kube-manager-state-changing-call",
                 "run-mcp-tools-call",
                 "run-retrieval-against-prompt",
+                "run-memory-rag-trace-set-curation-workbench-action",
                 "enable-ci-blocking-from-ui",
                 "reopen-nim-hpc-slurm-bcm-phase2"
             );
@@ -78,6 +81,7 @@ class AgentVueReadinessControlPlaneServiceTest {
             "bind-phase1-execution-roadmap-timeline",
             "bind-kube-manager-governance-cards",
             "bind-memory-rag-readiness-and-contract-links",
+            "bind-memory-rag-trace-set-curation-workbench",
             "bind-eval-workbench-summary-and-gate-bundle",
             "bind-mcp-governance-manifest-view",
             "keep-runtime-control-buttons-absent"
@@ -87,6 +91,8 @@ class AgentVueReadinessControlPlaneServiceTest {
             .containsEntry("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap")
             .containsEntry("reviewedEvalTraceEvidence", "/api/agent/observability/eval/reviewed-trace-evidence")
             .containsEntry("releaseBlockingEvalGateContract", "/api/agent/observability/eval/release-blocking-gate-contract")
+            .containsEntry("memoryRagTraceSetCurationWorkbenchOverview",
+                "/api/agent/observability/memory-rag/workbench/trace-set-curation/overview")
             .containsEntry("memoryRagEvalGateContract", "/api/agent/observability/memory-rag/eval-gate-contract")
             .containsEntry("memoryRagEvalSuiteBindingContract", "/api/agent/observability/memory-rag/eval-suite-binding-contract")
             .containsEntry("mcpManifest", "/api/agent/mcp/manifest");

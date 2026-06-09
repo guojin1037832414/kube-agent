@@ -10,7 +10,66 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.71-1
+## Latest Phase 1 Core Memory - M5.72-1
+
+M5.72-1 adds the Vue-ready Memory/RAG trace-set curation workbench overview on top of the M5.71 curation contract.
+
+Endpoint:
+
+```text
+GET /api/agent/observability/memory-rag/workbench/trace-set-curation/overview
+```
+
+Delivered:
+
+- Added `AgentMemoryRagTraceSetCurationWorkbenchOverviewResponse`.
+- Added `AgentMemoryRagTraceSetCurationWorkbenchOverviewService`.
+- Added admin-only Controller method `memoryRagTraceSetCurationWorkbenchOverview()`.
+- Integrated the workbench into `AgentVueReadinessControlPlaneResponse`, `AgentPhase1ExecutionRoadmapResponse`, `AgentMemoryRagReadinessResponse`, and `AgentMemoryRagTraceSetCurationContractResponse.endpointMap`.
+- Added service, Controller, source-security, WebMvc, Vue readiness, roadmap, readiness, and contract tests.
+
+Current state:
+
+- `schemaVersion=agent-memory-rag-trace-set-curation-workbench-overview.v1`.
+- `workbenchStatus=WORKBENCH_READY_TO_RENDER_REVIEWED_EVIDENCE_GAPS`.
+- `frontendTarget=vue-kube-manager Memory/RAG trace-set curation workbench`.
+- `sourceReadModelsEmbedded=true`.
+- `runtimeControlAllowed=false`.
+- `curationCardCount=3`.
+- `blockingCardCount=3`.
+- `requiredTraceSetCount=3`.
+- `definedTraceSetCount=3`.
+- `reviewedTraceSetCount=0`.
+- Three curation cards are present: `memory-rag-citation-fidelity`, `memory-rag-privacy-tenant`, and `memory-rag-lifecycle-policy`.
+- Each card is `BLOCKING` because reviewed redacted trace IDs are still missing.
+- The suite latch remains closed: `suiteLatchCard.status=RUNTIME_LATCH_CLOSED` and `runtimeExecutionAllowedNow=false`.
+
+Security boundary:
+
+- M5.72 is admin-only, read-only, overview-only, Vue-workbench-only, and fail-closed.
+- It only composes `contract()`, `suiteBindingContractService.contract()`, and `memoryRagReadinessService.readiness()`.
+- It does not run evals, call `gateBundle`, query raw audit, discover candidates, execute curation review, promote trace IDs, mutate trace-set catalogs, accept caller trace IDs, enable CI blocking, execute retrieval, bind vector stores, call embedding/reranker/LLM, mutate prompts, write memory, write audit, issue durable receipts, execute Tools, invoke `SafeToolExecutor`, invoke HITL, call kube-manager including port `8100`, expose MCP runtime `tools/call`, call external services, upgrade dependencies, or touch NIM / HPC / Slurm / BCM Phase 2 scope.
+
+Learning point: the frontend should not invent governance rules. A top-tier Agent publishes backend-owned read models that tell Vue exactly what cards to render, which blockers matter, which runtime actions are disabled, and which evidence must be curated through human/Git review. M5.72 turns the Memory/RAG evidence lane into an operator and learning surface without giving the UI new runtime authority.
+
+Latest technology note checked on 2026-06-09:
+
+- Spring AI, MCP, OpenTelemetry GenAI, OpenAI Agents SDK, and A2A remain Phase 1 architecture targets.
+- They are introduced as contracts, read models, eval evidence, and compatibility matrices first.
+- Runtime authority remains closed until deterministic tests, reviewed redacted traces, Vue operator visibility, audit/replay, and recovery checkpoints pass.
+
+Latest verified command:
+
+- `mvn -q "-Dtest=AgentMemoryRagTraceSetCurationWorkbenchOverviewServiceTest,AgentMemoryRagTraceSetCurationContractServiceTest,AgentMemoryRagReadinessServiceTest,AgentPhase1ExecutionRoadmapServiceTest,AgentVueReadinessControlPlaneServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+Next safe development order:
+
+- Add reviewed redacted trace IDs for `memory-rag-citation-fidelity`, `memory-rag-privacy-tenant`, and `memory-rag-lifecycle-policy` through human/Git review.
+- After reviewed traces exist, generate advisory Memory/RAG gate-bundle evidence as a separate reviewed slice.
+- Keep CI blocking, retrieval runtime, durable memory runtime, MCP tools/call, and kube-manager write authority closed until their release gates pass.
+- Continue compatibility-matrix work for Java 21/25, Spring Boot 4, Spring AI 2, OpenTelemetry GenAI adapters, MCP runtime, A2A, GraphRAG, rerankers, and vector stores.
+
+## Previous Phase 1 Core Memory - M5.71-1
 
 M5.71-1 adds the admin-only Memory/RAG trace-set curation contract without opening eval runtime, retrieval runtime, CI blocking, catalog mutation, or memory writes.
 

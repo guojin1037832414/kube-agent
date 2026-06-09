@@ -1,0 +1,171 @@
+﻿{
+    "project":  "kube-agent",
+    "milestone":  "M5.72-1",
+    "title":  "Memory/RAG trace-set curation workbench overview",
+    "generatedAt":  "2026-06-09T21:49:39.5533285+08:00",
+    "workspace":  "F:\\gitProject\\kube-agent",
+    "verification":  [
+                         "git diff --check",
+                         "mvn -q \"-Dtest=AgentMemoryRagTraceSetCurationWorkbenchOverviewServiceTest,AgentMemoryRagTraceSetCurationContractServiceTest,AgentMemoryRagReadinessServiceTest,AgentPhase1ExecutionRoadmapServiceTest,AgentVueReadinessControlPlaneServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest\" test",
+                         "mvn -q \"-Dtest=AgentMemoryRagTraceSetCurationWorkbenchOverviewServiceTest,AgentMemoryRagTraceSetCurationContractServiceTest,AgentMemoryRagEvalSuiteBindingContractServiceTest,AgentEvalTraceSetCatalogServiceTest,AgentEvalSuiteCatalogServiceTest,AgentEvalWorkbenchOverviewServiceTest,AgentEvalWorkbenchGateBundleSummaryServiceTest,AgentMemoryRagReadinessServiceTest,AgentPhase1ExecutionRoadmapServiceTest,AgentVueReadinessControlPlaneServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest\" test",
+                         "mvn -q \"-DskipTests\" validate"
+                     ],
+    "files":  [
+                  {
+                      "path":  "CHANGELOG.md",
+                      "sha256":  "F43F98FBD9B8A86319C957665CBD2D5E3C7D35FD6F95C67215A710D8440CA784",
+                      "length":  366830,
+                      "lastWriteTime":  "2026-06-09T21:43:31.9148259+08:00"
+                  },
+                  {
+                      "path":  "docs/M5_72_MEMORY_RAG_TRACE_SET_CURATION_WORKBENCH_20260609.md",
+                      "sha256":  "8103A687CFE20CA825E708AB9A8AD390E8511961B2368CD9E37DB69F1C9EE591",
+                      "length":  6046,
+                      "lastWriteTime":  "2026-06-09T21:43:13.3552534+08:00"
+                  },
+                  {
+                      "path":  "docs/PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "F72FFED289012ECACA71B50FCA25C06B3A6D7868D5425401F73C937F557DBB4B",
+                      "length":  414152,
+                      "lastWriteTime":  "2026-06-09T21:44:25.7720289+08:00"
+                  },
+                  {
+                      "path":  "docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "D26871DDE654D0E0DC0F58D89227840016F77AF2DBBDB04D86FF285BDDD7BDE3",
+                      "length":  166913,
+                      "lastWriteTime":  "2026-06-09T21:45:31.4922952+08:00"
+                  },
+                  {
+                      "path":  "docs/tech-stack/BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "8F0B3E956383A54DB4F0EFB46EDC19E771817FE7CEC35EBCE8BEC619927B851A",
+                      "length":  92203,
+                      "lastWriteTime":  "2026-06-09T21:46:38.0422818+08:00"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentMemoryRagTraceSetCurationWorkbenchOverviewResponse.java",
+                      "sha256":  "E69EACDFE21F7331CFCA5E218C56A48399C7FF29C4EEF6306585C241FD3598FD",
+                      "length":  23843,
+                      "lastWriteTime":  "2026-06-09T21:40:50.9487328+08:00"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentMemoryRagTraceSetCurationWorkbenchOverviewService.java",
+                      "sha256":  "76068EBDA893855093E3FF2C837E3B6C5317E9256ED725FE60EFB2284433115B",
+                      "length":  2243,
+                      "lastWriteTime":  "2026-06-09T21:39:54.1605880+08:00"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentMemoryRagTraceSetCurationContractResponse.java",
+                      "sha256":  "139D8C97E67864A821A197279F626F1F787DBF19BB7A3B72DBDF5C7B0B5D1742",
+                      "length":  25710,
+                      "lastWriteTime":  "2026-06-09T21:35:05.5358878+08:00"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentMemoryRagReadinessResponse.java",
+                      "sha256":  "E785E418FBAEA357E3400CF9D504E35AE996656FC8B6277D08DE84929EA979A6",
+                      "length":  17265,
+                      "lastWriteTime":  "2026-06-09T21:34:57.4601025+08:00"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentPhase1ExecutionRoadmapResponse.java",
+                      "sha256":  "5D25FC9859728148EF96E82D62CC2817DECFA18D2CD886F7D67099C13BEE61FC",
+                      "length":  13462,
+                      "lastWriteTime":  "2026-06-09T21:34:43.1984362+08:00"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentVueReadinessControlPlaneResponse.java",
+                      "sha256":  "3FEE6E3D80DE56CCDD17AD3BB9AC0BC09709A9A938239719540DBD499EDA15B9",
+                      "length":  13884,
+                      "lastWriteTime":  "2026-06-09T21:34:26.1289590+08:00"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/ObservabilityController.java",
+                      "sha256":  "9339C20DB235448FE12B59B355358834ABF01BA3EFAF633C90D026B3BDB0E631",
+                      "length":  44398,
+                      "lastWriteTime":  "2026-06-09T21:34:03.2284717+08:00"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/AgentMemoryRagTraceSetCurationWorkbenchOverviewServiceTest.java",
+                      "sha256":  "E199DE82D025F5523288CB591F2E1DDC0DA4A1CC12B2ABED367331792253DBD1",
+                      "length":  14251,
+                      "lastWriteTime":  "2026-06-09T21:36:15.7690217+08:00"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/AgentMemoryRagTraceSetCurationContractServiceTest.java",
+                      "sha256":  "347A4C353A1A354C03DC74D8D70CEF9510C97F684E1F3B7B1FD2ABF02896E374",
+                      "length":  18312,
+                      "lastWriteTime":  "2026-06-09T21:39:14.3333770+08:00"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/AgentMemoryRagReadinessServiceTest.java",
+                      "sha256":  "75FC55C24732552A59D6E878EBAB52545C5680A36AE820A2E3289A6F1FD224A1",
+                      "length":  8496,
+                      "lastWriteTime":  "2026-06-09T21:39:05.2222378+08:00"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/AgentPhase1ExecutionRoadmapServiceTest.java",
+                      "sha256":  "4710D543648E23A968967E9A91C3DFD28E4379E54204706867E23831F3227174",
+                      "length":  8135,
+                      "lastWriteTime":  "2026-06-09T21:38:50.8401744+08:00"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/AgentVueReadinessControlPlaneServiceTest.java",
+                      "sha256":  "9564B97037B94223ADBC60E582F8402E20D3AC6F85F4AE75DC53B7FE6551458E",
+                      "length":  7852,
+                      "lastWriteTime":  "2026-06-09T21:38:37.5804694+08:00"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/ObservabilityControllerTest.java",
+                      "sha256":  "9342BD0513651F8532BFA4F61C4B1BDE0C22F1D0A531A85EE7EEC2617156171A",
+                      "length":  176985,
+                      "lastWriteTime":  "2026-06-09T21:37:52.0900650+08:00"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/ObservabilityControllerSecurityContractTest.java",
+                      "sha256":  "0E583B47A1D65A0478FAE871613A504124E7B627B347DD8DC4A28DBCF3F8B364",
+                      "length":  11913,
+                      "lastWriteTime":  "2026-06-09T21:39:24.8364781+08:00"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/auth/AgentSecurityConfigWebMvcTest.java",
+                      "sha256":  "6ED04C8A9D633778CAE01D8F6E57B1EA6AA1F1DD9FFCC77B9A75EEC1F2A57EE2",
+                      "length":  41394,
+                      "lastWriteTime":  "2026-06-09T21:38:21.3644507+08:00"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/CHANGELOG.md",
+                      "sha256":  "F43F98FBD9B8A86319C957665CBD2D5E3C7D35FD6F95C67215A710D8440CA784",
+                      "length":  366830,
+                      "lastWriteTime":  "2026-06-09T21:43:31.9148259+08:00"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_M5_72_MEMORY_RAG_TRACE_SET_CURATION_WORKBENCH_20260609.md",
+                      "sha256":  "8103A687CFE20CA825E708AB9A8AD390E8511961B2368CD9E37DB69F1C9EE591",
+                      "length":  6046,
+                      "lastWriteTime":  "2026-06-09T21:43:13.3552534+08:00"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "F72FFED289012ECACA71B50FCA25C06B3A6D7868D5425401F73C937F557DBB4B",
+                      "length":  414152,
+                      "lastWriteTime":  "2026-06-09T21:44:25.7720289+08:00"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "D26871DDE654D0E0DC0F58D89227840016F77AF2DBBDB04D86FF285BDDD7BDE3",
+                      "length":  166913,
+                      "lastWriteTime":  "2026-06-09T21:45:31.4922952+08:00"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "8F0B3E956383A54DB4F0EFB46EDC19E771817FE7CEC35EBCE8BEC619927B851A",
+                      "length":  92203,
+                      "lastWriteTime":  "2026-06-09T21:46:38.0422818+08:00"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/RECOVERY_STATUS.md",
+                      "sha256":  "D2AF238E4E0A9EFB5C42E78D19FFCB9B91F57FD94D9C9F67CA829FA75D32AF5A",
+                      "length":  71206,
+                      "lastWriteTime":  "2026-06-09T21:49:09.8728754+08:00"
+                  }
+              ]
+}

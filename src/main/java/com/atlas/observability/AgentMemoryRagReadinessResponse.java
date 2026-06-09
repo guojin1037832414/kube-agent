@@ -161,6 +161,8 @@ public record AgentMemoryRagReadinessResponse(
         evidence.put("memoryRagEvalSuiteExists", true);
         evidence.put("memoryRagTraceSetCurationContractDefined", true);
         evidence.put("memoryRagTraceSetCurationContractBound", false);
+        evidence.put("memoryRagTraceSetCurationWorkbenchDefined", true);
+        evidence.put("memoryRagTraceSetCurationWorkbenchBound", false);
         evidence.put("memoryRagReviewedTraceEvidenceCurated", false);
         evidence.put("citationFidelityGateExists", false);
         evidence.put("privacyLeakageGateExists", false);
@@ -198,6 +200,7 @@ public record AgentMemoryRagReadinessResponse(
             "define-memory-rag-eval-suite-binding-contract",
             "define-memory-rag-release-gate-suite-check-codes",
             "define-memory-rag-trace-set-curation-contract",
+            "define-memory-rag-trace-set-curation-workbench",
             "bind-durable-memory-runtime-after-lifecycle-and-source-digest-contract",
             "bind-tenant-isolated-vector-store-through-reviewed-retrieval-policy",
             "add-redacted-runbook-and-kube-manager-doc-ingestion-pipeline",
@@ -237,6 +240,8 @@ public record AgentMemoryRagReadinessResponse(
         evidence.put("memoryRagEvalSuiteCheckCodeCount", 9);
         evidence.put("memoryRagTraceSetCurationContractDefined", true);
         evidence.put("memoryRagTraceSetCurationContractBound", false);
+        evidence.put("memoryRagTraceSetCurationWorkbenchDefined", true);
+        evidence.put("memoryRagTraceSetCurationWorkbenchBound", false);
         evidence.put("memoryRagReviewedTraceEvidenceCurated", false);
         evidence.put("vueWorkbenchBound", false);
         return Map.copyOf(evidence);
@@ -252,6 +257,8 @@ public record AgentMemoryRagReadinessResponse(
         endpoints.put("memoryRagEvalSuiteBindingContract", "/api/agent/observability/memory-rag/eval-suite-binding-contract");
         endpoints.put("memoryRagTraceSetCurationContract",
             "/api/agent/observability/memory-rag/trace-set-curation-contract");
+        endpoints.put("memoryRagTraceSetCurationWorkbenchOverview",
+            AgentMemoryRagTraceSetCurationWorkbenchOverviewResponse.OVERVIEW_ENDPOINT);
         endpoints.put("memorySummaries", "/api/agent/memory/summaries");
         endpoints.put("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview");
         endpoints.put("evalWorkbenchCapabilities", "/api/agent/observability/eval/workbench/capabilities");
@@ -270,6 +277,7 @@ public record AgentMemoryRagReadinessResponse(
         protocol.put("requiresMemoryRagEvalGateContract", true);
         protocol.put("requiresMemoryRagEvalSuiteBindingContract", true);
         protocol.put("requiresMemoryRagTraceSetCurationContract", true);
+        protocol.put("requiresMemoryRagTraceSetCurationWorkbench", true);
         protocol.put("requiresRedactedIngestion", true);
         protocol.put("requiresEvalGate", true);
         protocol.put("requiresFrontendGovernance", true);
@@ -283,7 +291,8 @@ public record AgentMemoryRagReadinessResponse(
             "Memory/RAG eval suite binding contract",
             "deterministic Memory/RAG eval suite",
             "memory-rag-release-gate suite catalog entry",
-            "Memory/RAG trace-set curation contract"
+            "Memory/RAG trace-set curation contract",
+            "Memory/RAG trace-set curation Vue workbench"
         ));
         protocol.put("compatibilityMatrixCandidates", List.of(
             "GraphRAG",

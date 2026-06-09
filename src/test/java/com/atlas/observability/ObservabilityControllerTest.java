@@ -119,6 +119,12 @@ class ObservabilityControllerTest {
         );
     private final AgentMemoryRagTraceSetCurationContractService memoryRagTraceSetCurationContractService =
         new AgentMemoryRagTraceSetCurationContractService(evalTraceSetCatalogService, evalSuiteCatalogService);
+    private final AgentMemoryRagTraceSetCurationWorkbenchOverviewService memoryRagTraceSetCurationWorkbenchOverviewService =
+        new AgentMemoryRagTraceSetCurationWorkbenchOverviewService(
+            memoryRagTraceSetCurationContractService,
+            memoryRagEvalSuiteBindingContractService,
+            memoryRagReadinessService
+        );
     private final AgentTopTierReadinessOverviewService topTierReadinessOverviewService =
         new AgentTopTierReadinessOverviewService(
             kubeManagerHttpOutletGovernanceWorkbenchOverviewService,
@@ -151,6 +157,7 @@ class ObservabilityControllerTest {
         memoryRagEvalGateContractService,
         memoryRagEvalSuiteBindingContractService,
         memoryRagTraceSetCurationContractService,
+        memoryRagTraceSetCurationWorkbenchOverviewService,
         auditRecorder,
         auditRecorder,
         replayTimelineService,
@@ -1021,7 +1028,9 @@ class ObservabilityControllerTest {
             .containsEntry("advancedTechnologyAdoptionContract", "/api/agent/observability/top-tier/advanced-technology-adoption-contract")
             .containsEntry("memoryRagEvalGateContract", "/api/agent/observability/memory-rag/eval-gate-contract")
             .containsEntry("memoryRagTraceSetCurationContract",
-                "/api/agent/observability/memory-rag/trace-set-curation-contract");
+                "/api/agent/observability/memory-rag/trace-set-curation-contract")
+            .containsEntry("memoryRagTraceSetCurationWorkbenchOverview",
+                "/api/agent/observability/memory-rag/workbench/trace-set-curation/overview");
         assertThat(roadmap.safety())
             .containsEntry("adminOnly", true)
             .containsEntry("readOnly", true)
@@ -1080,14 +1089,18 @@ class ObservabilityControllerTest {
                 "phase1-execution-roadmap",
                 "kube-manager-governance",
                 "memory-rag-readiness",
+                "memory-rag-trace-set-curation-workbench",
                 "eval-workbench",
                 "mcp-governance"
             );
         assertThat(controlPlane.forbiddenUiActions())
-            .contains("enable-kube-manager-write-retry", "run-mcp-tools-call", "run-retrieval-against-prompt");
+            .contains("enable-kube-manager-write-retry", "run-mcp-tools-call", "run-retrieval-against-prompt",
+                "run-memory-rag-trace-set-curation-workbench-action");
         assertThat(controlPlane.endpointMap())
             .containsEntry("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane")
             .containsEntry("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap")
+            .containsEntry("memoryRagTraceSetCurationWorkbenchOverview",
+                "/api/agent/observability/memory-rag/workbench/trace-set-curation/overview")
             .containsEntry("mcpManifest", "/api/agent/mcp/manifest");
         assertThat(controlPlane.safety())
             .containsEntry("adminOnly", true)
@@ -1577,6 +1590,8 @@ class ObservabilityControllerTest {
         assertThat(contract.endpointMap())
             .containsEntry("memoryRagTraceSetCurationContract",
                 "/api/agent/observability/memory-rag/trace-set-curation-contract")
+            .containsEntry("memoryRagTraceSetCurationWorkbenchOverview",
+                "/api/agent/observability/memory-rag/workbench/trace-set-curation/overview")
             .containsEntry("memoryRagEvalSuiteBindingContract",
                 "/api/agent/observability/memory-rag/eval-suite-binding-contract")
             .containsEntry("traceSetCatalog", "/api/agent/observability/eval/trace-sets")
@@ -1610,6 +1625,131 @@ class ObservabilityControllerTest {
             .containsEntry("containsToken", false);
         assertThat(contract.toString())
             .contains("memory-rag-trace-set-curation-contract", "memory-rag-citation-fidelity")
+            .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret");
+    }
+
+    @Test
+    void memoryRagTraceSetCurationWorkbenchOverview_shouldRequireAdminAndReturnVueReadModel() {
+        ResponseEntity<ApiResponse<AgentMemoryRagTraceSetCurationWorkbenchOverviewResponse>> anonymous =
+            controller.memoryRagTraceSetCurationWorkbenchOverview();
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentMemoryRagTraceSetCurationWorkbenchOverviewResponse>> user =
+            controller.memoryRagTraceSetCurationWorkbenchOverview();
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        userPermissionContext.unbind();
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentMemoryRagTraceSetCurationWorkbenchOverviewResponse>> admin =
+            controller.memoryRagTraceSetCurationWorkbenchOverview();
+
+        assertThat(admin.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(admin.getBody()).isNotNull();
+        AgentMemoryRagTraceSetCurationWorkbenchOverviewResponse overview = admin.getBody().getData();
+        assertThat(overview.schemaVersion())
+            .isEqualTo("agent-memory-rag-trace-set-curation-workbench-overview.v1");
+        assertThat(overview.workbenchStatus()).isEqualTo("WORKBENCH_READY_TO_RENDER_REVIEWED_EVIDENCE_GAPS");
+        assertThat(overview.phase1TopTierGoalPreserved()).isTrue();
+        assertThat(overview.phase2NimHpcSlurmBcmPaused()).isTrue();
+        assertThat(overview.sourceReadModelsEmbedded()).isTrue();
+        assertThat(overview.runtimeControlAllowed()).isFalse();
+        assertThat(overview.curationCardCount()).isEqualTo(3);
+        assertThat(overview.blockingCardCount()).isEqualTo(3);
+        assertThat(overview.curationCards()).extracting(card -> card.get("id"))
+            .containsExactly(
+                "memory-rag-citation-fidelity",
+                "memory-rag-privacy-tenant",
+                "memory-rag-lifecycle-policy"
+            );
+        assertThat(overview.curationCards()).allSatisfy(card -> {
+            assertThat(card)
+                .containsEntry("severity", "BLOCKING")
+                .containsEntry("traceIdsVisibleInWorkbench", false)
+                .containsEntry("policyLatchDeclaredClosed", true)
+                .containsEntry("runtimeControlAllowed", false)
+                .containsEntry("runtimeCatalogMutationAllowed", false)
+                .containsEntry("toolExecution", false)
+                .containsEntry("kubeManagerCalls", false);
+            @SuppressWarnings("unchecked")
+            java.util.List<java.util.Map<String, Object>> actions =
+                (java.util.List<java.util.Map<String, Object>>) card.get("disabledRuntimeActions");
+            assertThat(actions).allSatisfy(action -> assertThat(action)
+                .containsEntry("enabledNow", false)
+                .containsEntry("buttonVisibleNow", false));
+        });
+        assertThat(overview.suiteLatchCard())
+            .containsEntry("status", "RUNTIME_LATCH_CLOSED")
+            .containsEntry("runtimeExecutionAllowedNow", false)
+            .containsEntry("runtimeControlAllowed", false);
+        assertThat(overview.endpointMap())
+            .containsEntry("memoryRagTraceSetCurationWorkbenchOverview",
+                "/api/agent/observability/memory-rag/workbench/trace-set-curation/overview")
+            .containsEntry("memoryRagTraceSetCurationContract",
+                "/api/agent/observability/memory-rag/trace-set-curation-contract")
+            .containsEntry("memoryRagReadiness", "/api/agent/observability/memory-rag/readiness");
+        assertThat(overview.workbenchPolicy())
+            .containsEntry("adminOnly", true)
+            .containsEntry("readOnly", true)
+            .containsEntry("overviewOnly", true)
+            .containsEntry("vueWorkbenchOnly", true)
+            .containsEntry("traceIdsAcceptedFromCaller", false)
+            .containsEntry("traceIdsVisibleInWorkbench", false)
+            .containsEntry("candidateDiscoveryAllowedNow", false)
+            .containsEntry("curationReviewAllowedNow", false)
+            .containsEntry("traceSetGateAllowedNow", false)
+            .containsEntry("gateBundleButtonEnabledNow", false)
+            .containsEntry("catalogMutationAllowed", false)
+            .containsEntry("runtimeCatalogWrite", false)
+            .containsEntry("runtimeControlAllowed", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("safeToolExecutorInvocation", false)
+            .containsEntry("kubeManagerCalls", false)
+            .containsEntry("mcpToolCall", false)
+            .containsEntry("llmUsed", false)
+            .containsEntry("externalCalls", false)
+            .containsEntry("phase2NimHpcSlurmBcmTouched", false);
+        assertThat(overview.safety())
+            .containsEntry("adminOnly", true)
+            .containsEntry("readOnly", true)
+            .containsEntry("evalRuntimeExecuted", false)
+            .containsEntry("traceSetGateInvoked", false)
+            .containsEntry("curationReviewInvoked", false)
+            .containsEntry("candidateDiscoveryInvoked", false)
+            .containsEntry("catalogMutationAllowed", false)
+            .containsEntry("runtimeCatalogWrite", false)
+            .containsEntry("retrievalExecuted", false)
+            .containsEntry("memoryWrite", false)
+            .containsEntry("auditWrite", false)
+            .containsEntry("vectorStoreCalls", false)
+            .containsEntry("embeddingModelCalls", false)
+            .containsEntry("rerankerCalls", false)
+            .containsEntry("llmUsed", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("safeToolExecutorInvocation", false)
+            .containsEntry("mcpToolCall", false)
+            .containsEntry("kubeManagerCalls", false)
+            .containsEntry("phase2NimHpcSlurmBcmTouched", false);
+        assertThat(overview.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("traceIdsVisibleInWorkbench", false)
+            .containsEntry("containsRawDocument", false)
+            .containsEntry("containsRawPrompt", false)
+            .containsEntry("containsRawRetrievedChunk", false)
+            .containsEntry("containsToken", false);
+        assertThat(overview.curationContract().schemaVersion())
+            .isEqualTo("agent-memory-rag-trace-set-curation-contract.v1");
+        assertThat(overview.suiteBindingContract().schemaVersion())
+            .isEqualTo("agent-memory-rag-eval-suite-binding-contract.v1");
+        assertThat(overview.memoryRagReadiness().schemaVersion()).isEqualTo("agent-memory-rag-readiness.v1");
+        assertThat(overview.toString())
+            .contains("trace-set-curation-workbench", "memory-rag-citation-fidelity")
             .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret");
     }
 

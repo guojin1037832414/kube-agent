@@ -2,6 +2,59 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-09 M5.72 Memory/RAG Trace-Set Curation Workbench
+
+M5.72 turns the M5.71 curation contract into a Vue-ready workbench read model. It answers: can `vue-kube-manager` render Memory/RAG trace-set curation cards, suite latch state, missing evidence, and disabled runtime actions without owning governance logic or opening runtime authority?
+
+```text
+M5.71 curation contract
+        |
+        +-- contractStatus
+        +-- suiteRuntimeLatch
+        +-- traceSetRows
+        +-- blockedReasons / missingEvidence
+        |
+        v
+M5.72 workbench overview
+        |
+        +-- curationCards
+        +-- suiteLatchCard
+        +-- disabledRuntimeActions
+        +-- renderHints
+        +-- workbenchPolicy / safety / privacy
+        |
+        v
+vue-kube-manager renders governance, not runtime controls
+        |
+        v
+future human/Git reviewed redacted trace IDs
+```
+
+Endpoint:
+
+```text
+GET /api/agent/observability/memory-rag/workbench/trace-set-curation/overview
+```
+
+Current state:
+- `schemaVersion=agent-memory-rag-trace-set-curation-workbench-overview.v1`
+- `workbenchStatus=WORKBENCH_READY_TO_RENDER_REVIEWED_EVIDENCE_GAPS`
+- `curationCardCount=3`
+- `blockingCardCount=3`
+- `reviewedTraceSetCount=0`
+- `runtimeControlAllowed=false`
+
+Key design:
+- The service only composes `AgentMemoryRagTraceSetCurationContractService.contract()`, `AgentMemoryRagEvalSuiteBindingContractService.contract()`, and `AgentMemoryRagReadinessService.readiness()`.
+- It does not call `gateBundle`, `gate`, `run`, `curationReview`, candidate discovery, promotion workflow, raw audit query, replay, retrieval, vector store, embedding, reranker, LLM, MCP tools/call, kube-manager, memory write, or audit write.
+- Vue receives explicit disabled actions instead of deriving button state locally.
+- `AgentVueReadinessControlPlaneResponse`, `AgentPhase1ExecutionRoadmapResponse`, and `AgentMemoryRagReadinessResponse` now all point to the workbench endpoint.
+- `AgentMemoryRagTraceSetCurationContractResponse.endpointMap` also points back to the workbench endpoint.
+
+Learning point: 顶级 Agent 的前端工作台应该渲染“后端已经审计过的治理事实”，而不是自己推断是否可以运行某个动作。M5.72 把 UI 需要的卡片、状态、禁用动作、下一步、隐私证明和安全证明都放进后端契约，保证 Vue 页面漂亮可用，同时不会变成绕过 eval / audit / Git review 的运行时入口。
+
+Technology point: this is the practical way to introduce advanced Agent technology. Spring AI RAG, MCP runtime, OpenTelemetry GenAI, OpenAI Agents SDK-style tracing/guardrails/handoffs, A2A provenance, GraphRAG, rerankers, and vector stores remain in Phase 1 scope, but they first appear as contracts, evidence lanes, read models, eval gates, and compatibility matrices. Runtime power comes later, after deterministic tests and reviewed traces.
+
 ## 2026-06-09 M5.71 Memory/RAG Trace-Set Curation Contract
 
 M5.71 adds the read-only contract that sits between "Memory/RAG trace-set rows exist" and "reviewed trace ids can be curated." It answers: can the backend expose enough state for Vue and Git review to see every trace-set gap, without accidentally running evals or opening retrieval?

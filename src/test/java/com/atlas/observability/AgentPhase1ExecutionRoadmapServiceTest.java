@@ -67,6 +67,7 @@ class AgentPhase1ExecutionRoadmapServiceTest {
                 "vue-readiness-control-plane",
                 "kube-manager-governance",
                 "memory-rag-readiness",
+                "memory-rag-trace-set-curation-workbench",
                 "eval-workbench",
                 "mcp-governance"
             );
@@ -88,9 +89,11 @@ class AgentPhase1ExecutionRoadmapServiceTest {
             .containsEntry("memoryRagEvalGateContract", "/api/agent/observability/memory-rag/eval-gate-contract")
             .containsEntry("memoryRagEvalSuiteBindingContract", "/api/agent/observability/memory-rag/eval-suite-binding-contract")
             .containsEntry("memoryRagTraceSetCurationContract",
-                "/api/agent/observability/memory-rag/trace-set-curation-contract");
+                "/api/agent/observability/memory-rag/trace-set-curation-contract")
+            .containsEntry("memoryRagTraceSetCurationWorkbenchOverview",
+                "/api/agent/observability/memory-rag/workbench/trace-set-curation/overview");
         assertThat(roadmap.executionSteps().get(3).get("requiredEvidence").toString())
-            .contains("memory-rag-trace-set-curation-contract");
+            .contains("memory-rag-trace-set-curation-contract", "memory-rag-trace-set-curation-workbench");
         assertThat(roadmap.executionSteps().get(1))
             .containsEntry("status", "BACKEND_CONTRACT_READY");
         assertThat(roadmap.executionSteps().get(2))
@@ -124,7 +127,8 @@ class AgentPhase1ExecutionRoadmapServiceTest {
             .containsEntry("containsToken", false)
             .containsEntry("containsPassword", false);
         assertThat(roadmap.toString())
-            .contains("vue-readiness-control-plane", "memory-rag-eval-suite-binding", "phase1-roadmap")
+            .contains("vue-readiness-control-plane", "memory-rag-eval-suite-binding",
+                "memory-rag-trace-set-curation-workbench", "phase1-roadmap")
             .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret");
     }
 

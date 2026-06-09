@@ -132,6 +132,8 @@ class AgentMemoryRagTraceSetCurationContractServiceTest {
         assertThat(contract.endpointMap())
             .containsEntry("memoryRagTraceSetCurationContract",
                 "/api/agent/observability/memory-rag/trace-set-curation-contract")
+            .containsEntry("memoryRagTraceSetCurationWorkbenchOverview",
+                "/api/agent/observability/memory-rag/workbench/trace-set-curation/overview")
             .containsEntry("traceSetCatalog", "/api/agent/observability/eval/trace-sets")
             .containsKey("traceSetGateBundle");
         @SuppressWarnings("unchecked")

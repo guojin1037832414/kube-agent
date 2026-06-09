@@ -381,6 +381,8 @@ public record AgentMemoryRagTraceSetCurationContractResponse(
         Map<String, Object> endpoints = new LinkedHashMap<>();
         endpoints.put("memoryRagTraceSetCurationContract",
             "/api/agent/observability/memory-rag/trace-set-curation-contract");
+        endpoints.put("memoryRagTraceSetCurationWorkbenchOverview",
+            AgentMemoryRagTraceSetCurationWorkbenchOverviewResponse.OVERVIEW_ENDPOINT);
         endpoints.put("memoryRagEvalSuiteBindingContract",
             "/api/agent/observability/memory-rag/eval-suite-binding-contract");
         endpoints.put("memoryRagEvalGateContract", "/api/agent/observability/memory-rag/eval-gate-contract");

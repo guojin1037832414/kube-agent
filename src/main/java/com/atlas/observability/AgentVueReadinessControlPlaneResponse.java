@@ -78,6 +78,10 @@ public record AgentVueReadinessControlPlaneResponse(
                 "Render Memory/RAG readiness, citation, source digest, lifecycle, eval-gate, and eval-suite binding blockers.",
                 "/api/agent/observability/memory-rag/readiness",
                 List.of("readinessCards", "requiredEvidence", "endpointMap", "safety")),
+            dashboard("memory-rag-trace-set-curation-workbench", "READY_TO_BIND",
+                "Render Memory/RAG trace-set curation cards, suite latch, missing evidence, and disabled runtime actions.",
+                AgentMemoryRagTraceSetCurationWorkbenchOverviewResponse.OVERVIEW_ENDPOINT,
+                List.of("curationCards", "suiteLatchCard", "workbenchPolicy", "nextActions", "endpointMap")),
             dashboard("eval-workbench", "READY_TO_BIND",
                 "Render eval workbench overview, reviewed evidence, release-blocking gate contract, gate bundle state, and promotion entrypoints.",
                 "/api/agent/observability/eval/workbench/overview",
@@ -96,6 +100,8 @@ public record AgentVueReadinessControlPlaneResponse(
             apiBinding("phase1-roadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap", "GET", true),
             apiBinding("kube-manager-governance", "/api/agent/observability/kube-manager/http-outlet/governance-workbench/overview", "GET", true),
             apiBinding("memory-rag-readiness", "/api/agent/observability/memory-rag/readiness", "GET", true),
+            apiBinding("memory-rag-trace-set-curation-workbench",
+                AgentMemoryRagTraceSetCurationWorkbenchOverviewResponse.OVERVIEW_ENDPOINT, "GET", true),
             apiBinding("memory-rag-eval-gate", "/api/agent/observability/memory-rag/eval-gate-contract", "GET", true),
             apiBinding("memory-rag-eval-suite-binding", "/api/agent/observability/memory-rag/eval-suite-binding-contract", "GET", true),
             apiBinding("eval-workbench-overview", "/api/agent/observability/eval/workbench/overview", "GET", true),
@@ -126,6 +132,7 @@ public record AgentVueReadinessControlPlaneResponse(
             "run-mcp-tools-call",
             "run-retrieval-against-prompt",
             "mutate-eval-trace-set-catalog",
+            "run-memory-rag-trace-set-curation-workbench-action",
             "enable-ci-blocking-from-ui",
             "issue-durable-receipt",
             "invoke-hitl-from-readiness-page",
@@ -142,6 +149,7 @@ public record AgentVueReadinessControlPlaneResponse(
             "bind-phase1-execution-roadmap-timeline",
             "bind-kube-manager-governance-cards",
             "bind-memory-rag-readiness-and-contract-links",
+            "bind-memory-rag-trace-set-curation-workbench",
             "bind-eval-workbench-summary-and-gate-bundle",
             "bind-mcp-governance-manifest-view",
             "keep-runtime-control-buttons-absent"
@@ -156,6 +164,8 @@ public record AgentVueReadinessControlPlaneResponse(
         endpoints.put("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap");
         endpoints.put("kubeManagerGovernanceOverview", "/api/agent/observability/kube-manager/http-outlet/governance-workbench/overview");
         endpoints.put("memoryRagReadiness", "/api/agent/observability/memory-rag/readiness");
+        endpoints.put("memoryRagTraceSetCurationWorkbenchOverview",
+            AgentMemoryRagTraceSetCurationWorkbenchOverviewResponse.OVERVIEW_ENDPOINT);
         endpoints.put("memoryRagEvalGateContract", "/api/agent/observability/memory-rag/eval-gate-contract");
         endpoints.put("memoryRagEvalSuiteBindingContract", "/api/agent/observability/memory-rag/eval-suite-binding-contract");
         endpoints.put("evalWorkbenchOverview", "/api/agent/observability/eval/workbench/overview");
