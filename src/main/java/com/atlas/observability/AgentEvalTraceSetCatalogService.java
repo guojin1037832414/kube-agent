@@ -51,6 +51,14 @@ public class AgentEvalTraceSetCatalogService {
             .flatMap(definition -> gate(definition, request));
     }
 
+    public AgentEvalTraceSetGateBundleArtifact gateBundle(AgentEvalSuiteRequest request) {
+        List<AgentEvalTraceSetGateArtifact> gates = definitions.stream()
+            .map(definition -> gate(definition, request)
+                .orElseGet(() -> AgentEvalTraceSetGateArtifact.from(definition, null, request, CATALOG_SOURCE)))
+            .toList();
+        return AgentEvalTraceSetGateBundleArtifact.of(CATALOG_SOURCE, gates);
+    }
+
     private Optional<AgentEvalTraceSetGateArtifact> gate(AgentEvalTraceSetDefinition definition,
                                                         AgentEvalSuiteRequest request) {
         AgentEvalSuiteRequest suiteRequest = new AgentEvalSuiteRequest(

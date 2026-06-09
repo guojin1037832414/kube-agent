@@ -40,4 +40,4 @@ jobs:
             target/site/jacoco/
             target/spotbugsXml.xml
             target/bom.*
-
+            target/agent-eval/

@@ -10,7 +10,34 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.37-1
+## Latest Phase 1 Core Memory - M5.38-1
+
+M5.38-1 turns the versioned trace-set catalog into a CI-publishable gate bundle artifact.
+
+Delivered:
+
+- Added `AgentEvalTraceSetGateBundleArtifact`.
+- Added `AgentEvalTraceSetCatalogService#gateBundle(...)`.
+- Added admin-only `POST /api/agent/observability/eval/trace-sets/gate-bundle`.
+- Added `AgentEvalTraceSetGateBundleArtifactTest`, which writes `target/agent-eval/trace-set-gate-bundle.json`.
+- Updated `.github/workflows/backend-quality.yml` so backend quality artifacts include `target/agent-eval/`.
+- Added CI workflow source-contract coverage to prevent losing the Agent eval artifact upload path.
+
+Security boundary:
+
+- The gate bundle endpoint is admin-only at URL and method levels.
+- The generated bundle is deterministic, redacted-only, non-executing, `llmUsed=false`, `externalCalls=false`, `toolExecution=false`, and `kubeManagerCalls=false`.
+- The bundle intentionally marks `ciBlockingEnabled=false` until real curated trace IDs are populated. This publishes evidence now without pretending empty trace sets are release-ready.
+- No LLM, Tool execution, kube-manager call, network call, durable write, or raw audit export is added.
+- NIM / HPC / Slurm / BCM remain Phase 2 paused scope.
+
+Learning point: top-tier Agent CI should produce evidence artifacts, not only green/red build status. M5.38 makes the eval trace-set gate visible in CI artifacts while preserving fail-closed semantics and avoiding false release blocking before real curated traces exist.
+
+Latest verified command:
+
+- `mvn -q "-Dtest=AgentEvalTraceSetCatalogServiceTest,AgentEvalTraceSetGateBundleArtifactTest,AgentEvalTraceSetGateBundleCiWorkflowContractTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+## Previous Phase 1 Core Memory - M5.37-1
 
 M5.37-1 adds the first versioned golden/red-team trace set catalog for deterministic Agent eval gates.
 

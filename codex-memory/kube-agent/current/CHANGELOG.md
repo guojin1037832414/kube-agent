@@ -6,6 +6,24 @@
 
 ---
 
+## [M5.38-1] - Eval trace-set CI gate bundle artifact
+
+**Delivery**: Added a compact whole-catalog trace-set gate bundle artifact for CI and release workflow evidence.
+**Changes**
+- Added `AgentEvalTraceSetGateBundleArtifact`.
+- Added `AgentEvalTraceSetCatalogService#gateBundle(...)`.
+- Added admin-only `POST /api/agent/observability/eval/trace-sets/gate-bundle`.
+- Added `AgentEvalTraceSetGateBundleArtifactTest`, which writes `target/agent-eval/trace-set-gate-bundle.json` during tests.
+- Updated `.github/workflows/backend-quality.yml` to upload `target/agent-eval/` with backend quality artifacts.
+- Added source-level CI workflow contract coverage for the uploaded Agent eval artifact path.
+**Verification**
+- `mvn -q "-Dtest=AgentEvalTraceSetCatalogServiceTest,AgentEvalTraceSetGateBundleArtifactTest,AgentEvalTraceSetGateBundleCiWorkflowContractTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed.
+**Security**
+- The bundle endpoint is protected by observability admin URL rules plus method-level `@PreAuthorize`.
+- The bundle remains deterministic, redacted-only, non-executing, `llmUsed=false`, `externalCalls=false`, `toolExecution=false`, and `kubeManagerCalls=false`.
+- `ciBlockingEnabled=false` until real curated trace IDs are populated, so CI can publish evidence without pretending empty trace sets are release-ready.
+- This slice adds no kube-manager write/create/delete/state-changing behavior and does not reopen NIM/HPC/Slurm/BCM scope.
+
 ## [M5.37-1] - Eval trace set catalog foundation
 
 **Delivery**: Added a versioned golden/red-team trace set catalog foundation for deterministic Agent eval gates.

@@ -237,6 +237,18 @@ public class ObservabilityController {
                 .body(ApiResponse.fail("Unknown Agent eval trace set: " + traceSetId)));
     }
 
+    /** Produce a compact CI/release-gate bundle for every versioned trace set. */
+    @PostMapping("/eval/trace-sets/gate-bundle")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentEvalTraceSetGateBundleArtifact>> evalTraceSetGateBundle(
+        @RequestBody(required = false) AgentEvalSuiteRequest request) {
+        ResponseEntity<ApiResponse<AgentEvalTraceSetGateBundleArtifact>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return ResponseEntity.ok(ApiResponse.ok(evalTraceSetCatalogService.gateBundle(request)));
+    }
+
     private <T> ResponseEntity<ApiResponse<T>> requireAdmin() {
         Optional<AgentPrincipal> currentUser = principalResolver.current();
         if (currentUser.isEmpty() || !currentUser.get().isAuthenticated()) {

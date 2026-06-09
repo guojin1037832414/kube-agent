@@ -757,4 +757,56 @@ class ObservabilityControllerTest {
             .doesNotContain("conv-sensitive", "user-sensitive", "org-sensitive", "secret-token-value", "/api/org-sensitive")
             .doesNotContain("reports=", "replay=");
     }
+
+    @Test
+    void evalTraceSetGateBundle_shouldRequireAdminUser() {
+        ResponseEntity<ApiResponse<AgentEvalTraceSetGateBundleArtifact>> anonymous =
+            controller.evalTraceSetGateBundle(null);
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentEvalTraceSetGateBundleArtifact>> user =
+            controller.evalTraceSetGateBundle(null);
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void evalTraceSetGateBundle_shouldReturnCompactFailClosedCiArtifact() {
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentEvalTraceSetGateBundleArtifact>> response =
+            controller.evalTraceSetGateBundle(new AgentEvalSuiteRequest(
+                java.util.List.of("trc_request_override_must_not_run"), null, null, null
+            ));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        AgentEvalTraceSetGateBundleArtifact bundle = response.getBody().getData();
+        assertThat(bundle.schemaVersion()).isEqualTo("agent-eval-trace-set-gate-bundle.v1");
+        assertThat(bundle.pass()).isFalse();
+        assertThat(bundle.releaseEligible()).isFalse();
+        assertThat(bundle.traceSetCount()).isEqualTo(4);
+        assertThat(bundle.failedTraceSetIds()).contains("phase1-core-golden", "phase1-redaction-regression");
+        assertThat(bundle.emptyTraceSetIds()).containsExactlyElementsOf(bundle.traceSetIds());
+        assertThat(bundle.bundlePolicy())
+            .containsEntry("artifactOnly", true)
+            .containsEntry("embeddedReports", false)
+            .containsEntry("embeddedReplay", false)
+            .containsEntry("ciBlockingEnabled", false);
+        assertThat(bundle.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("llmUsed", false)
+            .containsEntry("externalCalls", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("kubeManagerCalls", false);
+        assertThat(bundle.toString())
+            .doesNotContain("trc_request_override_must_not_run")
+            .doesNotContain("conv-sensitive", "user-sensitive", "org-sensitive", "secret-token-value", "/api/org-sensitive")
+            .doesNotContain("reports=", "replay=");
+    }
 }

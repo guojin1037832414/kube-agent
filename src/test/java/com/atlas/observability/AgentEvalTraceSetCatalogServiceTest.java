@@ -106,6 +106,54 @@ class AgentEvalTraceSetCatalogServiceTest {
             .doesNotContain("reports=", "replay=");
     }
 
+    @Test
+    void gateBundle_shouldProduceCompactCiArtifactForWholeCatalog() {
+        AgentEvalTraceSetCatalogService service = service(new InMemoryAgentAuditRecorder());
+
+        AgentEvalTraceSetGateBundleArtifact bundle = service.gateBundle(
+            new AgentEvalSuiteRequest(List.of("trc_request_override_must_not_run"), null, null, null)
+        );
+
+        assertThat(bundle.schemaVersion()).isEqualTo("agent-eval-trace-set-gate-bundle.v1");
+        assertThat(bundle.source()).isEqualTo("classpath:observability/eval-trace-sets.json");
+        assertThat(bundle.gateVerdict()).isEqualTo("FAIL");
+        assertThat(bundle.pass()).isFalse();
+        assertThat(bundle.releaseEligible()).isFalse();
+        assertThat(bundle.traceSetCount()).isEqualTo(4);
+        assertThat(bundle.failedTraceSets()).isEqualTo(4);
+        assertThat(bundle.emptyTraceSets()).isEqualTo(4);
+        assertThat(bundle.traceSetIds())
+            .containsExactly("phase1-core-golden", "phase1-redaction-regression", "phase1-high-risk-prewrite",
+                "phase1-red-team-safety");
+        assertThat(bundle.failedTraceSetIds()).containsExactlyElementsOf(bundle.traceSetIds());
+        assertThat(bundle.emptyTraceSetIds()).containsExactlyElementsOf(bundle.traceSetIds());
+        assertThat(bundle.traceSetGates()).hasSize(4);
+        assertThat(bundle.traceSetGates()).allSatisfy(gate -> {
+            assertThat(gate.suiteGate().schemaVersion()).isEqualTo("agent-eval-suite-gate.v1");
+            assertThat(gate.emptyInput()).isTrue();
+            assertThat(gate.traceIds()).isEmpty();
+        });
+        assertThat(bundle.bundlePolicy())
+            .containsEntry("artifactOnly", true)
+            .containsEntry("embeddedReports", false)
+            .containsEntry("embeddedReplay", false)
+            .containsEntry("ciArtifactPath", "target/agent-eval/trace-set-gate-bundle.json")
+            .containsEntry("ciBlockingEnabled", false)
+            .containsEntry("failClosedWhenEmpty", true)
+            .containsEntry("requestTraceIdOverrideAllowed", false);
+        assertThat(bundle.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("deterministic", true)
+            .containsEntry("llmUsed", false)
+            .containsEntry("externalCalls", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("kubeManagerCalls", false);
+        assertThat(bundle.toString())
+            .doesNotContain("trc_request_override_must_not_run")
+            .doesNotContain("conv-sensitive", "user-sensitive", "org-sensitive", "secret-token-value", "/api/org-sensitive")
+            .doesNotContain("reports=", "replay=");
+    }
+
     private AgentEvalTraceSetCatalogService service(InMemoryAgentAuditRecorder recorder) {
         AgentEvalReportService evalReportService = new AgentEvalReportService(new AgentReplayTimelineService(recorder));
         AgentEvalSuiteCatalogService suiteCatalogService = new AgentEvalSuiteCatalogService(evalReportService);

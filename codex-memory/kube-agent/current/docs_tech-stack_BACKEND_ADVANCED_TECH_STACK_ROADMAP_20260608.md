@@ -408,3 +408,16 @@ M5.37-1 implements the next eval roadmap item: curated golden/red-team trace set
 - The catalog/gate contracts state `redactedOnly=true`, `deterministic=true`, `llmUsed=false`, `externalCalls=false`, `toolExecution=false`, and `kubeManagerCalls=false`.
 
 Technology judgment: this completes the first typed eval chain for Phase 1: suite = quality standard, trace set = curated evidence source, gate artifact = machine-readable release decision. The next advanced steps are CI workflow wiring around trace-set gates, frontend replay/eval workbench integration, and persisted capture jobs that populate real redacted trace ids.
+
+## M5.38-1 Update - Trace-Set Gate Bundle CI Artifact
+
+M5.38-1 wires the trace-set gate catalog into backend quality evidence:
+
+- `POST /api/agent/observability/eval/trace-sets/gate-bundle` returns `AgentEvalTraceSetGateBundleArtifact`.
+- `AgentEvalTraceSetGateBundleArtifactTest` writes `target/agent-eval/trace-set-gate-bundle.json`.
+- `.github/workflows/backend-quality.yml` now uploads `target/agent-eval/` with the backend quality artifacts.
+- A source-level CI workflow contract test protects the artifact path.
+- The bundle keeps `artifactOnly=true`, `embeddedReports=false`, `embeddedReplay=false`, `redactedOnly=true`, `llmUsed=false`, `externalCalls=false`, `toolExecution=false`, and `kubeManagerCalls=false`.
+- The bundle sets `ciBlockingEnabled=false` until curated trace sets contain real persisted redacted replay captures.
+
+Technology judgment: this is the correct intermediate step before strict CI blocking. A top-tier Agent should publish eval evidence early, but it should not convert empty trace-set catalogs into misleading release decisions. The next step is to populate curated trace IDs through safe capture jobs, then flip the CI policy from evidence-only to blocking once the evidence set is real and reviewed.
