@@ -86,7 +86,11 @@ class AgentPhase1ExecutionRoadmapServiceTest {
             .containsEntry("reviewedEvalTraceEvidence", "/api/agent/observability/eval/reviewed-trace-evidence")
             .containsEntry("releaseBlockingEvalGateContract", "/api/agent/observability/eval/release-blocking-gate-contract")
             .containsEntry("memoryRagEvalGateContract", "/api/agent/observability/memory-rag/eval-gate-contract")
-            .containsEntry("memoryRagEvalSuiteBindingContract", "/api/agent/observability/memory-rag/eval-suite-binding-contract");
+            .containsEntry("memoryRagEvalSuiteBindingContract", "/api/agent/observability/memory-rag/eval-suite-binding-contract")
+            .containsEntry("memoryRagTraceSetCurationContract",
+                "/api/agent/observability/memory-rag/trace-set-curation-contract");
+        assertThat(roadmap.executionSteps().get(3).get("requiredEvidence").toString())
+            .contains("memory-rag-trace-set-curation-contract");
         assertThat(roadmap.executionSteps().get(1))
             .containsEntry("status", "BACKEND_CONTRACT_READY");
         assertThat(roadmap.executionSteps().get(2))

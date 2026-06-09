@@ -9,6 +9,52 @@
 - 供应链、CI、SBOM、质量门禁进入工程默认路径；
 - Java / Spring / Agent 框架升级以兼容性矩阵推进，不用不可构建的版本号伪装先进。
 
+## 2026-06-09 M5.71 Memory-RAG-Trace-Set-Curation-Contract Rule
+
+M5.71 adds the backend-owned curation contract:
+
+```text
+GET /api/agent/observability/memory-rag/trace-set-curation-contract
+```
+
+The advanced Agent stack now has a Vue/Git-review contract that exposes Memory/RAG trace-set gaps before reviewed trace IDs or runtime authority can be promoted:
+
+- It composes `AgentEvalTraceSetCatalogService.catalog()` and `AgentEvalSuiteCatalogService.catalog()` only.
+- It reports `TRACE_SETS_DEFINED_REVIEWED_EVIDENCE_NOT_CURATED` in the current catalog state.
+- It publishes a `suiteRuntimeLatch` for `memory-rag-release-gate`.
+- It publishes three trace-set rows for `memory-rag-citation-fidelity`, `memory-rag-privacy-tenant`, and `memory-rag-lifecycle-policy`.
+- Each row includes `rowStatus`, `policyKeysPresent`, `missingPolicyKeys`, `policyMismatches`, `policyLatchDeclaredClosed`, `blockedReasons`, and `missingEvidence`.
+- Missing policy keys now fail closed as visible blockers. This prevents a catalog edit from silently relying on backend default values.
+- The gate-bundle endpoint is exposed as a future-stage descriptor with `runtimeAllowedNow=false`, not as an enabled runtime button.
+- Phase 2 NIM / HPC / Slurm / BCM remains paused and is not reopened by this contract work.
+
+Technology judgment: the Java backend remains a strong main language for Phase 1 because the project is building a governed control plane, not just a prompt demo. Java/Spring gives typed contracts, mature security filters, deterministic tests, Actuator/Micrometer/OpenTelemetry integration, SBOM/quality gates, and maintainable enterprise deployment. The improvement path is not to replace Java; it is to let Java own the control plane while adopting the latest Agent runtimes through evidence-first adapters.
+
+Latest stack posture checked on 2026-06-09:
+
+- Current mainline: Java 17 runtime baseline, Spring Boot 3.5.x, Spring AI 1.1.x, Micrometer/OpenTelemetry bridge, deterministic eval contracts, SafeToolExecutor, durable audit/replay, MCP manifest/governance, and Vue-ready read models.
+- Near-term compatibility matrix: Java 21/25 migration, Spring Boot 4, Spring AI 2, virtual threads, structured concurrency, OpenTelemetry GenAI adapters, full MCP runtime, A2A handoff/provenance, GraphRAG, rerankers, and vector stores.
+- Adoption rule: major framework upgrades and Agent runtime authority must pass source-owned contracts, compatibility tests, security/eval gates, Vue operator visibility, and recovery checkpoints before becoming mainline.
+- Do not blind-upgrade to Spring Boot 4 or Spring AI 2 from inside a Memory/RAG contract slice. Treat those as explicit compatibility-matrix slices with rollback and benchmark evidence.
+
+Official references checked for this anchor:
+
+- Spring Boot reference: https://docs.spring.io/spring-boot/
+- Spring AI reference: https://docs.spring.io/spring-ai/reference/
+- Model Context Protocol specification: https://modelcontextprotocol.io/specification/2025-11-25
+- OpenTelemetry GenAI semantic conventions: https://opentelemetry.io/docs/specs/semconv/gen-ai/
+- OpenAI Agents SDK: https://openai.github.io/openai-agents-python/
+- A2A protocol specification: https://a2a-protocol.org/latest/specification/
+
+Next order after M5.71:
+
+- Wire Vue to render Memory/RAG trace-set curation rows and blocked reasons.
+- Curate reviewed redacted trace IDs through Git review.
+- Generate advisory Memory/RAG gate-bundle evidence only after reviewed trace IDs exist.
+- Promote CI blocking only in a separate reviewed slice.
+- Bind durable memory store and retrieval runtime only after source digest, lifecycle, tenant/privacy, eval evidence, Vue visibility, and recovery memory pass.
+- Run separate compatibility spikes for Java 21/25, Spring Boot 4, Spring AI 2, MCP runtime, A2A, GraphRAG, rerankers, and vector stores.
+
 ## 2026-06-09 M5.70 Memory-RAG-Trace-Set-Catalog Rule
 
 M5.70 advances the Memory/RAG roadmap with three Git-reviewed catalog lanes:

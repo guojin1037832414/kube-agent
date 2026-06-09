@@ -6,6 +6,28 @@
 
 ---
 
+## [M5.71-1] - Memory/RAG trace-set curation contract
+
+**Delivery**: Added an admin-only, read-only Memory/RAG trace-set curation contract for Vue/Git-review visibility before reviewed trace IDs are promoted.
+**Changes**
+- Added `GET /api/agent/observability/memory-rag/trace-set-curation-contract`.
+- Added `AgentMemoryRagTraceSetCurationContractResponse` and `AgentMemoryRagTraceSetCurationContractService`.
+- Published current Memory/RAG trace-set curation state:
+  `contractStatus=TRACE_SETS_DEFINED_REVIEWED_EVIDENCE_NOT_CURATED`,
+  `requiredTraceSetCount=3`, `definedTraceSetCount=3`, and `reviewedTraceSetCount=0`.
+- Added a suite-level runtime latch view for `memory-rag-release-gate`, keeping `suiteRuntimePolicyClosed=true` and `runtimeExecutionAllowedNow=false`.
+- Added per-row Vue-ready fields: `rowStatus`, `policyKeysPresent`, `missingPolicyKeys`, `policyMismatches`, `policyLatchDeclaredClosed`, `blockedReasons`, and `missingEvidence`.
+- Hardened policy evaluation so missing trace-set policy keys fail closed as visible blockers instead of being hidden by safe defaults.
+- Described the trace-set gate-bundle endpoint as a disabled future-stage descriptor rather than a button-ready runtime action.
+- Fixed the Memory/RAG readiness `eval-and-observability` evidence map so it no longer exceeds Java `Map.of` limits.
+- Added direct controller coverage and WebMvc security coverage for the new endpoint.
+**Verification**
+- `mvn -q "-Dtest=AgentMemoryRagTraceSetCurationContractServiceTest,AgentMemoryRagReadinessServiceTest,AgentPhase1ExecutionRoadmapServiceTest,ObservabilityControllerTest,AgentSecurityConfigWebMvcTest" test` passed during implementation.
+**Security**
+- The contract is admin-only, read-only, contract-only, summary-only, and fail-closed.
+- It only reads eval suite catalog and trace-set catalog state.
+- It does not run evals, query raw audit, mutate `observability/eval-trace-sets.json`, discover candidates, execute curation review, accept caller trace IDs, enable CI blocking, execute retrieval, bind vector stores, call embedding/reranker/LLM, mutate prompts, write memory, write audit, issue durable receipts, execute Tools, invoke `SafeToolExecutor`, invoke HITL, call kube-manager, expose MCP runtime `tools/call`, call external services, upgrade dependencies, or touch NIM / HPC / Slurm / BCM Phase 2 work.
+
 ## [M5.70-1] - Memory/RAG trace-set catalog entries
 
 **Delivery**: Added the three required Memory/RAG trace-set catalog entries while keeping Memory/RAG eval runtime and retrieval runtime closed.

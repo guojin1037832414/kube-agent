@@ -81,6 +81,9 @@ class AgentSecurityConfigWebMvcTest {
         mockMvc.perform(get("/api/agent/observability/audit/id/aud_123"))
             .andExpect(status().isForbidden());
 
+        mockMvc.perform(get("/api/agent/observability/memory-rag/trace-set-curation-contract"))
+            .andExpect(status().isForbidden());
+
         mockMvc.perform(get("/api/agent/observability/audit/trace/trc_123")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
             .andExpect(status().isForbidden());
@@ -150,6 +153,10 @@ class AgentSecurityConfigWebMvcTest {
             .andExpect(status().isForbidden());
 
         mockMvc.perform(get("/api/agent/observability/memory-rag/eval-suite-binding-contract")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
+            .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/agent/observability/memory-rag/trace-set-curation-contract")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
             .andExpect(status().isForbidden());
 
@@ -330,6 +337,10 @@ class AgentSecurityConfigWebMvcTest {
             .andExpect(status().isOk());
 
         mockMvc.perform(get("/api/agent/observability/memory-rag/eval-suite-binding-contract")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token"))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/agent/observability/memory-rag/trace-set-curation-contract")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token"))
             .andExpect(status().isOk());
 
@@ -688,6 +699,11 @@ class AgentSecurityConfigWebMvcTest {
         @GetMapping("/api/agent/observability/memory-rag/eval-suite-binding-contract")
         String observabilityMemoryRagEvalSuiteBindingContract() {
             return "memory-rag-eval-suite-binding-contract";
+        }
+
+        @GetMapping("/api/agent/observability/memory-rag/trace-set-curation-contract")
+        String observabilityMemoryRagTraceSetCurationContract() {
+            return "memory-rag-trace-set-curation-contract";
         }
 
         @GetMapping("/api/agent/observability/replay/trace/{id}")

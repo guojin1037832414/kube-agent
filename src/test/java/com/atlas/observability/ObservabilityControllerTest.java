@@ -117,6 +117,8 @@ class ObservabilityControllerTest {
             evalSuiteCatalogService,
             evalTraceSetCatalogService
         );
+    private final AgentMemoryRagTraceSetCurationContractService memoryRagTraceSetCurationContractService =
+        new AgentMemoryRagTraceSetCurationContractService(evalTraceSetCatalogService, evalSuiteCatalogService);
     private final AgentTopTierReadinessOverviewService topTierReadinessOverviewService =
         new AgentTopTierReadinessOverviewService(
             kubeManagerHttpOutletGovernanceWorkbenchOverviewService,
@@ -148,6 +150,7 @@ class ObservabilityControllerTest {
         memoryRagDurableMemoryLifecycleContractService,
         memoryRagEvalGateContractService,
         memoryRagEvalSuiteBindingContractService,
+        memoryRagTraceSetCurationContractService,
         auditRecorder,
         auditRecorder,
         replayTimelineService,
@@ -1016,7 +1019,9 @@ class ObservabilityControllerTest {
             .containsEntry("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap")
             .containsEntry("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane")
             .containsEntry("advancedTechnologyAdoptionContract", "/api/agent/observability/top-tier/advanced-technology-adoption-contract")
-            .containsEntry("memoryRagEvalGateContract", "/api/agent/observability/memory-rag/eval-gate-contract");
+            .containsEntry("memoryRagEvalGateContract", "/api/agent/observability/memory-rag/eval-gate-contract")
+            .containsEntry("memoryRagTraceSetCurationContract",
+                "/api/agent/observability/memory-rag/trace-set-curation-contract");
         assertThat(roadmap.safety())
             .containsEntry("adminOnly", true)
             .containsEntry("readOnly", true)
@@ -1494,6 +1499,118 @@ class ObservabilityControllerTest {
         assertThat(contract.toString())
             .contains("memory-rag-eval-suite-binding-contract", "MEMORY_RAG_CITATION_FIDELITY")
             .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret", "raw document");
+    }
+
+    @Test
+    void memoryRagTraceSetCurationContract_shouldRequireAdminAndReturnReviewedTraceGaps() {
+        ResponseEntity<ApiResponse<AgentMemoryRagTraceSetCurationContractResponse>> anonymous =
+            controller.memoryRagTraceSetCurationContract();
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentMemoryRagTraceSetCurationContractResponse>> user =
+            controller.memoryRagTraceSetCurationContract();
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        userPermissionContext.unbind();
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentMemoryRagTraceSetCurationContractResponse>> admin =
+            controller.memoryRagTraceSetCurationContract();
+
+        assertThat(admin.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(admin.getBody()).isNotNull();
+        AgentMemoryRagTraceSetCurationContractResponse contract = admin.getBody().getData();
+        assertThat(contract.schemaVersion()).isEqualTo("agent-memory-rag-trace-set-curation-contract.v1");
+        assertThat(contract.contractStatus()).isEqualTo("TRACE_SETS_DEFINED_REVIEWED_EVIDENCE_NOT_CURATED");
+        assertThat(contract.reviewedTraceEvidenceCurated()).isFalse();
+        assertThat(contract.allRequiredTraceSetsDefined()).isTrue();
+        assertThat(contract.allRequiredTraceSetsPolicyClosed()).isTrue();
+        assertThat(contract.suiteRuntimePolicyClosed()).isTrue();
+        assertThat(contract.evalRuntimeAllowedNow()).isFalse();
+        assertThat(contract.retrievalRuntimeAllowedNow()).isFalse();
+        assertThat(contract.ciBlockingAllowedNow()).isFalse();
+        assertThat(contract.requiredTraceSetCount()).isEqualTo(3);
+        assertThat(contract.definedTraceSetCount()).isEqualTo(3);
+        assertThat(contract.reviewedTraceSetCount()).isZero();
+        assertThat(contract.traceSetRows()).extracting(row -> row.get("traceSetId"))
+            .containsExactly(
+                "memory-rag-citation-fidelity",
+                "memory-rag-privacy-tenant",
+                "memory-rag-lifecycle-policy"
+            );
+        assertThat(contract.suiteRuntimeLatch())
+            .containsEntry("suiteId", "memory-rag-release-gate")
+            .containsEntry("definedInCatalog", true)
+            .containsEntry("policyLatchDeclaredClosed", true)
+            .containsEntry("runtimeExecutionAllowedNow", false);
+        assertThat(contract.traceSetRows()).allSatisfy(row -> assertThat(row)
+            .containsEntry("definedInCatalog", true)
+            .containsEntry("rowStatus", "REVIEWED_EVIDENCE_MISSING")
+            .containsEntry("reviewedTraceIdsPresent", false)
+            .containsEntry("traceIdsVisibleInContract", false)
+            .containsEntry("policyKeysPresent", true)
+            .containsEntry("policyLatchDeclaredClosed", true)
+            .containsEntry("catalogOnlyUntilReviewed", true)
+            .containsEntry("suiteRuntimeExecutionAllowed", false)
+            .containsEntry("retrievalRuntimeAllowed", false)
+            .containsEntry("ciBlockingAllowed", false)
+            .containsEntry("requiresRealAuditCapture", true)
+            .containsEntry("placeholderTraceIds", false)
+            .containsEntry("failClosedWhenEmpty", true)
+            .containsEntry("requestTraceIdOverrideAllowed", false)
+            .containsEntry("runtimeCatalogMutationAllowed", false));
+        assertThat(contract.traceSetRows()).allSatisfy(row ->
+            assertThat(row.get("blockedReasons").toString()).contains("reviewed-redacted-trace-ids-missing"));
+        assertThat(contract.blockedReasons()).contains(
+            "reviewed-redacted-memory-rag-trace-ids-missing",
+            "memory-rag-advisory-gate-bundle-not-generated",
+            "memory-rag-eval-runtime-not-promoted",
+            "retrieval-runtime-intentionally-closed",
+            "ci-blocking-switch-intentionally-absent"
+        );
+        assertThat(contract.endpointMap())
+            .containsEntry("memoryRagTraceSetCurationContract",
+                "/api/agent/observability/memory-rag/trace-set-curation-contract")
+            .containsEntry("memoryRagEvalSuiteBindingContract",
+                "/api/agent/observability/memory-rag/eval-suite-binding-contract")
+            .containsEntry("traceSetCatalog", "/api/agent/observability/eval/trace-sets")
+            .containsKey("traceSetGateBundle");
+        assertThat(contract.evidencePolicy())
+            .containsEntry("traceIdsAcceptedFromCaller", false)
+            .containsEntry("catalogMutationAllowed", false)
+            .containsEntry("requiresGitReview", true)
+            .containsEntry("emptyTraceIdsFailClosed", true)
+            .containsEntry("missingPolicyKeyOutcome", "fail-closed-visible-blocker");
+        assertThat(contract.safety())
+            .containsEntry("adminOnly", true)
+            .containsEntry("readOnly", true)
+            .containsEntry("contractOnly", true)
+            .containsEntry("evalRuntimeExecuted", false)
+            .containsEntry("traceSetGateInvoked", false)
+            .containsEntry("curationReviewInvoked", false)
+            .containsEntry("candidateDiscoveryInvoked", false)
+            .containsEntry("retrievalExecuted", false)
+            .containsEntry("llmUsed", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("safeToolExecutorInvocation", false)
+            .containsEntry("kubeManagerCalls", false)
+            .containsEntry("phase2NimHpcSlurmBcmTouched", false);
+        assertThat(contract.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("traceIdsVisibleInContract", false)
+            .containsEntry("containsRawDocument", false)
+            .containsEntry("containsRawPrompt", false)
+            .containsEntry("containsRawRetrievedChunk", false)
+            .containsEntry("containsToken", false);
+        assertThat(contract.toString())
+            .contains("memory-rag-trace-set-curation-contract", "memory-rag-citation-fidelity")
+            .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret");
     }
 
     @Test

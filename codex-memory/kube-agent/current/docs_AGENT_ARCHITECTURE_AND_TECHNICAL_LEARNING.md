@@ -2,6 +2,69 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-09 M5.71 Memory/RAG Trace-Set Curation Contract
+
+M5.71 adds the read-only contract that sits between "Memory/RAG trace-set rows exist" and "reviewed trace ids can be curated." It answers: can the backend expose enough state for Vue and Git review to see every trace-set gap, without accidentally running evals or opening retrieval?
+
+```text
+M5.70 trace-set catalog entries
+        |
+        +-- memory-rag-citation-fidelity
+        +-- memory-rag-privacy-tenant
+        +-- memory-rag-lifecycle-policy
+        |
+        v
+M5.71 trace-set curation contract
+        |
+        +-- suiteRuntimeLatch for memory-rag-release-gate
+        +-- per-row rowStatus
+        +-- missingPolicyKeys / policyMismatches
+        +-- missingEvidence / blockedReasons
+        |
+        v
+future reviewed redacted trace ids
+        |
+        v
+future advisory gate bundle, Vue workbench, CI/runtime promotion
+```
+
+Endpoint:
+
+```text
+GET /api/agent/observability/memory-rag/trace-set-curation-contract
+```
+
+Current state:
+- `contractStatus=TRACE_SETS_DEFINED_REVIEWED_EVIDENCE_NOT_CURATED`
+- `suiteRuntimePolicyClosed=true`
+- `allRequiredTraceSetsDefined=true`
+- `allRequiredTraceSetsPolicyClosed=true`
+- `reviewedTraceEvidenceCurated=false`
+- `requiredTraceSetCount=3`
+- `definedTraceSetCount=3`
+- `reviewedTraceSetCount=0`
+- `evalRuntimeAllowedNow=false`
+- `retrievalRuntimeAllowedNow=false`
+- `ciBlockingAllowedNow=false`
+
+Key design:
+- The service reads only `AgentEvalTraceSetCatalogService.catalog()` and `AgentEvalSuiteCatalogService.catalog()`.
+- It does not call `.gate()`, `.run()`, `.curationReview()`, candidate discovery, audit query, retrieval, vector stores, LLMs, Tools, MCP, or kube-manager.
+- The suite latch verifies that `memory-rag-release-gate` is still catalog-only and runtime-closed.
+- Each Memory/RAG trace-set row verifies required policy keys explicitly. Missing keys are blockers, not silently defaulted safe values.
+- Each row now has a Vue-ready `rowStatus`: `CATALOG_ROW_MISSING`, `POLICY_LATCH_MISCONFIGURED`, `REVIEWED_EVIDENCE_MISSING`, or `READY_FOR_ADVISORY_GATE_BUNDLE`.
+- The trace-set gate-bundle endpoint is described as a future-stage descriptor with `runtimeAllowedNow=false`, so the UI does not render it as an enabled action.
+
+Learning point: 顶级 Agent 的安全不是“代码里默认 false 就行”。真正可恢复、可审计、可教学的系统必须让缺失配置也变成可见证据。M5.71 把这个原则落到 Memory/RAG：如果 someone removes `failClosedWhenEmpty` or `suiteRuntimeExecutionAllowed`, the contract no longer pretends the row is safe. It reports missing policy keys and blocks progression.
+
+Technology point: this is how latest Agent ideas enter the Java/Spring mainline without chaos. OpenAI Agents/Evals-style tracing and guardrails, Spring AI RAG/eval/observability, MCP tools/resources/prompts, OpenTelemetry GenAI adapters, A2A provenance, GraphRAG, rerankers, and vector stores all need explicit evidence lanes before runtime authority expands. M5.71 creates the curation lane that these future capabilities will depend on.
+
+Official latest-technology anchor checked on 2026-06-09:
+- Spring Boot and Spring AI remain the Java/Spring adoption baseline, with major upgrades tracked through compatibility matrices rather than blind dependency jumps.
+- MCP `2025-11-25` remains the governed protocol reference for tools/resources/prompts.
+- OpenTelemetry GenAI semantic conventions remain an external adapter target while `atlas.agent.*` remains the stable internal telemetry contract.
+- A2A Agent Card/task/artifact concepts stay in future handoff/provenance work after local eval evidence matures.
+
 ## 2026-06-09 M5.70 Memory/RAG Trace-Set Catalog Entries
 
 M5.70 implements the next Memory/RAG evidence step after the non-runnable `memory-rag-release-gate` suite. It answers: are the required trace-set lanes now present in the catalog so reviewed redacted evidence has a stable Git-reviewed home?
