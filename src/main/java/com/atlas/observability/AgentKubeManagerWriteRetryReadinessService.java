@@ -99,8 +99,8 @@ public class AgentKubeManagerWriteRetryReadinessService {
             ),
             requirement(
                 "read-after-write-verification",
-                "BLOCKING",
-                "Every retryable write needs deterministic post-write readback or equivalent verification before success can be claimed.",
+                "PARTIAL",
+                "A generic post-write readback contract exists, but it is not yet bound to kube-manager HTTP writes.",
                 false
             ),
             requirement(
@@ -111,8 +111,8 @@ public class AgentKubeManagerWriteRetryReadinessService {
             ),
             requirement(
                 "operation-allowlist-and-rbac",
-                "BLOCKING",
-                "Only explicitly modeled operations with tenant/RBAC evidence may be eligible for controlled retry.",
+                "PARTIAL",
+                "A generic write operation allowlist/RBAC contract exists, but it is not yet bound to kube-manager HTTP writes.",
                 false
             ),
             requirement(
@@ -154,20 +154,35 @@ public class AgentKubeManagerWriteRetryReadinessService {
         evidence.put("genericKubeManagerIdempotencyBoundaryBoundToHttpOutlet", false);
         evidence.put("serverDerivedIdempotencyKeyDeriverExists", true);
         evidence.put("callerProvidedIdempotencyKeyAccepted", false);
-        evidence.put("genericWriteOperationAllowlistExists", false);
+        evidence.put("genericWriteOperationAllowlistExists", true);
+        evidence.put("genericWriteOperationAllowlistBoundToHttpOutlet", false);
+        evidence.put("genericWriteOperationAllowlistEnforcedByHttpOutlet", false);
+        evidence.put("operationRbacEvidenceContractExists", true);
+        evidence.put("operationRbacEvidenceBoundToHttpOutlet", false);
+        evidence.put("runtimeRetryEligibleWriteOperationCount", 0);
+        evidence.put("callerProvidedAllowlistEntryAccepted", false);
         evidence.put("retryPredicateBoundToWriteFailureClasses", false);
-        evidence.put("postWriteReadbackContractExists", false);
+        evidence.put("postWriteReadbackContractExists", true);
+        evidence.put("postWriteReadbackBoundToHttpOutlet", false);
+        evidence.put("postWriteReadbackExecutorExists", false);
+        evidence.put("postWriteReadbackExecutedByReadinessEndpoint", false);
+        evidence.put("postWriteReadbackAcceptsCallerClaims", false);
+        evidence.put("postWriteReadbackCanOpenReleaseSwitch", false);
         evidence.put("runtimeWriteRetryEnablementSwitchExists", false);
         evidence.put("nimHpcSlurmBcmPhase2Paused", true);
+        evidence.put("phase2NimHpcSlurmBcmWriteOperationsExcluded", true);
         return Map.copyOf(evidence);
     }
 
     private List<String> blockedReasons() {
         return List.of(
             "generic-kube-manager-idempotency-boundary-not-bound-to-http-outlet",
-            "write-operation-allowlist-missing",
+            "write-operation-allowlist-contract-not-bound-to-http-outlet",
+            "write-operation-rbac-evidence-not-bound-to-http-outlet",
             "write-retry-predicate-not-bound",
-            "post-write-readback-contract-missing",
+            "post-write-readback-contract-not-bound-to-http-outlet",
+            "post-write-readback-executor-missing",
+            "no-runtime-retry-eligible-write-operation",
             "release-and-hitl-evidence-not-bound-to-http-outlet",
             "compensation-policy-missing",
             "runtime-enable-switch-intentionally-absent"
@@ -198,6 +213,7 @@ public class AgentKubeManagerWriteRetryReadinessService {
         Map<String, Object> endpoints = new LinkedHashMap<>();
         endpoints.put("healthSummary", "/api/agent/observability/kube-manager/http-outlet/health-summary");
         endpoints.put("writeIdempotencyContract", "/api/agent/observability/kube-manager/http-outlet/write-idempotency-contract");
+        endpoints.put("writeOperationSafetyContract", "/api/agent/observability/kube-manager/http-outlet/write-operation-safety-contract");
         endpoints.put("writeRetryReadiness", "/api/agent/observability/kube-manager/http-outlet/write-retry-readiness");
         endpoints.put("auditByTrace", "/api/agent/observability/audit/trace/{traceId}");
         endpoints.put("replayByTrace", "/api/agent/observability/replay/trace/{traceId}");

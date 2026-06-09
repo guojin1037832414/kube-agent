@@ -78,15 +78,30 @@ class AgentKubeManagerWriteRetryReadinessServiceTest {
             .containsEntry("genericKubeManagerIdempotencyBoundaryBoundToHttpOutlet", false)
             .containsEntry("serverDerivedIdempotencyKeyDeriverExists", true)
             .containsEntry("callerProvidedIdempotencyKeyAccepted", false)
-            .containsEntry("genericWriteOperationAllowlistExists", false)
+            .containsEntry("genericWriteOperationAllowlistExists", true)
+            .containsEntry("genericWriteOperationAllowlistBoundToHttpOutlet", false)
+            .containsEntry("genericWriteOperationAllowlistEnforcedByHttpOutlet", false)
+            .containsEntry("operationRbacEvidenceContractExists", true)
+            .containsEntry("operationRbacEvidenceBoundToHttpOutlet", false)
+            .containsEntry("runtimeRetryEligibleWriteOperationCount", 0)
+            .containsEntry("callerProvidedAllowlistEntryAccepted", false)
             .containsEntry("retryPredicateBoundToWriteFailureClasses", false)
-            .containsEntry("postWriteReadbackContractExists", false)
+            .containsEntry("postWriteReadbackContractExists", true)
+            .containsEntry("postWriteReadbackBoundToHttpOutlet", false)
+            .containsEntry("postWriteReadbackExecutorExists", false)
+            .containsEntry("postWriteReadbackExecutedByReadinessEndpoint", false)
+            .containsEntry("postWriteReadbackAcceptsCallerClaims", false)
+            .containsEntry("postWriteReadbackCanOpenReleaseSwitch", false)
             .containsEntry("runtimeWriteRetryEnablementSwitchExists", false)
-            .containsEntry("nimHpcSlurmBcmPhase2Paused", true);
+            .containsEntry("nimHpcSlurmBcmPhase2Paused", true)
+            .containsEntry("phase2NimHpcSlurmBcmWriteOperationsExcluded", true);
         assertThat(readiness.blockedReasons()).contains(
             "generic-kube-manager-idempotency-boundary-not-bound-to-http-outlet",
-            "write-operation-allowlist-missing",
-            "post-write-readback-contract-missing",
+            "write-operation-allowlist-contract-not-bound-to-http-outlet",
+            "write-operation-rbac-evidence-not-bound-to-http-outlet",
+            "post-write-readback-contract-not-bound-to-http-outlet",
+            "post-write-readback-executor-missing",
+            "no-runtime-retry-eligible-write-operation",
             "runtime-enable-switch-intentionally-absent"
         );
         assertThat(readiness.futureEnablementProtocol())
@@ -97,6 +112,7 @@ class AgentKubeManagerWriteRetryReadinessServiceTest {
         assertThat(readiness.endpointTemplates())
             .containsEntry("healthSummary", "/api/agent/observability/kube-manager/http-outlet/health-summary")
             .containsEntry("writeIdempotencyContract", "/api/agent/observability/kube-manager/http-outlet/write-idempotency-contract")
+            .containsEntry("writeOperationSafetyContract", "/api/agent/observability/kube-manager/http-outlet/write-operation-safety-contract")
             .containsEntry("writeRetryReadiness", "/api/agent/observability/kube-manager/http-outlet/write-retry-readiness")
             .containsEntry("runtimeEnableWriteRetry", "not-exposed");
         assertThat(readiness.safety())

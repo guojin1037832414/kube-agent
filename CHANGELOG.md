@@ -6,6 +6,30 @@
 
 ---
 
+## [M5.52-1] - Kube-manager write operation safety contract
+
+**Delivery**: Added a review-only write operation allowlist/RBAC/readback contract for future controlled kube-manager writes.
+**Changes**
+- Added `KubeManagerWriteOperationAllowlistEntry`.
+- Added `KubeManagerPostWriteReadbackContract`.
+- Added `KubeManagerWriteSafetyContractCatalog`.
+- Added `AgentKubeManagerWriteOperationSafetyContractResponse`.
+- Added `AgentKubeManagerWriteOperationSafetyContractService`.
+- Added admin-only `GET /api/agent/observability/kube-manager/http-outlet/write-operation-safety-contract`.
+- Updated write retry readiness to report operation allowlist/RBAC/readback contracts as defined but not bound to the HTTP outlet.
+- Added catalog, service, controller, source-contract, and MockMvc security coverage.
+**Verification**
+- `mvn -q "-DskipTests" validate` passed.
+- `mvn -q "-Dtest=KubeManagerWriteSafetyContractCatalogTest,AgentKubeManagerWriteOperationSafetyContractServiceTest,AgentKubeManagerWriteRetryReadinessServiceTest,AgentKubeManagerWriteIdempotencyContractServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed.
+**Security**
+- The catalog is pure Java, static, and review-only.
+- The endpoint is admin-only, local-process-only, read-only, and summary-only.
+- Runtime retry eligible write operation count remains `0`.
+- Caller-provided allowlist entries and caller success claims are not accepted.
+- No kube-manager call, `KubeManagerHttpClient` binding, `RestClient`, `executeWrite`, Tool execution, LLM call, external call, audit write, durable receipt issuance, HTTP header injection, readback execution, resilience registry mutation, runtime enable switch, or write retry enablement is added.
+- Raw principal, raw organization, raw backend path, raw request body, token, password, and Authorization header are not exposed.
+- NIM / HPC / Slurm / BCM remain Phase 2 paused scope.
+
 ## [M5.51-1] - Kube-manager write idempotency contract
 
 **Delivery**: Added a generic server-derived idempotency-key contract for future controlled kube-manager writes.

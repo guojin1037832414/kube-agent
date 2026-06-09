@@ -97,6 +97,10 @@ class AgentSecurityConfigWebMvcTest {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
             .andExpect(status().isForbidden());
 
+        mockMvc.perform(get("/api/agent/observability/kube-manager/http-outlet/write-operation-safety-contract")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
+            .andExpect(status().isForbidden());
+
         mockMvc.perform(get("/api/agent/observability/replay/trace/trc_123")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
             .andExpect(status().isForbidden());
@@ -210,6 +214,10 @@ class AgentSecurityConfigWebMvcTest {
             .andExpect(status().isOk());
 
         mockMvc.perform(get("/api/agent/observability/kube-manager/http-outlet/write-idempotency-contract")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token"))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/agent/observability/kube-manager/http-outlet/write-operation-safety-contract")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token"))
             .andExpect(status().isOk());
 
@@ -483,6 +491,11 @@ class AgentSecurityConfigWebMvcTest {
         @GetMapping("/api/agent/observability/kube-manager/http-outlet/write-idempotency-contract")
         String observabilityKubeManagerWriteIdempotencyContract() {
             return "kube-manager-write-idempotency-contract";
+        }
+
+        @GetMapping("/api/agent/observability/kube-manager/http-outlet/write-operation-safety-contract")
+        String observabilityKubeManagerWriteOperationSafetyContract() {
+            return "kube-manager-write-operation-safety-contract";
         }
 
         @GetMapping("/api/agent/observability/replay/trace/{id}")

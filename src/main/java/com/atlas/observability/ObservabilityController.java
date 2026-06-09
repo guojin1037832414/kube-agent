@@ -37,6 +37,7 @@ public class ObservabilityController {
     private final AgentKubeManagerHttpOutletHealthSummaryService kubeManagerHttpOutletHealthSummaryService;
     private final AgentKubeManagerWriteRetryReadinessService kubeManagerWriteRetryReadinessService;
     private final AgentKubeManagerWriteIdempotencyContractService kubeManagerWriteIdempotencyContractService;
+    private final AgentKubeManagerWriteOperationSafetyContractService kubeManagerWriteOperationSafetyContractService;
     private final AgentAuditSnapshotProvider auditSnapshotProvider;
     private final AgentAuditQueryService auditQueryService;
     private final AgentReplayTimelineService replayTimelineService;
@@ -57,6 +58,7 @@ public class ObservabilityController {
                                    AgentKubeManagerHttpOutletHealthSummaryService kubeManagerHttpOutletHealthSummaryService,
                                    AgentKubeManagerWriteRetryReadinessService kubeManagerWriteRetryReadinessService,
                                    AgentKubeManagerWriteIdempotencyContractService kubeManagerWriteIdempotencyContractService,
+                                   AgentKubeManagerWriteOperationSafetyContractService kubeManagerWriteOperationSafetyContractService,
                                    AgentAuditSnapshotProvider auditSnapshotProvider,
                                    AgentAuditQueryService auditQueryService,
                                    AgentReplayTimelineService replayTimelineService,
@@ -76,6 +78,7 @@ public class ObservabilityController {
         this.kubeManagerHttpOutletHealthSummaryService = kubeManagerHttpOutletHealthSummaryService;
         this.kubeManagerWriteRetryReadinessService = kubeManagerWriteRetryReadinessService;
         this.kubeManagerWriteIdempotencyContractService = kubeManagerWriteIdempotencyContractService;
+        this.kubeManagerWriteOperationSafetyContractService = kubeManagerWriteOperationSafetyContractService;
         this.auditSnapshotProvider = auditSnapshotProvider;
         this.auditQueryService = auditQueryService;
         this.replayTimelineService = replayTimelineService;
@@ -125,6 +128,17 @@ public class ObservabilityController {
             return guard;
         }
         return ResponseEntity.ok(ApiResponse.ok(kubeManagerWriteIdempotencyContractService.contract()));
+    }
+
+    /** Describe the write operation allowlist/RBAC/readback contract before binding runtime writes. */
+    @GetMapping("/kube-manager/http-outlet/write-operation-safety-contract")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentKubeManagerWriteOperationSafetyContractResponse>> kubeManagerWriteOperationSafetyContract() {
+        ResponseEntity<ApiResponse<AgentKubeManagerWriteOperationSafetyContractResponse>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return ResponseEntity.ok(ApiResponse.ok(kubeManagerWriteOperationSafetyContractService.contract()));
     }
 
     @GetMapping("/snapshot")

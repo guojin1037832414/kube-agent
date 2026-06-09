@@ -2,6 +2,31 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-09 M5.52 Kube-Manager Write Operation Safety Contract
+
+M5.52 把 M5.50 readiness 中的 write operation allowlist/RBAC/readback 前置条件沉淀成源代码拥有的契约目录。
+
+```text
+KubeManagerWriteSafetyContractCatalog
+    |
+    | review-only allowlist + GET-only readback contract
+    v
+AgentKubeManagerWriteOperationSafetyContractService
+    |
+    | admin-only local read model
+    v
+/api/agent/observability/kube-manager/http-outlet/write-operation-safety-contract
+```
+
+关键设计：
+- `KubeManagerWriteOperationAllowlistEntry` 描述未来可审查的写操作类别，但 M5.52 中所有条目都是 `runtimeEligible=false`、`retryEligible=false`。
+- `KubeManagerPostWriteReadbackContract` 描述 GET-only 读回验证：同 principal、同 organization fingerprint、请求规格 digest 和 idempotency digest 都必须存在。
+- `KubeManagerWriteSafetyContractCatalog` 是 producer-owned contract，避免未来下游随意解释散装 JSON 或扫描 `ToolRegistry` 把高风险 Tool 误升格为 runtime allowlist。
+- 新 endpoint 只暴露 contract-defined-not-bound 状态，不执行 readback，不调用 kube-manager，不绑定 `KubeManagerHttpClient`，不注入 header，不启用 retry。
+- M5.50 readiness 现在能区分“allowlist/readback 契约缺失”和“契约已存在但未绑定 HTTP outlet”。后者更接近真实工程状态，也更适合前端 observability 页面教学展示。
+
+学习重点：顶级 Agent 的写能力不是靠 prompt 承诺安全，而是靠代码拥有的协议对象逐层放权。越接近真实写执行，越要减少宽松解释，增加 source-owned catalog、exact evidence、RBAC/tenant proof、durable receipt、HITL/release evidence 和 readback verification。
+
 ## 2026-06-09 M5.51 Kube-Manager Write Idempotency Contract
 
 M5.51 把 M5.50 readiness 中的“server-derived idempotency key”推进成通用 Java 契约。

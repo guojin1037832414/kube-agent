@@ -1,0 +1,105 @@
+﻿{
+    "project":  "kube-agent",
+    "milestone":  "M5.52-1",
+    "title":  "Kube-manager write operation safety contract",
+    "generatedAt":  "2026-06-09T12:48:57.2407040+08:00",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "files":  [
+                  {
+                      "path":  "CHANGELOG.md",
+                      "sha256":  "FE6150845D6169D0C2BF490CFE8A25475CB0082388785133A30281C6A536B6BC"
+                  },
+                  {
+                      "path":  "docs/PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "AA7BCD20F2ECFDC4E566ECDFF7E66A0A3D3E8C07300E88269A479B50B2C70B68"
+                  },
+                  {
+                      "path":  "docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "478AF889B7F25E0DF620ECF38D28FCB52DBB1F37656EA9076963551D587CDC66"
+                  },
+                  {
+                      "path":  "docs/tech-stack/BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "DD017FDB8E68C898D32A4F0D7F763B460A5233FC3377CB0A45BA30C00BD5FD8D"
+                  },
+                  {
+                      "path":  "docs/M5_52_KUBE_MANAGER_WRITE_OPERATION_SAFETY_CONTRACT_20260609.md",
+                      "sha256":  "6FA83D8B4C9095F62D83396C18ADEA1FCF940F039BA35E9D6D04D1178203DF92"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/http/KubeManagerWriteOperationAllowlistEntry.java",
+                      "sha256":  "74B110C2D900CF18A5C65ABBC6F7D98FF6F88378B13E58A3FDAF8EABB75AE850"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/http/KubeManagerPostWriteReadbackContract.java",
+                      "sha256":  "B5BB080B96AE49EB9E295988EF5B0DFBD55C35A1E9E00BD492E38E9B50EA4CB7"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/http/KubeManagerWriteSafetyContractCatalog.java",
+                      "sha256":  "B077A6D8BC853CDC00F6BD5BFDF71E0C8ADC3295EF07219A0FAB26074B01A0A0"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentKubeManagerWriteOperationSafetyContractResponse.java",
+                      "sha256":  "68056C2B602944C3DF7DF2E43C1D3569EE155F610CF4134652E04D54349AAEB3"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentKubeManagerWriteOperationSafetyContractService.java",
+                      "sha256":  "75BD3D3935123F55A9CD9C4FB0A092723F4D5DE64ABF574A32AE27C71CB3C5EC"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentKubeManagerWriteRetryReadinessService.java",
+                      "sha256":  "B303E2C96C01FB668EBBABAEB1811F82C3750CD51FE3D46C74BB0928DFAF202D"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/ObservabilityController.java",
+                      "sha256":  "42C337EEA3FCDCF738C253678A3052EA82AFE0E2082911380D34FF693D62D982"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/http/KubeManagerWriteSafetyContractCatalogTest.java",
+                      "sha256":  "6BD9AE144A46D5B12D31117A7744D4F1527D100CA7C15F8E7A6F9AAD5C2535BD"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/AgentKubeManagerWriteOperationSafetyContractServiceTest.java",
+                      "sha256":  "750DE220D919BB40A0067ADCAA829C73CDAED1ED12E859A2EB7F3A9707FA360C"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/AgentKubeManagerWriteRetryReadinessServiceTest.java",
+                      "sha256":  "6A4A9E60EC46A807CFBE36BB502A505406F32D8C9035FCB1BC3DF6D6AA78A68D"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/ObservabilityControllerTest.java",
+                      "sha256":  "5B8E88AADB783AADB27112A42882650996FD11B792B4C79AB585B547A9452AA1"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/ObservabilityControllerSecurityContractTest.java",
+                      "sha256":  "AE127E55A1FCE6B7782696522688B0F3FCBF71FBC07D36496C2908390141AFAF"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/auth/AgentSecurityConfigWebMvcTest.java",
+                      "sha256":  "15CE5F8B0207708C3121AFBC10A53B62FF8DAA4383B49F4266F63714989B79F6"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/RECOVERY_STATUS.md",
+                      "sha256":  "5369B544D851E22392C19F93950A73FA82EB275A695ECAC8FABC04D725DD0642"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_M5_52_KUBE_MANAGER_WRITE_OPERATION_SAFETY_CONTRACT_20260609.md",
+                      "sha256":  "9EAD5B59500DD1922C77949500115B0F40192FA51046737478E42DB24D802E15"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/CHANGELOG.md",
+                      "sha256":  "FE6150845D6169D0C2BF490CFE8A25475CB0082388785133A30281C6A536B6BC"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "AA7BCD20F2ECFDC4E566ECDFF7E66A0A3D3E8C07300E88269A479B50B2C70B68"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "478AF889B7F25E0DF620ECF38D28FCB52DBB1F37656EA9076963551D587CDC66"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "DD017FDB8E68C898D32A4F0D7F763B460A5233FC3377CB0A45BA30C00BD5FD8D"
+                  }
+              ]
+}

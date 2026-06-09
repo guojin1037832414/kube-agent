@@ -68,11 +68,14 @@ class ObservabilityControllerTest {
         new AgentKubeManagerWriteRetryReadinessService(retryRegistry());
     private final AgentKubeManagerWriteIdempotencyContractService kubeManagerWriteIdempotencyContractService =
         new AgentKubeManagerWriteIdempotencyContractService();
+    private final AgentKubeManagerWriteOperationSafetyContractService kubeManagerWriteOperationSafetyContractService =
+        new AgentKubeManagerWriteOperationSafetyContractService();
     private final ObservabilityController controller = new ObservabilityController(
         new AgentMetricsService(new SimpleMeterRegistry()),
         kubeManagerHttpOutletHealthSummaryService,
         kubeManagerWriteRetryReadinessService,
         kubeManagerWriteIdempotencyContractService,
+        kubeManagerWriteOperationSafetyContractService,
         auditRecorder,
         auditRecorder,
         replayTimelineService,
@@ -336,9 +339,20 @@ class ObservabilityControllerTest {
             .containsEntry("genericKubeManagerIdempotencyBoundaryExists", true)
             .containsEntry("genericKubeManagerIdempotencyBoundaryBoundToHttpOutlet", false)
             .containsEntry("callerProvidedIdempotencyKeyAccepted", false)
+            .containsEntry("genericWriteOperationAllowlistExists", true)
+            .containsEntry("genericWriteOperationAllowlistBoundToHttpOutlet", false)
+            .containsEntry("genericWriteOperationAllowlistEnforcedByHttpOutlet", false)
+            .containsEntry("postWriteReadbackContractExists", true)
+            .containsEntry("postWriteReadbackBoundToHttpOutlet", false)
+            .containsEntry("runtimeRetryEligibleWriteOperationCount", 0)
+            .containsEntry("postWriteReadbackExecutorExists", false)
             .containsEntry("runtimeWriteRetryEnablementSwitchExists", false)
             .containsEntry("nimHpcSlurmBcmPhase2Paused", true);
-        assertThat(readiness.blockedReasons()).contains("generic-kube-manager-idempotency-boundary-not-bound-to-http-outlet");
+        assertThat(readiness.blockedReasons()).contains(
+            "generic-kube-manager-idempotency-boundary-not-bound-to-http-outlet",
+            "write-operation-allowlist-contract-not-bound-to-http-outlet",
+            "post-write-readback-contract-not-bound-to-http-outlet"
+        );
         assertThat(readiness.safety())
             .containsEntry("localProcessOnly", true)
             .containsEntry("kubeManagerCalls", false)
@@ -408,6 +422,80 @@ class ObservabilityControllerTest {
             .containsEntry("containsRawBaseUrl", false)
             .containsEntry("containsToken", false)
             .containsEntry("containsLoginPassword", false);
+        assertThat(contract.toString())
+            .doesNotContain("secret-password", "Bearer", "user-token", "/api/login", "/api/100002");
+    }
+
+    @Test
+    void kubeManagerWriteOperationSafetyContract_shouldRequireAdminAndReturnUnboundSafetyContract() {
+        ResponseEntity<ApiResponse<AgentKubeManagerWriteOperationSafetyContractResponse>> anonymous =
+            controller.kubeManagerWriteOperationSafetyContract();
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentKubeManagerWriteOperationSafetyContractResponse>> user =
+            controller.kubeManagerWriteOperationSafetyContract();
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        userPermissionContext.unbind();
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentKubeManagerWriteOperationSafetyContractResponse>> admin =
+            controller.kubeManagerWriteOperationSafetyContract();
+
+        assertThat(admin.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(admin.getBody()).isNotNull();
+        AgentKubeManagerWriteOperationSafetyContractResponse contract = admin.getBody().getData();
+        assertThat(contract.schemaVersion()).isEqualTo("agent-kube-manager-write-operation-safety-contract.v1");
+        assertThat(contract.contractStatus()).isEqualTo("CONTRACT_DEFINED_NOT_BOUND");
+        assertThat(contract.operationAllowlistContractExists()).isTrue();
+        assertThat(contract.postWriteReadbackContractExists()).isTrue();
+        assertThat(contract.boundToHttpOutlet()).isFalse();
+        assertThat(contract.writeRetryEnabled()).isFalse();
+        assertThat(contract.allowedOperationClasses())
+            .extracting(operation -> operation.get("id"))
+            .containsExactly(
+                "generic-tenant-create",
+                "generic-tenant-update-patch",
+                "generic-tenant-update-put",
+                "generic-tenant-delete",
+                "generic-tenant-action"
+            );
+        assertThat(contract.requiredRbacEvidence())
+            .extracting(evidence -> evidence.get("field"))
+            .contains("principalFingerprint", "organizationFingerprint", "rolePermissionDigest", "releaseEvidenceDigest");
+        assertThat(contract.readbackContract())
+            .containsEntry("boundToHttpOutlet", false)
+            .containsEntry("readMethod", "GET")
+            .containsEntry("successClaimRequiresReadback", true)
+            .containsEntry("acceptsCallerSuccessClaim", false);
+        assertThat(contract.retryEligibilityGates())
+            .containsEntry("runtimeRetryEligibleWriteOperationCount", 0L)
+            .containsEntry("runtimeBindingAllowedNow", false)
+            .containsEntry("callerOverrideAllowed", false)
+            .containsEntry("defaultIfAnyGateMissing", "fail-closed-no-write-retry");
+        assertThat(contract.blockedRuntimeBindings())
+            .containsEntry("realWriteExecution", "blocked-by-contract")
+            .containsEntry("runtimeEnableSwitch", "not-exposed");
+        assertThat(contract.safety())
+            .containsEntry("kubeManagerCalls", false)
+            .containsEntry("restClientUsed", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("auditWrite", false)
+            .containsEntry("httpHeaderInjection", false)
+            .containsEntry("writeRetryEnablement", false)
+            .containsEntry("allowlistMutation", false)
+            .containsEntry("readbackExecuted", false);
+        assertThat(contract.privacy())
+            .containsEntry("containsRawBaseUrl", false)
+            .containsEntry("containsToken", false)
+            .containsEntry("containsLoginPassword", false)
+            .containsEntry("containsRawRequestBody", false);
         assertThat(contract.toString())
             .doesNotContain("secret-password", "Bearer", "user-token", "/api/login", "/api/100002");
     }

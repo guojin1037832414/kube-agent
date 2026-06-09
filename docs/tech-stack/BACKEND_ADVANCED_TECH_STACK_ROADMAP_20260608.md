@@ -99,6 +99,15 @@ M5.51-1 turns the first M5.50 prerequisite into a generic contract:
 
 Technology judgment: this is how advanced Agent systems should introduce idempotency. The trusted evidence contract comes before HTTP binding and long before retry enablement.
 
+M5.52-1 turns the next M5.50 prerequisites into source-owned contracts:
+- `KubeManagerWriteSafetyContractCatalog` owns review-only allowlist entries and the generic post-write readback contract.
+- `KubeManagerWriteOperationAllowlistEntry` and `KubeManagerPostWriteReadbackContract` keep write eligibility and readback verification as typed Java protocol objects.
+- New admin-only endpoint `GET /api/agent/observability/kube-manager/http-outlet/write-operation-safety-contract` describes allowlist/RBAC/readback evidence without binding runtime writes.
+- M5.50 readiness now reports allowlist/RBAC/readback contracts as existing but not bound to the HTTP outlet; runtime retry eligible write operation count remains `0`.
+- The contract does not scan `ToolRegistry`, does not inspect `tool/impl`, does not call kube-manager, does not execute readback, does not issue audit receipts, and does not enable write retry.
+
+Technology judgment: this is the correct advanced-agent pattern for dangerous write authority. OpenAI Agents SDK-style guardrails/tracing, MCP tool interoperability, OTel GenAI spans, and durable execution ideas all point toward the same requirement: runtime authority must sit behind explicit contracts, evidence, and observability, not behind prompt-only conventions.
+
 M5.29-1 已把 Spring Security 推进到 HTTP 安全入口：
 
 - 新增 `AgentSecurityConfig`，用 `SecurityFilterChain` 承接标准 Web 安全主线；

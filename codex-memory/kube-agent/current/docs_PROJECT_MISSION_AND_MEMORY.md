@@ -10,7 +10,39 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.51-1
+## Latest Phase 1 Core Memory - M5.52-1
+
+M5.52-1 adds the generic kube-manager write operation safety contract required before any future controlled write retry or write release can be considered.
+
+Delivered:
+
+- Added `KubeManagerWriteOperationAllowlistEntry`.
+- Added `KubeManagerPostWriteReadbackContract`.
+- Added `KubeManagerWriteSafetyContractCatalog`.
+- Added `AgentKubeManagerWriteOperationSafetyContractResponse`.
+- Added `AgentKubeManagerWriteOperationSafetyContractService`.
+- Added admin-only `GET /api/agent/observability/kube-manager/http-outlet/write-operation-safety-contract`.
+- Updated M5.50 readiness so allowlist/RBAC/readback contracts are `exists=true` but `boundToHttpOutlet=false`.
+- Added catalog, service, controller, source-contract, and MockMvc security coverage.
+
+Security boundary:
+
+- The catalog is pure Java, static, and review-only.
+- Runtime retry eligible write operation count remains `0`.
+- Caller-provided allowlist entries and caller success claims are not accepted.
+- The observability endpoint is admin-only, local-process-only, read-only, and summary-only.
+- No `KubeManagerHttpClient`, `RestClient`, kube-manager `8100`, `/api/login`, `executeWrite`, Tool, LLM, external service, audit writer, durable receipt writer, HTTP header injection, readback executor, resilience registry mutation, runtime enable switch, or write retry enablement is added.
+- The contract does not expose raw principal, raw organization, raw backend path, raw request body, token, password, or Authorization header.
+- NIM / HPC / Slurm / BCM remain Phase 2 paused scope.
+
+Learning point: top-tier Agent write safety starts with a source-owned contract catalog. Future runtime code must bind to this catalog and prove RBAC, tenant ownership, idempotency, HITL/release evidence, durable prewrite, and post-write readback before it can gain execution or retry authority.
+
+Latest verified commands:
+
+- `mvn -q "-DskipTests" validate`
+- `mvn -q "-Dtest=KubeManagerWriteSafetyContractCatalogTest,AgentKubeManagerWriteOperationSafetyContractServiceTest,AgentKubeManagerWriteRetryReadinessServiceTest,AgentKubeManagerWriteIdempotencyContractServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+## Previous Phase 1 Core Memory - M5.51-1
 
 M5.51-1 adds the generic kube-manager write idempotency-key contract required before any future controlled write retry can be considered.
 
