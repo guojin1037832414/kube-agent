@@ -1,0 +1,65 @@
+﻿{
+    "schemaVersion":  "kube-agent-post-push-recovery-sha256.v1",
+    "project":  "kube-agent",
+    "milestone":  "M5.70-1",
+    "title":  "Post-push recovery checkpoint for Memory/RAG trace-set catalog entries",
+    "generatedAt":  "2026-06-09T20:49:59.0085598+08:00",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "implementationCommit":  "9386dab",
+    "pushedToRemote":  "origin/codex/m521-29-top-agent-mission",
+    "verification":  [
+                         "git diff --check",
+                         "mvn -q \"-Dtest=AgentEvalTraceSetCatalogServiceTest,AgentEvalTraceSetGateBundleArtifactTest,AgentEvalWorkbenchOverviewServiceTest,AgentEvalWorkbenchGateBundleSummaryServiceTest,AgentEvalWorkbenchTraceSetDetailServiceTest,AgentEvalWorkbenchPromotionWorkflowServiceTest,AgentMemoryRagEvalSuiteBindingContractServiceTest,AgentReviewedEvalTraceEvidenceServiceTest,AgentReleaseBlockingEvalGateContractServiceTest,AgentMemoryRagReadinessServiceTest,ObservabilityControllerTest\" test",
+                         "mvn -q \"-DskipTests\" validate"
+                     ],
+    "resumeSummary":  [
+                          "M5.70 implementation commit 9386dab has been pushed.",
+                          "Memory/RAG trace-set catalog entries exist and remain empty until reviewed redacted trace ids are curated.",
+                          "Suite runtime and trace-set policy runtime are both latched closed.",
+                          "Next safe work is reviewed trace curation, advisory gate bundle evidence, Vue visibility, then separate CI/retrieval promotion."
+                      ],
+    "files":  [
+                  {
+                      "path":  "codex-memory/kube-agent/current/RECOVERY_STATUS.md",
+                      "sha256":  "45C148938AED65A53AC1156E7AD03D51395988A64FE1B2C03A6D45429DC47C2E",
+                      "length":  65472,
+                      "lastWriteTime":  "2026-06-09T20:49:43.2345633+08:00"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/M5_70_1_WORKSPACE_RECOVERY_SHA256.json",
+                      "sha256":  "1A7D369C450253E3A43C655E9DD7BAF426C2879A66508378994AEEED3437FF47",
+                      "length":  10957,
+                      "lastWriteTime":  "2026-06-09T20:46:40.5214601+08:00"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/CHANGELOG.md",
+                      "sha256":  "C8572DF710A67E34E63551CBFE11E6B66AD2A7606A80D8F1D3C0B08F1DBBF83B",
+                      "length":  361973,
+                      "lastWriteTime":  "2026-06-09T20:45:19.5628028+08:00"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "CF2402CD7AB932D6833C091A1DE2E107C36B8B47DA35E3B78BB061B81CA5328E",
+                      "length":  405284,
+                      "lastWriteTime":  "2026-06-09T20:45:19.6965437+08:00"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "51132B800D1CC2DB326775B8880AD8AAFBFBEA4893977209F7F1499AEE999E65",
+                      "length":  160357,
+                      "lastWriteTime":  "2026-06-09T20:45:19.7646893+08:00"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "BF297A6B1C15DF34D012AF7C49567E0CF600D5685B4F2CECD84172E39C61F1B7",
+                      "length":  85677,
+                      "lastWriteTime":  "2026-06-09T20:45:19.8312917+08:00"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_M5_70_MEMORY_RAG_TRACE_SET_CATALOG_ENTRIES_20260609.md",
+                      "sha256":  "F599A029CD11F2FCFEEC5C61B936F76314B6A7C85CBC33553C45443FDAFE39FC",
+                      "length":  4932,
+                      "lastWriteTime":  "2026-06-09T20:45:19.6269222+08:00"
+                  }
+              ]
+}
