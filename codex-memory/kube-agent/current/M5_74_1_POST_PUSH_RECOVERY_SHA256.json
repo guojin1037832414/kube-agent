@@ -1,0 +1,58 @@
+﻿{
+    "project":  "kube-agent",
+    "milestone":  "M5.74-1",
+    "title":  "Official version/protocol watch post-push checkpoint",
+    "generatedAt":  "2026-06-09T23:04:53.0215462+08:00",
+    "workspace":  "F:\\gitProject\\kube-agent",
+    "pushedCommit":  "5465060",
+    "remoteBranch":  "origin/codex/m521-29-top-agent-mission",
+    "verification":  [
+                         "git diff --check",
+                         "mvn -q \"-DskipTests\" validate",
+                         "mvn -q \"-Dtest=AgentOfficialVersionProtocolWatchServiceTest,AgentAdvancedTechnologyAdoptionContractServiceTest,AgentTopTierReadinessOverviewServiceTest,AgentPhase1ExecutionRoadmapServiceTest,AgentVueReadinessControlPlaneServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest\" test"
+                     ],
+    "files":  [
+                  {
+                      "path":  "codex-memory/kube-agent/current/RECOVERY_STATUS.md",
+                      "sha256":  "3E53FBDCD5EB7ED79EF0FE8D62745111B515A1111E737BDEF3A9DFDEBE9554B5",
+                      "length":  75053,
+                      "lastWriteTime":  "2026-06-09T23:04:35.0009348+08:00"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/M5_74_1_WORKSPACE_RECOVERY_SHA256.json",
+                      "sha256":  "6C806BE32B688A339364FB1A591058F268428D1AC2EE02A426ADBEF4315FC67D",
+                      "length":  10472,
+                      "lastWriteTime":  "2026-06-09T23:02:50.7274326+08:00"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_M5_74_OFFICIAL_VERSION_PROTOCOL_WATCH_20260609.md",
+                      "sha256":  "D74EB80000BE1C12088F9A2983DD2D081F1D3C4EE9D7620346101E9F54B9E3B5",
+                      "length":  7092,
+                      "lastWriteTime":  "2026-06-09T22:55:40.4738657+08:00"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "AFBC013918B0532FD7EABF0942B5CE47599836F485BA5EC1C25D8091AFF07E39",
+                      "length":  423037,
+                      "lastWriteTime":  "2026-06-09T22:56:09.0660888+08:00"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "85FB5D78EFEA6FF3B2EA760A0678FDA05A07F55A8DF2B8327A542405CAA7F2E1",
+                      "length":  174301,
+                      "lastWriteTime":  "2026-06-09T22:56:31.6061060+08:00"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "8F94EE33BB8508430B0459F4161DDB6B798391130FBE1FC94186EE3FDFD362AC",
+                      "length":  98567,
+                      "lastWriteTime":  "2026-06-09T22:56:54.8745793+08:00"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/CHANGELOG.md",
+                      "sha256":  "C0F1636695652408D131FD930BBFD39B57A4694DF814F9A1D854C51C7CAB893E",
+                      "length":  371875,
+                      "lastWriteTime":  "2026-06-09T22:57:17.8090040+08:00"
+                  }
+              ]
+}
