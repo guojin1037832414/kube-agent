@@ -27,7 +27,7 @@ class AgentEvalWorkbenchOverviewServiceTest {
 
         assertThat(overview.schemaVersion()).isEqualTo("agent-eval-workbench-overview.v1");
         assertThat(overview.evaluationVersion()).isEqualTo("deterministic-replay-eval.v1");
-        assertThat(overview.capabilityCount()).isEqualTo(14);
+        assertThat(overview.capabilityCount()).isEqualTo(15);
         assertThat(overview.traceSetCount()).isEqualTo(4);
         assertThat(overview.traceSetNeedsEvidenceCount()).isEqualTo(4);
         assertThat(overview.traceSetReadyCount()).isZero();

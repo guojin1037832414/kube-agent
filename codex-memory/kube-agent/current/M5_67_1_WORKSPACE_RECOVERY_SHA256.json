@@ -1,0 +1,183 @@
+﻿{
+    "schemaVersion":  "kube-agent-workspace-recovery-sha256.v1",
+    "project":  "kube-agent",
+    "milestone":  "M5.67-1",
+    "title":  "Release-blocking eval gate contract",
+    "generatedAt":  "2026-06-09T18:49:26.4407002+08:00",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "verification":  [
+                         "git diff --check",
+                         "mvn -q \"-Dtest=AgentReleaseBlockingEvalGateContractServiceTest,AgentReviewedEvalTraceEvidenceServiceTest,AgentEvalWorkbenchCapabilitiesServiceTest,AgentEvalWorkbenchOverviewServiceTest,AgentPhase1ExecutionRoadmapServiceTest,AgentVueReadinessControlPlaneServiceTest,AgentAdvancedTechnologyAdoptionContractServiceTest,AgentTopTierReadinessOverviewServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest\" test",
+                         "mvn -q \"-DskipTests\" validate"
+                     ],
+    "files":  [
+                  {
+                      "path":  "CHANGELOG.md",
+                      "sha256":  "82C616E5BAEBD9E2433B5F414EDC3D5649D79F9096E84BFFB46E64516992C1DA",
+                      "length":  353556,
+                      "lastWriteTime":  "2026-06-09T18:33:08.7510094+08:00"
+                  },
+                  {
+                      "path":  "docs/M5_67_RELEASE_BLOCKING_EVAL_GATE_CONTRACT_20260609.md",
+                      "sha256":  "2EA0FF4B076BAFFBD945014008FB6344C3C541B7087448C88CC5C0AE885E394B",
+                      "length":  2856,
+                      "lastWriteTime":  "2026-06-09T18:33:08.8168952+08:00"
+                  },
+                  {
+                      "path":  "docs/PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "30EF21FC61F7EC006F05153D1D7A0E55A9C6B233BAD9318F9C48C2F4EE62134B",
+                      "length":  390251,
+                      "lastWriteTime":  "2026-06-09T18:41:15.7335300+08:00"
+                  },
+                  {
+                      "path":  "docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "D0CE64E0F595C8DCA7FB887ACA11903BF524633E991BF42B0F1E014C55FE12C7",
+                      "length":  149521,
+                      "lastWriteTime":  "2026-06-09T18:43:20.1234224+08:00"
+                  },
+                  {
+                      "path":  "docs/tech-stack/BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "71992551ABEB852BBA1C552CB36BF257C1FFE345824F744DF795AA98EC85F0BB",
+                      "length":  76867,
+                      "lastWriteTime":  "2026-06-09T18:43:31.0414850+08:00"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentReleaseBlockingEvalGateContractResponse.java",
+                      "sha256":  "0E3DF64E3CC021FDC025935EB4413B7EB4BE95B85627757981177F267E7D39CB",
+                      "length":  13704,
+                      "lastWriteTime":  "2026-06-09T18:46:28.7046119+08:00"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentReleaseBlockingEvalGateContractService.java",
+                      "sha256":  "6EFD43F9907F6A28CF8B5661EAA1979A77834724620A23E1CA3ECBDB41630091",
+                      "length":  1521,
+                      "lastWriteTime":  "2026-06-09T18:25:37.7156567+08:00"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/ObservabilityController.java",
+                      "sha256":  "4A6B8E31980514139BFCA2C220CA37133E2E68A7541274732FDD1A8D608D3931",
+                      "length":  40752,
+                      "lastWriteTime":  "2026-06-09T18:25:53.6037164+08:00"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentEvalWorkbenchCapabilitiesService.java",
+                      "sha256":  "7FF4F8990A4B2CEBD575FE977A6CB5C8D26125D2BAA0CE473DE21F0F1D54A793",
+                      "length":  12195,
+                      "lastWriteTime":  "2026-06-09T18:26:06.4047071+08:00"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentPhase1ExecutionRoadmapResponse.java",
+                      "sha256":  "B05C7A926E9AB002A72C796C431ED2FA72A54C3823EDF65C4800AFDB5222D6EB",
+                      "length":  12456,
+                      "lastWriteTime":  "2026-06-09T18:26:17.8585071+08:00"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentVueReadinessControlPlaneResponse.java",
+                      "sha256":  "E076EBFCBF41CA658FBC0DAE697FD12A179E4BFC006E2335D214B50FB2B6D54F",
+                      "length":  12740,
+                      "lastWriteTime":  "2026-06-09T18:26:31.3366027+08:00"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentAdvancedTechnologyAdoptionContractResponse.java",
+                      "sha256":  "B5A3C3066513B12B234FBFBB3222FC0B43550FC78CDBB47422969F52A943B063",
+                      "length":  14544,
+                      "lastWriteTime":  "2026-06-09T18:26:43.8432872+08:00"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentTopTierReadinessOverviewResponse.java",
+                      "sha256":  "A8A6B62D7FA643F19DFB5078A624994DFB460EAEBB1271DE3D3249075F1C152D",
+                      "length":  19531,
+                      "lastWriteTime":  "2026-06-09T18:26:58.5839419+08:00"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/AgentReleaseBlockingEvalGateContractServiceTest.java",
+                      "sha256":  "0D5CF721D584E69CA334E317BFF46A0504AED7CC4E553893830E22435E38B255",
+                      "length":  13269,
+                      "lastWriteTime":  "2026-06-09T18:47:31.1762820+08:00"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/ObservabilityControllerTest.java",
+                      "sha256":  "70EDB5A54FEF700B9C6BC9813C9C342BC9A9A46C4925BDE7684009240161091D",
+                      "length":  153924,
+                      "lastWriteTime":  "2026-06-09T18:29:44.0903897+08:00"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/ObservabilityControllerSecurityContractTest.java",
+                      "sha256":  "A3C3F4C99D9CA01B8F809CAAAA86825FAB3A1308CB716B9EF7BA9CF0001F9BE7",
+                      "length":  11117,
+                      "lastWriteTime":  "2026-06-09T18:29:53.7647937+08:00"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/auth/AgentSecurityConfigWebMvcTest.java",
+                      "sha256":  "3DC33229EB5E01BE830F8B35B1D2BA9990322DAADDD0FABB336C53CD4D0658E0",
+                      "length":  39086,
+                      "lastWriteTime":  "2026-06-09T18:30:07.2050094+08:00"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/AgentEvalWorkbenchCapabilitiesServiceTest.java",
+                      "sha256":  "DCE311BF71BF343E856D84EF33A2492C01A51CCC54C027B72A7C3E3623188F91",
+                      "length":  4355,
+                      "lastWriteTime":  "2026-06-09T18:30:17.5317561+08:00"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/AgentEvalWorkbenchOverviewServiceTest.java",
+                      "sha256":  "A028E607B1469210A0A1BDA957DD6B140CA9EA280B8E2FCA938F8389D0D8EA42",
+                      "length":  4673,
+                      "lastWriteTime":  "2026-06-09T18:30:24.6492471+08:00"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/AgentPhase1ExecutionRoadmapServiceTest.java",
+                      "sha256":  "BB317FF8B432143F681DA3BF916A3C977A1580BAB35A42BC737CDECBDB183862",
+                      "length":  7248,
+                      "lastWriteTime":  "2026-06-09T18:30:35.2650720+08:00"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/AgentVueReadinessControlPlaneServiceTest.java",
+                      "sha256":  "54AA6662FD7614DD3D21958D56EF7EF5EFF69DEB7BD9C52AE1F3186477DE5B47",
+                      "length":  7258,
+                      "lastWriteTime":  "2026-06-09T18:30:43.9287170+08:00"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/AgentAdvancedTechnologyAdoptionContractServiceTest.java",
+                      "sha256":  "57CE8D47468145478F1F9886B7523E35F2B6463CDCA74EFFE220A330EC9565FB",
+                      "length":  8798,
+                      "lastWriteTime":  "2026-06-09T18:30:59.8767340+08:00"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/AgentTopTierReadinessOverviewServiceTest.java",
+                      "sha256":  "9FB8829692B5493FA0BF65C2D1A6E71C6D02CEB1A95BB86E51C2DA50733B4B20",
+                      "length":  13723,
+                      "lastWriteTime":  "2026-06-09T18:31:10.5149644+08:00"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/RECOVERY_STATUS.md",
+                      "sha256":  "7CF3B66B734B7CC45FB23BB68D51908E154E02073A62D861AB66CB3ABCAFA8F7",
+                      "length":  58006,
+                      "lastWriteTime":  "2026-06-09T18:45:22.3957581+08:00"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_M5_67_RELEASE_BLOCKING_EVAL_GATE_CONTRACT_20260609.md",
+                      "sha256":  "2EA0FF4B076BAFFBD945014008FB6344C3C541B7087448C88CC5C0AE885E394B",
+                      "length":  2856,
+                      "lastWriteTime":  "2026-06-09T18:33:08.8168952+08:00"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "30EF21FC61F7EC006F05153D1D7A0E55A9C6B233BAD9318F9C48C2F4EE62134B",
+                      "length":  390251,
+                      "lastWriteTime":  "2026-06-09T18:41:15.7335300+08:00"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "D0CE64E0F595C8DCA7FB887ACA11903BF524633E991BF42B0F1E014C55FE12C7",
+                      "length":  149521,
+                      "lastWriteTime":  "2026-06-09T18:43:20.1234224+08:00"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "71992551ABEB852BBA1C552CB36BF257C1FFE345824F744DF795AA98EC85F0BB",
+                      "length":  76867,
+                      "lastWriteTime":  "2026-06-09T18:43:31.0414850+08:00"
+                  }
+              ]
+}

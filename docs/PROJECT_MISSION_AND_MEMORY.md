@@ -10,7 +10,49 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.66-1
+## Latest Phase 1 Core Memory - M5.67-1
+
+M5.67-1 adds the release-blocking eval gate contract.
+
+Delivered:
+
+- Added `AgentReleaseBlockingEvalGateContractResponse`.
+- Added `AgentReleaseBlockingEvalGateContractService`.
+- Added admin-only `GET /api/agent/observability/eval/release-blocking-gate-contract`.
+- Composed M5.66 reviewed trace evidence with eval workbench gate-bundle summary into one release-readiness contract.
+- Updated eval workbench capabilities, Phase 1 roadmap, Vue readiness control plane, advanced technology adoption, and top-tier readiness endpoint maps to include the new release-blocking gate contract.
+- Added service, controller, source-contract, top-tier, roadmap, Vue, adoption contract, workbench, and MockMvc security coverage.
+
+Current state:
+
+- `schemaVersion=agent-release-blocking-eval-gate-contract.v1`.
+- `contractStatus=BLOCKED_BY_REVIEWED_TRACE_EVIDENCE`.
+- `phase1TopTierGoalPreserved=true`.
+- `releaseBlockingGateDefined=true`.
+- `releaseBlockingEnabled=false`.
+- `ciBlockingEnabled=false`.
+- `releaseGateCanOpenNow=false`.
+- `runtimeMutationAllowed=false`.
+- `reviewedEvidenceReady=false`.
+- `gateBundleReleaseEligible=false`.
+- `traceSetCount=4`.
+- `reviewedTraceSetCount=0`.
+- `reviewedTraceAnchorCount=0`.
+- `emptyTraceSets=4`.
+
+Security boundary:
+
+- The endpoint is admin-only, read-only, contract-only, summary-only, and fail-closed.
+- It does not mutate CI workflows, enable CI blocking, run evals, mutate trace-set catalogs, query raw audit evidence, embed replay payloads, execute Tools, invoke `SafeToolExecutor`, invoke HITL, call kube-manager, expose MCP runtime `tools/call`, call LLMs/external services, write audit, issue durable receipts, write memory, execute retrieval, upgrade dependencies, or touch NIM / HPC / Slurm / BCM Phase 2 scope.
+- Even a synthetic future-ready evidence scenario reports only `READY_FOR_MANUAL_RELEASE_GATE_PROMOTION`; `releaseBlockingEnabled=false`, `ciBlockingEnabled=false`, and `releaseGateCanOpenNow=false` remain hard false until a separate reviewed CI wiring slice exists.
+
+Learning point: top-tier Agent quality gates are not a single boolean. M5.67 teaches the release-gate chain: reviewed redacted trace evidence, deterministic gate bundle, non-empty trace sets, human Git review, explicit CI wiring, and unchanged runtime authority. This is how the project absorbs current Agent engineering ideas from tracing, evals, MCP governance, OpenTelemetry GenAI, OWASP LLM safety, and W3C trace context without prematurely granting runtime authority.
+
+Latest verified command:
+
+- `mvn -q "-Dtest=AgentReleaseBlockingEvalGateContractServiceTest,AgentReviewedEvalTraceEvidenceServiceTest,AgentEvalWorkbenchCapabilitiesServiceTest,AgentEvalWorkbenchOverviewServiceTest,AgentPhase1ExecutionRoadmapServiceTest,AgentVueReadinessControlPlaneServiceTest,AgentAdvancedTechnologyAdoptionContractServiceTest,AgentTopTierReadinessOverviewServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+## Previous Phase 1 Core Memory - M5.66-1
 
 M5.66-1 adds the reviewed eval trace evidence contract.
 
@@ -865,7 +907,7 @@ Latest official technology check on 2026-06-09:
 
 - Spring Boot docs list stable `4.0.6` and `3.5.14`; this repo keeps verified mainline on `3.5.14` while tracking Boot 4 in compatibility matrix.
 - Spring AI docs list stable `1.1.7` and preview `2.0.0-RC1`; this repo keeps verified mainline on `1.1.7` while tracking Spring AI 2 in compatibility matrix.
-- MCP latest specification redirects to `2025-11-25`; Phase 1 keeps a safe adapter/manifest posture before full external MCP broker behavior.
+- MCP official specification snapshots include `2025-06-18` with `tools/list` and `tools/call`; Phase 1 keeps a safe adapter/manifest posture before full external MCP broker behavior.
 - OpenTelemetry semantic conventions docs show `1.41.1`, including Generative AI and MCP registry areas; this repo keeps stable `atlas.agent.*` attributes while isolating experimental OTel/GenAI attributes.
 
 ## Previous Phase 1 Core Memory - M5.40-1

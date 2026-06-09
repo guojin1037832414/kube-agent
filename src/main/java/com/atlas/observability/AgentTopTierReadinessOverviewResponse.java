@@ -161,6 +161,7 @@ public record AgentTopTierReadinessOverviewResponse(
             Map.of(
                 "capabilityCount", evalWorkbenchCapabilities != null ? evalWorkbenchCapabilities.capabilityCount() : 0,
                 "reviewedTraceEvidenceContractExists", true,
+                "releaseBlockingEvalGateContractExists", true,
                 "ciBlockingEnabled", false,
                 "needsReviewedCuratedTraceIds", true
             )
@@ -336,6 +337,7 @@ public record AgentTopTierReadinessOverviewResponse(
         endpoints.put("evalWorkbenchCapabilities", "/api/agent/observability/eval/workbench/capabilities");
         endpoints.put("evalWorkbenchOverview", "/api/agent/observability/eval/workbench/overview");
         endpoints.put("reviewedEvalTraceEvidence", "/api/agent/observability/eval/reviewed-trace-evidence");
+        endpoints.put("releaseBlockingEvalGateContract", "/api/agent/observability/eval/release-blocking-gate-contract");
         endpoints.put("mcpGovernanceOverview", "/api/agent/mcp/governance/overview");
         endpoints.put("mcpManifest", "/api/agent/mcp/manifest");
         endpoints.put("memoryRagReadiness", "/api/agent/observability/memory-rag/readiness");

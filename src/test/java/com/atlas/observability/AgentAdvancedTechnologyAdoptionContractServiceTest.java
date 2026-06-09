@@ -49,6 +49,7 @@ class AgentAdvancedTechnologyAdoptionContractServiceTest {
                 "mcp-manifest-governance",
                 "trace-audit-replay-observability",
                 "reviewed-eval-trace-evidence",
+                "release-blocking-eval-gate-contract",
                 "kube-manager-http-governance"
             );
         assertThat(contract.compatibilityMatrix()).extracting(technology -> technology.get("id"))
@@ -105,6 +106,7 @@ class AgentAdvancedTechnologyAdoptionContractServiceTest {
             .containsEntry("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane")
             .containsEntry("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview")
             .containsEntry("reviewedEvalTraceEvidence", "/api/agent/observability/eval/reviewed-trace-evidence")
+            .containsEntry("releaseBlockingEvalGateContract", "/api/agent/observability/eval/release-blocking-gate-contract")
             .containsEntry("memoryRagEvalGateContract", "/api/agent/observability/memory-rag/eval-gate-contract");
         assertThat(contract.safety())
             .containsEntry("adminOnly", true)

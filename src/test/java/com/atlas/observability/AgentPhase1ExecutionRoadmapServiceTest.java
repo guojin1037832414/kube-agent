@@ -84,9 +84,12 @@ class AgentPhase1ExecutionRoadmapServiceTest {
             .containsEntry("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview")
             .containsEntry("advancedTechnologyAdoptionContract", "/api/agent/observability/top-tier/advanced-technology-adoption-contract")
             .containsEntry("reviewedEvalTraceEvidence", "/api/agent/observability/eval/reviewed-trace-evidence")
+            .containsEntry("releaseBlockingEvalGateContract", "/api/agent/observability/eval/release-blocking-gate-contract")
             .containsEntry("memoryRagEvalGateContract", "/api/agent/observability/memory-rag/eval-gate-contract");
         assertThat(roadmap.executionSteps().get(1))
             .containsEntry("status", "BACKEND_CONTRACT_READY");
+        assertThat(roadmap.executionSteps().get(2))
+            .containsEntry("status", "BACKEND_CONTRACT_READY_BUT_BLOCKED");
         assertThat(roadmap.safety())
             .containsEntry("adminOnly", true)
             .containsEntry("readOnly", true)

@@ -85,6 +85,9 @@ public record AgentAdvancedTechnologyAdoptionContractResponse(
             technology("reviewed-eval-trace-evidence", "MAINLINE_CONTRACT",
                 "Reviewed redacted trace evidence links replay, deterministic eval, human Git review, and future release-blocking gates.",
                 "quality evidence before runtime expansion"),
+            technology("release-blocking-eval-gate-contract", "MAINLINE_CONTRACT",
+                "Release-blocking eval gates become explicit contracts before CI can consume them.",
+                "release readiness without premature CI authority"),
             technology("kube-manager-http-governance", "MAINLINE_STABLE",
                 "Read-side resilience and write-side release contracts govern kube-manager access.",
                 "manager integration safety")
@@ -178,6 +181,7 @@ public record AgentAdvancedTechnologyAdoptionContractResponse(
         endpoints.put("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview");
         endpoints.put("evalWorkbenchCapabilities", "/api/agent/observability/eval/workbench/capabilities");
         endpoints.put("reviewedEvalTraceEvidence", "/api/agent/observability/eval/reviewed-trace-evidence");
+        endpoints.put("releaseBlockingEvalGateContract", "/api/agent/observability/eval/release-blocking-gate-contract");
         endpoints.put("kubeManagerGovernanceOverview", "/api/agent/observability/kube-manager/http-outlet/governance-workbench/overview");
         endpoints.put("mcpGovernanceOverview", "/api/agent/mcp/governance/overview");
         endpoints.put("memoryRagReadiness", "/api/agent/observability/memory-rag/readiness");

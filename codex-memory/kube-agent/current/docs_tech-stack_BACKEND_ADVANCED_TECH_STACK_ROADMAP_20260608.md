@@ -9,6 +9,24 @@
 - 供应链、CI、SBOM、质量门禁进入工程默认路径；
 - Java / Spring / Agent 框架升级以兼容性矩阵推进，不用不可构建的版本号伪装先进。
 
+## 2026-06-09 M5.67 Release-Blocking-Eval-Gate-Before-CI Rule
+
+M5.67 advances the third Phase 1 roadmap step with:
+
+```text
+GET /api/agent/observability/eval/release-blocking-gate-contract
+```
+
+The advanced Agent stack now has a release-blocking gate contract before CI can consume eval artifacts as blockers:
+
+- Reviewed redacted trace evidence and gate-bundle release eligibility must both be true.
+- Empty trace sets keep the release gate closed.
+- Human Git review remains required.
+- The CI blocking switch is intentionally absent in this slice.
+- Runtime authority remains unchanged even when future evidence is ready.
+
+Technology judgment: current Agent best practice is not "turn on every new runtime." It is to convert advanced capabilities into governed evidence: OpenAI-style tracing/evals/guardrails, MCP tool safety, OpenTelemetry GenAI spans, OWASP LLM safety gates, and W3C trace context all feed a server-owned release contract first. Only after the contract is reviewed should CI wiring or runtime authority be considered.
+
 ## 2026-06-09 M5.66 Reviewed-Trace-Evidence-Before-Release-Gates Rule
 
 M5.66 advances the second Phase 1 roadmap step with:
@@ -66,7 +84,7 @@ Do not start yet: NIM runtime reopening, HPC/Slurm/BCM plugins, kube-manager sta
 
 Official-version check on 2026-06-09:
 - Spring Boot docs list `4.0.6` and `3.5.14` as stable lines.
-- Spring AI docs list `1.1.7` as stable and `2.0.0-RC1` as preview.
+- Spring AI docs list `1.1.7` as the stable line and `2.0.0-RC1` as preview/compatibility-matrix work.
 - MCP tools spec defines `tools/list` and `tools/call` plus human-in-the-loop safety expectations.
 - OpenTelemetry GenAI semantic conventions remain `Development`, so internal stable fields stay the mainline contract.
 
@@ -511,7 +529,7 @@ M5.30-3 已经把 durable audit 从 readiness gate 升级为 prewrite receipt ga
 - Spring Boot 官方文档当前稳定线同时包含 `4.0.6` 和 `3.5.14`；`4.0.6` 需要 Java 17+，并要求 Spring Framework 7.0.7+。
 - Spring AI 官方文档当前稳定线是 `1.1.7`，`2.0.0-RC1` 仍在 Preview 区域。
 - Oracle Java SE 路线图将 Java SE 17、21、25 都列为 LTS，其中 Java 25 GA 于 2025-09，Premier Support 到 2030-09。
-- MCP 官方规范持续迭代，2025-11-25 规范已明确 Tool list/call、structured output、annotations 等能力；本项目仍只把它作为受控外部 Tool 发现与调用协议接入，不能绕过权限、HITL、审计和 SafeToolExecutor。
+- MCP 官方规范持续迭代，2025-06-18 工具规范已明确 `tools/list` / `tools/call`、structured output、annotations 等能力；本项目仍只把它作为受控外部 Tool 发现与调用协议接入，不能绕过权限、HITL、审计和 SafeToolExecutor。
 - OpenTelemetry GenAI 语义约定对 Agent/LLM/Tool 很关键，但官方状态仍是 Development，并且要求现有 instrumentation 不要默认切到最新实验约定；本项目继续先以内部字段映射和兼容层落地，避免直接把发展中属性名固化成无法迁移的数据库契约。
 
 因此，本项目主线当前采用 `Spring Boot 3.5.14 + Spring AI 1.1.7 + Java 17` 作为可验证稳定底座；`Spring Boot 4 + Spring AI 2 + Java 21/25` 进入兼容性矩阵和试验分支。
@@ -680,16 +698,16 @@ M5.33-1 moves Agent eval from roadmap language into the backend mainline:
 
 2026-06-09 official-source refresh:
 
-- Spring AI 1.1.7 remains the current stable Spring AI mainline for this project; Spring AI 2.0.0-M7 remains compatibility-matrix work. Official Spring AI docs confirm Tool Calling, MCP, Vector Store/RAG, observability, and evaluator APIs as first-class directions.
+- Spring AI 1.1.7 remains the current stable Spring AI mainline for this project; Spring AI 2.0.0-RC1 remains compatibility-matrix work. Official Spring AI docs confirm Tool Calling, MCP, Vector Store/RAG, observability, and evaluator APIs as first-class directions.
 - Spring Boot official docs list 4.0.6 and 3.5.14 as stable documentation lines. This project stays on the already verified Spring Boot 3.5.14 mainline until the Boot 4 / Framework 7 compatibility matrix passes.
-- MCP latest specification work continues to evolve quickly, with the 2025-11-25 spec line visible in official MCP docs/repo. Phase 1 should expose read-only manifest/schema first; future `tools/call` must still pass through `SafeToolExecutor`, HITL, trace, audit, and eval.
+- MCP specification work continues to evolve quickly; the official 2025-06-18 tools spec already defines `tools/list` and `tools/call`. Phase 1 should expose read-only manifest/schema first; future `tools/call` must still pass through `SafeToolExecutor`, HITL, trace, audit, and eval.
 - OpenTelemetry GenAI/agent semantic conventions are still marked Development, so kube-agent should keep stable internal `atlas.agent.*` attributes and map to GenAI semconv through a compatibility layer rather than freezing experimental names into storage.
 - OpenAI's current Agent/Evals guidance reinforces the same architecture direction: tools, guardrails, memory/vector stores, orchestration, trace grading, and eval workflows are core Agent capabilities. kube-agent implements the same ideas in a Java/Spring control plane bound to kube-manager safety requirements.
 
 References:
 
 - [Spring AI Tool Calling](https://docs.spring.io/spring-ai/reference/api/tools.html)
-- [Spring AI release 1.1.7 / 2.0.0-M7](https://spring.io/blog/2026/05/23/spring-ai-1-0-8-1-1-7-2-0-0-M7-available-now/)
+- [Spring AI reference documentation](https://docs.spring.io/spring-ai/reference/)
 - [Spring Boot documentation index](https://docs.spring.io/spring-boot/index.html)
 - [Model Context Protocol specification](https://modelcontextprotocol.io/specification)
 - [OpenTelemetry GenAI semantic conventions](https://opentelemetry.io/docs/specs/semconv/gen-ai/)
@@ -891,7 +909,7 @@ The Phase 1 mainline continues to follow "stable verified core + compatibility m
 
 - Spring Boot official docs list stable `4.0.6` and `3.5.14`; this repository remains on verified `3.5.14` while tracking Boot 4 migration under tests.
 - Spring AI official docs list stable `1.1.7` and preview `2.0.0-RC1`; this repository remains on verified `1.1.7` while tracking Spring AI 2 under compatibility work.
-- MCP `latest` specification redirects to `2025-11-25`; Phase 1 should keep MCP work behind safe manifest/schema adapters until authorization, consent, and Tool safety contracts are complete.
+- MCP tools specification defines `tools/list` and `tools/call`; Phase 1 should keep MCP work behind safe manifest/schema adapters until authorization, consent, and Tool safety contracts are complete.
 - OpenTelemetry semantic conventions are at `1.41.1` and include Generative AI / MCP areas; the mainline keeps stable `atlas.agent.*` attributes and isolates experimental semconv attributes until contract tests prove they are safe.
 
 Rule: a technology is "introduced" into this project only after it has a typed contract, security boundary, tests, documentation, recovery memory, and CI/release evidence. Version-chasing without those gates is not top-tier engineering.

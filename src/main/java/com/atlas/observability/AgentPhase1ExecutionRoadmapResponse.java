@@ -68,9 +68,9 @@ public record AgentPhase1ExecutionRoadmapResponse(
                 List.of("reviewed-trace-evidence", "eval-workbench-overview", "trace-set-detail", "catalog-patch-review")),
             step(3, "release-blocking-eval-gates",
                 "Promote deterministic eval gate bundles from advisory evidence to reviewed release gates.",
-                "BLOCKED_BY_TRACE_EVIDENCE",
-                List.of("reviewed-redacted-traces", "gate-bundle-summary", "human-git-review"),
-                List.of("eval-gate-bundle-summary", "promotion-workflow")),
+                "BACKEND_CONTRACT_READY_BUT_BLOCKED",
+                List.of("release-blocking-gate-contract", "reviewed-redacted-traces", "gate-bundle-summary", "human-git-review"),
+                List.of("release-blocking-gate-contract", "eval-gate-bundle-summary", "promotion-workflow")),
             step(4, "memory-rag-eval-suite-binding",
                 "Implement Memory/RAG eval suites for citation, source digest, privacy, tenant isolation, lifecycle, and prompt-injection gates.",
                 "CONTRACT_DEFINED_NOT_BOUND",
@@ -145,6 +145,7 @@ public record AgentPhase1ExecutionRoadmapResponse(
         endpoints.put("kubeManagerGovernanceOverview", "/api/agent/observability/kube-manager/http-outlet/governance-workbench/overview");
         endpoints.put("evalWorkbenchOverview", "/api/agent/observability/eval/workbench/overview");
         endpoints.put("reviewedEvalTraceEvidence", "/api/agent/observability/eval/reviewed-trace-evidence");
+        endpoints.put("releaseBlockingEvalGateContract", "/api/agent/observability/eval/release-blocking-gate-contract");
         endpoints.put("memoryRagReadiness", "/api/agent/observability/memory-rag/readiness");
         endpoints.put("memoryRagEvalGateContract", "/api/agent/observability/memory-rag/eval-gate-contract");
         endpoints.put("mcpGovernanceOverview", "/api/agent/mcp/governance/overview");

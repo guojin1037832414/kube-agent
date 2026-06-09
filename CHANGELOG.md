@@ -6,6 +6,25 @@
 
 ---
 
+## [M5.67-1] - Release-blocking eval gate contract
+
+**Delivery**: Added an admin-only release-blocking eval gate contract before CI can consume eval artifacts as release blockers.
+**Changes**
+- Added `AgentReleaseBlockingEvalGateContractResponse`.
+- Added `AgentReleaseBlockingEvalGateContractService`.
+- Added `GET /api/agent/observability/eval/release-blocking-gate-contract`.
+- Composed M5.66 reviewed trace evidence with the eval workbench gate bundle summary into a release-gate readiness contract.
+- Published release-gate checks, trace-set release rows, blocked reasons, promotion plan, next actions, endpoint map, safety proof, and privacy proof.
+- Updated eval workbench capabilities, Phase 1 roadmap, Vue readiness control plane, advanced technology adoption, and top-tier readiness endpoint maps to include the new contract.
+- Added service, controller, source-contract, top-tier, roadmap, Vue, adoption contract, workbench, and MockMvc security coverage.
+**Verification**
+- `mvn -q "-Dtest=AgentReleaseBlockingEvalGateContractServiceTest,AgentReviewedEvalTraceEvidenceServiceTest,AgentEvalWorkbenchCapabilitiesServiceTest,AgentEvalWorkbenchOverviewServiceTest,AgentPhase1ExecutionRoadmapServiceTest,AgentVueReadinessControlPlaneServiceTest,AgentAdvancedTechnologyAdoptionContractServiceTest,AgentTopTierReadinessOverviewServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed during implementation.
+**Security**
+- `contractStatus=BLOCKED_BY_REVIEWED_TRACE_EVIDENCE` in the current empty-catalog state.
+- `releaseBlockingGateDefined=true`, `releaseBlockingEnabled=false`, `ciBlockingEnabled=false`, `releaseGateCanOpenNow=false`, and `runtimeMutationAllowed=false`.
+- Even a synthetic future-ready evidence scenario keeps `releaseBlockingEnabled=false` and `ciBlockingEnabled=false`; a later explicit CI wiring slice is required.
+- No CI workflow mutation, CI blocking enablement, eval execution, trace-set catalog mutation, raw audit query, replay embedding, Tool execution, `SafeToolExecutor` invocation, HITL invocation, kube-manager call, MCP runtime `tools/call`, LLM call, external call, audit write, durable receipt issuance, memory write, retrieval execution, dependency upgrade, or NIM / HPC / Slurm / BCM Phase 2 work is added.
+
 ## [M5.66-1] - Reviewed eval trace evidence contract
 
 **Delivery**: Added an admin-only reviewed eval trace evidence control-plane contract for Phase 1 release-gate hardening.

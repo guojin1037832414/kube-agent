@@ -63,6 +63,11 @@ class ObservabilityControllerTest {
         new AgentEvalWorkbenchCatalogPatchReviewService(evalTraceSetCatalogService);
     private final AgentEvalWorkbenchGateBundleSummaryService evalWorkbenchGateBundleSummaryService =
         new AgentEvalWorkbenchGateBundleSummaryService(evalTraceSetCatalogService);
+    private final AgentReleaseBlockingEvalGateContractService releaseBlockingEvalGateContractService =
+        new AgentReleaseBlockingEvalGateContractService(
+            reviewedEvalTraceEvidenceService,
+            evalWorkbenchGateBundleSummaryService
+        );
     private final AgentKubeManagerHttpOutletHealthSummaryService kubeManagerHttpOutletHealthSummaryService =
         new AgentKubeManagerHttpOutletHealthSummaryService(
             retryRegistry(),
@@ -147,6 +152,7 @@ class ObservabilityControllerTest {
         evalWorkbenchCapabilitiesService,
         evalWorkbenchOverviewService,
         reviewedEvalTraceEvidenceService,
+        releaseBlockingEvalGateContractService,
         evalWorkbenchTraceSetDetailService,
         evalWorkbenchPromotionWorkflowService,
         evalWorkbenchCatalogPatchReviewService,
@@ -2078,6 +2084,61 @@ class ObservabilityControllerTest {
             .containsEntry("externalCalls", false);
         assertThat(evidence.toString())
             .contains("reviewed-trace-evidence", "phase1-core-golden")
+            .doesNotContain("secret-token-value", "conv-sensitive", "user-sensitive", "org-sensitive", "/api/org-sensitive");
+    }
+
+    @Test
+    void releaseBlockingEvalGateContract_shouldRequireAdminUser() {
+        ResponseEntity<ApiResponse<AgentReleaseBlockingEvalGateContractResponse>> anonymous =
+            controller.releaseBlockingEvalGateContract();
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentReleaseBlockingEvalGateContractResponse>> user =
+            controller.releaseBlockingEvalGateContract();
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void releaseBlockingEvalGateContract_shouldReturnFailClosedContractForAdminUser() {
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentReleaseBlockingEvalGateContractResponse>> response =
+            controller.releaseBlockingEvalGateContract();
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        AgentReleaseBlockingEvalGateContractResponse contract = response.getBody().getData();
+        assertThat(contract.schemaVersion()).isEqualTo("agent-release-blocking-eval-gate-contract.v1");
+        assertThat(contract.contractStatus()).isEqualTo("BLOCKED_BY_REVIEWED_TRACE_EVIDENCE");
+        assertThat(contract.releaseBlockingGateDefined()).isTrue();
+        assertThat(contract.releaseBlockingEnabled()).isFalse();
+        assertThat(contract.ciBlockingEnabled()).isFalse();
+        assertThat(contract.releaseGateCanOpenNow()).isFalse();
+        assertThat(contract.reviewedEvidenceReady()).isFalse();
+        assertThat(contract.gateBundleReleaseEligible()).isFalse();
+        assertThat(contract.emptyTraceSets()).isEqualTo(4);
+        assertThat(contract.blockedReasons())
+            .contains("reviewed-redacted-trace-evidence-missing", "ci-blocking-switch-intentionally-absent");
+        assertThat(contract.safety())
+            .containsEntry("adminOnly", true)
+            .containsEntry("readOnly", true)
+            .containsEntry("releaseBlockingEnabled", false)
+            .containsEntry("ciBlockingEnabled", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("kubeManagerCalls", false);
+        assertThat(contract.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("containsRawParameterValues", false)
+            .containsEntry("llmUsed", false)
+            .containsEntry("externalCalls", false);
+        assertThat(contract.toString())
+            .contains("release-blocking-gate-contract", "phase1-core-golden")
             .doesNotContain("secret-token-value", "conv-sensitive", "user-sensitive", "org-sensitive", "/api/org-sensitive");
     }
 

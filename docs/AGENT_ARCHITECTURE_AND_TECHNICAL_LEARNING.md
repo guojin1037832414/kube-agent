@@ -2,6 +2,47 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-09 M5.67 Release-Blocking Eval Gate Contract
+
+M5.67 implements the third M5.64 roadmap slice as a backend-owned release-blocking eval gate contract. It answers a stricter release question: even if eval artifacts exist, are they mature enough to become a release blocker?
+
+```text
+reviewed eval trace evidence
+        |
+        +-- reviewed redacted anchors
+        +-- human Git review required
+        |
+        v
+eval workbench gate bundle summary
+        |
+        +-- no empty trace sets
+        +-- compact deterministic release artifact
+        |
+        v
+release-blocking eval gate contract
+        |
+        +-- advisory release-readiness state
+        +-- CI blocking still disabled
+        +-- runtime authority unchanged
+```
+
+Endpoint:
+
+```text
+/api/agent/observability/eval/release-blocking-gate-contract
+```
+
+Key design:
+- `AgentReleaseBlockingEvalGateContractResponse` publishes `schemaVersion=agent-release-blocking-eval-gate-contract.v1`.
+- Current state is fail-closed: `contractStatus=BLOCKED_BY_REVIEWED_TRACE_EVIDENCE`, `releaseBlockingEnabled=false`, `ciBlockingEnabled=false`, `releaseGateCanOpenNow=false`, and `runtimeMutationAllowed=false`.
+- It composes M5.66 reviewed trace evidence with the eval workbench gate bundle summary; no raw replay, raw audit, Tool execution, kube-manager call, MCP `tools/call`, LLM call, retrieval, memory write, or CI mutation is added.
+- It publishes six checks: reviewed trace evidence, gate-bundle eligibility, no empty trace sets, human Git review, CI switch intentionally absent, and unchanged runtime authority.
+- It makes future readiness explicit but still safe: even if synthetic reviewed evidence and passing gate bundle data exist, the contract can only say `READY_FOR_MANUAL_RELEASE_GATE_PROMOTION`; CI blocking remains a separate future slice.
+
+Learning point: 发布阻断不是“eval 分数够了就打开开关”。顶级 Agent 的 release gate 是一个证据系统：先证明输入 trace 真实、脱敏、已审阅，再证明 gate bundle 确定性可复现，再由人工 Git review 接住发布责任，最后才允许 CI 消费紧凑 artifact。M5.67 把这条链路写成后端契约，让前端、测试、文档和恢复记忆都看到同一个事实。
+
+Technology point: 这一步是“引入最新 Agent 技术”的正确姿势。OpenAI Agents/Evals 的 trace grading 和 guardrails、MCP 的工具调用治理、OpenTelemetry GenAI 的 span/evidence 方向、OWASP LLM Top 10 的 excessive agency / sensitive information 风险、W3C Trace Context 的 trace 锚点，都被收敛成 Java/Spring 可测试的 release gate contract。先进协议先进在证据闭环，而不是绕过本地控制面。
+
 ## 2026-06-09 M5.66 Reviewed Eval Trace Evidence Contract
 
 M5.66 implements the second M5.64 roadmap slice as a backend-owned reviewed evidence contract. It answers the release-quality question: do our eval gates have real reviewed redacted trace anchors, or are they still schema-only?
@@ -726,7 +767,7 @@ human/Git review -> eval-trace-sets.json -> gate bundle
 
 学习重点：顶级 Agent 的“证据晋升”必须是有类型、有审查、有 Git 轨迹的流程。runtime 只能产生候选和提案，不能直接获得 release authority。这样可以防止一次临时排障、一次本地请求、一个伪造 traceId 变成未来 CI 的发布依据。
 
-技术基线备注：2026-06-09 查阅官方文档后，当前主线继续使用已验证的 Spring Boot 3.5.14 / Spring AI 1.1.7；Spring Boot 4.0.6、Spring AI 2.0.0-RC1、MCP 2025-11-25、OpenTelemetry semantic conventions 1.41.1 进入兼容矩阵和后续 contract-first 适配，不做无测试的盲升。
+技术基线备注：2026-06-09 查阅官方文档后，当前主线继续使用已验证的 Spring Boot 3.5.14 / Spring AI 1.1.7；Spring Boot 4.0.6、Spring AI 2.0.0-RC1、MCP 2025-06-18 工具规范、OpenTelemetry GenAI semantic conventions 进入兼容矩阵和后续 contract-first 适配，不做无测试的盲升。
 
 ## 2026-06-09 M5.40 Trace-Set Candidate Discovery 候选发现
 

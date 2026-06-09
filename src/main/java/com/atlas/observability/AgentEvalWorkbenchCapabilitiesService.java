@@ -95,6 +95,17 @@ public class AgentEvalWorkbenchCapabilitiesService {
                 List.of("traceSetEvidence", "reviewPipeline", "qualityGates", "nextActions")
             ),
             capability(
+                "release-blocking-gate-contract",
+                "Release-blocking eval gate contract",
+                "release-gate",
+                "GET",
+                "/api/agent/observability/eval/release-blocking-gate-contract",
+                "",
+                AgentReleaseBlockingEvalGateContractResponse.SCHEMA_VERSION,
+                List.of("reviewedTraceEvidence", "gateBundleSummary"),
+                List.of("releaseGateChecks", "blockedReasons", "promotionPlan")
+            ),
+            capability(
                 "trace-set-candidate-discovery",
                 "Trace-set candidate discovery",
                 "discover",
@@ -182,6 +193,7 @@ public class AgentEvalWorkbenchCapabilitiesService {
                 "workbench-catalog-patch-review",
                 "workbench-gate-bundle-summary",
                 "reviewed-trace-evidence",
+                "release-blocking-gate-contract",
                 "trace-set-catalog-patch-proposal",
                 "trace-set-gate-bundle",
                 "trace-replay-timeline",

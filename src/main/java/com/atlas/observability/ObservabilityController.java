@@ -61,6 +61,7 @@ public class ObservabilityController {
     private final AgentEvalWorkbenchCapabilitiesService evalWorkbenchCapabilitiesService;
     private final AgentEvalWorkbenchOverviewService evalWorkbenchOverviewService;
     private final AgentReviewedEvalTraceEvidenceService reviewedEvalTraceEvidenceService;
+    private final AgentReleaseBlockingEvalGateContractService releaseBlockingEvalGateContractService;
     private final AgentEvalWorkbenchTraceSetDetailService evalWorkbenchTraceSetDetailService;
     private final AgentEvalWorkbenchPromotionWorkflowService evalWorkbenchPromotionWorkflowService;
     private final AgentEvalWorkbenchCatalogPatchReviewService evalWorkbenchCatalogPatchReviewService;
@@ -95,6 +96,7 @@ public class ObservabilityController {
                                    AgentEvalWorkbenchCapabilitiesService evalWorkbenchCapabilitiesService,
                                    AgentEvalWorkbenchOverviewService evalWorkbenchOverviewService,
                                    AgentReviewedEvalTraceEvidenceService reviewedEvalTraceEvidenceService,
+                                   AgentReleaseBlockingEvalGateContractService releaseBlockingEvalGateContractService,
                                    AgentEvalWorkbenchTraceSetDetailService evalWorkbenchTraceSetDetailService,
                                    AgentEvalWorkbenchPromotionWorkflowService evalWorkbenchPromotionWorkflowService,
                                    AgentEvalWorkbenchCatalogPatchReviewService evalWorkbenchCatalogPatchReviewService,
@@ -128,6 +130,7 @@ public class ObservabilityController {
         this.evalWorkbenchCapabilitiesService = evalWorkbenchCapabilitiesService;
         this.evalWorkbenchOverviewService = evalWorkbenchOverviewService;
         this.reviewedEvalTraceEvidenceService = reviewedEvalTraceEvidenceService;
+        this.releaseBlockingEvalGateContractService = releaseBlockingEvalGateContractService;
         this.evalWorkbenchTraceSetDetailService = evalWorkbenchTraceSetDetailService;
         this.evalWorkbenchPromotionWorkflowService = evalWorkbenchPromotionWorkflowService;
         this.evalWorkbenchCatalogPatchReviewService = evalWorkbenchCatalogPatchReviewService;
@@ -492,6 +495,17 @@ public class ObservabilityController {
             return guard;
         }
         return ResponseEntity.ok(ApiResponse.ok(reviewedEvalTraceEvidenceService.evidence()));
+    }
+
+    /** Publish release-blocking eval gate readiness without enabling CI blocking. */
+    @GetMapping("/eval/release-blocking-gate-contract")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentReleaseBlockingEvalGateContractResponse>> releaseBlockingEvalGateContract() {
+        ResponseEntity<ApiResponse<AgentReleaseBlockingEvalGateContractResponse>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return ResponseEntity.ok(ApiResponse.ok(releaseBlockingEvalGateContractService.contract()));
     }
 
     /** Build a frontend-ready gate-bundle summary without accepting caller trace IDs. */
