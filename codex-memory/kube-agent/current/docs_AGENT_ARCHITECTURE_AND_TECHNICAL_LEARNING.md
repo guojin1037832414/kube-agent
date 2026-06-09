@@ -2,6 +2,30 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-09 M5.42 Trace-Set Promotion Workflow 晋升工作流
+
+M5.42 给未来 Vue eval workbench 提供一个 typed orchestration artifact。前端不需要自己依次调用 candidates、curation-review、catalog-patch-proposal 再猜最终状态；后端直接返回完整的候选发现、推荐 trace 选择、复核结果和补丁提案。
+
+```text
+promotion-workflow
+    |
+    | candidate discovery
+    | select recommended trace anchors
+    | curation review
+    | catalog patch proposal
+    v
+workflow artifact for human/Git review
+```
+
+关键设计：
+- `AgentEvalTraceSetPromotionWorkflowService` 只编排已有安全步骤，不新增执行权限。
+- `AgentEvalTraceSetPromotionWorkflowArtifact` 嵌入 discovery 和 patch proposal，但不嵌入 replay timeline 或 per-trace reports。
+- `maxRecommendedCandidates` 默认 10、最大 25，防止一次自动工作流无限扩大评审面。
+- workflow verdict 可以是 `READY_FOR_GIT_REVIEW`、`NO_RECOMMENDED_CANDIDATES` 或底层 proposal verdict。
+- artifact 继续声明 `catalogMutationAllowed=false`、`catalogMutated=false`、`runtimeCatalogWrite=false`。
+
+学习重点：顶级 Agent 的前端工作台应该消费“后端已经建模好的证据语义”，而不是把 release-state 判断散落在页面逻辑里。后端负责证据边界、隐私证明、评审规则和发布权限；前端负责把这些状态清楚地展示给人。
+
 ## 2026-06-09 M5.41 Trace-Set Catalog Patch Proposal 补丁提案
 
 M5.41 把 eval trace-set 的证据晋升链路补成一个更完整的 release governance 闭环。之前 M5.40 能发现候选，M5.39 能评审候选，但系统还缺一个“把评审通过的候选表达成可审查 catalog 变更”的 typed artifact。

@@ -10,7 +10,34 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.41-1
+## Latest Phase 1 Core Memory - M5.42-1
+
+M5.42-1 adds a read-only promotion workflow artifact for the future Vue eval workbench. It composes M5.40 candidate discovery, M5.39 curation review, and M5.41 catalog patch proposal into one typed response.
+
+Delivered:
+
+- Added `AgentEvalTraceSetPromotionWorkflowRequest`.
+- Added `AgentEvalTraceSetPromotionWorkflowArtifact`.
+- Added `AgentEvalTraceSetPromotionWorkflowService`.
+- Added admin-only `POST /api/agent/observability/eval/trace-sets/{traceSetId}/promotion-workflow`.
+- Workflow selects bounded recommended trace anchors from redacted candidate discovery, then delegates to the existing catalog patch proposal path.
+
+Security boundary:
+
+- The endpoint is admin-only at URL and method levels.
+- It is orchestration-only / artifact-only and never mutates `observability/eval-trace-sets.json`.
+- `catalogMutationAllowed=false`, `catalogMutated=false`, `runtimeCatalogWrite=false`, and Git review remains mandatory.
+- No raw principal, organization, conversation, endpoint, reason text, or parameter values are exposed.
+- No LLM, Tool execution, kube-manager call, network call, durable write, raw audit export, or runtime catalog mutation is added.
+- NIM / HPC / Slurm / BCM remain Phase 2 paused scope.
+
+Learning point: top-tier Agent workbenches should consume typed workflow artifacts instead of reconstructing release-state logic in the frontend. The backend owns evidence semantics; the frontend displays and routes human review.
+
+Latest verified command:
+
+- `mvn -q "-Dtest=AgentEvalTraceSetPromotionWorkflowServiceTest,AgentEvalTraceSetCandidateDiscoveryServiceTest,AgentEvalTraceSetCatalogServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+## Previous Phase 1 Core Memory - M5.41-1
 
 M5.41-1 adds a review-only catalog patch proposal artifact so curated trace IDs can move from curation review toward Git-reviewed catalog promotion without runtime mutation.
 

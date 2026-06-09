@@ -31,6 +31,8 @@ class ObservabilityControllerTest {
         new AgentEvalTraceSetCatalogService(evalSuiteCatalogService, new com.fasterxml.jackson.databind.ObjectMapper());
     private final AgentEvalTraceSetCandidateDiscoveryService traceSetCandidateDiscoveryService =
         new AgentEvalTraceSetCandidateDiscoveryService(auditRecorder, evalTraceSetCatalogService);
+    private final AgentEvalTraceSetPromotionWorkflowService traceSetPromotionWorkflowService =
+        new AgentEvalTraceSetPromotionWorkflowService(traceSetCandidateDiscoveryService, evalTraceSetCatalogService);
     private final ObservabilityController controller = new ObservabilityController(
         new AgentMetricsService(new SimpleMeterRegistry()),
         auditRecorder,
@@ -40,6 +42,7 @@ class ObservabilityControllerTest {
         evalSuiteCatalogService,
         evalTraceSetCatalogService,
         traceSetCandidateDiscoveryService,
+        traceSetPromotionWorkflowService,
         new AgentPrincipalResolver(userPermissionContext)
     );
 
@@ -1000,6 +1003,90 @@ class ObservabilityControllerTest {
             .containsEntry("kubeManagerCalls", false);
         assertThat(proposal.toString())
             .contains(traceId, "observability/eval-trace-sets.json")
+            .doesNotContain("secret-token-value", "conv-sensitive", "user-sensitive", "org-sensitive", "/api/org-sensitive")
+            .doesNotContain("reports=", "replay=");
+    }
+
+    @Test
+    void evalTraceSetPromotionWorkflow_shouldRequireAdminUserAndRejectUnknownTraceSet() {
+        ResponseEntity<ApiResponse<AgentEvalTraceSetPromotionWorkflowArtifact>> anonymous =
+            controller.evalTraceSetPromotionWorkflow("phase1-core-golden", null);
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentEvalTraceSetPromotionWorkflowArtifact>> missing =
+            controller.evalTraceSetPromotionWorkflow("missing-trace-set", null);
+
+        assertThat(missing.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(missing.getBody()).isNotNull();
+        assertThat(missing.getBody().isSuccess()).isFalse();
+    }
+
+    @Test
+    void evalTraceSetPromotionWorkflow_shouldComposeRedactedPromotionArtifactsForAdminUser() {
+        String traceId = "trc_77777777777777777777777777777777";
+        auditRecorder.record(new com.atlas.audit.AgentAuditEvent(
+            "aud_eval_trace_set_workflow",
+            java.time.Instant.parse("2026-06-09T00:00:00Z"),
+            traceId,
+            "conv-sensitive",
+            "user-sensitive",
+            "org-sensitive",
+            "intent",
+            "tool",
+            com.atlas.tool.execution.SafeToolExecutionSource.REACT_ENGINE,
+            "GET",
+            java.util.List.of("/api/org-sensitive/pod?token=secret-token-value"),
+            com.atlas.tool.annotation.AtlasToolMapping.OperationType.READ,
+            false,
+            com.atlas.audit.AgentAuditOutcome.SUCCESS,
+            true,
+            true,
+            "ok token=secret-token-value",
+            java.util.Map.of("count", 1, "keys", java.util.List.of(java.util.Map.of(
+                "name", "token",
+                "protected", true,
+                "type", "string",
+                "present", true
+            )))
+        ));
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentEvalTraceSetPromotionWorkflowArtifact>> response =
+            controller.evalTraceSetPromotionWorkflow(
+                "phase1-core-golden",
+                new AgentEvalTraceSetPromotionWorkflowRequest(50, null, null, null, 5)
+            );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        AgentEvalTraceSetPromotionWorkflowArtifact workflow = response.getBody().getData();
+        assertThat(workflow.schemaVersion()).isEqualTo("agent-eval-trace-set-promotion-workflow.v1");
+        assertThat(workflow.workflowVerdict()).isEqualTo("READY_FOR_GIT_REVIEW");
+        assertThat(workflow.readyForGitReview()).isTrue();
+        assertThat(workflow.catalogMutated()).isFalse();
+        assertThat(workflow.selectedCandidateTraceIds()).containsExactly(traceId);
+        assertThat(workflow.candidateDiscovery().candidateTraceIds()).contains(traceId);
+        assertThat(workflow.catalogPatchProposal().readyForGitReview()).isTrue();
+        assertThat(workflow.workflowPolicy())
+            .containsEntry("workflowOnly", true)
+            .containsEntry("catalogMutationAllowed", false)
+            .containsEntry("runtimeCatalogWrite", false)
+            .containsEntry("requiresGitReview", true)
+            .containsEntry("toolExecution", false)
+            .containsEntry("kubeManagerCalls", false);
+        assertThat(workflow.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("llmUsed", false)
+            .containsEntry("externalCalls", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("kubeManagerCalls", false);
+        assertThat(workflow.toString())
+            .contains(traceId, "catalog-patch-proposal", "gate-bundle")
             .doesNotContain("secret-token-value", "conv-sensitive", "user-sensitive", "org-sensitive", "/api/org-sensitive")
             .doesNotContain("reports=", "replay=");
     }

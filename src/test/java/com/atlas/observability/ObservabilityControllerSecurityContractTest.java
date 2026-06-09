@@ -46,6 +46,7 @@ class ObservabilityControllerSecurityContractTest {
         assertThat(source).contains("@PostMapping(\"/eval/trace-sets/{traceSetId}/gate\")");
         assertThat(source).contains("@PostMapping(\"/eval/trace-sets/{traceSetId}/curation-review\")");
         assertThat(source).contains("@PostMapping(\"/eval/trace-sets/{traceSetId}/catalog-patch-proposal\")");
+        assertThat(source).contains("@PostMapping(\"/eval/trace-sets/{traceSetId}/promotion-workflow\")");
         assertThat(source).contains("@PostMapping(\"/eval/trace-sets/gate-bundle\")");
         assertThat(source).contains("public ResponseEntity<ApiResponse<Map<String, Object>>> auditIndex()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentAuditQueryResponse>> auditByAuditId(@PathVariable String auditId)");
@@ -61,8 +62,9 @@ class ObservabilityControllerSecurityContractTest {
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentEvalTraceSetGateArtifact>> evalTraceSetGate(@PathVariable String traceSetId,");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentEvalTraceSetCurationReviewArtifact>> evalTraceSetCurationReview(");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentEvalTraceSetCatalogPatchProposalArtifact>> evalTraceSetCatalogPatchProposal(");
+        assertThat(source).contains("public ResponseEntity<ApiResponse<AgentEvalTraceSetPromotionWorkflowArtifact>> evalTraceSetPromotionWorkflow(");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentEvalTraceSetGateBundleArtifact>> evalTraceSetGateBundle(");
         assertThat(source.split("@PreAuthorize\\(\"hasAnyRole\\('ADMIN', 'SYS_ADMIN'\\)\"\\)", -1).length - 1)
-            .isGreaterThanOrEqualTo(16);
+            .isGreaterThanOrEqualTo(17);
     }
 }

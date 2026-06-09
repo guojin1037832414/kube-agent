@@ -1,0 +1,85 @@
+﻿{
+    "schemaVersion":  "kube-agent-recovery-sha256.v1",
+    "generatedAt":  "2026-06-09T01:37:02.0058412Z",
+    "milestone":  "M5.42-1",
+    "title":  "Eval trace-set promotion workflow",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "files":  [
+                  {
+                      "path":  "CHANGELOG.md",
+                      "sha256":  "7f180486706ade6b08d75b88a22a65084e4549714e62d4c8f0c93326ef5d4cb9"
+                  },
+                  {
+                      "path":  "docs/PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "41ef684bc9c30d9760dd09c35b6c83032de94fb0d31362adfc5e3b297d7702c8"
+                  },
+                  {
+                      "path":  "docs/tech-stack/BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "8ded4a86c72b2c3f9651e1e84c9fc64c3ea693427f4bd4233e197bc093ff794d"
+                  },
+                  {
+                      "path":  "docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "5fc37fa4a58155f9c5b2f17b74f15544cadf74ea42baf831a1ef7620667a4e8a"
+                  },
+                  {
+                      "path":  "docs/M5_42_EVAL_TRACE_SET_PROMOTION_WORKFLOW_20260609.md",
+                      "sha256":  "a5d25747e71b16aa6b74a94691128cd9ef7ef58749539430aed8fb7e5969a981"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentEvalTraceSetPromotionWorkflowRequest.java",
+                      "sha256":  "7fbe633bb82ea490031238eb964720412d486ab53057b2069c5cba584b5f59aa"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentEvalTraceSetPromotionWorkflowArtifact.java",
+                      "sha256":  "692527b10ac69b6319f5f6a25731b0fd665671cdaf98fef8b3513d0acc106f0a"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentEvalTraceSetPromotionWorkflowService.java",
+                      "sha256":  "c850e1bac7004f0959980ef6ae99988b1681cb62f7c5d038a17d9375c75b566d"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/ObservabilityController.java",
+                      "sha256":  "d93adc1711754dfbaa8bdadd599a2704673a154cdd7709ae1ec33147d7bf4d38"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/AgentEvalTraceSetPromotionWorkflowServiceTest.java",
+                      "sha256":  "b70405ecd0bd00dad099fe9e1e6f31588a5c584c729d6978f9ba86e532849612"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/ObservabilityControllerTest.java",
+                      "sha256":  "ef69f06fe80dc26bdab2ba86bc8292b323ff6f6e2d17e502a1cc4ba4bad0bf44"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/ObservabilityControllerSecurityContractTest.java",
+                      "sha256":  "71ad5c86fba90f9c2b19653aa69b4b5e625b59c74fb9c2342abf9e541aa69e75"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/auth/AgentSecurityConfigWebMvcTest.java",
+                      "sha256":  "f2858edce8cd8f122b52a678e2f3c679875ce113bcc9994c47511f6edddb31f2"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/CHANGELOG.md",
+                      "sha256":  "7f180486706ade6b08d75b88a22a65084e4549714e62d4c8f0c93326ef5d4cb9"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "41ef684bc9c30d9760dd09c35b6c83032de94fb0d31362adfc5e3b297d7702c8"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "8ded4a86c72b2c3f9651e1e84c9fc64c3ea693427f4bd4233e197bc093ff794d"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "5fc37fa4a58155f9c5b2f17b74f15544cadf74ea42baf831a1ef7620667a4e8a"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_M5_42_EVAL_TRACE_SET_PROMOTION_WORKFLOW_20260609.md",
+                      "sha256":  "a5d25747e71b16aa6b74a94691128cd9ef7ef58749539430aed8fb7e5969a981"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/RECOVERY_STATUS.md",
+                      "sha256":  "09e08ec7914d146b8e373e05c1cc3ad2b707b188c4933efb065a768ce3db4876"
+                  }
+              ]
+}

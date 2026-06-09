@@ -6,6 +6,24 @@
 
 ---
 
+## [M5.42-1] - Eval trace-set promotion workflow
+
+**Delivery**: Added a read-only promotion workflow artifact that composes candidate discovery, curation review, and catalog patch proposal for future Vue eval workbench integration.
+**Changes**
+- Added `AgentEvalTraceSetPromotionWorkflowRequest`.
+- Added `AgentEvalTraceSetPromotionWorkflowArtifact`.
+- Added `AgentEvalTraceSetPromotionWorkflowService`.
+- Added admin-only `POST /api/agent/observability/eval/trace-sets/{traceSetId}/promotion-workflow`.
+- The workflow selects bounded recommended trace anchors from redacted candidate discovery, then delegates to the existing catalog patch proposal path.
+- Added service, controller, source-contract, and MockMvc security coverage.
+**Verification**
+- `mvn -q "-Dtest=AgentEvalTraceSetPromotionWorkflowServiceTest,AgentEvalTraceSetCandidateDiscoveryServiceTest,AgentEvalTraceSetCatalogServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed.
+**Security**
+- The workflow is orchestration-only and never mutates `observability/eval-trace-sets.json`.
+- The response remains deterministic, redacted-only, non-executing, `llmUsed=false`, `externalCalls=false`, `toolExecution=false`, and `kubeManagerCalls=false`.
+- `catalogMutationAllowed=false`, `catalogMutated=false`, `runtimeCatalogWrite=false`, and Git review remains mandatory.
+- This slice adds no kube-manager write/create/delete/state-changing behavior and does not reopen NIM/HPC/Slurm/BCM scope.
+
 ## [M5.41-1] - Eval trace-set catalog patch proposal
 
 **Delivery**: Added a review-only JSON Patch proposal artifact for promoting curated trace anchors through human/Git review.

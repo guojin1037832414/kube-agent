@@ -41,6 +41,7 @@ public class ObservabilityController {
     private final AgentEvalSuiteCatalogService evalSuiteCatalogService;
     private final AgentEvalTraceSetCatalogService evalTraceSetCatalogService;
     private final AgentEvalTraceSetCandidateDiscoveryService traceSetCandidateDiscoveryService;
+    private final AgentEvalTraceSetPromotionWorkflowService traceSetPromotionWorkflowService;
     private final AgentPrincipalResolver principalResolver;
 
     public ObservabilityController(AgentMetricsService metricsService,
@@ -51,6 +52,7 @@ public class ObservabilityController {
                                    AgentEvalSuiteCatalogService evalSuiteCatalogService,
                                    AgentEvalTraceSetCatalogService evalTraceSetCatalogService,
                                    AgentEvalTraceSetCandidateDiscoveryService traceSetCandidateDiscoveryService,
+                                   AgentEvalTraceSetPromotionWorkflowService traceSetPromotionWorkflowService,
                                    AgentPrincipalResolver principalResolver) {
         this.metricsService = metricsService;
         this.auditSnapshotProvider = auditSnapshotProvider;
@@ -60,6 +62,7 @@ public class ObservabilityController {
         this.evalSuiteCatalogService = evalSuiteCatalogService;
         this.evalTraceSetCatalogService = evalTraceSetCatalogService;
         this.traceSetCandidateDiscoveryService = traceSetCandidateDiscoveryService;
+        this.traceSetPromotionWorkflowService = traceSetPromotionWorkflowService;
         this.principalResolver = principalResolver;
     }
 
@@ -283,6 +286,22 @@ public class ObservabilityController {
             return guard;
         }
         return evalTraceSetCatalogService.catalogPatchProposal(traceSetId, request)
+            .map(response -> ResponseEntity.ok(ApiResponse.ok(response)))
+            .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.fail("Unknown Agent eval trace set: " + traceSetId)));
+    }
+
+    /** Compose discovery, curation review, and patch proposal for a future eval workbench. */
+    @PostMapping("/eval/trace-sets/{traceSetId}/promotion-workflow")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentEvalTraceSetPromotionWorkflowArtifact>> evalTraceSetPromotionWorkflow(
+        @PathVariable String traceSetId,
+        @RequestBody(required = false) AgentEvalTraceSetPromotionWorkflowRequest request) {
+        ResponseEntity<ApiResponse<AgentEvalTraceSetPromotionWorkflowArtifact>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return traceSetPromotionWorkflowService.workflow(traceSetId, request)
             .map(response -> ResponseEntity.ok(ApiResponse.ok(response)))
             .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(ApiResponse.fail("Unknown Agent eval trace set: " + traceSetId)));

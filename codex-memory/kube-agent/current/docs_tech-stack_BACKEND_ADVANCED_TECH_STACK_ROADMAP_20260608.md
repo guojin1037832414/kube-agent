@@ -444,6 +444,17 @@ M5.40-1 adds the candidate discovery step before M5.39 curation review:
 
 Technology judgment: this gives eval operations a real evidence workflow without granting new authority. Discovery is read-only and advisory, curation review is deterministic and review-only, and catalog promotion still requires a Git-reviewed patch. This separation is the mature Agent pattern for moving from observability data to release-blocking evidence.
 
+## M5.42-1 Update - Promotion Workflow Artifact
+
+M5.42-1 adds the backend contract a future Vue eval workbench needs for evidence promotion:
+
+- `POST /api/agent/observability/eval/trace-sets/{traceSetId}/promotion-workflow` returns `AgentEvalTraceSetPromotionWorkflowArtifact`.
+- The service composes candidate discovery, recommended trace selection, curation review, and catalog patch proposal.
+- It remains `workflowOnly=true`, `artifactOnly=true`, `catalogMutationAllowed=false`, `runtimeCatalogWrite=false`, `redactedOnly=true`, `llmUsed=false`, `externalCalls=false`, `toolExecution=false`, and `kubeManagerCalls=false`.
+- The workflow intentionally limits selected recommended candidates so operator review does not silently become unbounded release evidence.
+
+Technology judgment: frontend eval workbenches should render typed backend evidence workflows, not reimplement release-state logic. This keeps Agent governance consistent across CLI, admin APIs, CI, and future Vue screens.
+
 ## M5.41-1 Update - Catalog Patch Proposal Artifact
 
 M5.41-1 closes the next eval release-governance gap: reviewed candidates can now be converted into a typed JSON Patch proposal without mutating the catalog at runtime.
