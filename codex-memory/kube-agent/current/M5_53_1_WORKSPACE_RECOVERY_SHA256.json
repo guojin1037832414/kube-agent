@@ -1,0 +1,152 @@
+{
+  "schemaVersion": "kube-agent-workspace-recovery-sha256.v1",
+  "project": "kube-agent",
+  "wave": "M5.53-1",
+  "title": "Kube-manager write retry governance contract",
+  "generatedAt": "2026-06-09T13:19:00+08:00",
+  "branch": "codex/m521-29-top-agent-mission",
+  "status": "verified",
+  "notes": [
+    "M5.53 adds review-only failure-class, bounded retry predicate, and compensation policy contracts for future kube-manager writes.",
+    "The endpoint is admin-only/read-only/local-process-only and remains CONTRACT_DEFINED_NOT_BOUND.",
+    "runtimeRetryableFailureClassCount=0 and automaticCompensationPolicyCount=0.",
+    "No kube-manager call, write retry enablement, compensation executor, readback execution, RestClient binding, or NIM/HPC/Slurm/BCM work is added."
+  ],
+  "files": [
+    {
+      "path": "src/main/java/com/atlas/http/KubeManagerWriteCompensationPolicy.java",
+      "sha256": "9055CC76B27F93064E147AC1AEDCDAF2A023D6950914A5BC83E8308913986BD4",
+      "length": 459
+    },
+    {
+      "path": "src/main/java/com/atlas/http/KubeManagerWriteRetryFailureClass.java",
+      "sha256": "53BB45EE1F93050A774B4E70F591A5853FA55A66275630928D215183E9B4F6DE",
+      "length": 458
+    },
+    {
+      "path": "src/main/java/com/atlas/http/KubeManagerWriteRetryGovernanceCatalog.java",
+      "sha256": "52BC42495F8A8441D5F5E5F2DBAE77FD1DF93E06C847094ADF1D6D5B72D40AEE",
+      "length": 9150
+    },
+    {
+      "path": "src/main/java/com/atlas/http/KubeManagerWriteRetryPredicateContract.java",
+      "sha256": "1CCB9FC42CEDE95A96B5A7648C083576D013AB4E61AE30A734AFFC53C2B45B08",
+      "length": 718
+    },
+    {
+      "path": "src/main/java/com/atlas/observability/AgentKubeManagerWriteRetryGovernanceContractResponse.java",
+      "sha256": "34A27DA02C9CAA8C021CB374B283EF760F7801E3674145CC29CD0E42DF5C87BA",
+      "length": 976
+    },
+    {
+      "path": "src/main/java/com/atlas/observability/AgentKubeManagerWriteRetryGovernanceContractService.java",
+      "sha256": "B9C9F60040168D6B07852B51EE8B4FC11E492397B73E2B8952579BCE34766BBB",
+      "length": 8887
+    },
+    {
+      "path": "src/main/java/com/atlas/observability/AgentKubeManagerWriteRetryReadinessService.java",
+      "sha256": "866F430E181FECBA8F771E3C6EF896CC19701BEFCD9548DF635715BB8D5A0484",
+      "length": 13767
+    },
+    {
+      "path": "src/main/java/com/atlas/observability/ObservabilityController.java",
+      "sha256": "11D53BF57915CE379982C3D2E7AEC6D5A424C8E92383BD08DB2BD46469ED38B5",
+      "length": 28909
+    },
+    {
+      "path": "src/test/java/com/atlas/http/KubeManagerWriteRetryGovernanceCatalogTest.java",
+      "sha256": "D2A167571AAE225A1AD7128EC55B57EC6A3948C8700A5AC084B5E75544A985CD",
+      "length": 4406
+    },
+    {
+      "path": "src/test/java/com/atlas/observability/AgentKubeManagerWriteRetryGovernanceContractServiceTest.java",
+      "sha256": "E0E6F61CAB3D2DADC9CF772BC62FD0404DF6A326B5B0D1BE0D1EC097B822346E",
+      "length": 7006
+    },
+    {
+      "path": "src/test/java/com/atlas/observability/AgentKubeManagerWriteRetryReadinessServiceTest.java",
+      "sha256": "50BBBFF179F4C81A7A406E6A904DC2F6E065DEBF5C61031C20A89E2718F1765F",
+      "length": 13036
+    },
+    {
+      "path": "src/test/java/com/atlas/observability/ObservabilityControllerTest.java",
+      "sha256": "B2C5BF1C46F07494C92546E68FBF2EDC883A42CB80F02A3EC52B57604E91ED47",
+      "length": 100590
+    },
+    {
+      "path": "src/test/java/com/atlas/observability/ObservabilityControllerSecurityContractTest.java",
+      "sha256": "4EA22D7139CBFE00550830A1023C99375E6ED553EB49D26C880A2BEE632869AD",
+      "length": 7874
+    },
+    {
+      "path": "src/test/java/com/atlas/auth/AgentSecurityConfigWebMvcTest.java",
+      "sha256": "736BFA88C5060BBDDA3E88547F60E3E1C90A9E937473501DE687F5478411189C",
+      "length": 30301
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "70820C6C0F44327BF4DCF140F8A69EC01CC72E2097B4F6E56E37B67FAA17C7FB",
+      "length": 327026
+    },
+    {
+      "path": "docs/PROJECT_MISSION_AND_MEMORY.md",
+      "sha256": "B55CDFD39DE9A233980B78A2F5460E21AC6344494E43265C43C92CB1A89E3265",
+      "length": 357805
+    },
+    {
+      "path": "docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+      "sha256": "9A83A754B92FD54C23211AB6561D01001BCC0A3FE51281EB932134B09EFF7483",
+      "length": 119207
+    },
+    {
+      "path": "docs/tech-stack/BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+      "sha256": "612E1FE25A86C019B991EF3D6BF3ADBA8C949B2C960B3561792C18F8BDDF173F",
+      "length": 55272
+    },
+    {
+      "path": "docs/M5_53_KUBE_MANAGER_WRITE_RETRY_GOVERNANCE_CONTRACT_20260609.md",
+      "sha256": "84421DEA1BCB59CC272C7B703225FA292D3C1DE61347EC41E3488B6C040FF5AB",
+      "length": 4856
+    },
+    {
+      "path": "docs/tech-stack/BACKEND_JAVA_TECH_STACK_AUDIT_20260609.md",
+      "sha256": "4A5FFCF2B263BBDE08FFDFE21AE1732019969659A59688D5F0FC9361FDE29E5B",
+      "length": 6675
+    },
+    {
+      "path": "codex-memory/kube-agent/current/RECOVERY_STATUS.md",
+      "sha256": "7BFC0FBA02595934AF927C556197BCB6EE456D4E70EB4BDCD9F2E40278EAA47E",
+      "length": 39507
+    },
+    {
+      "path": "codex-memory/kube-agent/current/CHANGELOG.md",
+      "sha256": "70820C6C0F44327BF4DCF140F8A69EC01CC72E2097B4F6E56E37B67FAA17C7FB",
+      "length": 327026
+    },
+    {
+      "path": "codex-memory/kube-agent/current/docs_PROJECT_MISSION_AND_MEMORY.md",
+      "sha256": "B55CDFD39DE9A233980B78A2F5460E21AC6344494E43265C43C92CB1A89E3265",
+      "length": 357805
+    },
+    {
+      "path": "codex-memory/kube-agent/current/docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+      "sha256": "9A83A754B92FD54C23211AB6561D01001BCC0A3FE51281EB932134B09EFF7483",
+      "length": 119207
+    },
+    {
+      "path": "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+      "sha256": "612E1FE25A86C019B991EF3D6BF3ADBA8C949B2C960B3561792C18F8BDDF173F",
+      "length": 55272
+    },
+    {
+      "path": "codex-memory/kube-agent/current/docs_M5_53_KUBE_MANAGER_WRITE_RETRY_GOVERNANCE_CONTRACT_20260609.md",
+      "sha256": "84421DEA1BCB59CC272C7B703225FA292D3C1DE61347EC41E3488B6C040FF5AB",
+      "length": 4856
+    },
+    {
+      "path": "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_JAVA_TECH_STACK_AUDIT_20260609.md",
+      "sha256": "4A5FFCF2B263BBDE08FFDFE21AE1732019969659A59688D5F0FC9361FDE29E5B",
+      "length": 6675
+    }
+  ]
+}

@@ -1,0 +1,123 @@
+# Backend Java Tech Stack Audit - 2026-06-09
+
+## 结论
+
+Java / Spring 作为 kube-agent Phase 1 后端主语言仍然是先进且合适的选择。原因不是“Java 天然适合 Agent”，而是本项目的一期目标更像一个安全控制平面：身份、权限、工具治理、审计、回放、评测、发布门禁、可观测性、幂等和补偿契约，都需要强类型、可测试、可长期维护的工程底座。
+
+当前主线的 Spring Boot 3.5.14、Spring AI 1.1.7、Java 17 是可构建、可验证、可恢复的稳定组合。最新技术应继续引入，但必须分成两层：
+
+- Stable mainline：可以直接进入主分支并被测试保护的能力。
+- Compatibility matrix：Java 21/25、Spring Boot 4、Spring AI 2、MCP 新规范、OTel GenAI/MCP semconv 等需要先做分支验证和迁移门禁。
+
+这不是保守，而是顶级 Agent 的工程纪律：新技术必须带着安全边界、契约测试、文档和恢复记忆进入系统。
+
+## 官方事实基线
+
+2026-06-09 复核的官方资料：
+
+- Spring Boot 官方文档列出 Stable `4.0.6`、`3.5.14`、`3.4.13`、`3.3.13`，Preview `4.1.0-RC1`。来源：[Spring Boot Documentation](https://docs.spring.io/spring-boot/index.html)
+- Spring AI 官方文档列出 Stable `1.1.7`、`1.0.8`，Preview `2.0.0-RC1`。来源：[Spring AI Reference](https://docs.spring.io/spring-ai/reference/index.html)
+- OpenJDK 25 已在 2025-09-16 GA，是 Java SE 25 Reference Implementation，并被多数发行商作为 LTS 线。来源：[OpenJDK JDK 25](https://openjdk.org/projects/jdk/25/)
+- MCP latest specification 为 `2025-11-25`，包含 Tools / Resources / Prompts、client Sampling / Roots / Elicitation，以及显式的 consent、privacy、tool safety 原则。来源：[MCP Specification 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25)
+- OpenTelemetry Semantic Conventions 当前文档为 `1.41.1`，包含 Generative AI；GenAI conventions 仍标记为 Development，并提供 `OTEL_SEMCONV_STABILITY_OPT_IN` 迁移策略。来源：[OTel SemConv](https://opentelemetry.io/docs/specs/semconv/) 和 [OTel GenAI SemConv](https://opentelemetry.io/docs/specs/semconv/gen-ai/)
+- OWASP LLM Top 10 继续把 Prompt Injection、Sensitive Information Disclosure、Supply Chain、Excessive Agency 等作为核心风险。来源：[OWASP LLM Top 10](https://genai.owasp.org/llm-top-10/) 和 [OWASP Project Page](https://owasp.org/www-project-top-10-for-large-language-model-applications)
+
+## 当前选型评估
+
+### Java / Spring Boot
+
+评分：先进，但需要迁移矩阵。
+
+当前 Spring Boot 3.5.14 不是落后线，它仍在官方 stable 列表中。直接升级 Boot 4 会带来 Spring Framework 7、Jakarta/Servlet 容器、依赖生态和测试栈的系统性迁移成本。对于当前 M5 写安全链路，贸然升级会稀释安全收口。
+
+推荐：
+
+- 主线继续 Spring Boot 3.5.14。
+- 新建 Boot 4 compatibility branch，先跑 `mvn validate`、核心安全测试、ObservabilityController 安全测试、HTTP outlet 契约测试。
+- 只有当安全边界和 CI 全部通过，才考虑主线迁移。
+
+### Java 17 / 21 / 25
+
+评分：Java 17 可生产，Java 21/25 应进入矩阵。
+
+Java 25 已 GA，但本仓库当前明确以 Java 17 为可构建基线。Java 21/25 的价值主要在虚拟线程、结构化并发、Scoped Values、JFR 改进等运行时能力，但这些能力必须先证明不会破坏 ThreadLocal principal、trace context、MDC、audit prewrite 和 SSE/HITL 上下文传播。
+
+推荐：
+
+- CI matrix 增加 Java 21。
+- Java 25 先做 nightly/compatibility job。
+- 只有通过 trace/audit/security/context propagation 回归后，再评估 runtime baseline。
+
+### Spring AI
+
+评分：选型正确，升级需谨慎。
+
+Spring AI 1.1.7 是当前 stable；2.0.0-RC1 是 preview。项目已经采用 Spring AI OpenAI starter、ONNX embedding、工具治理、eval、memory/RAG 方向，这与官方能力方向一致。
+
+推荐：
+
+- 主线继续 1.1.7。
+- Spring AI 2 先验证 Tool Calling、MCP starters、Memory、RAG、Observability API 兼容性。
+- 不让模型直接调用真实 kube-manager 写工具；所有工具仍必须经过 SafeToolExecutor、HITL、durable audit、idempotency、allowlist、readback 和 eval gate。
+
+### MCP
+
+评分：必须引入，但先做 read-only manifest/schema adapter。
+
+MCP 是 Agent 工具体系的重要方向，但它也显式带来 arbitrary data access 与 code execution path 风险。MCP 规范自身强调用户同意、隐私、工具安全和 sampling 控制。
+
+推荐：
+
+- Phase 1 先提供只读 MCP manifest / schema adapter。
+- 写工具继续 HOLD/HITL，不对外开放直接执行。
+- MCP tool annotations 不能作为可信安全事实，必须映射到本项目的 source-owned contract。
+
+### OpenTelemetry / GenAI Observability
+
+评分：方向正确，需隔离实验语义。
+
+项目已有 Micrometer Tracing + OTLP、trace kernel、audit telemetry projection、Observation publisher。OTel GenAI semconv 仍处 Development，因此本项目目前使用稳定 `atlas.agent.*` 属性，并把实验属性隔离，是正确策略。
+
+推荐：
+
+- 继续把 LLM、Tool、HTTP、HITL、audit、eval 映射到同一 trace。
+- 对 GenAI/MCP semconv 用兼容层，不直接把实验字段变成长期合同。
+
+## 改进空间
+
+1. Boot 4 / Java 21 / Java 25 compatibility matrix。
+2. Spring AI 2 compatibility spike。
+3. 只读 MCP manifest/schema adapter。
+4. OTel GenAI/MCP semconv adapter。
+5. RAG / persistent memory 的权限与数据隔离。
+6. Eval trace set 从空 catalog 进入 reviewed real evidence。
+7. CI 从 evidence-only 逐步进入 blocking gate。
+8. Kube-manager 写路径继续补 durable receipt binding、HITL/release evidence binding、readback executor contract。
+9. Vue workbench 消费 M5.49-M5.53 的观测契约。
+10. 文档编码统一 UTF-8，修复历史乱码注释和文档。
+
+## 对“引入全部最先进技术”的执行原则
+
+全部最先进技术都应进入计划，但不是全部直接进运行时主线。
+
+主线可以立即承接：
+
+- typed contracts
+- security gates
+- audit/replay/eval
+- OTel-compatible observability
+- read-only MCP schema
+- frontend workbench contracts
+- CI/SBOM/quality gates
+
+兼容矩阵承接：
+
+- Spring Boot 4
+- Spring AI 2
+- Java 21/25
+- full MCP server/broker
+- A2A adapter
+- GraphRAG / reranker / vector store experiments
+- virtual threads / structured concurrency
+
+顶级 Agent 的标准不是“依赖版本号最新”，而是“每个新能力进入系统时，都有可证明的权限、审计、评测、观测、回滚和恢复记忆”。

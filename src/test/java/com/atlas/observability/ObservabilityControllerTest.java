@@ -70,12 +70,15 @@ class ObservabilityControllerTest {
         new AgentKubeManagerWriteIdempotencyContractService();
     private final AgentKubeManagerWriteOperationSafetyContractService kubeManagerWriteOperationSafetyContractService =
         new AgentKubeManagerWriteOperationSafetyContractService();
+    private final AgentKubeManagerWriteRetryGovernanceContractService kubeManagerWriteRetryGovernanceContractService =
+        new AgentKubeManagerWriteRetryGovernanceContractService();
     private final ObservabilityController controller = new ObservabilityController(
         new AgentMetricsService(new SimpleMeterRegistry()),
         kubeManagerHttpOutletHealthSummaryService,
         kubeManagerWriteRetryReadinessService,
         kubeManagerWriteIdempotencyContractService,
         kubeManagerWriteOperationSafetyContractService,
+        kubeManagerWriteRetryGovernanceContractService,
         auditRecorder,
         auditRecorder,
         replayTimelineService,
@@ -342,17 +345,33 @@ class ObservabilityControllerTest {
             .containsEntry("genericWriteOperationAllowlistExists", true)
             .containsEntry("genericWriteOperationAllowlistBoundToHttpOutlet", false)
             .containsEntry("genericWriteOperationAllowlistEnforcedByHttpOutlet", false)
+            .containsEntry("retryFailureClassificationContractExists", true)
+            .containsEntry("retryPredicateContractExists", true)
+            .containsEntry("retryPredicateBoundToHttpOutlet", false)
+            .containsEntry("runtimeRetryableFailureClassCount", 0)
+            .containsEntry("callerProvidedRetryPredicateAccepted", false)
             .containsEntry("postWriteReadbackContractExists", true)
             .containsEntry("postWriteReadbackBoundToHttpOutlet", false)
             .containsEntry("runtimeRetryEligibleWriteOperationCount", 0)
             .containsEntry("postWriteReadbackExecutorExists", false)
             .containsEntry("runtimeWriteRetryEnablementSwitchExists", false)
+            .containsEntry("compensationPolicyContractExists", true)
+            .containsEntry("compensationPolicyBoundToHttpOutlet", false)
+            .containsEntry("compensationExecutorExists", false)
+            .containsEntry("automaticCompensationPolicyCount", 0)
+            .containsEntry("compensationCanOpenReleaseSwitch", false)
             .containsEntry("nimHpcSlurmBcmPhase2Paused", true);
         assertThat(readiness.blockedReasons()).contains(
             "generic-kube-manager-idempotency-boundary-not-bound-to-http-outlet",
             "write-operation-allowlist-contract-not-bound-to-http-outlet",
-            "post-write-readback-contract-not-bound-to-http-outlet"
+            "write-retry-predicate-contract-not-bound-to-http-outlet",
+            "no-runtime-retryable-failure-class",
+            "post-write-readback-contract-not-bound-to-http-outlet",
+            "compensation-policy-contract-not-bound-to-http-outlet",
+            "compensation-executor-missing"
         );
+        assertThat(readiness.endpointTemplates())
+            .containsEntry("writeRetryGovernanceContract", "/api/agent/observability/kube-manager/http-outlet/write-retry-governance-contract");
         assertThat(readiness.safety())
             .containsEntry("localProcessOnly", true)
             .containsEntry("kubeManagerCalls", false)
@@ -497,6 +516,79 @@ class ObservabilityControllerTest {
             .containsEntry("containsLoginPassword", false)
             .containsEntry("containsRawRequestBody", false);
         assertThat(contract.toString())
+            .doesNotContain("secret-password", "Bearer", "user-token", "/api/login", "/api/100002");
+    }
+
+    @Test
+    void kubeManagerWriteRetryGovernanceContract_shouldRequireAdminAndReturnUnboundGovernanceContract() {
+        ResponseEntity<ApiResponse<AgentKubeManagerWriteRetryGovernanceContractResponse>> anonymous =
+            controller.kubeManagerWriteRetryGovernanceContract();
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentKubeManagerWriteRetryGovernanceContractResponse>> user =
+            controller.kubeManagerWriteRetryGovernanceContract();
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        userPermissionContext.unbind();
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentKubeManagerWriteRetryGovernanceContractResponse>> admin =
+            controller.kubeManagerWriteRetryGovernanceContract();
+
+        assertThat(admin.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(admin.getBody()).isNotNull();
+        AgentKubeManagerWriteRetryGovernanceContractResponse contract = admin.getBody().getData();
+        assertThat(contract.schemaVersion()).isEqualTo("agent-kube-manager-write-retry-governance-contract.v1");
+        assertThat(contract.contractStatus()).isEqualTo("CONTRACT_DEFINED_NOT_BOUND");
+        assertThat(contract.retryPredicateContractExists()).isTrue();
+        assertThat(contract.compensationPolicyContractExists()).isTrue();
+        assertThat(contract.boundToHttpOutlet()).isFalse();
+        assertThat(contract.writeRetryEnabled()).isFalse();
+        assertThat(contract.runtimeRetryableFailureClassCount()).isZero();
+        assertThat(contract.automaticCompensationPolicyCount()).isZero();
+        assertThat(contract.predicateContract())
+            .containsEntry("boundToHttpOutlet", false)
+            .containsEntry("runtimePredicateExists", false)
+            .containsEntry("callerOverrideAccepted", false)
+            .containsEntry("sameIdempotencyKeyRequired", true)
+            .containsEntry("postWriteReadbackRequiredBeforeSuccess", true);
+        assertThat(contract.failureClasses())
+            .allSatisfy(failureClass -> assertThat(failureClass).containsEntry("runtimeRetryableNow", false));
+        assertThat(contract.compensationPolicies())
+            .allSatisfy(policy -> assertThat(policy)
+                .containsEntry("automaticCompensationAllowed", false)
+                .containsEntry("operatorReviewRequired", true)
+                .containsEntry("runtimeBound", false)
+                .containsEntry("canOpenReleaseSwitch", false));
+        assertThat(contract.bindingStatus())
+            .containsEntry("retryPredicateBoundToResilience4j", false)
+            .containsEntry("retryPredicateBoundToHttpOutlet", false)
+            .containsEntry("failureClassifierRuntimeBound", false)
+            .containsEntry("compensationExecutorExists", false)
+            .containsEntry("writeRetryEnabled", false)
+            .containsEntry("runtimeEnableSwitchPresent", false);
+        assertThat(contract.safety())
+            .containsEntry("kubeManagerCalls", false)
+            .containsEntry("restClientUsed", false)
+            .containsEntry("retryRegistryMutation", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("auditWrite", false)
+            .containsEntry("readbackExecuted", false)
+            .containsEntry("compensationExecuted", false)
+            .containsEntry("writeRetryEnablement", false);
+        assertThat(contract.privacy())
+            .containsEntry("containsRawBaseUrl", false)
+            .containsEntry("containsToken", false)
+            .containsEntry("containsLoginPassword", false)
+            .containsEntry("containsRawRequestBody", false);
+        assertThat(contract.toString())
+            .contains("agent-kube-manager-write-retry-governance-contract.v1", "CONTRACT_DEFINED_NOT_BOUND")
             .doesNotContain("secret-password", "Bearer", "user-token", "/api/login", "/api/100002");
     }
 

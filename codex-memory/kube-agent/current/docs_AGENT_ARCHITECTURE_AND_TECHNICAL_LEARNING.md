@@ -2,6 +2,32 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-09 M5.53 Kube-Manager Write Retry Governance Contract
+
+M5.53 turns the remaining M5.50 write-retry prerequisites into source-owned contracts: failure classes, a bounded retry predicate, and review-only compensation policies.
+
+```text
+KubeManagerWriteRetryGovernanceCatalog
+    |
+    | failure classes + bounded predicate + review-only compensation
+    v
+AgentKubeManagerWriteRetryGovernanceContractService
+    |
+    | admin-only local read model
+    v
+/api/agent/observability/kube-manager/http-outlet/write-retry-governance-contract
+```
+
+Key design:
+- `KubeManagerWriteRetryFailureClass` separates future transient candidates from never-retry failures such as validation errors, authz denial, tenant mismatch, conflicts, and unknown acceptance without readback.
+- Every failure class remains `runtimeRetryableNow=false`, so `runtimeRetryableFailureClassCount=0`.
+- `KubeManagerWriteRetryPredicateContract` records the minimum future retry shape: max 2 attempts, jittered exponential backoff, same server-derived idempotency key, durable prewrite receipt, operation allowlist/RBAC, and post-write readback before success.
+- `KubeManagerWriteCompensationPolicy` is operator-review-only. It does not create an automatic compensation executor, does not bind runtime behavior, and cannot open a release switch.
+- The endpoint returns `CONTRACT_DEFINED_NOT_BOUND`; it does not bind Resilience4j, call kube-manager, execute readback, write audit evidence, issue durable receipts, mutate registries, or enable write retry.
+- M5.50 readiness can now distinguish "retry governance contract exists" from "retry governance is runtime-bound"; the latter remains false.
+
+Learning point: top-tier Agent retry is not simply "retry on 502". Write retry can amplify side effects, so the mature pattern is classify failure, prove idempotency and durable prewrite, verify readback before success, and route unknown side effects to operator-reviewed compensation. M5.53 makes that decision tree visible and testable while keeping runtime authority off.
+
 ## 2026-06-09 M5.52 Kube-Manager Write Operation Safety Contract
 
 M5.52 把 M5.50 readiness 中的 write operation allowlist/RBAC/readback 前置条件沉淀成源代码拥有的契约目录。

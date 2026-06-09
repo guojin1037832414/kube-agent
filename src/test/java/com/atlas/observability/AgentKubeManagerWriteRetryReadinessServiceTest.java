@@ -85,7 +85,12 @@ class AgentKubeManagerWriteRetryReadinessServiceTest {
             .containsEntry("operationRbacEvidenceBoundToHttpOutlet", false)
             .containsEntry("runtimeRetryEligibleWriteOperationCount", 0)
             .containsEntry("callerProvidedAllowlistEntryAccepted", false)
+            .containsEntry("retryFailureClassificationContractExists", true)
+            .containsEntry("retryPredicateContractExists", true)
             .containsEntry("retryPredicateBoundToWriteFailureClasses", false)
+            .containsEntry("retryPredicateBoundToHttpOutlet", false)
+            .containsEntry("runtimeRetryableFailureClassCount", 0)
+            .containsEntry("callerProvidedRetryPredicateAccepted", false)
             .containsEntry("postWriteReadbackContractExists", true)
             .containsEntry("postWriteReadbackBoundToHttpOutlet", false)
             .containsEntry("postWriteReadbackExecutorExists", false)
@@ -93,15 +98,24 @@ class AgentKubeManagerWriteRetryReadinessServiceTest {
             .containsEntry("postWriteReadbackAcceptsCallerClaims", false)
             .containsEntry("postWriteReadbackCanOpenReleaseSwitch", false)
             .containsEntry("runtimeWriteRetryEnablementSwitchExists", false)
+            .containsEntry("compensationPolicyContractExists", true)
+            .containsEntry("compensationPolicyBoundToHttpOutlet", false)
+            .containsEntry("compensationExecutorExists", false)
+            .containsEntry("automaticCompensationPolicyCount", 0)
+            .containsEntry("compensationCanOpenReleaseSwitch", false)
             .containsEntry("nimHpcSlurmBcmPhase2Paused", true)
             .containsEntry("phase2NimHpcSlurmBcmWriteOperationsExcluded", true);
         assertThat(readiness.blockedReasons()).contains(
             "generic-kube-manager-idempotency-boundary-not-bound-to-http-outlet",
             "write-operation-allowlist-contract-not-bound-to-http-outlet",
             "write-operation-rbac-evidence-not-bound-to-http-outlet",
+            "write-retry-predicate-contract-not-bound-to-http-outlet",
+            "no-runtime-retryable-failure-class",
             "post-write-readback-contract-not-bound-to-http-outlet",
             "post-write-readback-executor-missing",
             "no-runtime-retry-eligible-write-operation",
+            "compensation-policy-contract-not-bound-to-http-outlet",
+            "compensation-executor-missing",
             "runtime-enable-switch-intentionally-absent"
         );
         assertThat(readiness.futureEnablementProtocol())
@@ -113,6 +127,7 @@ class AgentKubeManagerWriteRetryReadinessServiceTest {
             .containsEntry("healthSummary", "/api/agent/observability/kube-manager/http-outlet/health-summary")
             .containsEntry("writeIdempotencyContract", "/api/agent/observability/kube-manager/http-outlet/write-idempotency-contract")
             .containsEntry("writeOperationSafetyContract", "/api/agent/observability/kube-manager/http-outlet/write-operation-safety-contract")
+            .containsEntry("writeRetryGovernanceContract", "/api/agent/observability/kube-manager/http-outlet/write-retry-governance-contract")
             .containsEntry("writeRetryReadiness", "/api/agent/observability/kube-manager/http-outlet/write-retry-readiness")
             .containsEntry("runtimeEnableWriteRetry", "not-exposed");
         assertThat(readiness.safety())
@@ -181,7 +196,11 @@ class AgentKubeManagerWriteRetryReadinessServiceTest {
             .containsEntry("writeRetryConfiguredButInactive", false)
             .containsEntry("writeRetryBoundIntoExecutionPath", false)
             .containsEntry("genericKubeManagerIdempotencyBoundaryExists", true)
-            .containsEntry("genericKubeManagerIdempotencyBoundaryBoundToHttpOutlet", false);
+            .containsEntry("genericKubeManagerIdempotencyBoundaryBoundToHttpOutlet", false)
+            .containsEntry("retryPredicateContractExists", true)
+            .containsEntry("retryPredicateBoundToHttpOutlet", false)
+            .containsEntry("compensationPolicyContractExists", true)
+            .containsEntry("compensationExecutorExists", false);
     }
 
     @Test
@@ -190,6 +209,8 @@ class AgentKubeManagerWriteRetryReadinessServiceTest {
 
         assertThat(source)
             .doesNotContain("import com.atlas.http.KubeManagerHttpClient")
+            .doesNotContain("KubeManagerWriteRetryGovernanceCatalog")
+            .doesNotContain("AgentKubeManagerWriteRetryGovernanceContractService")
             .doesNotContain("import org.springframework.web.client.RestClient")
             .doesNotContain("resolveToken")
             .doesNotContain("refreshFallbackToken")

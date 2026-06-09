@@ -108,6 +108,15 @@ M5.52-1 turns the next M5.50 prerequisites into source-owned contracts:
 
 Technology judgment: this is the correct advanced-agent pattern for dangerous write authority. OpenAI Agents SDK-style guardrails/tracing, MCP tool interoperability, OTel GenAI spans, and durable execution ideas all point toward the same requirement: runtime authority must sit behind explicit contracts, evidence, and observability, not behind prompt-only conventions.
 
+M5.53-1 adds the retry governance layer before any runtime retry binding:
+- `KubeManagerWriteRetryGovernanceCatalog` owns failure classes, the bounded retry predicate contract, and review-only compensation policies.
+- New admin-only endpoint `GET /api/agent/observability/kube-manager/http-outlet/write-retry-governance-contract` reports `CONTRACT_DEFINED_NOT_BOUND`.
+- Future retry candidates are documented for transient transport/gateway/rate-limit cases, but every failure class remains `runtimeRetryableNow=false`; runtime retryable failure class count is `0`.
+- Never-retry categories include caller validation errors, authn/authz denial, tenant/ownership mismatch, conflicts, and unknown acceptance without readback.
+- Compensation policies are operator-review-only; no automatic compensation policy, compensation executor, release switch, Resilience4j predicate binding, HTTP outlet binding, readback execution, or write retry enablement is added.
+
+Technology judgment: top-tier Agent retry governance should be explicit before it is executable. The system now has typed contracts for idempotency, operation allowlist/RBAC/readback, failure classification, bounded retry predicate, and compensation guidance, but the runtime remains fail-closed until durable receipts, readback evidence, HITL/release evidence, eval gates, and operator observability are bound together.
+
 M5.29-1 已把 Spring Security 推进到 HTTP 安全入口：
 
 - 新增 `AgentSecurityConfig`，用 `SecurityFilterChain` 承接标准 Web 安全主线；

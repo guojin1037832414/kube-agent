@@ -10,7 +10,42 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.52-1
+## Latest Phase 1 Core Memory - M5.53-1
+
+M5.53-1 adds the generic kube-manager write retry governance contract required before any future controlled write retry can be considered.
+
+Delivered:
+
+- Added `KubeManagerWriteRetryFailureClass`.
+- Added `KubeManagerWriteRetryPredicateContract`.
+- Added `KubeManagerWriteCompensationPolicy`.
+- Added `KubeManagerWriteRetryGovernanceCatalog`.
+- Added `AgentKubeManagerWriteRetryGovernanceContractResponse`.
+- Added `AgentKubeManagerWriteRetryGovernanceContractService`.
+- Added admin-only `GET /api/agent/observability/kube-manager/http-outlet/write-retry-governance-contract`.
+- Updated M5.50 readiness so retry failure classification, retry predicate, and compensation policy contracts are `exists=true` but `boundToHttpOutlet=false`.
+- Added catalog, service, controller, source-contract, and MockMvc security coverage.
+
+Security boundary:
+
+- The catalog is pure Java, static, and review-only.
+- `contractStatus=CONTRACT_DEFINED_NOT_BOUND`.
+- `runtimeRetryableFailureClassCount=0`.
+- `automaticCompensationPolicyCount=0`.
+- Future retry candidates are documented, but every failure class remains `runtimeRetryableNow=false`.
+- Compensation policies are operator-review-only; no runtime compensation executor exists.
+- The observability endpoint is admin-only, local-process-only, read-only, and summary-only.
+- No `KubeManagerHttpClient`, `RestClient`, kube-manager `8100`, `/api/login`, `executeWrite`, Tool, LLM, external service, audit writer, durable receipt writer, HTTP header injection, readback executor, compensation executor, resilience registry mutation, runtime enable switch, or write retry enablement is added.
+- The contract does not expose raw principal, raw organization, raw backend path, raw request body, raw exception body, token, password, or Authorization header.
+- NIM / HPC / Slurm / BCM remain Phase 2 paused scope.
+
+Learning point: top-tier Agent retry is not "retry transient errors." It is a release-governed decision tree: classify failure, prove idempotency and durable prewrite, verify readback before success, and route unknown side effects to operator-reviewed compensation. M5.53 is successful because it makes that tree visible while keeping all runtime retry and compensation authority off.
+
+Latest verified command:
+
+- `mvn -q "-Dtest=KubeManagerWriteRetryGovernanceCatalogTest,AgentKubeManagerWriteRetryGovernanceContractServiceTest,AgentKubeManagerWriteOperationSafetyContractServiceTest,AgentKubeManagerWriteRetryReadinessServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+## Previous Phase 1 Core Memory - M5.52-1
 
 M5.52-1 adds the generic kube-manager write operation safety contract required before any future controlled write retry or write release can be considered.
 

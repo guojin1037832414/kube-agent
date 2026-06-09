@@ -6,6 +6,32 @@
 
 ---
 
+## [M5.53-1] - Kube-manager write retry governance contract
+
+**Delivery**: Added a review-only retry failure classification, bounded retry predicate, and compensation policy contract for future controlled kube-manager writes.
+**Changes**
+- Added `KubeManagerWriteRetryFailureClass`.
+- Added `KubeManagerWriteRetryPredicateContract`.
+- Added `KubeManagerWriteCompensationPolicy`.
+- Added `KubeManagerWriteRetryGovernanceCatalog`.
+- Added `AgentKubeManagerWriteRetryGovernanceContractResponse`.
+- Added `AgentKubeManagerWriteRetryGovernanceContractService`.
+- Added admin-only `GET /api/agent/observability/kube-manager/http-outlet/write-retry-governance-contract`.
+- Updated write retry readiness to report retry predicate/failure classification and compensation policies as defined but not bound to the HTTP outlet.
+- Added catalog, service, controller, source-contract, and MockMvc security coverage.
+**Verification**
+- `mvn -q "-Dtest=KubeManagerWriteRetryGovernanceCatalogTest,AgentKubeManagerWriteRetryGovernanceContractServiceTest,AgentKubeManagerWriteOperationSafetyContractServiceTest,AgentKubeManagerWriteRetryReadinessServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed.
+**Security**
+- The catalog is pure Java, static, and review-only.
+- `contractStatus=CONTRACT_DEFINED_NOT_BOUND`.
+- `runtimeRetryableFailureClassCount=0`.
+- `automaticCompensationPolicyCount=0`.
+- Retry predicate candidates are documented but not bound to Resilience4j or the HTTP outlet.
+- Compensation policies are operator-review-only; no compensation executor exists.
+- No kube-manager call, `KubeManagerHttpClient` binding, `RestClient`, `executeWrite`, Tool execution, LLM call, external call, audit write, durable receipt issuance, HTTP header injection, readback execution, resilience registry mutation, runtime enable switch, compensation execution, or write retry enablement is added.
+- Raw principal, raw organization, raw backend path, raw request body, token, password, Authorization header, and raw exception body are not exposed.
+- NIM / HPC / Slurm / BCM remain Phase 2 paused scope.
+
 ## [M5.52-1] - Kube-manager write operation safety contract
 
 **Delivery**: Added a review-only write operation allowlist/RBAC/readback contract for future controlled kube-manager writes.
