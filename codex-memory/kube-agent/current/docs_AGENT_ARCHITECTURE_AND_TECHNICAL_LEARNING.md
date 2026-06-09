@@ -2,6 +2,33 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-09 M5.50 Kube-Manager Write Retry Readiness Contract
+
+M5.50 把 kube-manager 写操作自动重试从“未来风险点”变成 admin-only 的 readiness 合约。
+
+```text
+GET /api/agent/observability/kube-manager/http-outlet/write-retry-readiness
+    |
+    | Resilience4j registry facts + code-level safety contract only
+    v
+AgentKubeManagerWriteRetryReadinessResponse
+    |
+    | NOT_READY + required evidence + current gaps + safety/privacy proof
+    v
+Operator readiness page / future release checklist
+```
+
+关键设计：
+
+- endpoint 固定表达 `readinessVerdict=NOT_READY`、`writeRetryEnabled=false`、`automaticWriteRetryAllowed=false`。
+- 即使 `kubeManagerWrite` retry 实例存在，也只能展示为 `configuredButInactive=true`。
+- 未来要开启受控写重试，必须先绑定 server-derived idempotency key、durable prewrite receipt、HITL/release evidence、read-after-write verification、bounded retry predicate、operation allowlist/RBAC、compensation/replay evidence、CI gate 和 operator observability。
+- 当前已有证据包括 GET read retry、WRITE circuit/bulkhead only、高风险 durable prewrite gate、admin audit query、replay timeline、eval gate bundle。
+- 当前阻塞原因包括通用 kube-manager idempotency 边界缺失、写操作 allowlist 缺失、写 retry predicate 未绑定、post-write readback 合约缺失、release/HITL evidence 未绑定 HTTP outlet、runtime enable switch 故意不存在。
+- 端点不调用 `KubeManagerHttpClient`、`RestClient`、`/api/login`、kube-manager `8100`、Tool、LLM 或外部服务，不写 audit，不签发 durable receipt，不修改 resilience registry，不开启写重试。
+
+学习重点：顶级 Agent 的“先进”不是把高风险能力直接放开，而是先把它们做成可观测、可审计、可评测、可恢复、可 fail-closed 的准入协议。写操作重试会放大副作用，所以它必须先有 idempotency、审计、人工审批、读回验证、补偿和 eval 证据，再考虑进入执行路径。
+
 ## 2026-06-09 M5.49 Kube-Manager HTTP Outlet Health Summary
 
 M5.49 把 kube-manager HTTP 出口的 Resilience4j 治理状态变成 admin-only、local-process-only 的可观测摘要。

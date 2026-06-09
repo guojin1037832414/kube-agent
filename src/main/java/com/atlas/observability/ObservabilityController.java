@@ -35,6 +35,7 @@ public class ObservabilityController {
 
     private final AgentMetricsService metricsService;
     private final AgentKubeManagerHttpOutletHealthSummaryService kubeManagerHttpOutletHealthSummaryService;
+    private final AgentKubeManagerWriteRetryReadinessService kubeManagerWriteRetryReadinessService;
     private final AgentAuditSnapshotProvider auditSnapshotProvider;
     private final AgentAuditQueryService auditQueryService;
     private final AgentReplayTimelineService replayTimelineService;
@@ -53,6 +54,7 @@ public class ObservabilityController {
 
     public ObservabilityController(AgentMetricsService metricsService,
                                    AgentKubeManagerHttpOutletHealthSummaryService kubeManagerHttpOutletHealthSummaryService,
+                                   AgentKubeManagerWriteRetryReadinessService kubeManagerWriteRetryReadinessService,
                                    AgentAuditSnapshotProvider auditSnapshotProvider,
                                    AgentAuditQueryService auditQueryService,
                                    AgentReplayTimelineService replayTimelineService,
@@ -70,6 +72,7 @@ public class ObservabilityController {
                                    AgentPrincipalResolver principalResolver) {
         this.metricsService = metricsService;
         this.kubeManagerHttpOutletHealthSummaryService = kubeManagerHttpOutletHealthSummaryService;
+        this.kubeManagerWriteRetryReadinessService = kubeManagerWriteRetryReadinessService;
         this.auditSnapshotProvider = auditSnapshotProvider;
         this.auditQueryService = auditQueryService;
         this.replayTimelineService = replayTimelineService;
@@ -97,6 +100,17 @@ public class ObservabilityController {
             return guard;
         }
         return ResponseEntity.ok(ApiResponse.ok(kubeManagerHttpOutletHealthSummaryService.summary()));
+    }
+
+    /** Describe why kube-manager write retries remain disabled and what evidence future releases must bind. */
+    @GetMapping("/kube-manager/http-outlet/write-retry-readiness")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentKubeManagerWriteRetryReadinessResponse>> kubeManagerWriteRetryReadiness() {
+        ResponseEntity<ApiResponse<AgentKubeManagerWriteRetryReadinessResponse>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return ResponseEntity.ok(ApiResponse.ok(kubeManagerWriteRetryReadinessService.readiness()));
     }
 
     @GetMapping("/snapshot")

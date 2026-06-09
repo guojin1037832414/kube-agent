@@ -10,7 +10,38 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.49-1
+## Latest Phase 1 Core Memory - M5.50-1
+
+M5.50-1 adds an admin-only kube-manager write retry readiness contract.
+
+Delivered:
+
+- Added `AgentKubeManagerWriteRetryReadinessResponse`.
+- Added `AgentKubeManagerWriteRetryReadinessService`.
+- Added admin-only `GET /api/agent/observability/kube-manager/http-outlet/write-retry-readiness`.
+- The response is intentionally fail-closed: `readinessVerdict=NOT_READY`, `readyForControlledWriteRetry=false`, `writeRetryEnabled=false`, and `automaticWriteRetryAllowed=false`.
+- The response explains future required evidence for controlled write retry: server-derived idempotency key, durable prewrite receipt, HITL/release evidence, read-after-write verification, bounded retry predicate, operation allowlist/RBAC, compensation/replay evidence, CI gate, and operator observability.
+- Added service, controller, source-contract, and MockMvc security coverage.
+
+Security boundary:
+
+- The endpoint is admin-only at URL and method levels.
+- It is local-process-only, read-only, summary-only, and GET-only.
+- It does not accept caller trace IDs, idempotency keys, release flags, retry flags, or write-control inputs.
+- It does not call `KubeManagerHttpClient`, `RestClient`, kube-manager `8100`, `/api/login`, Tools, LLMs, or any external service.
+- It does not write audit evidence, issue durable receipts, mutate Retry/CircuitBreaker/Bulkhead registry state, change runtime configuration, or enable write retry.
+- It does not expose raw base URL, token, password, Authorization header, backend paths, request/response bodies, or exception bodies.
+- NIM / HPC / Slurm / BCM remain Phase 2 paused scope.
+
+Learning point: a top-tier Agent should turn dangerous future capabilities into explicit readiness contracts before enabling them. For write retry, the correct M5.50 outcome is not "retry is on"; it is "retry remains off, and every prerequisite for ever turning it on is visible, testable, and recoverable."
+
+Latest verified commands:
+
+- `mvn -q "-DskipTests" validate`
+- `git diff --check`
+- `mvn -q "-Dtest=AgentKubeManagerWriteRetryReadinessServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+## Previous Phase 1 Core Memory - M5.49-1
 
 M5.49-1 adds an admin-only kube-manager HTTP outlet health summary for local resilience observability.
 

@@ -64,9 +64,12 @@ class ObservabilityControllerTest {
                 .withProperty("atlas.backend.read-timeout-seconds", "30")
                 .withProperty("atlas.backend.login-password", "secret-password")
         );
+    private final AgentKubeManagerWriteRetryReadinessService kubeManagerWriteRetryReadinessService =
+        new AgentKubeManagerWriteRetryReadinessService(retryRegistry());
     private final ObservabilityController controller = new ObservabilityController(
         new AgentMetricsService(new SimpleMeterRegistry()),
         kubeManagerHttpOutletHealthSummaryService,
+        kubeManagerWriteRetryReadinessService,
         auditRecorder,
         auditRecorder,
         replayTimelineService,
@@ -288,6 +291,62 @@ class ObservabilityControllerTest {
             .containsEntry("containsLoginPassword", false)
             .containsEntry("containsRawEndpoint", false);
         assertThat(summary.toString())
+            .doesNotContain("kube-manager.internal", "secret-password", "Bearer", "user-token", "/api/login");
+    }
+
+    @Test
+    void kubeManagerWriteRetryReadiness_shouldRequireAdminAndReturnFailClosedReadinessContract() {
+        ResponseEntity<ApiResponse<AgentKubeManagerWriteRetryReadinessResponse>> anonymous =
+            controller.kubeManagerWriteRetryReadiness();
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentKubeManagerWriteRetryReadinessResponse>> user =
+            controller.kubeManagerWriteRetryReadiness();
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        userPermissionContext.unbind();
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentKubeManagerWriteRetryReadinessResponse>> admin =
+            controller.kubeManagerWriteRetryReadiness();
+
+        assertThat(admin.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(admin.getBody()).isNotNull();
+        AgentKubeManagerWriteRetryReadinessResponse readiness = admin.getBody().getData();
+        assertThat(readiness.schemaVersion()).isEqualTo("agent-kube-manager-write-retry-readiness.v1");
+        assertThat(readiness.readinessVerdict()).isEqualTo("NOT_READY");
+        assertThat(readiness.readyForControlledWriteRetry()).isFalse();
+        assertThat(readiness.writeRetryEnabled()).isFalse();
+        assertThat(readiness.automaticWriteRetryAllowed()).isFalse();
+        assertThat(readiness.effectivePolicy())
+            .containsEntry("configuredButInactive", true)
+            .containsEntry("automaticRetryEnabled", false)
+            .containsEntry("runtimeEnableEndpointPresent", false);
+        assertThat(readiness.currentEvidence())
+            .containsEntry("highRiskDurablePrewriteGateExists", true)
+            .containsEntry("genericKubeManagerIdempotencyBoundaryExists", false)
+            .containsEntry("runtimeWriteRetryEnablementSwitchExists", false)
+            .containsEntry("nimHpcSlurmBcmPhase2Paused", true);
+        assertThat(readiness.blockedReasons()).contains("generic-kube-manager-idempotency-boundary-missing");
+        assertThat(readiness.safety())
+            .containsEntry("localProcessOnly", true)
+            .containsEntry("kubeManagerCalls", false)
+            .containsEntry("remoteProbeExecuted", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("writeRetryEnablement", false)
+            .containsEntry("callerInputAccepted", false);
+        assertThat(readiness.privacy())
+            .containsEntry("containsRawBaseUrl", false)
+            .containsEntry("containsToken", false)
+            .containsEntry("containsLoginPassword", false)
+            .containsEntry("containsRawEndpoint", false);
+        assertThat(readiness.toString())
             .doesNotContain("kube-manager.internal", "secret-password", "Bearer", "user-token", "/api/login");
     }
 

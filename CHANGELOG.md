@@ -6,6 +6,28 @@
 
 ---
 
+## [M5.50-1] - Kube-manager write retry readiness contract
+
+**Delivery**: Added an admin-only readiness contract for future controlled kube-manager write retry enablement.
+**Changes**
+- Added `AgentKubeManagerWriteRetryReadinessResponse`.
+- Added `AgentKubeManagerWriteRetryReadinessService`.
+- Added admin-only `GET /api/agent/observability/kube-manager/http-outlet/write-retry-readiness`.
+- The response is a fail-closed readiness model with `readinessVerdict=NOT_READY`, `writeRetryEnabled=false`, and `automaticWriteRetryAllowed=false`.
+- The response lists future required evidence: server-derived idempotency key, durable prewrite receipt, HITL/release evidence, read-after-write verification, bounded retry predicate, operation allowlist/RBAC, compensation/replay evidence, CI gate, and operator observability.
+- Added service, controller, source-contract, and MockMvc security coverage.
+**Verification**
+- `mvn -q "-DskipTests" validate` passed.
+- `git diff --check` passed.
+- `mvn -q "-Dtest=AgentKubeManagerWriteRetryReadinessServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed.
+**Security**
+- The endpoint is admin-only, local-process-only, read-only, summary-only, and GET-only.
+- It does not accept caller trace IDs, idempotency keys, release flags, retry flags, or write-control inputs.
+- It does not call `KubeManagerHttpClient`, `RestClient`, kube-manager `8100`, `/api/login`, Tools, LLMs, or external services.
+- It does not write audit evidence, issue durable receipts, mutate resilience registries, change runtime configuration, or enable write retry.
+- It does not expose raw base URL, token, password, Authorization header, backend paths, request/response bodies, or exception bodies.
+- NIM / HPC / Slurm / BCM remain Phase 2 paused scope.
+
 ## [M5.49-1] - Kube-manager HTTP outlet health summary
 
 **Delivery**: Added an admin-only local health summary for kube-manager HTTP outlet resilience state.

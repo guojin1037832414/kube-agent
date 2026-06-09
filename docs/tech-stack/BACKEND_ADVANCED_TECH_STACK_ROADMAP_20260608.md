@@ -79,6 +79,17 @@ M5.49-1 已把 Resilience4j HTTP outlet 治理推进到 admin-only 可观测摘�
 - 摘要暴露 redacted backend facts、GET read retry effective policy、WRITE no-auto-retry effective policy、circuit breaker state、bulkhead state、safety proof 和 privacy proof。
 - 即使 `kubeManagerWrite` retry 实例存在，也标记为 `configuredButInactive=true`，避免操作员误以为写请求已经自动重试。
 - 该端点不提供 ping、token refresh、fallback login、circuit breaker reset、bulkhead config change 或 enable write retry 动作。
+
+M5.50-1 adds the next safe Resilience4j governance layer: an admin-only write retry readiness contract.
+- New endpoint: `GET /api/agent/observability/kube-manager/http-outlet/write-retry-readiness`.
+- It always reports `readinessVerdict=NOT_READY`, `writeRetryEnabled=false`, and `automaticWriteRetryAllowed=false`.
+- It treats any configured `kubeManagerWrite` retry instance as configured-but-inactive evidence, not an active write retry path.
+- It lists the release prerequisites for any future controlled write retry: server-derived idempotency key, durable prewrite receipt, HITL/release evidence, read-after-write verification, bounded retry predicate, operation allowlist/RBAC, compensation/replay evidence, CI gate, and operator observability.
+- It does not call kube-manager, `RestClient`, `/api/login`, Tool execution, LLMs, external services, audit writers, or durable receipt writers.
+- It does not mutate Retry/CircuitBreaker/Bulkhead registries and does not provide a runtime enable switch.
+
+Technology judgment: this is the correct advanced-agent path for dangerous reliability features. Read retry can improve availability; write retry can amplify side effects. Therefore the project keeps write retry disabled while making the future enablement protocol visible, testable, and teachable.
+
 M5.29-1 已把 Spring Security 推进到 HTTP 安全入口：
 
 - 新增 `AgentSecurityConfig`，用 `SecurityFilterChain` 承接标准 Web 安全主线；
