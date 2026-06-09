@@ -1,0 +1,53 @@
+﻿{
+    "schemaVersion":  "kube-agent-post-push-recovery-sha256.v1",
+    "project":  "kube-agent",
+    "milestone":  "M5.68-1-post-push",
+    "implementationCommit":  "99f1ecf",
+    "pushedToRemote":  true,
+    "generatedAt":  "2026-06-09T19:23:02.2211536+08:00",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "files":  [
+                  {
+                      "path":  "codex-memory/kube-agent/current/RECOVERY_STATUS.md",
+                      "sha256":  "5180AA053EF6F5BE955C27DA782032ECB0198BDDB6F79275DDAD70B39DB8E975",
+                      "length":  60092,
+                      "lastWriteTime":  "2026-06-09T19:23:02.1469735+08:00"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/M5_68_1_WORKSPACE_RECOVERY_SHA256.json",
+                      "sha256":  "502FCE3834A972605F2E4C4608E6FE83B3BF53B96BE5A8F7B8F4EBABA689190E",
+                      "length":  12138,
+                      "lastWriteTime":  "2026-06-09T19:18:32.6934691+08:00"
+                  },
+                  {
+                      "path":  "docs/M5_68_MEMORY_RAG_EVAL_SUITE_BINDING_CONTRACT_20260609.md",
+                      "sha256":  "629156642A19CCDCBCF530B5EAC428D17869AF4D4CB50F780F6090669FB79B92",
+                      "length":  4653,
+                      "lastWriteTime":  "2026-06-09T19:11:19.2730004+08:00"
+                  },
+                  {
+                      "path":  "docs/PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "1937AA5B4DEFB337A439AE5E32B7820738CBEADB50777E388A2B6152FF9A15F5",
+                      "length":  393830,
+                      "lastWriteTime":  "2026-06-09T19:12:29.4255956+08:00"
+                  },
+                  {
+                      "path":  "docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "41BCB51CA3DF15820A190C7CE261323A9D5D8E2B41554E3280354F4ED800BDFF",
+                      "length":  152295,
+                      "lastWriteTime":  "2026-06-09T19:14:40.5597085+08:00"
+                  },
+                  {
+                      "path":  "docs/tech-stack/BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "97FE6968B4E2C13C54B530B5DDC44A2E74171DD75523B7804654ABE6383C0B23",
+                      "length":  79174,
+                      "lastWriteTime":  "2026-06-09T19:14:40.6252321+08:00"
+                  },
+                  {
+                      "path":  "CHANGELOG.md",
+                      "sha256":  "2A889604FC3FE170BD08A35D882C294942790C6D43680521E48A4C6A95C88DCA",
+                      "length":  355785,
+                      "lastWriteTime":  "2026-06-09T19:11:19.2143107+08:00"
+                  }
+              ]
+}
