@@ -87,7 +87,8 @@ class JsonlAgentAuditDurableSinkTest {
             queryService.findByAuditId("aud_0123456789abcdef0123456789abcdef");
         AgentAuditQueryResponse byTraceId =
             queryService.findByTraceId("trc_0123456789abcdef0123456789abcdef", 10);
-        String queryText = byAuditId.toString() + byTraceId.toString();
+        AgentAuditQueryResponse recent = queryService.recentEvents(10);
+        String queryText = byAuditId.toString() + byTraceId.toString() + recent.toString();
 
         assertThat(queryService.available()).isTrue();
         assertThat(byAuditId.index())
@@ -106,6 +107,9 @@ class JsonlAgentAuditDurableSinkTest {
             .containsExactly("BUSINESS_FAILURE", "PREPARED");
         assertThat(byTraceId.events()).extracting(AgentAuditQueryEvent::recordPhase)
             .containsExactly("FINAL", "PRE_EXECUTION");
+        assertThat(recent.queryType()).isEqualTo("recent");
+        assertThat(recent.events()).extracting(AgentAuditQueryEvent::outcome)
+            .containsExactly("BUSINESS_FAILURE", "PREPARED");
         assertThat(queryText)
             .contains("aud_0123456789abcdef0123456789abcdef", "trc_0123456789abcdef0123456789abcdef", "<protected>")
             .doesNotContain("conv-secret", "user-secret", "org-secret", "secret-token-value", "/api/org-secret");
@@ -125,12 +129,16 @@ class JsonlAgentAuditDurableSinkTest {
 
         AgentAuditQueryResponse response =
             recorder.findByTraceId("trc_0123456789abcdef0123456789abcdef", 10);
+        AgentAuditQueryResponse recent = recorder.recentEvents(10);
 
         assertThat(response.index()).containsEntry("backend", "jsonl-reverse-scan");
         assertThat(response.events()).extracting(AgentAuditQueryEvent::outcome)
             .containsExactly("BUSINESS_FAILURE", "PREPARED");
         assertThat(response.events()).extracting(AgentAuditQueryEvent::recordPhase)
             .containsExactly("FINAL", "PRE_EXECUTION");
+        assertThat(recent.index()).containsEntry("backend", "jsonl-reverse-scan");
+        assertThat(recent.events()).extracting(AgentAuditQueryEvent::outcome)
+            .containsExactly("BUSINESS_FAILURE", "PREPARED");
         assertThat(recorder.recentEvents()).hasSize(1);
     }
 
@@ -157,11 +165,14 @@ class JsonlAgentAuditDurableSinkTest {
             queryService.findByAuditId("aud_0123456789abcdef0123456789abcdef");
         AgentAuditQueryResponse byTraceId =
             queryService.findByTraceId("trc_0123456789abcdef0123456789abcdef", 10);
+        AgentAuditQueryResponse recent = queryService.recentEvents(10);
 
         assertThat(byAuditId.maxResults()).isEqualTo(1);
         assertThat(byAuditId.events()).hasSize(1);
         assertThat(byTraceId.maxResults()).isEqualTo(1);
         assertThat(byTraceId.truncated()).isTrue();
+        assertThat(recent.maxResults()).isEqualTo(1);
+        assertThat(recent.truncated()).isTrue();
         assertThat(byTraceId.index())
             .containsEntry("maxScanRecords", 2)
             .containsEntry("maxQueryResults", 1)

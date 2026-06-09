@@ -40,6 +40,7 @@ public class ObservabilityController {
     private final AgentEvalReportService evalReportService;
     private final AgentEvalSuiteCatalogService evalSuiteCatalogService;
     private final AgentEvalTraceSetCatalogService evalTraceSetCatalogService;
+    private final AgentEvalTraceSetCandidateDiscoveryService traceSetCandidateDiscoveryService;
     private final AgentPrincipalResolver principalResolver;
 
     public ObservabilityController(AgentMetricsService metricsService,
@@ -49,6 +50,7 @@ public class ObservabilityController {
                                    AgentEvalReportService evalReportService,
                                    AgentEvalSuiteCatalogService evalSuiteCatalogService,
                                    AgentEvalTraceSetCatalogService evalTraceSetCatalogService,
+                                   AgentEvalTraceSetCandidateDiscoveryService traceSetCandidateDiscoveryService,
                                    AgentPrincipalResolver principalResolver) {
         this.metricsService = metricsService;
         this.auditSnapshotProvider = auditSnapshotProvider;
@@ -57,6 +59,7 @@ public class ObservabilityController {
         this.evalReportService = evalReportService;
         this.evalSuiteCatalogService = evalSuiteCatalogService;
         this.evalTraceSetCatalogService = evalTraceSetCatalogService;
+        this.traceSetCandidateDiscoveryService = traceSetCandidateDiscoveryService;
         this.principalResolver = principalResolver;
     }
 
@@ -220,6 +223,22 @@ public class ObservabilityController {
             return guard;
         }
         return ResponseEntity.ok(ApiResponse.ok(evalTraceSetCatalogService.catalog()));
+    }
+
+    /** Discover redacted recent trace candidates before running curation review. */
+    @GetMapping("/eval/trace-sets/{traceSetId}/candidates")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentEvalTraceSetCandidateDiscoveryResponse>> evalTraceSetCandidates(
+        @PathVariable String traceSetId,
+        @RequestParam(defaultValue = "50") int limit) {
+        ResponseEntity<ApiResponse<AgentEvalTraceSetCandidateDiscoveryResponse>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return traceSetCandidateDiscoveryService.discover(traceSetId, limit)
+            .map(response -> ResponseEntity.ok(ApiResponse.ok(response)))
+            .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.fail("Unknown Agent eval trace set: " + traceSetId)));
     }
 
     /** Run the suite attached to a trace set; empty trace sets fail closed until real captures are curated. */

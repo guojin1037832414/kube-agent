@@ -432,3 +432,14 @@ M5.39-1 adds the missing promotion protocol between candidate trace evidence and
 - The endpoint never mutates `observability/eval-trace-sets.json`; promotion still requires human review and a Git catalog patch.
 
 Technology judgment: this is how advanced Agent eval moves safely toward blocking CI. The system can now prove that candidate traces are good enough for review, while still preventing ad-hoc runtime requests from silently becoming release evidence. The next step is a persisted redacted capture workflow that helps operators discover candidate trace IDs, then a reviewed catalog patch that lets M5.38's bundle become genuinely release-blocking.
+
+## M5.40-1 Update - Trace-Set Candidate Discovery
+
+M5.40-1 adds the candidate discovery step before M5.39 curation review:
+
+- `AgentAuditQueryService#recentEvents(...)` exposes a bounded redacted recent-event read model across in-memory and JSONL backends.
+- `GET /api/agent/observability/eval/trace-sets/{traceSetId}/candidates` groups recent audit events by W3C-compatible trace ID.
+- Candidate summaries contain only trace anchors, counts, closed-vocabulary operation/outcome data, evidence tags, recommendation state, and privacy proof.
+- Recommendation logic is trace-set aware: golden read traces, redaction traces, high-risk prewrite traces, and red-team safety traces are surfaced differently.
+
+Technology judgment: this gives eval operations a real evidence workflow without granting new authority. Discovery is read-only and advisory, curation review is deterministic and review-only, and catalog promotion still requires a Git-reviewed patch. This separation is the mature Agent pattern for moving from observability data to release-blocking evidence.

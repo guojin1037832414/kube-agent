@@ -215,11 +215,14 @@ class AgentAuditRecorderTest {
 
         AgentAuditQueryResponse byAuditId = recorder.findByAuditId("aud_query_sensitive");
         AgentAuditQueryResponse byTraceId = recorder.findByTraceId("trc_query_sensitive", 10);
-        String queryText = byAuditId.toString() + byTraceId.toString();
+        AgentAuditQueryResponse recent = recorder.recentEvents(10);
+        String queryText = byAuditId.toString() + byTraceId.toString() + recent.toString();
 
         assertThat(byAuditId.schemaVersion()).isEqualTo("agent-audit-query.v1");
         assertThat(byAuditId.events()).hasSize(1);
         assertThat(byTraceId.events()).hasSize(1);
+        assertThat(recent.queryType()).isEqualTo("recent");
+        assertThat(recent.events()).hasSize(1);
         assertThat(byTraceId.index())
             .containsEntry("backend", "in-memory-ring-buffer")
             .containsEntry("containsRawPrincipal", false)
@@ -240,6 +243,13 @@ class AgentAuditRecorderTest {
         assertThat(response.resultCount()).isEqualTo(1);
         assertThat(response.maxResults()).isEqualTo(1);
         assertThat(response.truncated()).isTrue();
+
+        AgentAuditQueryResponse recent = recorder.recentEvents(1);
+
+        assertThat(recent.queryType()).isEqualTo("recent");
+        assertThat(recent.events()).extracting(AgentAuditQueryEvent::auditId)
+            .containsExactly("aud_two");
+        assertThat(recent.truncated()).isTrue();
     }
 
     private AgentAuditEvent event(String auditId, AgentAuditOutcome outcome) {

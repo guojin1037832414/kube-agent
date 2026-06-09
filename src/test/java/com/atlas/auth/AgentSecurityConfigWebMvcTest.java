@@ -119,6 +119,10 @@ class AgentSecurityConfigWebMvcTest {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
             .andExpect(status().isForbidden());
 
+        mockMvc.perform(get("/api/agent/observability/eval/trace-sets/phase1-core-golden/candidates")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
+            .andExpect(status().isForbidden());
+
         mockMvc.perform(post("/api/agent/observability/eval/trace-sets/phase1-core-golden/gate")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer user-token")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -186,6 +190,10 @@ class AgentSecurityConfigWebMvcTest {
             .andExpect(status().isOk());
 
         mockMvc.perform(get("/api/agent/observability/eval/trace-sets")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token"))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/agent/observability/eval/trace-sets/phase1-core-golden/candidates")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token"))
             .andExpect(status().isOk());
 
@@ -371,6 +379,11 @@ class AgentSecurityConfigWebMvcTest {
         @GetMapping("/api/agent/observability/eval/trace-sets")
         String observabilityEvalTraceSets() {
             return "eval-trace-sets";
+        }
+
+        @GetMapping("/api/agent/observability/eval/trace-sets/{id}/candidates")
+        String observabilityEvalTraceSetCandidates(@PathVariable String id) {
+            return id;
         }
 
         @PostMapping("/api/agent/observability/eval/trace-sets/{id}/gate")

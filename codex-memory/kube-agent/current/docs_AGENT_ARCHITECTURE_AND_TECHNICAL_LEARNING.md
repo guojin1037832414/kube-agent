@@ -2,6 +2,36 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-09 M5.40 Trace-Set Candidate Discovery 候选发现
+
+M5.40 补上的是 M5.39 前面的一步：管理员不应该靠猜测 traceId 来做 curation review，而应该从脱敏审计读模型里发现“值得复核”的候选 trace。这个能力仍然是 read-only advisory，不是 release authority。
+
+```text
+AgentAuditQueryService#recentEvents(...)
+    |
+    | redacted AgentAuditQueryEvent only
+    v
+AgentEvalTraceSetCandidateDiscoveryService
+    |
+    | group by W3C traceId and recommend per trace-set purpose
+    v
+GET /api/agent/observability/eval/trace-sets/{traceSetId}/candidates
+    |
+    v
+M5.39 curation-review
+    |
+    v
+human/Git catalog promotion
+```
+
+关键设计：
+- `recentEvents(...)` 同时进入 in-memory 和 JSONL audit read model，为未来数据库/搜索后端留下同一接口。
+- candidates 只包含 traceId、计数、operation/outcome 枚举、evidence tags 和 privacy proof，不包含 raw endpoint、reason、principal、org、conversation 或参数值。
+- discovery 会按 trace-set 目标给推荐：golden read、redaction、high-risk prewrite、red-team safety。
+- 被发现或推荐不等于进入 catalog；推荐 trace 还必须经过 M5.39 curation review 和 Git patch。
+
+学习重点：顶级 Agent eval 应该拆成 discovery、review、promotion 三个边界。每个边界只回答一个问题，并且权限逐步增加；这样可观测性数据不会意外变成发布授权。
+
 ## 2026-06-09 M5.39 Trace-Set Curation Review 复核协议
 
 M5.39 关闭的是 eval trace-set 从“候选证据”进入“版本化发布证据”之前的复核协议。M5.38 已经能把 trace-set gate bundle 上传为 CI 证据，但 trace set 仍然为空；如果直接让运行时请求覆盖 catalog，就会把临时诊断输入误当成 release evidence。

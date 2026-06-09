@@ -27,6 +27,10 @@ class ObservabilityControllerTest {
     private final AgentReplayTimelineService replayTimelineService = new AgentReplayTimelineService(auditRecorder);
     private final AgentEvalReportService evalReportService = new AgentEvalReportService(replayTimelineService);
     private final AgentEvalSuiteCatalogService evalSuiteCatalogService = new AgentEvalSuiteCatalogService(evalReportService);
+    private final AgentEvalTraceSetCatalogService evalTraceSetCatalogService =
+        new AgentEvalTraceSetCatalogService(evalSuiteCatalogService, new com.fasterxml.jackson.databind.ObjectMapper());
+    private final AgentEvalTraceSetCandidateDiscoveryService traceSetCandidateDiscoveryService =
+        new AgentEvalTraceSetCandidateDiscoveryService(auditRecorder, evalTraceSetCatalogService);
     private final ObservabilityController controller = new ObservabilityController(
         new AgentMetricsService(new SimpleMeterRegistry()),
         auditRecorder,
@@ -34,7 +38,8 @@ class ObservabilityControllerTest {
         replayTimelineService,
         evalReportService,
         evalSuiteCatalogService,
-        new AgentEvalTraceSetCatalogService(evalSuiteCatalogService, new com.fasterxml.jackson.databind.ObjectMapper()),
+        evalTraceSetCatalogService,
+        traceSetCandidateDiscoveryService,
         new AgentPrincipalResolver(userPermissionContext)
     );
 
@@ -700,6 +705,82 @@ class ObservabilityControllerTest {
             .containsEntry("toolExecution", false)
             .containsEntry("kubeManagerCalls", false);
         assertThat(catalog.toString())
+            .doesNotContain("conv-sensitive", "user-sensitive", "org-sensitive", "secret-token-value", "/api/org-sensitive");
+    }
+
+    @Test
+    void evalTraceSetCandidates_shouldRequireAdminUserAndRejectUnknownTraceSet() {
+        ResponseEntity<ApiResponse<AgentEvalTraceSetCandidateDiscoveryResponse>> anonymous =
+            controller.evalTraceSetCandidates("phase1-core-golden", 50);
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentEvalTraceSetCandidateDiscoveryResponse>> missing =
+            controller.evalTraceSetCandidates("missing-trace-set", 50);
+
+        assertThat(missing.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(missing.getBody()).isNotNull();
+        assertThat(missing.getBody().isSuccess()).isFalse();
+    }
+
+    @Test
+    void evalTraceSetCandidates_shouldReturnRedactedRecommendedCandidatesForAdminUser() {
+        String traceId = "trc_44444444444444444444444444444444";
+        auditRecorder.record(new com.atlas.audit.AgentAuditEvent(
+            "aud_eval_trace_set_candidate",
+            java.time.Instant.parse("2026-06-09T00:00:00Z"),
+            traceId,
+            "conv-sensitive",
+            "user-sensitive",
+            "org-sensitive",
+            "intent",
+            "tool",
+            com.atlas.tool.execution.SafeToolExecutionSource.REACT_ENGINE,
+            "GET",
+            java.util.List.of("/api/org-sensitive/pod?token=secret-token-value"),
+            com.atlas.tool.annotation.AtlasToolMapping.OperationType.READ,
+            false,
+            com.atlas.audit.AgentAuditOutcome.SUCCESS,
+            true,
+            true,
+            "ok token=secret-token-value",
+            java.util.Map.of("count", 1, "keys", java.util.List.of(java.util.Map.of(
+                "name", "token",
+                "protected", true,
+                "type", "string",
+                "present", true
+            )))
+        ));
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentEvalTraceSetCandidateDiscoveryResponse>> response =
+            controller.evalTraceSetCandidates("phase1-core-golden", 50);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        AgentEvalTraceSetCandidateDiscoveryResponse candidates = response.getBody().getData();
+        assertThat(candidates.schemaVersion()).isEqualTo("agent-eval-trace-set-candidates.v1");
+        assertThat(candidates.traceSetId()).isEqualTo("phase1-core-golden");
+        assertThat(candidates.candidateTraceIds()).contains(traceId);
+        assertThat(candidates.candidates()).filteredOn(AgentEvalTraceSetCandidate::recommendedForCurationReview)
+            .extracting(AgentEvalTraceSetCandidate::traceId)
+            .contains(traceId);
+        assertThat(candidates.discoveryPolicy())
+            .containsEntry("sourceRedactedOnly", true)
+            .containsEntry("requiresCurationReview", true)
+            .containsEntry("catalogMutationAllowed", false);
+        assertThat(candidates.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("llmUsed", false)
+            .containsEntry("externalCalls", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("kubeManagerCalls", false);
+        assertThat(candidates.toString())
+            .contains(traceId)
             .doesNotContain("conv-sensitive", "user-sensitive", "org-sensitive", "secret-token-value", "/api/org-sensitive");
     }
 

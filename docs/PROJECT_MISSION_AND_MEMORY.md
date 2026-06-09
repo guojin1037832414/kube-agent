@@ -10,7 +10,34 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.39-1
+## Latest Phase 1 Core Memory - M5.40-1
+
+M5.40-1 adds redacted trace-set candidate discovery so operators can find candidate trace IDs before running M5.39 curation review.
+
+Delivered:
+
+- Added `AgentAuditQueryService#recentEvents(...)`.
+- Implemented recent redacted audit queries for in-memory and JSONL read models.
+- Added `AgentEvalTraceSetCandidate`, `AgentEvalTraceSetCandidateDiscoveryResponse`, and `AgentEvalTraceSetCandidateDiscoveryService`.
+- Added admin-only `GET /api/agent/observability/eval/trace-sets/{traceSetId}/candidates?limit=50`.
+- Candidate discovery groups recent redacted audit events by W3C-compatible trace ID and recommends candidates for golden, redaction, high-risk prewrite, and red-team trace sets.
+
+Security boundary:
+
+- The candidate discovery endpoint is admin-only at URL and method levels.
+- It reads only `AgentAuditQueryEvent`, never raw audit records.
+- Output contains trace IDs, counts, closed-vocabulary enums, evidence tags, and privacy metadata only.
+- No raw principal, organization, conversation, endpoint, reason text, or parameter values are exposed.
+- No LLM, Tool execution, kube-manager call, network call, catalog mutation, durable write, or raw audit export is added.
+- NIM / HPC / Slurm / BCM remain Phase 2 paused scope.
+
+Learning point: top-tier Agent eval separates discovery, review, and promotion. Discovery finds relevant redacted traces, review evaluates candidates, and promotion still requires human/Git catalog changes before CI can treat them as release evidence.
+
+Latest verified command:
+
+- `mvn -q "-Dtest=AgentAuditRecorderTest,JsonlAgentAuditDurableSinkTest,AgentEvalTraceSetCandidateDiscoveryServiceTest,AgentEvalTraceSetCatalogServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+## Previous Phase 1 Core Memory - M5.39-1
 
 M5.39-1 adds a review-only curation artifact for candidate trace IDs before they can become versioned trace-set release evidence.
 

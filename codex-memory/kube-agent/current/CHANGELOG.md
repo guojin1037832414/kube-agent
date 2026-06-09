@@ -6,6 +6,23 @@
 
 ---
 
+## [M5.40-1] - Eval trace-set candidate discovery
+
+**Delivery**: Added admin-only redacted trace candidate discovery before curation review.
+**Changes**
+- Added `AgentAuditQueryService#recentEvents(...)` and implemented it for in-memory and JSONL audit read models.
+- Added `AgentEvalTraceSetCandidate`, `AgentEvalTraceSetCandidateDiscoveryResponse`, and `AgentEvalTraceSetCandidateDiscoveryService`.
+- Added admin-only `GET /api/agent/observability/eval/trace-sets/{traceSetId}/candidates?limit=50`.
+- Candidate discovery groups recent redacted audit events by W3C-compatible trace ID and recommends candidates per target trace-set purpose.
+- Added service, audit read-model, controller, source-contract, and MockMvc security coverage.
+**Verification**
+- `mvn -q "-Dtest=AgentAuditRecorderTest,JsonlAgentAuditDurableSinkTest,AgentEvalTraceSetCandidateDiscoveryServiceTest,AgentEvalTraceSetCatalogServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed.
+**Security**
+- Candidate discovery reads only `AgentAuditQueryEvent`, never raw audit records.
+- The response contains trace IDs, counts, closed-vocabulary enums, evidence tags, and privacy metadata only.
+- The path remains deterministic, redacted-only, non-executing, `llmUsed=false`, `externalCalls=false`, `toolExecution=false`, and `kubeManagerCalls=false`.
+- This slice adds no catalog mutation, no kube-manager write/create/delete/state-changing behavior, and does not reopen NIM/HPC/Slurm/BCM scope.
+
 ## [M5.39-1] - Eval trace-set curation review artifact
 
 **Delivery**: Added a review-only promotion artifact for candidate trace IDs before they can be patched into versioned eval trace sets.

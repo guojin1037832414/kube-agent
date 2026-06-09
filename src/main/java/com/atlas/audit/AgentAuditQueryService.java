@@ -15,5 +15,7 @@ public interface AgentAuditQueryService {
 
     AgentAuditQueryResponse findByTraceId(String traceId, int maxResults);
 
+    AgentAuditQueryResponse recentEvents(int maxResults);
+
     Map<String, Object> indexMetadata();
 }

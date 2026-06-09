@@ -75,6 +75,24 @@ public class JsonlAgentAuditQueryService implements AgentAuditQueryService {
     }
 
     @Override
+    public AgentAuditQueryResponse recentEvents(int maxResults) {
+        int boundedMaxResults = Math.max(1, Math.min(maxResults, boundedQueryMaxResults()));
+        ScanResult scan = scan(
+            boundedMaxScanRecords(),
+            event -> true,
+            boundedMaxResults
+        );
+        return AgentAuditQueryResponse.of(
+            "recent",
+            "newest-first",
+            boundedMaxResults,
+            scan.truncated(),
+            indexMetadata(),
+            scan.events()
+        );
+    }
+
+    @Override
     public Map<String, Object> indexMetadata() {
         boolean available = available();
         AgentAuditProperties.Durable durable = properties.getDurable();
@@ -84,7 +102,7 @@ public class JsonlAgentAuditQueryService implements AgentAuditQueryService {
         metadata.put("storageType", "jsonl");
         metadata.put("durableRetention", durable.isEnabled());
         metadata.put("available", available);
-        metadata.put("lookupFields", List.of("auditId", "traceId"));
+        metadata.put("lookupFields", List.of("auditId", "traceId", "recent"));
         metadata.put("scanDirection", "newest-first");
         metadata.put("maxScanRecords", boundedMaxScanRecords());
         metadata.put("maxQueryResults", boundedQueryMaxResults());

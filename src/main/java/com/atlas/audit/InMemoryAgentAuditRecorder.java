@@ -174,6 +174,30 @@ public class InMemoryAgentAuditRecorder implements AgentAuditRecorder, AgentAudi
     }
 
     @Override
+    public AgentAuditQueryResponse recentEvents(int maxResults) {
+        if (jsonlQueryAvailable()) {
+            return jsonlQueryService.recentEvents(maxResults);
+        }
+        int boundedMaxResults = Math.max(1, Math.min(maxResults, MAX_RECENT_EVENTS));
+        List<AgentAuditQueryEvent> matches = recentEvents().stream()
+            .limit(boundedMaxResults + 1L)
+            .map(AgentAuditQueryEvent::from)
+            .toList();
+        boolean truncated = matches.size() > boundedMaxResults;
+        List<AgentAuditQueryEvent> visibleMatches = truncated
+            ? matches.subList(0, boundedMaxResults)
+            : matches;
+        return AgentAuditQueryResponse.of(
+            "recent",
+            "newest-first",
+            boundedMaxResults,
+            truncated,
+            indexMetadata(),
+            visibleMatches
+        );
+    }
+
+    @Override
     public Map<String, Object> indexMetadata() {
         if (jsonlQueryAvailable()) {
             return jsonlQueryService.indexMetadata();
@@ -182,7 +206,7 @@ public class InMemoryAgentAuditRecorder implements AgentAuditRecorder, AgentAudi
         return Map.of(
             "schemaVersion", "agent-audit-index.v1",
             "backend", "in-memory-ring-buffer",
-            "lookupFields", List.of("auditId", "traceId"),
+            "lookupFields", List.of("auditId", "traceId", "recent"),
             "maxRecentEvents", MAX_RECENT_EVENTS,
             "durableRetention", durabilityStatus.durableRetention(),
             "durableStorageType", durabilityStatus.storageType(),
