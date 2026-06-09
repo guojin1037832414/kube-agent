@@ -80,14 +80,15 @@ public record AgentMemoryRagEvalSuiteBindingContractResponse(
         int required = REQUIRED_GATE_CHECKS.size();
         int suiteCount = suiteCatalog != null ? suiteCatalog.suiteCount() : 0;
         int traceSetCount = traceSetCatalog != null ? traceSetCatalog.traceSetCount() : 0;
+        boolean suiteBound = mapped == required;
         return new AgentMemoryRagEvalSuiteBindingContractResponse(
             SCHEMA_VERSION,
             generatedAt,
-            "CONTRACT_DEFINED_NOT_BOUND",
+            suiteBound ? "SUITE_CHECKS_DEFINED_TRACE_SETS_NOT_CURATED" : "CONTRACT_DEFINED_NOT_BOUND",
             "Memory/RAG eval suite binding before retrieval runtime",
             true,
             true,
-            false,
+            suiteBound,
             false,
             true,
             false,
@@ -204,7 +205,7 @@ public record AgentMemoryRagEvalSuiteBindingContractResponse(
         if (mapped < required) {
             reasons.add("memory-rag-suite-check-codes-missing");
         }
-        reasons.add("memory-rag-suite-definition-not-bound");
+        reasons.add("memory-rag-suite-runtime-not-promoted");
         reasons.add("memory-rag-trace-sets-not-curated");
         reasons.add("reviewed-redacted-memory-rag-trace-evidence-missing");
         reasons.add("ci-blocking-switch-intentionally-absent");

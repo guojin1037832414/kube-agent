@@ -145,14 +145,14 @@ public record AgentMemoryRagReadinessResponse(
                 "eval-and-observability",
                 "Memory/RAG eval and observability",
                 "PARTIAL",
-                "The Memory/RAG eval gate and eval-suite binding contracts now define citation, privacy, tenant, lifecycle, and stale retrieval checks; runtime eval suites and curated trace evidence are still unbound.",
-                List.of("eval gate contract", "eval-suite binding contract", "deterministic eval", "red-team trace set", "privacy leakage check", "staleness check"),
+                "The Memory/RAG eval gate, eval-suite binding contract, and deterministic suite definition now cover citation, privacy, tenant, lifecycle, and stale retrieval checks; curated trace evidence is still unbound.",
+                List.of("eval gate contract", "eval-suite binding contract", "deterministic Memory/RAG suite", "red-team trace set", "privacy leakage check", "staleness check"),
                 Map.of(
                     "memoryRagEvalGateContractDefined", true,
                     "memoryRagEvalGateContractBound", false,
                     "memoryRagEvalSuiteBindingContractDefined", true,
                     "memoryRagEvalSuiteBindingContractBound", false,
-                    "memoryRagEvalSuiteExists", false,
+                    "memoryRagEvalSuiteExists", true,
                     "citationFidelityGateExists", false,
                     "privacyLeakageGateExists", false,
                     "retrievalTelemetryExists", false
@@ -189,10 +189,11 @@ public record AgentMemoryRagReadinessResponse(
             "define-durable-memory-lifecycle-contract",
             "define-memory-rag-eval-gate-contract",
             "define-memory-rag-eval-suite-binding-contract",
+            "define-memory-rag-release-gate-suite-check-codes",
             "bind-durable-memory-runtime-after-lifecycle-and-source-digest-contract",
             "bind-tenant-isolated-vector-store-through-reviewed-retrieval-policy",
             "add-redacted-runbook-and-kube-manager-doc-ingestion-pipeline",
-            "add-memory-rag-eval-suite-for-citation-privacy-tenant-isolation-staleness",
+            "add-reviewed-memory-rag-trace-sets-for-citation-privacy-tenant-lifecycle",
             "wire-vue-memory-rag-readiness-workbench"
         );
     }
@@ -223,7 +224,9 @@ public record AgentMemoryRagReadinessResponse(
         evidence.put("memoryRagEvalGateContractBound", false);
         evidence.put("memoryRagEvalSuiteBindingContractDefined", true);
         evidence.put("memoryRagEvalSuiteBindingContractBound", false);
-        evidence.put("memoryRagEvalSuiteExists", false);
+        evidence.put("memoryRagEvalSuiteExists", true);
+        evidence.put("memoryRagEvalSuiteId", "memory-rag-release-gate");
+        evidence.put("memoryRagEvalSuiteCheckCodeCount", 9);
         evidence.put("vueWorkbenchBound", false);
         return Map.copyOf(evidence);
     }
@@ -264,7 +267,8 @@ public record AgentMemoryRagReadinessResponse(
             "durable memory lifecycle contract",
             "Memory/RAG eval gate contract",
             "Memory/RAG eval suite binding contract",
-            "deterministic Memory/RAG eval suite"
+            "deterministic Memory/RAG eval suite",
+            "memory-rag-release-gate suite catalog entry"
         ));
         protocol.put("compatibilityMatrixCandidates", List.of(
             "GraphRAG",

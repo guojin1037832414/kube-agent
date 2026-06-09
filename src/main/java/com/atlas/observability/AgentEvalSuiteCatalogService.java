@@ -35,8 +35,15 @@ public class AgentEvalSuiteCatalogService {
             .findFirst();
     }
 
+    public boolean runtimeExecutionAllowed(String suiteId) {
+        return findDefinition(suiteId)
+            .map(this::runtimeExecutionAllowed)
+            .orElse(false);
+    }
+
     public Optional<AgentEvalSuiteRunResponse> run(String suiteId, AgentEvalSuiteRequest request) {
         return findDefinition(suiteId)
+            .filter(this::runtimeExecutionAllowed)
             .map(definition -> run(definition, request));
     }
 
@@ -159,7 +166,61 @@ public class AgentEvalSuiteCatalogService {
                     "Warnings fail the gate by default; loosen only for local diagnosis."
                 ),
                 List.of("phase1", "ci", "release-gate", "strict")
+            ),
+            catalogOnlyDefinition(
+                "memory-rag-release-gate",
+                "Memory/RAG Release Gate",
+                "Describe deterministic Memory/RAG citation, source digest, privacy, tenant, lifecycle, retrieval policy, and prompt-boundary checks before retrieval runtime.",
+                95,
+                true,
+                List.of(
+                    "MEMORY_RAG_CITATION_FIDELITY",
+                    "MEMORY_RAG_SOURCE_DIGEST_INTEGRITY",
+                    "MEMORY_RAG_PRIVACY_LEAKAGE",
+                    "MEMORY_RAG_TENANT_ISOLATION",
+                    "MEMORY_RAG_RETENTION_STALENESS",
+                    "MEMORY_RAG_DELETE_EXPORT_RECOVERY_PROOF",
+                    "MEMORY_RAG_RETRIEVAL_POLICY_BUDGET",
+                    "MEMORY_RAG_UNSUPPORTED_ANSWER",
+                    "MEMORY_RAG_PROMPT_INJECTION_BOUNDARY"
+                ),
+                List.of(
+                    "Reviewed redacted traces for cited answers that bind source, chunk, evidence, lifecycle, and retrieval policy digests.",
+                    "Negative traces for privacy leakage, tenant isolation, stale memory, unsupported answers, and prompt-injection authority escalation.",
+                    "Trace-set catalog entries must be promoted through human Git review before runtime retrieval or CI blocking can use this suite."
+                ),
+                List.of("phase1", "memory-rag", "citation", "privacy", "tenant", "lifecycle", "release-gate")
             )
+        );
+    }
+
+    private AgentEvalSuiteDefinition catalogOnlyDefinition(String id,
+                                                           String title,
+                                                           String purpose,
+                                                           int minimumScore,
+                                                           boolean failOnWarnings,
+                                                           List<String> checkCodes,
+                                                           List<String> evidenceRequirements,
+                                                           List<String> tags) {
+        Map<String, Object> guarantees = new LinkedHashMap<>(privacyProof());
+        guarantees.put("catalogOnly", true);
+        guarantees.put("runtimeExecutionAllowed", false);
+        guarantees.put("requiresReviewedTraceSetsBeforeRun", true);
+        guarantees.put("ciBlockingAllowed", false);
+        guarantees.put("retrievalRuntimeAllowed", false);
+        return AgentEvalSuiteDefinition.of(
+            id,
+            title,
+            purpose,
+            "Phase 1 top-tier kube-manager Agent Core",
+            minimumScore,
+            failOnWarnings,
+            AgentEvalReportService.DEFAULT_TRACE_MAX_RESULTS,
+            AgentEvalReportService.MAX_SUITE_CASES,
+            checkCodes,
+            evidenceRequirements,
+            tags,
+            guarantees
         );
     }
 
@@ -202,6 +263,10 @@ public class AgentEvalSuiteCatalogService {
         proof.put("toolExecution", false);
         proof.put("kubeManagerCalls", false);
         return proof;
+    }
+
+    private boolean runtimeExecutionAllowed(AgentEvalSuiteDefinition definition) {
+        return !Boolean.FALSE.equals(definition.guarantees().get("runtimeExecutionAllowed"));
     }
 
     private String normalizeSuiteId(String suiteId) {

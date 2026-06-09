@@ -27,7 +27,7 @@ class AgentEvalWorkbenchOverviewServiceTest {
 
         assertThat(overview.schemaVersion()).isEqualTo("agent-eval-workbench-overview.v1");
         assertThat(overview.evaluationVersion()).isEqualTo("deterministic-replay-eval.v1");
-        assertThat(overview.capabilityCount()).isEqualTo(15);
+        assertThat(overview.capabilityCount()).isEqualTo(16);
         assertThat(overview.traceSetCount()).isEqualTo(4);
         assertThat(overview.traceSetNeedsEvidenceCount()).isEqualTo(4);
         assertThat(overview.traceSetReadyCount()).isZero();
@@ -84,6 +84,9 @@ class AgentEvalWorkbenchOverviewServiceTest {
             .containsEntry("externalCalls", false)
             .containsEntry("toolExecution", false)
             .containsEntry("kubeManagerCalls", false);
+        assertThat(overview.capabilities().capabilities())
+            .anySatisfy(capability -> assertThat(capability.id())
+                .isEqualTo("memory-rag-eval-suite-binding-contract"));
         assertThat(overview.toString())
             .contains("workbench-overview", "agent-eval-trace-set-gate-bundle.v1")
             .doesNotContain("reports=", "replay=")

@@ -28,7 +28,13 @@ class AgentEvalSuiteCatalogServiceTest {
         assertThat(catalog.evaluationVersion()).isEqualTo("deterministic-replay-eval.v1");
         assertThat(catalog.suiteCount()).isEqualTo(catalog.suites().size());
         assertThat(catalog.suites()).extracting(AgentEvalSuiteDefinition::id)
-            .containsExactly("core-safety-smoke", "high-risk-prewrite", "redaction-regression", "release-gate-strict");
+            .containsExactly(
+                "core-safety-smoke",
+                "high-risk-prewrite",
+                "redaction-regression",
+                "release-gate-strict",
+                "memory-rag-release-gate"
+            );
         assertThat(catalog.suites()).allSatisfy(definition -> {
             assertThat(definition.phase()).isEqualTo("Phase 1 top-tier kube-manager Agent Core");
             assertThat(definition.defaultLimit()).isEqualTo(AgentEvalReportService.DEFAULT_TRACE_MAX_RESULTS);
@@ -46,6 +52,50 @@ class AgentEvalSuiteCatalogServiceTest {
             .containsEntry("containsRawParameterValues", false);
         assertThat(catalog.toString())
             .doesNotContain("conv-sensitive", "user-sensitive", "org-sensitive", "secret-token-value", "/api/org-sensitive");
+    }
+
+    @Test
+    void catalog_shouldExposeMemoryRagReleaseGateChecksWithoutRuntimeAuthority() {
+        AgentEvalSuiteCatalogService service = service(new InMemoryAgentAuditRecorder());
+
+        AgentEvalSuiteDefinition definition = service.findDefinition("memory-rag-release-gate").orElseThrow();
+
+        assertThat(definition.title()).isEqualTo("Memory/RAG Release Gate");
+        assertThat(definition.defaultMinimumScore()).isEqualTo(95);
+        assertThat(definition.defaultFailOnWarnings()).isTrue();
+        assertThat(definition.checkCodes()).containsExactly(
+            "MEMORY_RAG_CITATION_FIDELITY",
+            "MEMORY_RAG_SOURCE_DIGEST_INTEGRITY",
+            "MEMORY_RAG_PRIVACY_LEAKAGE",
+            "MEMORY_RAG_TENANT_ISOLATION",
+            "MEMORY_RAG_RETENTION_STALENESS",
+            "MEMORY_RAG_DELETE_EXPORT_RECOVERY_PROOF",
+            "MEMORY_RAG_RETRIEVAL_POLICY_BUDGET",
+            "MEMORY_RAG_UNSUPPORTED_ANSWER",
+            "MEMORY_RAG_PROMPT_INJECTION_BOUNDARY"
+        );
+        assertThat(definition.evidenceRequirements()).contains(
+            "Trace-set catalog entries must be promoted through human Git review before runtime retrieval or CI blocking can use this suite."
+        );
+        assertThat(definition.tags()).contains("memory-rag", "citation", "privacy", "tenant", "lifecycle");
+        assertThat(definition.guarantees())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("toolExecution", false)
+            .containsEntry("kubeManagerCalls", false)
+            .containsEntry("llmUsed", false)
+            .containsEntry("catalogOnly", true)
+            .containsEntry("runtimeExecutionAllowed", false)
+            .containsEntry("requiresReviewedTraceSetsBeforeRun", true)
+            .containsEntry("ciBlockingAllowed", false)
+            .containsEntry("retrievalRuntimeAllowed", false);
+        assertThat(service.run("memory-rag-release-gate",
+            new AgentEvalSuiteRequest(List.of("trc_memory_rag"), null, null, null)))
+            .as("M5.69 defines suite codes only; runtime eval needs a later reviewed slice")
+            .isEmpty();
+        assertThat(service.gate("memory-rag-release-gate",
+            new AgentEvalSuiteRequest(List.of("trc_memory_rag"), null, null, null)))
+            .as("M5.69 must not produce Memory/RAG gate artifacts before reviewed trace sets")
+            .isEmpty();
     }
 
     @Test

@@ -6,6 +6,33 @@
 
 ---
 
+## [M5.69-1] - Memory/RAG release-gate suite catalog
+
+**Delivery**: Added the deterministic `memory-rag-release-gate` suite to the built-in eval suite catalog.
+**Changes**
+- Added `memory-rag-release-gate` to `AgentEvalSuiteCatalogService`.
+- Defined all nine Memory/RAG check codes from the M5.62 gate contract:
+  `MEMORY_RAG_CITATION_FIDELITY`, `MEMORY_RAG_SOURCE_DIGEST_INTEGRITY`,
+  `MEMORY_RAG_PRIVACY_LEAKAGE`, `MEMORY_RAG_TENANT_ISOLATION`,
+  `MEMORY_RAG_RETENTION_STALENESS`, `MEMORY_RAG_DELETE_EXPORT_RECOVERY_PROOF`,
+  `MEMORY_RAG_RETRIEVAL_POLICY_BUDGET`, `MEMORY_RAG_UNSUPPORTED_ANSWER`, and
+  `MEMORY_RAG_PROMPT_INJECTION_BOUNDARY`.
+- Set the Memory/RAG release suite default minimum score to `95` with `failOnWarnings=true`.
+- Marked `memory-rag-release-gate` as catalog-only and non-runnable until reviewed trace sets are curated and a later reviewed runtime slice opens advisory execution.
+- Updated the eval-suite binding contract from missing suite codes to
+  `SUITE_CHECKS_DEFINED_TRACE_SETS_NOT_CURATED`.
+- Updated Memory/RAG readiness evidence to publish `memoryRagEvalSuiteExists=true`,
+  `memoryRagEvalSuiteId=memory-rag-release-gate`, and `memoryRagEvalSuiteCheckCodeCount=9`.
+- Kept eval workbench overview scoped to workbench capabilities and trace-set bundle state; suite catalog rows remain visible through the suite catalog and binding contract, not hidden in the overview read model.
+**Verification**
+- `mvn -q "-Dtest=AgentEvalSuiteCatalogServiceTest,AgentMemoryRagEvalSuiteBindingContractServiceTest,AgentMemoryRagReadinessServiceTest,AgentEvalWorkbenchCapabilitiesServiceTest,AgentEvalWorkbenchOverviewServiceTest,AgentEvalWorkbenchGateBundleSummaryServiceTest,AgentPhase1ExecutionRoadmapServiceTest,AgentVueReadinessControlPlaneServiceTest,AgentAdvancedTechnologyAdoptionContractServiceTest,AgentTopTierReadinessOverviewServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed during implementation.
+**Security**
+- `contractStatus=SUITE_CHECKS_DEFINED_TRACE_SETS_NOT_CURATED`.
+- `memoryRagEvalSuiteBound=true` means suite check-code mapping only; it does not mean trace evidence, eval runtime, CI blocking, or retrieval runtime is enabled.
+- `memory-rag-release-gate` carries `catalogOnly=true` and `runtimeExecutionAllowed=false`; admin calls to the existing suite `/run` and `/gate` endpoints fail closed for this suite.
+- `memoryRagTraceSetBound=false`, `evalRuntimeExecuted=false`, `ciBlockingEnabled=false`, `retrievalRuntimeAllowedNow=false`, `mappedGateCheckCount=9`, `missingGateCheckCount=0`, and `availableSuiteCount=5`.
+- No eval runtime execution, trace-set catalog mutation, CI blocking enablement, retrieval execution, vector-store binding, embedding/reranker/LLM call, prompt mutation, memory write, audit write, Tool execution, `SafeToolExecutor` invocation, HITL invocation, kube-manager call, MCP runtime `tools/call`, external call, dependency upgrade, or NIM / HPC / Slurm / BCM Phase 2 work is added.
+
 ## [M5.68-1] - Memory/RAG eval-suite binding contract
 
 **Delivery**: Added an admin-only Memory/RAG eval-suite binding contract before any retrieval runtime can use memory evidence.
@@ -22,7 +49,7 @@
 **Security**
 - `contractStatus=CONTRACT_DEFINED_NOT_BOUND`.
 - `evalSuiteBindingContractDefined=true`, `memoryRagEvalSuiteBound=false`, `memoryRagTraceSetBound=false`, `evalRuntimeExecuted=false`, `ciBlockingEnabled=false`, and `retrievalRuntimeAllowedNow=false`.
-- Current built-in eval suites do not yet contain the required Memory/RAG check codes, so `mappedGateCheckCount=0` and `missingGateCheckCount=9`.
+- At M5.68, built-in eval suites did not yet contain the required Memory/RAG check codes, so `mappedGateCheckCount=0` and `missingGateCheckCount=9`.
 - No eval runtime execution, trace-set catalog mutation, CI blocking enablement, retrieval execution, vector-store binding, embedding/reranker/LLM call, prompt mutation, memory write, audit write, Tool execution, `SafeToolExecutor` invocation, HITL invocation, kube-manager call, MCP runtime `tools/call`, external call, dependency upgrade, or NIM / HPC / Slurm / BCM Phase 2 work is added.
 
 ## [M5.67-1] - Release-blocking eval gate contract

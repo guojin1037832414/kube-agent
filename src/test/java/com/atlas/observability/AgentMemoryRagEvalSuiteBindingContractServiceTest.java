@@ -42,19 +42,19 @@ class AgentMemoryRagEvalSuiteBindingContractServiceTest {
 
         assertThat(contract.schemaVersion()).isEqualTo("agent-memory-rag-eval-suite-binding-contract.v1");
         assertThat(contract.generatedAt()).isEqualTo(Instant.parse("2026-06-09T11:00:00Z"));
-        assertThat(contract.contractStatus()).isEqualTo("CONTRACT_DEFINED_NOT_BOUND");
+        assertThat(contract.contractStatus()).isEqualTo("SUITE_CHECKS_DEFINED_TRACE_SETS_NOT_CURATED");
         assertThat(contract.phase1TopTierGoalPreserved()).isTrue();
         assertThat(contract.evalSuiteBindingContractDefined()).isTrue();
-        assertThat(contract.memoryRagEvalSuiteBound()).isFalse();
+        assertThat(contract.memoryRagEvalSuiteBound()).isTrue();
         assertThat(contract.memoryRagTraceSetBound()).isFalse();
         assertThat(contract.reviewedTraceEvidenceRequired()).isTrue();
         assertThat(contract.evalRuntimeExecuted()).isFalse();
         assertThat(contract.ciBlockingEnabled()).isFalse();
         assertThat(contract.retrievalRuntimeAllowedNow()).isFalse();
         assertThat(contract.requiredGateCheckCount()).isEqualTo(9);
-        assertThat(contract.mappedGateCheckCount()).isZero();
-        assertThat(contract.missingGateCheckCount()).isEqualTo(9);
-        assertThat(contract.availableSuiteCount()).isEqualTo(4);
+        assertThat(contract.mappedGateCheckCount()).isEqualTo(9);
+        assertThat(contract.missingGateCheckCount()).isZero();
+        assertThat(contract.availableSuiteCount()).isEqualTo(5);
         assertThat(contract.availableTraceSetCount()).isEqualTo(4);
         assertThat(contract.bindingRows()).extracting(row -> row.get("gateCheckId"))
             .containsExactly(
@@ -69,8 +69,8 @@ class AgentMemoryRagEvalSuiteBindingContractServiceTest {
                 "prompt-injection-boundary"
             );
         assertThat(contract.bindingRows()).allSatisfy(row -> assertThat(row)
-            .containsEntry("suiteCheckCodePresent", false)
-            .containsEntry("bindingStatus", "NEEDS_SUITE_CHECK")
+            .containsEntry("suiteCheckCodePresent", true)
+            .containsEntry("bindingStatus", "MAPPED")
             .containsEntry("runtimeBound", false)
             .containsEntry("blocksRetrievalRuntime", true));
         assertThat(contract.requiredTraceSets()).extracting(row -> row.get("traceSetId"))
@@ -84,10 +84,17 @@ class AgentMemoryRagEvalSuiteBindingContractServiceTest {
             .containsEntry("reviewedTraceIdsPresent", false)
             .containsEntry("runtimeCatalogMutationAllowed", false));
         assertThat(contract.suiteCandidates()).extracting(row -> row.get("suiteId"))
-            .contains("core-safety-smoke", "redaction-regression", "release-gate-strict");
+            .contains("core-safety-smoke", "redaction-regression", "release-gate-strict", "memory-rag-release-gate");
+        assertThat(contract.suiteCandidates())
+            .filteredOn(row -> "memory-rag-release-gate".equals(row.get("suiteId")))
+            .singleElement()
+            .satisfies(row -> assertThat(row)
+                .containsEntry("memoryRagSpecific", true)
+                .containsEntry("eligibleForMemoryRagBinding", true)
+                .containsEntry("checkCount", 9));
+        assertThat(contract.blockedReasons()).doesNotContain("memory-rag-suite-check-codes-missing");
         assertThat(contract.blockedReasons()).contains(
-            "memory-rag-suite-check-codes-missing",
-            "memory-rag-suite-definition-not-bound",
+            "memory-rag-suite-runtime-not-promoted",
             "memory-rag-trace-sets-not-curated",
             "reviewed-redacted-memory-rag-trace-evidence-missing",
             "ci-blocking-switch-intentionally-absent",

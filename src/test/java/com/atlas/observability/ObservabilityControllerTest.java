@@ -1445,14 +1445,18 @@ class ObservabilityControllerTest {
         assertThat(admin.getBody()).isNotNull();
         AgentMemoryRagEvalSuiteBindingContractResponse contract = admin.getBody().getData();
         assertThat(contract.schemaVersion()).isEqualTo("agent-memory-rag-eval-suite-binding-contract.v1");
-        assertThat(contract.contractStatus()).isEqualTo("CONTRACT_DEFINED_NOT_BOUND");
-        assertThat(contract.memoryRagEvalSuiteBound()).isFalse();
+        assertThat(contract.contractStatus()).isEqualTo("SUITE_CHECKS_DEFINED_TRACE_SETS_NOT_CURATED");
+        assertThat(contract.memoryRagEvalSuiteBound()).isTrue();
         assertThat(contract.memoryRagTraceSetBound()).isFalse();
         assertThat(contract.evalRuntimeExecuted()).isFalse();
         assertThat(contract.ciBlockingEnabled()).isFalse();
         assertThat(contract.retrievalRuntimeAllowedNow()).isFalse();
         assertThat(contract.bindingRows()).extracting(row -> row.get("gateCheckId"))
             .contains("citation-fidelity", "source-digest-integrity", "privacy-leakage", "tenant-isolation");
+        assertThat(contract.bindingRows()).allSatisfy(row -> assertThat(row)
+            .containsEntry("suiteCheckCodePresent", true)
+            .containsEntry("bindingStatus", "MAPPED")
+            .containsEntry("runtimeBound", false));
         assertThat(contract.requiredTraceSets()).extracting(row -> row.get("traceSetId"))
             .contains("memory-rag-citation-fidelity", "memory-rag-privacy-tenant", "memory-rag-lifecycle-policy");
         assertThat(contract.endpointMap())
@@ -1827,7 +1831,8 @@ class ObservabilityControllerTest {
         AgentEvalSuiteCatalogResponse catalog = response.getBody().getData();
         assertThat(catalog.schemaVersion()).isEqualTo("agent-eval-suite-catalog.v1");
         assertThat(catalog.suites()).extracting(AgentEvalSuiteDefinition::id)
-            .contains("core-safety-smoke", "high-risk-prewrite", "redaction-regression", "release-gate-strict");
+            .contains("core-safety-smoke", "high-risk-prewrite", "redaction-regression", "release-gate-strict",
+                "memory-rag-release-gate");
         assertThat(catalog.privacy())
             .containsEntry("redactedOnly", true)
             .containsEntry("toolExecution", false)
@@ -1910,6 +1915,32 @@ class ObservabilityControllerTest {
         assertThat(bodyText)
             .contains("aud_eval_named_suite", "trc_eval_named_suite", "<protected>")
             .doesNotContain("conv-sensitive", "user-sensitive", "org-sensitive", "secret-token-value", "/api/org-sensitive");
+    }
+
+    @Test
+    void memoryRagReleaseGateSuite_shouldRemainCatalogOnlyForRuntimeEndpoints() {
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+        AgentEvalSuiteRequest request = new AgentEvalSuiteRequest(
+            java.util.List.of("trc_memory_rag_catalog_only"),
+            null,
+            null,
+            null
+        );
+
+        ResponseEntity<ApiResponse<AgentEvalSuiteRunResponse>> run =
+            controller.runEvalSuite("memory-rag-release-gate", request);
+        ResponseEntity<ApiResponse<AgentEvalSuiteGateArtifact>> gate =
+            controller.evalSuiteGate("memory-rag-release-gate", request);
+
+        assertThat(run.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(run.getBody()).isNotNull();
+        assertThat(run.getBody().isSuccess()).isFalse();
+        assertThat(run.getBody().getMessage()).contains("仅用于目录/绑定契约");
+        assertThat(gate.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(gate.getBody()).isNotNull();
+        assertThat(gate.getBody().isSuccess()).isFalse();
+        assertThat(gate.getBody().getMessage()).contains("尚未开放 gate artifact");
     }
 
     @Test

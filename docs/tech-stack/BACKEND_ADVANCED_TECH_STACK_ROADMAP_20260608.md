@@ -9,6 +9,35 @@
 - 供应链、CI、SBOM、质量门禁进入工程默认路径；
 - Java / Spring / Agent 框架升级以兼容性矩阵推进，不用不可构建的版本号伪装先进。
 
+## 2026-06-09 M5.69 Memory-RAG-Release-Gate-Suite-Catalog Rule
+
+M5.69 advances the Memory/RAG roadmap with a built-in deterministic suite:
+
+```text
+memory-rag-release-gate
+```
+
+The advanced Agent stack now has a concrete Memory/RAG release-gate suite catalog entry before retrieval runtime can influence prompts:
+
+- The suite defines all nine Memory/RAG gate check codes required by M5.62 and mapped by M5.68.
+- The default minimum score is `95`, and `failOnWarnings=true`.
+- The suite is catalog-only and non-runnable in M5.69: `runtimeExecutionAllowed=false`.
+- The eval-suite binding contract now reports `SUITE_CHECKS_DEFINED_TRACE_SETS_NOT_CURATED`.
+- `memoryRagEvalSuiteBound=true` means check-code mapping only. It does not mean trace-set evidence is curated, eval runtime is executed, CI blocking is enabled, or retrieval is allowed.
+- `memoryRagTraceSetBound=false`, `evalRuntimeExecuted=false`, `ciBlockingEnabled=false`, `retrievalRuntimeAllowedNow=false`, `mappedGateCheckCount=9`, and `missingGateCheckCount=0`.
+- Existing named suite runtime endpoints reject `memory-rag-release-gate` until reviewed trace-set evidence and a later explicit advisory runtime slice exist.
+- Phase 2 NIM / HPC / Slurm / BCM remains paused and is not reopened by this catalog work.
+
+Technology judgment: the project should keep treating "latest technology" as an evidence-first adoption discipline. Responses/Agents-style orchestration, Spring AI Memory/RAG/MCP/eval/observability, MCP latest tools/resources/prompts governance, OpenTelemetry GenAI telemetry, A2A handoff/provenance, GraphRAG, rerankers, vector stores, and future Java/Spring upgrades should pass through compatibility matrices, deterministic contracts, reviewed trace evidence, Vue read models, and recovery checkpoints before becoming runtime authority.
+
+Next order after M5.69:
+
+- Add Git-reviewed trace-set catalog entries for `memory-rag-citation-fidelity`, `memory-rag-privacy-tenant`, and `memory-rag-lifecycle-policy`.
+- Curate reviewed redacted trace ids.
+- Add advisory Memory/RAG gate-bundle and Vue workbench visibility.
+- Promote CI blocking only in a separate reviewed slice.
+- Bind durable memory store and retrieval runtime only after source digest, lifecycle, tenant/privacy, eval evidence, Vue visibility, and recovery memory pass.
+
 ## 2026-06-09 M5.68 Memory-RAG-Eval-Suite-Binding-Before-Retrieval Rule
 
 M5.68 advances the fourth Phase 1 roadmap step with:
@@ -21,7 +50,7 @@ The advanced Agent stack now has an explicit Memory/RAG eval-suite binding contr
 
 - The nine Memory/RAG gate checks from M5.62 must be mapped to deterministic suite check codes.
 - Future trace sets must cover citation fidelity, privacy/tenant isolation, and lifecycle policy evidence.
-- Current built-in suites do not yet contain the required Memory/RAG check codes, so the binding remains `CONTRACT_DEFINED_NOT_BOUND`.
+- At M5.68, built-in suites did not yet contain the required Memory/RAG check codes, so the binding remained `CONTRACT_DEFINED_NOT_BOUND`.
 - CI blocking, eval runtime execution, retrieval runtime, vector-store binding, and prompt influence remain closed.
 - Vue can render exactly which gate checks and trace-set evidence are missing instead of guessing from scattered endpoints.
 

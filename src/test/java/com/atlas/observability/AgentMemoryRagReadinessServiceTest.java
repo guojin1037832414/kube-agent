@@ -84,7 +84,10 @@ class AgentMemoryRagReadinessServiceTest {
             .containsEntry("memoryRagEvalGateContractDefined", true)
             .containsEntry("memoryRagEvalGateContractBound", false)
             .containsEntry("memoryRagEvalSuiteBindingContractDefined", true)
-            .containsEntry("memoryRagEvalSuiteBindingContractBound", false);
+            .containsEntry("memoryRagEvalSuiteBindingContractBound", false)
+            .containsEntry("memoryRagEvalSuiteExists", true)
+            .containsEntry("memoryRagEvalSuiteId", "memory-rag-release-gate")
+            .containsEntry("memoryRagEvalSuiteCheckCodeCount", 9);
         assertThat(readiness.futureEnablementProtocol())
             .containsEntry("runtimeRagAllowedNow", false)
             .containsEntry("requiresDurableMemoryLifecycleContract", true)

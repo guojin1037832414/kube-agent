@@ -2,6 +2,59 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-09 M5.69 Memory/RAG Release-Gate Suite Catalog
+
+M5.69 implements the first concrete Memory/RAG suite catalog step after the M5.68 binding contract. It answers a narrower but important question: do the required Memory/RAG gate checks now exist as deterministic suite check codes in the built-in eval catalog?
+
+```text
+M5.62 Memory/RAG gate contract
+        |
+        +-- 9 required quality/safety gates
+        |
+        v
+M5.68 binding contract
+        |
+        +-- maps required gates to future suite check codes
+        |
+        v
+M5.69 memory-rag-release-gate suite
+        |
+        +-- all 9 suite check codes defined
+        +-- min score 95
+        +-- failOnWarnings=true
+        |
+        v
+future reviewed Memory/RAG trace sets
+        |
+        v
+future advisory gate bundle, Vue workbench, CI promotion, retrieval promotion
+```
+
+Suite id:
+
+```text
+memory-rag-release-gate
+```
+
+Key design:
+- `AgentEvalSuiteCatalogService` now exposes five built-in suites, including `memory-rag-release-gate`.
+- The suite defines `MEMORY_RAG_CITATION_FIDELITY`, `MEMORY_RAG_SOURCE_DIGEST_INTEGRITY`, `MEMORY_RAG_PRIVACY_LEAKAGE`, `MEMORY_RAG_TENANT_ISOLATION`, `MEMORY_RAG_RETENTION_STALENESS`, `MEMORY_RAG_DELETE_EXPORT_RECOVERY_PROOF`, `MEMORY_RAG_RETRIEVAL_POLICY_BUDGET`, `MEMORY_RAG_UNSUPPORTED_ANSWER`, and `MEMORY_RAG_PROMPT_INJECTION_BOUNDARY`.
+- The suite is catalog-only: `catalogOnly=true`, `runtimeExecutionAllowed=false`, `requiresReviewedTraceSetsBeforeRun=true`, `ciBlockingAllowed=false`, and `retrievalRuntimeAllowed=false`.
+- The binding contract now reports `contractStatus=SUITE_CHECKS_DEFINED_TRACE_SETS_NOT_CURATED`, `memoryRagEvalSuiteBound=true`, `mappedGateCheckCount=9`, and `missingGateCheckCount=0`.
+- `memoryRagEvalSuiteBound=true` is intentionally narrow: suite codes are catalog-defined. Trace-set evidence, eval runtime, CI blocking, and retrieval runtime are still closed.
+- Existing named suite `/run` and `/gate` endpoints fail closed for `memory-rag-release-gate`; a later reviewed slice must explicitly open advisory Memory/RAG eval execution.
+- `memoryRagTraceSetBound=false`, `evalRuntimeExecuted=false`, `ciBlockingEnabled=false`, and `retrievalRuntimeAllowedNow=false` remain the important fail-closed fields.
+
+Learning point: 顶级 Agent 的 Memory/RAG 不是“先接向量库再慢慢补评测”。正确顺序是把每个未来会影响回答的能力拆成可命名、可测试、可审查、可回放的 release-gate check。M5.69 把 Memory/RAG 的九个质量与安全边界放进确定性 suite catalog，但仍然不允许 retrieval 影响 prompt。
+
+Technology point: this is how the project introduces advanced Agent technology safely. OpenAI Agents / Responses patterns, Spring AI Memory/RAG/MCP/eval/observability, MCP tools/resources/prompts, OpenTelemetry GenAI spans, A2A Agent Card/task/artifact provenance, OWASP LLM safety categories, and W3C trace context are translated into Java/Spring-owned contracts and deterministic catalog entries first. Runtime wiring comes later, after reviewed redacted traces and release evidence prove behavior.
+
+Terminology guard:
+- `suite catalog defined` means check names and default policies exist.
+- `trace evidence curated` means reviewed redacted trace ids are present in trace-set catalogs.
+- `eval runtime executed` means deterministic suite/gate artifacts have been generated from evidence.
+- `retrieval allowed` means a later reviewed slice explicitly promotes Memory/RAG evidence into prompt influence.
+
 ## 2026-06-09 M5.68 Memory/RAG Eval-Suite Binding Contract
 
 M5.68 implements the fourth M5.64 roadmap slice as a backend-owned Memory/RAG eval-suite binding contract. It answers the question between "we have Memory/RAG gate definitions" and "retrieval may affect prompts": are those gates mapped to deterministic suite checks and reviewed trace-set evidence?
@@ -35,7 +88,7 @@ Endpoint:
 
 Key design:
 - `AgentMemoryRagEvalSuiteBindingContractResponse` publishes `schemaVersion=agent-memory-rag-eval-suite-binding-contract.v1`.
-- Current state is fail-closed: `contractStatus=CONTRACT_DEFINED_NOT_BOUND`, `memoryRagEvalSuiteBound=false`, `memoryRagTraceSetBound=false`, `evalRuntimeExecuted=false`, `ciBlockingEnabled=false`, and `retrievalRuntimeAllowedNow=false`.
+- At M5.68, the state was fail-closed: `contractStatus=CONTRACT_DEFINED_NOT_BOUND`, `memoryRagEvalSuiteBound=false`, `memoryRagTraceSetBound=false`, `evalRuntimeExecuted=false`, `ciBlockingEnabled=false`, and `retrievalRuntimeAllowedNow=false`.
 - It maps the M5.62 gate checks to future codes such as `MEMORY_RAG_CITATION_FIDELITY`, `MEMORY_RAG_SOURCE_DIGEST_INTEGRITY`, and `MEMORY_RAG_PROMPT_INJECTION_BOUNDARY`.
 - It declares three future trace sets: `memory-rag-citation-fidelity`, `memory-rag-privacy-tenant`, and `memory-rag-lifecycle-policy`.
 - It integrates with Memory/RAG readiness, eval workbench capabilities, Phase 1 roadmap, Vue readiness control plane, advanced technology adoption, and top-tier readiness.

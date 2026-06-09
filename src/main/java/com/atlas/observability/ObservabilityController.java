@@ -457,6 +457,11 @@ public class ObservabilityController {
         if (guard != null) {
             return guard;
         }
+        if (evalSuiteCatalogService.findDefinition(suiteId).isPresent()
+            && !evalSuiteCatalogService.runtimeExecutionAllowed(suiteId)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.fail("Agent eval suite 当前仅用于目录/绑定契约，尚未开放运行: " + suiteId));
+        }
         return evalSuiteCatalogService.run(suiteId, request)
             .map(response -> ResponseEntity.ok(ApiResponse.ok(response)))
             .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -471,6 +476,11 @@ public class ObservabilityController {
         ResponseEntity<ApiResponse<AgentEvalSuiteGateArtifact>> guard = requireAdmin();
         if (guard != null) {
             return guard;
+        }
+        if (evalSuiteCatalogService.findDefinition(suiteId).isPresent()
+            && !evalSuiteCatalogService.runtimeExecutionAllowed(suiteId)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.fail("Agent eval suite 当前仅用于目录/绑定契约，尚未开放 gate artifact: " + suiteId));
         }
         return evalSuiteCatalogService.gate(suiteId, request)
             .map(response -> ResponseEntity.ok(ApiResponse.ok(response)))

@@ -10,7 +10,66 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.68-1
+## Latest Phase 1 Core Memory - M5.69-1
+
+M5.69-1 adds the deterministic Memory/RAG release-gate suite catalog entry.
+
+Delivered:
+
+- Added `memory-rag-release-gate` to the built-in eval suite catalog.
+- Defined all nine M5.62 Memory/RAG check codes inside the suite catalog:
+  `MEMORY_RAG_CITATION_FIDELITY`, `MEMORY_RAG_SOURCE_DIGEST_INTEGRITY`,
+  `MEMORY_RAG_PRIVACY_LEAKAGE`, `MEMORY_RAG_TENANT_ISOLATION`,
+  `MEMORY_RAG_RETENTION_STALENESS`, `MEMORY_RAG_DELETE_EXPORT_RECOVERY_PROOF`,
+  `MEMORY_RAG_RETRIEVAL_POLICY_BUDGET`, `MEMORY_RAG_UNSUPPORTED_ANSWER`, and
+  `MEMORY_RAG_PROMPT_INJECTION_BOUNDARY`.
+- Set the suite default minimum score to `95` and `failOnWarnings=true`.
+- Marked the suite as catalog-only with `runtimeExecutionAllowed=false`, `requiresReviewedTraceSetsBeforeRun=true`, `ciBlockingAllowed=false`, and `retrievalRuntimeAllowed=false`.
+- Updated the Memory/RAG eval-suite binding contract so it now reports suite check-code mapping as complete while keeping trace evidence unbound.
+- Updated Memory/RAG readiness evidence with `memoryRagEvalSuiteExists=true`, `memoryRagEvalSuiteId=memory-rag-release-gate`, and `memoryRagEvalSuiteCheckCodeCount=9`.
+- Kept eval workbench overview scoped to workbench capabilities and trace-set gate bundle state, while suite catalog visibility stays in `/api/agent/observability/eval/suites` and `/api/agent/observability/memory-rag/eval-suite-binding-contract`.
+
+Current state:
+
+- `schemaVersion=agent-memory-rag-eval-suite-binding-contract.v1`.
+- `contractStatus=SUITE_CHECKS_DEFINED_TRACE_SETS_NOT_CURATED`.
+- `phase1TopTierGoalPreserved=true`.
+- `evalSuiteBindingContractDefined=true`.
+- `memoryRagEvalSuiteBound=true`.
+- Important meaning: `memoryRagEvalSuiteBound=true` only means all required Memory/RAG gate checks have matching deterministic suite check codes in the catalog. It does not mean trace evidence is curated, eval runtime is executed, CI blocking is enabled, or retrieval can affect prompts.
+- `memoryRagTraceSetBound=false`.
+- `reviewedTraceEvidenceRequired=true`.
+- `evalRuntimeExecuted=false`.
+- `ciBlockingEnabled=false`.
+- `retrievalRuntimeAllowedNow=false`.
+- `mappedGateCheckCount=9`.
+- `missingGateCheckCount=0`.
+- `availableSuiteCount=5`.
+- Existing `/api/agent/observability/eval/suites/{suiteId}/run` and `/api/agent/observability/eval/suites/{suiteId}/gate` endpoints reject `memory-rag-release-gate` with fail-closed conflict semantics until a later reviewed slice explicitly opens advisory Memory/RAG eval runtime.
+
+Security boundary:
+
+- M5.69 remains admin-readable, deterministic, and contract/catalog-only.
+- It does not run evals, call trace-set gates, mutate trace-set catalogs, enable CI blocking, execute retrieval, bind vector stores, call embedding/reranker/LLM, mutate prompts, write memory, write audit, issue durable receipts, execute Tools, invoke `SafeToolExecutor`, invoke HITL, call kube-manager, expose MCP runtime `tools/call`, call external services, upgrade dependencies, or touch NIM / HPC / Slurm / BCM Phase 2 scope.
+- The user mentioned that kube-manager query methods can be tested through port `8100`; M5.69 does not use that runtime path because this slice is suite catalog and binding evidence only.
+
+Learning point: top-tier Memory/RAG quality moves through four separate gates: suite catalog defined, trace evidence curated, eval runtime/gate bundle executed, and retrieval runtime promoted. M5.69 completes the first gate for Memory/RAG by making citation fidelity, source digest integrity, privacy leakage, tenant isolation, lifecycle, retrieval budget, unsupported-answer, and prompt-injection boundary explicit deterministic checks.
+
+Latest technology note: "引入全部最先进的技术" means using the latest Agent adoption method, not blindly wiring every runtime. Phase 1 should absorb OpenAI Agents / Responses patterns, Spring AI Memory/RAG/MCP/eval/observability, MCP tools/resources/prompts governance, OpenTelemetry GenAI telemetry direction, A2A handoff/provenance, OWASP LLM safety gates, and W3C trace context through Java/Spring-owned contracts, deterministic suites, reviewed redacted traces, audit/replay evidence, Vue operator visibility, and recovery memory before any runtime authority expands.
+
+Latest verified command:
+
+- `mvn -q "-Dtest=AgentEvalSuiteCatalogServiceTest,AgentMemoryRagEvalSuiteBindingContractServiceTest,AgentMemoryRagReadinessServiceTest,AgentEvalWorkbenchCapabilitiesServiceTest,AgentEvalWorkbenchOverviewServiceTest,AgentEvalWorkbenchGateBundleSummaryServiceTest,AgentPhase1ExecutionRoadmapServiceTest,AgentVueReadinessControlPlaneServiceTest,AgentAdvancedTechnologyAdoptionContractServiceTest,AgentTopTierReadinessOverviewServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+Next safe development order:
+
+- Add trace-set catalog entries for `memory-rag-citation-fidelity`, `memory-rag-privacy-tenant`, and `memory-rag-lifecycle-policy` through Git-reviewed catalog changes.
+- Curate reviewed redacted trace ids for those trace sets.
+- Generate an advisory Memory/RAG gate bundle and Vue workbench read model.
+- Promote CI blocking only in a later separate reviewed slice.
+- Bind durable memory and retrieval runtime only after source evidence, lifecycle, tenant/privacy, trace evidence, eval gates, Vue visibility, and recovery memory all pass.
+
+## Previous Phase 1 Core Memory - M5.68-1
 
 M5.68-1 adds the Memory/RAG eval-suite binding contract.
 
