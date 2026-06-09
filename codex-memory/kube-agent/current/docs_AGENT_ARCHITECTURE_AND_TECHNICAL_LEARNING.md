@@ -2,6 +2,59 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-09 M5.70 Memory/RAG Trace-Set Catalog Entries
+
+M5.70 implements the next Memory/RAG evidence step after the non-runnable `memory-rag-release-gate` suite. It answers: are the required trace-set lanes now present in the catalog so reviewed redacted evidence has a stable Git-reviewed home?
+
+```text
+M5.69 memory-rag-release-gate suite
+        |
+        +-- runtimeExecutionAllowed=false
+        +-- all 9 Memory/RAG check codes defined
+        |
+        v
+M5.70 Memory/RAG trace-set catalog entries
+        |
+        +-- memory-rag-citation-fidelity
+        +-- memory-rag-privacy-tenant
+        +-- memory-rag-lifecycle-policy
+        |
+        +-- traceIds=[]
+        +-- suiteRuntimeExecutionAllowed=false
+        +-- runtimeRetrievalAllowed=false
+        +-- ciBlockingAllowed=false
+        |
+        v
+future reviewed redacted trace ids
+        |
+        v
+future advisory Memory/RAG gate bundle, Vue visibility, CI/runtime promotion
+```
+
+Key design:
+- `observability/eval-trace-sets.json` now contains seven trace sets: four existing Phase 1 sets plus the three Memory/RAG sets.
+- The three Memory/RAG trace sets all bind to `suiteId=memory-rag-release-gate`, but that suite remains non-runnable.
+- `AgentEvalTraceSetCatalogService` now checks suite runtime eligibility before trying to run a trace-set gate. Disabled suites produce a compact fail-closed artifact instead of invoking suite runtime.
+- It also checks the trace-set's own curation policy. If a future suite is promoted but the trace-set still says `suiteRuntimeExecutionAllowed=false` or `catalogOnlyUntilReviewed=true` with no reviewed `traceIds`, the gate returns `TRACE_SET_RUNTIME_DISABLED`.
+- Memory/RAG trace-set gates return `gateVerdict=SUITE_RUNTIME_DISABLED`, `pass=false`, `emptyInput=true`, `traceIds=[]`, and `suiteGate=null`.
+- `AgentMemoryRagEvalSuiteBindingContractResponse` now reports `contractStatus=TRACE_SETS_DEFINED_REVIEWED_EVIDENCE_NOT_CURATED`.
+- The binding contract now reads Memory/RAG trace-set policy fields from the catalog rows, so a policy misconfiguration can surface as a contract problem instead of being hidden by hard-coded safe text.
+- `memoryRagTraceSetBound=false` still means no reviewed redacted trace ids have been curated. It does not mean the trace-set catalog rows are missing.
+- The blocked reason `memory-rag-trace-sets-not-defined` is gone; `memory-rag-trace-sets-not-curated` remains.
+
+Learning point: 顶级 Agent 的 RAG 不能先让检索结果影响 prompt，再回头补安全与质量证据。正确顺序是先让 reviewed redacted traces、eval gate bundle、Vue operator visibility、CI/runtime promotion 形成证据链，再允许 retrieval runtime 进入回答路径。M5.70 把 Memory/RAG 证据拆成三条学习主线：citation fidelity、privacy/tenant isolation、lifecycle policy。
+
+Technology point: this is still part of introducing the latest Agent technology. Modern RAG systems often combine source digests, chunk provenance, retention policy, tenant partitioning, evals, red-team traces, rerankers, vector stores, MCP resources/tools, and observability spans. The project translates those ideas into Java/Spring-owned trace-set contracts first, so future Spring AI VectorStore, GraphRAG, reranker, MCP resource, OpenTelemetry GenAI, OpenAI Agents/Evals, or A2A provenance work has a deterministic evidence lane instead of a prompt-only promise.
+
+Latest-technology anchor checked on 2026-06-09: OpenAI Agents SDK-style tools, handoffs, guardrails, sessions, tracing, HITL, and eval loops; Spring AI ChatClient/advisors/chat memory/RAG/VectorStore/MCP/eval/observability; MCP tools/resources/prompts plus consent and tool-safety governance; OpenTelemetry GenAI agent/model spans and metrics; A2A Agent Card/task/message/artifact/streaming/security concepts; GraphRAG, rerankers, and vector stores are all Phase 1 architecture targets. M5.70 intentionally adopts them as evidence contracts first, not as direct runtime authority.
+
+Terminology guard:
+- `trace-set defined` means a catalog row exists and can be reviewed in Git.
+- `reviewed trace ids present` means real redacted replay anchors have been curated into that row.
+- `suite runtime disabled` means the current trace-set gate cannot run the attached suite, even if the row exists.
+- `trace-set runtime disabled` means the attached suite may be runnable in the future, but this catalog row's own policy still blocks execution.
+- `retrieval runtime allowed` remains false until a later reviewed slice explicitly promotes it.
+
 ## 2026-06-09 M5.69 Memory/RAG Release-Gate Suite Catalog
 
 M5.69 implements the first concrete Memory/RAG suite catalog step after the M5.68 binding contract. It answers a narrower but important question: do the required Memory/RAG gate checks now exist as deterministic suite check codes in the built-in eval catalog?

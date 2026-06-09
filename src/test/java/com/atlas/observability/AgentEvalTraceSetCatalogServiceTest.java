@@ -34,7 +34,10 @@ class AgentEvalTraceSetCatalogServiceTest {
                 "phase1-core-golden",
                 "phase1-redaction-regression",
                 "phase1-high-risk-prewrite",
-                "phase1-red-team-safety"
+                "phase1-red-team-safety",
+                "memory-rag-citation-fidelity",
+                "memory-rag-privacy-tenant",
+                "memory-rag-lifecycle-policy"
             );
         assertThat(catalog.traceSets()).allSatisfy(definition -> {
             assertThat(definition.phase()).isEqualTo("Phase 1 top-tier kube-manager Agent Core");
@@ -51,6 +54,25 @@ class AgentEvalTraceSetCatalogServiceTest {
                 .containsEntry("toolExecution", false)
                 .containsEntry("kubeManagerCalls", false);
         });
+        assertThat(catalog.traceSets())
+            .filteredOn(definition -> definition.id().startsWith("memory-rag-"))
+            .hasSize(3)
+            .allSatisfy(definition -> {
+                assertThat(definition.suiteId()).isEqualTo("memory-rag-release-gate");
+                assertThat(definition.curationPolicy())
+                    .containsEntry("catalogOnlyUntilReviewed", true)
+                    .containsEntry("suiteRuntimeExecutionAllowed", false)
+                    .containsEntry("runtimeRetrievalAllowed", false)
+                    .containsEntry("ciBlockingAllowed", false);
+                assertThat(definition.guarantees())
+                    .containsEntry("containsRawDocument", false)
+                    .containsEntry("containsRawPrompt", false)
+                    .containsEntry("containsRawRetrievedChunk", false)
+                    .containsEntry("retrievalExecuted", false)
+                    .containsEntry("vectorStoreCalls", false)
+                    .containsEntry("memoryWrite", false)
+                    .containsEntry("auditWrite", false);
+            });
         assertThat(catalog.privacy())
             .containsEntry("redactedOnly", true)
             .containsEntry("containsRawPrincipal", false)
@@ -125,20 +147,46 @@ class AgentEvalTraceSetCatalogServiceTest {
         assertThat(bundle.gateVerdict()).isEqualTo("FAIL");
         assertThat(bundle.pass()).isFalse();
         assertThat(bundle.releaseEligible()).isFalse();
-        assertThat(bundle.traceSetCount()).isEqualTo(4);
-        assertThat(bundle.failedTraceSets()).isEqualTo(4);
-        assertThat(bundle.emptyTraceSets()).isEqualTo(4);
+        assertThat(bundle.traceSetCount()).isEqualTo(7);
+        assertThat(bundle.failedTraceSets()).isEqualTo(7);
+        assertThat(bundle.emptyTraceSets()).isEqualTo(7);
         assertThat(bundle.traceSetIds())
             .containsExactly("phase1-core-golden", "phase1-redaction-regression", "phase1-high-risk-prewrite",
-                "phase1-red-team-safety");
+                "phase1-red-team-safety", "memory-rag-citation-fidelity", "memory-rag-privacy-tenant",
+                "memory-rag-lifecycle-policy");
         assertThat(bundle.failedTraceSetIds()).containsExactlyElementsOf(bundle.traceSetIds());
         assertThat(bundle.emptyTraceSetIds()).containsExactlyElementsOf(bundle.traceSetIds());
-        assertThat(bundle.traceSetGates()).hasSize(4);
+        assertThat(bundle.traceSetGates()).hasSize(7);
         assertThat(bundle.traceSetGates()).allSatisfy(gate -> {
-            assertThat(gate.suiteGate().schemaVersion()).isEqualTo("agent-eval-suite-gate.v1");
             assertThat(gate.emptyInput()).isTrue();
             assertThat(gate.traceIds()).isEmpty();
         });
+        assertThat(bundle.traceSetGates())
+            .filteredOn(gate -> gate.traceSetId().startsWith("phase1-"))
+            .allSatisfy(gate -> assertThat(gate.suiteGate().schemaVersion()).isEqualTo("agent-eval-suite-gate.v1"));
+        assertThat(bundle.traceSetGates())
+            .filteredOn(gate -> gate.traceSetId().startsWith("memory-rag-"))
+            .hasSize(3)
+            .allSatisfy(gate -> {
+                assertThat(gate.gateVerdict()).isEqualTo("SUITE_RUNTIME_DISABLED");
+                assertThat(gate.suiteGate()).isNull();
+                assertThat(gate.gatePolicy())
+                    .containsEntry("suiteRuntimeDisabled", true)
+                    .containsEntry("traceSetRuntimeDisabled", true)
+                    .containsEntry("runtimeExecutionAllowed", false)
+                    .containsEntry("retrievalRuntimeAllowed", false)
+                    .containsEntry("ciBlockingEnabled", false);
+                assertThat(gate.privacy())
+                    .containsEntry("containsRawDocument", false)
+                    .containsEntry("containsRawPrompt", false)
+                    .containsEntry("containsRawRetrievedChunk", false)
+                    .containsEntry("retrievalExecuted", false)
+                    .containsEntry("vectorStoreCalls", false)
+                    .containsEntry("embeddingModelCalls", false)
+                    .containsEntry("rerankerCalls", false)
+                    .containsEntry("memoryWrite", false)
+                    .containsEntry("auditWrite", false);
+            });
         assertThat(bundle.bundlePolicy())
             .containsEntry("artifactOnly", true)
             .containsEntry("embeddedReports", false)
@@ -158,6 +206,44 @@ class AgentEvalTraceSetCatalogServiceTest {
             .doesNotContain("trc_request_override_must_not_run")
             .doesNotContain("conv-sensitive", "user-sensitive", "org-sensitive", "secret-token-value", "/api/org-sensitive")
             .doesNotContain("reports=", "replay=");
+    }
+
+    @Test
+    void gate_shouldHonorTraceSetPolicyEvenIfSuiteRuntimeIsLaterEnabled() {
+        AgentEvalSuiteCatalogService futureRuntimeEnabledSuiteCatalog = futureRuntimeEnabledSuiteCatalog(
+            new InMemoryAgentAuditRecorder()
+        );
+        AgentEvalTraceSetCatalogService service = new AgentEvalTraceSetCatalogService(
+            futureRuntimeEnabledSuiteCatalog,
+            new ObjectMapper()
+        );
+
+        AgentEvalTraceSetGateArtifact artifact = service.gate(
+            "memory-rag-citation-fidelity",
+            new AgentEvalSuiteRequest(List.of("trc_request_override_must_not_run"), null, null, null)
+        ).orElseThrow();
+
+        assertThat(artifact.gateVerdict()).isEqualTo("TRACE_SET_RUNTIME_DISABLED");
+        assertThat(artifact.pass()).isFalse();
+        assertThat(artifact.emptyInput()).isTrue();
+        assertThat(artifact.suiteGate()).isNull();
+        assertThat(artifact.traceIds()).isEmpty();
+        assertThat(artifact.gatePolicy())
+            .containsEntry("suiteRuntimeDisabled", false)
+            .containsEntry("traceSetRuntimeDisabled", true)
+            .containsEntry("catalogOnlyUntilReviewed", true)
+            .containsEntry("suiteRuntimeExecutionAllowed", false)
+            .containsEntry("runtimeExecutionAllowed", false)
+            .containsEntry("retrievalRuntimeAllowed", false)
+            .containsEntry("ciBlockingEnabled", false);
+        assertThat(artifact.privacy())
+            .containsEntry("retrievalExecuted", false)
+            .containsEntry("vectorStoreCalls", false)
+            .containsEntry("embeddingModelCalls", false)
+            .containsEntry("rerankerCalls", false)
+            .containsEntry("memoryWrite", false)
+            .containsEntry("auditWrite", false);
+        assertThat(artifact.toString()).doesNotContain("trc_request_override_must_not_run");
     }
 
     @Test
@@ -312,6 +398,16 @@ class AgentEvalTraceSetCatalogServiceTest {
         AgentEvalReportService evalReportService = new AgentEvalReportService(new AgentReplayTimelineService(recorder));
         AgentEvalSuiteCatalogService suiteCatalogService = new AgentEvalSuiteCatalogService(evalReportService);
         return new AgentEvalTraceSetCatalogService(suiteCatalogService, new ObjectMapper());
+    }
+
+    private AgentEvalSuiteCatalogService futureRuntimeEnabledSuiteCatalog(InMemoryAgentAuditRecorder recorder) {
+        AgentEvalReportService reportService = new AgentEvalReportService(new AgentReplayTimelineService(recorder));
+        return new AgentEvalSuiteCatalogService(reportService) {
+            @Override
+            public boolean runtimeExecutionAllowed(String suiteId) {
+                return true;
+            }
+        };
     }
 
     private void recordReadEvidence(InMemoryAgentAuditRecorder recorder, String traceId) {

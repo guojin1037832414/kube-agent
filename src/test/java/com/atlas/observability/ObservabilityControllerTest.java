@@ -1445,7 +1445,7 @@ class ObservabilityControllerTest {
         assertThat(admin.getBody()).isNotNull();
         AgentMemoryRagEvalSuiteBindingContractResponse contract = admin.getBody().getData();
         assertThat(contract.schemaVersion()).isEqualTo("agent-memory-rag-eval-suite-binding-contract.v1");
-        assertThat(contract.contractStatus()).isEqualTo("SUITE_CHECKS_DEFINED_TRACE_SETS_NOT_CURATED");
+        assertThat(contract.contractStatus()).isEqualTo("TRACE_SETS_DEFINED_REVIEWED_EVIDENCE_NOT_CURATED");
         assertThat(contract.memoryRagEvalSuiteBound()).isTrue();
         assertThat(contract.memoryRagTraceSetBound()).isFalse();
         assertThat(contract.evalRuntimeExecuted()).isFalse();
@@ -1459,6 +1459,13 @@ class ObservabilityControllerTest {
             .containsEntry("runtimeBound", false));
         assertThat(contract.requiredTraceSets()).extracting(row -> row.get("traceSetId"))
             .contains("memory-rag-citation-fidelity", "memory-rag-privacy-tenant", "memory-rag-lifecycle-policy");
+        assertThat(contract.requiredTraceSets()).allSatisfy(row -> assertThat(row)
+            .containsEntry("definedInCatalog", true)
+            .containsEntry("reviewedTraceIdsPresent", false)
+            .containsEntry("catalogOnlyUntilReviewed", true)
+            .containsEntry("suiteRuntimeExecutionAllowed", false)
+            .containsEntry("retrievalRuntimeAllowed", false)
+            .containsEntry("ciBlockingAllowed", false));
         assertThat(contract.endpointMap())
             .containsEntry("memoryRagEvalSuiteBindingContract", "/api/agent/observability/memory-rag/eval-suite-binding-contract")
             .containsEntry("evalSuiteCatalog", "/api/agent/observability/eval/suites")
@@ -2108,10 +2115,26 @@ class ObservabilityControllerTest {
         assertThat(response.getBody()).isNotNull();
         AgentEvalWorkbenchOverviewResponse overview = response.getBody().getData();
         assertThat(overview.schemaVersion()).isEqualTo("agent-eval-workbench-overview.v1");
-        assertThat(overview.traceSetCount()).isEqualTo(4);
-        assertThat(overview.traceSetNeedsEvidenceCount()).isEqualTo(4);
-        assertThat(overview.traceSets()).extracting(AgentEvalWorkbenchTraceSetView::status)
+        assertThat(overview.traceSetCount()).isEqualTo(7);
+        assertThat(overview.traceSetNeedsEvidenceCount()).isEqualTo(7);
+        assertThat(overview.traceSets())
+            .filteredOn(traceSet -> traceSet.id().startsWith("phase1-"))
+            .extracting(AgentEvalWorkbenchTraceSetView::status)
             .containsOnly("NEEDS_REDACTED_EVIDENCE");
+        assertThat(overview.traceSets())
+            .filteredOn(traceSet -> traceSet.id().startsWith("memory-rag-"))
+            .hasSize(3)
+            .allSatisfy(traceSet -> {
+                assertThat(traceSet.suiteId()).isEqualTo("memory-rag-release-gate");
+                assertThat(traceSet.gateVerdict()).isEqualTo("SUITE_RUNTIME_DISABLED");
+                assertThat(traceSet.status()).isEqualTo("SUITE_RUNTIME_DISABLED_CATALOG_ONLY");
+                assertThat(traceSet.nextAction()).isEqualTo("keep-catalog-only-until-reviewed-runtime-promotion");
+                assertThat(traceSet.policy())
+                    .containsEntry("suiteRuntimeDisabled", true)
+                    .containsEntry("runtimeExecutionAllowed", false)
+                    .containsEntry("retrievalRuntimeAllowed", false)
+                    .containsEntry("traceSetGateRuntimeDisabled", true);
+            });
         assertThat(overview.recommendedWorkflow()).startsWith(
             "workbench-overview",
             "trace-set-catalog",
@@ -2165,7 +2188,7 @@ class ObservabilityControllerTest {
         AgentReviewedEvalTraceEvidenceResponse evidence = response.getBody().getData();
         assertThat(evidence.schemaVersion()).isEqualTo("agent-reviewed-eval-trace-evidence.v1");
         assertThat(evidence.evidenceStatus()).isEqualTo("NEEDS_REVIEWED_REDACTED_TRACE_EVIDENCE");
-        assertThat(evidence.traceSetCount()).isEqualTo(4);
+        assertThat(evidence.traceSetCount()).isEqualTo(7);
         assertThat(evidence.reviewedTraceSetCount()).isZero();
         assertThat(evidence.reviewedTraceAnchorCount()).isZero();
         assertThat(evidence.reviewPipeline()).extracting(stage -> stage.get("id"))
@@ -2226,7 +2249,7 @@ class ObservabilityControllerTest {
         assertThat(contract.releaseGateCanOpenNow()).isFalse();
         assertThat(contract.reviewedEvidenceReady()).isFalse();
         assertThat(contract.gateBundleReleaseEligible()).isFalse();
-        assertThat(contract.emptyTraceSets()).isEqualTo(4);
+        assertThat(contract.emptyTraceSets()).isEqualTo(7);
         assertThat(contract.blockedReasons())
             .contains("reviewed-redacted-trace-evidence-missing", "ci-blocking-switch-intentionally-absent");
         assertThat(contract.safety())
@@ -2276,7 +2299,14 @@ class ObservabilityControllerTest {
         assertThat(summary.schemaVersion()).isEqualTo("agent-eval-workbench-gate-bundle-summary.v1");
         assertThat(summary.gateVerdict()).isEqualTo("FAIL");
         assertThat(summary.releaseEligible()).isFalse();
-        assertThat(summary.traceSetCount()).isEqualTo(4);
+        assertThat(summary.traceSetCount()).isEqualTo(7);
+        assertThat(summary.traceSetGateRows())
+            .filteredOn(row -> row.get("traceSetId").toString().startsWith("memory-rag-"))
+            .hasSize(3)
+            .allSatisfy(row -> assertThat(row)
+                .containsEntry("suiteId", "memory-rag-release-gate")
+                .containsEntry("status", "SUITE_RUNTIME_DISABLED_CATALOG_ONLY")
+                .containsEntry("gateVerdict", "SUITE_RUNTIME_DISABLED"));
         assertThat(summary.emptyTraceSetIds()).containsExactlyElementsOf(summary.traceSetIds());
         assertThat(summary.bundleSummary())
             .containsEntry("ciBlockingEnabled", false)
@@ -3024,8 +3054,15 @@ class ObservabilityControllerTest {
         assertThat(bundle.schemaVersion()).isEqualTo("agent-eval-trace-set-gate-bundle.v1");
         assertThat(bundle.pass()).isFalse();
         assertThat(bundle.releaseEligible()).isFalse();
-        assertThat(bundle.traceSetCount()).isEqualTo(4);
+        assertThat(bundle.traceSetCount()).isEqualTo(7);
         assertThat(bundle.failedTraceSetIds()).contains("phase1-core-golden", "phase1-redaction-regression");
+        assertThat(bundle.traceSetGates())
+            .filteredOn(gate -> gate.traceSetId().startsWith("memory-rag-"))
+            .hasSize(3)
+            .allSatisfy(gate -> {
+                assertThat(gate.gateVerdict()).isEqualTo("SUITE_RUNTIME_DISABLED");
+                assertThat(gate.suiteGate()).isNull();
+            });
         assertThat(bundle.emptyTraceSetIds()).containsExactlyElementsOf(bundle.traceSetIds());
         assertThat(bundle.bundlePolicy())
             .containsEntry("artifactOnly", true)

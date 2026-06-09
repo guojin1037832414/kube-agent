@@ -28,8 +28,8 @@ class AgentEvalWorkbenchOverviewServiceTest {
         assertThat(overview.schemaVersion()).isEqualTo("agent-eval-workbench-overview.v1");
         assertThat(overview.evaluationVersion()).isEqualTo("deterministic-replay-eval.v1");
         assertThat(overview.capabilityCount()).isEqualTo(16);
-        assertThat(overview.traceSetCount()).isEqualTo(4);
-        assertThat(overview.traceSetNeedsEvidenceCount()).isEqualTo(4);
+        assertThat(overview.traceSetCount()).isEqualTo(7);
+        assertThat(overview.traceSetNeedsEvidenceCount()).isEqualTo(7);
         assertThat(overview.traceSetReadyCount()).isZero();
         assertThat(overview.gateVerdict()).isEqualTo("FAIL");
         assertThat(overview.releaseEligible()).isFalse();
@@ -50,10 +50,12 @@ class AgentEvalWorkbenchOverviewServiceTest {
                 "phase1-core-golden",
                 "phase1-redaction-regression",
                 "phase1-high-risk-prewrite",
-                "phase1-red-team-safety"
+                "phase1-red-team-safety",
+                "memory-rag-citation-fidelity",
+                "memory-rag-privacy-tenant",
+                "memory-rag-lifecycle-policy"
             );
         assertThat(overview.traceSets()).allSatisfy(traceSet -> {
-            assertThat(traceSet.status()).isEqualTo("NEEDS_REDACTED_EVIDENCE");
             assertThat(traceSet.readyForCiBlocking()).isFalse();
             assertThat(traceSet.candidateDiscoveryPath()).contains("/candidates");
             assertThat(traceSet.promotionWorkflowPath()).contains("/promotion-workflow");
@@ -69,6 +71,26 @@ class AgentEvalWorkbenchOverviewServiceTest {
                 .containsEntry("toolExecution", false)
                 .containsEntry("kubeManagerCalls", false);
         });
+        assertThat(overview.traceSets())
+            .filteredOn(traceSet -> traceSet.id().startsWith("phase1-"))
+            .allSatisfy(traceSet -> assertThat(traceSet.status()).isEqualTo("NEEDS_REDACTED_EVIDENCE"));
+        assertThat(overview.traceSets())
+            .filteredOn(traceSet -> traceSet.id().startsWith("memory-rag-"))
+            .hasSize(3)
+            .allSatisfy(traceSet -> {
+                assertThat(traceSet.suiteId()).isEqualTo("memory-rag-release-gate");
+                assertThat(traceSet.gateVerdict()).isEqualTo("SUITE_RUNTIME_DISABLED");
+                assertThat(traceSet.status()).isEqualTo("SUITE_RUNTIME_DISABLED_CATALOG_ONLY");
+                assertThat(traceSet.nextAction()).isEqualTo("keep-catalog-only-until-reviewed-runtime-promotion");
+                assertThat(traceSet.policy())
+                    .containsEntry("runtimeCatalogWrite", false)
+                    .containsEntry("suiteRuntimeDisabled", true)
+                    .containsEntry("runtimeExecutionAllowed", false)
+                    .containsEntry("retrievalRuntimeAllowed", false)
+                    .containsEntry("traceSetGateRuntimeDisabled", true)
+                    .containsEntry("toolExecution", false)
+                    .containsEntry("kubeManagerCalls", false);
+            });
         assertThat(overview.workbenchPolicy())
             .containsEntry("frontendTarget", "vue-kube-manager eval workbench")
             .containsEntry("overviewOnly", true)

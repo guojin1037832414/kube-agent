@@ -91,6 +91,9 @@ public record AgentEvalWorkbenchTraceSetView(
     }
 
     private static String resolveStatus(boolean empty, boolean pass, AgentEvalTraceSetGateArtifact gate) {
+        if (gate != null && "SUITE_RUNTIME_DISABLED".equals(gate.gateVerdict())) {
+            return "SUITE_RUNTIME_DISABLED_CATALOG_ONLY";
+        }
         if (empty) {
             return "NEEDS_REDACTED_EVIDENCE";
         }
@@ -102,6 +105,7 @@ public record AgentEvalWorkbenchTraceSetView(
 
     private static String resolveNextAction(String status) {
         return switch (status) {
+            case "SUITE_RUNTIME_DISABLED_CATALOG_ONLY" -> "keep-catalog-only-until-reviewed-runtime-promotion";
             case "NEEDS_REDACTED_EVIDENCE" -> "discover-candidates-and-open-git-reviewed-patch";
             case "GATE_PASS" -> "keep-gate-bundle-current-before-ci-blocking";
             case "GATE_FAIL_REVIEW_REQUIRED" -> "open-replay-and-eval-drill-down";
@@ -155,6 +159,11 @@ public record AgentEvalWorkbenchTraceSetView(
         if (gate != null) {
             policy.put("gateVerdict", gate.gateVerdict());
             policy.put("emptyInput", gate.emptyInput());
+            Map<String, Object> gatePolicy = gate.gatePolicy();
+            policy.put("suiteRuntimeDisabled", truthy(gatePolicy, "suiteRuntimeDisabled"));
+            policy.put("runtimeExecutionAllowed", truthy(gatePolicy, "runtimeExecutionAllowed"));
+            policy.put("retrievalRuntimeAllowed", truthy(gatePolicy, "retrievalRuntimeAllowed"));
+            policy.put("traceSetGateRuntimeDisabled", "SUITE_RUNTIME_DISABLED".equals(gate.gateVerdict()));
         }
         return Map.copyOf(policy);
     }

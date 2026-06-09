@@ -41,7 +41,7 @@ public record AgentEvalWorkbenchOverviewResponse(
             .filter(AgentEvalWorkbenchTraceSetView::readyForCiBlocking)
             .count();
         int needsEvidenceCount = (int) safeTraceSets.stream()
-            .filter(traceSet -> "NEEDS_REDACTED_EVIDENCE".equals(traceSet.status()))
+            .filter(AgentEvalWorkbenchOverviewResponse::needsReviewedEvidence)
             .count();
         return new AgentEvalWorkbenchOverviewResponse(
             SCHEMA_VERSION,
@@ -80,6 +80,13 @@ public record AgentEvalWorkbenchOverviewResponse(
         }
         actions.add("use-replay-and-eval-drill-down-for-failures");
         return List.copyOf(actions);
+    }
+
+    private static boolean needsReviewedEvidence(AgentEvalWorkbenchTraceSetView traceSet) {
+        return traceSet != null && (
+            "NEEDS_REDACTED_EVIDENCE".equals(traceSet.status())
+                || "SUITE_RUNTIME_DISABLED_CATALOG_ONLY".equals(traceSet.status())
+        );
     }
 
     private static Map<String, Object> buildWorkbenchPolicy(AgentEvalWorkbenchCapabilitiesResponse capabilities,

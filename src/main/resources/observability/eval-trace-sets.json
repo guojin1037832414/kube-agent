@@ -138,5 +138,175 @@
       "toolExecution": false,
       "kubeManagerCalls": false
     }
+  },
+  {
+    "id": "memory-rag-citation-fidelity",
+    "title": "Memory/RAG Citation Fidelity Trace Set",
+    "purpose": "Reviewed redacted traces proving cited answer text is faithful to source, chunk, evidence, lifecycle, and retrieval policy digests before retrieval runtime.",
+    "phase": "Phase 1 top-tier kube-manager Agent Core",
+    "suiteId": "memory-rag-release-gate",
+    "traceIds": [],
+    "evidenceRequirements": [
+      "Populate traceIds only with reviewed redacted replay captures that include citation source digest evidence.",
+      "Require sourceDigest, chunkDigest, evidenceDigest, citationSeed, retentionPolicyId, and retrievalPolicyId evidence in review notes before promotion.",
+      "No raw document, prompt, retrieved chunk, principal, organization, conversation, endpoint, reason, or parameter values."
+    ],
+    "tags": [
+      "phase1",
+      "memory-rag",
+      "citation",
+      "source-digest",
+      "release-gate"
+    ],
+    "curationPolicy": {
+      "versionedSource": "classpath:observability/eval-trace-sets.json",
+      "requiresRealAuditCapture": true,
+      "requiresReviewedSourceEvidenceDigest": true,
+      "requiresReviewedMemoryLifecycleEvidence": true,
+      "placeholderTraceIds": false,
+      "failClosedWhenEmpty": true,
+      "requestTraceIdOverrideAllowed": false,
+      "catalogOnlyUntilReviewed": true,
+      "suiteRuntimeExecutionAllowed": false,
+      "runtimeRetrievalAllowed": false,
+      "ciBlockingAllowed": false
+    },
+    "guarantees": {
+      "redactedOnly": true,
+      "containsRawPrincipal": false,
+      "containsRawOrganization": false,
+      "containsRawConversation": false,
+      "containsRawEndpoints": false,
+      "containsRawReason": false,
+      "containsRawParameterValues": false,
+      "containsRawDocument": false,
+      "containsRawPrompt": false,
+      "containsRawRetrievedChunk": false,
+      "deterministic": true,
+      "llmUsed": false,
+      "externalCalls": false,
+      "toolExecution": false,
+      "kubeManagerCalls": false,
+      "retrievalExecuted": false,
+      "vectorStoreCalls": false,
+      "embeddingModelCalls": false,
+      "rerankerCalls": false,
+      "memoryWrite": false,
+      "auditWrite": false
+    }
+  },
+  {
+    "id": "memory-rag-privacy-tenant",
+    "title": "Memory/RAG Privacy And Tenant Trace Set",
+    "purpose": "Reviewed red-team traces for raw prompt/source leakage, tenant partition failures, and cross-tenant memory retrieval attempts.",
+    "phase": "Phase 1 top-tier kube-manager Agent Core",
+    "suiteId": "memory-rag-release-gate",
+    "traceIds": [],
+    "evidenceRequirements": [
+      "Populate traceIds only with reviewed redacted red-team captures covering privacy leakage and tenant isolation boundaries.",
+      "Require tenantPartitionDigest and sourceAclDigest review evidence before promotion.",
+      "No raw document, prompt, retrieved chunk, tenant secret, principal, organization, conversation, endpoint, reason, or parameter values."
+    ],
+    "tags": [
+      "phase1",
+      "memory-rag",
+      "privacy",
+      "tenant",
+      "red-team",
+      "release-gate"
+    ],
+    "curationPolicy": {
+      "versionedSource": "classpath:observability/eval-trace-sets.json",
+      "requiresRealAuditCapture": true,
+      "requiresReviewedSourceEvidenceDigest": true,
+      "requiresReviewedMemoryLifecycleEvidence": true,
+      "placeholderTraceIds": false,
+      "failClosedWhenEmpty": true,
+      "requestTraceIdOverrideAllowed": false,
+      "catalogOnlyUntilReviewed": true,
+      "suiteRuntimeExecutionAllowed": false,
+      "runtimeRetrievalAllowed": false,
+      "ciBlockingAllowed": false
+    },
+    "guarantees": {
+      "redactedOnly": true,
+      "containsRawPrincipal": false,
+      "containsRawOrganization": false,
+      "containsRawConversation": false,
+      "containsRawEndpoints": false,
+      "containsRawReason": false,
+      "containsRawParameterValues": false,
+      "containsRawDocument": false,
+      "containsRawPrompt": false,
+      "containsRawRetrievedChunk": false,
+      "deterministic": true,
+      "llmUsed": false,
+      "externalCalls": false,
+      "toolExecution": false,
+      "kubeManagerCalls": false,
+      "retrievalExecuted": false,
+      "vectorStoreCalls": false,
+      "embeddingModelCalls": false,
+      "rerankerCalls": false,
+      "memoryWrite": false,
+      "auditWrite": false
+    }
+  },
+  {
+    "id": "memory-rag-lifecycle-policy",
+    "title": "Memory/RAG Lifecycle Policy Trace Set",
+    "purpose": "Reviewed traces for retention, stale memory rejection, delete/export/recovery proof, and retrieval policy budget enforcement.",
+    "phase": "Phase 1 top-tier kube-manager Agent Core",
+    "suiteId": "memory-rag-release-gate",
+    "traceIds": [],
+    "evidenceRequirements": [
+      "Populate traceIds only with reviewed redacted captures for retention, delete proof, export proof, recovery proof, stale memory, and retrieval budget behavior.",
+      "Require retentionPolicyId, deleteProofDigest, exportProofDigest, recoveryCheckpointDigest, and evalGateDigest evidence before promotion.",
+      "No raw document, prompt, retrieved chunk, principal, organization, conversation, endpoint, reason, or parameter values."
+    ],
+    "tags": [
+      "phase1",
+      "memory-rag",
+      "lifecycle",
+      "retention",
+      "recovery",
+      "release-gate"
+    ],
+    "curationPolicy": {
+      "versionedSource": "classpath:observability/eval-trace-sets.json",
+      "requiresRealAuditCapture": true,
+      "requiresReviewedSourceEvidenceDigest": true,
+      "requiresReviewedMemoryLifecycleEvidence": true,
+      "placeholderTraceIds": false,
+      "failClosedWhenEmpty": true,
+      "requestTraceIdOverrideAllowed": false,
+      "catalogOnlyUntilReviewed": true,
+      "suiteRuntimeExecutionAllowed": false,
+      "runtimeRetrievalAllowed": false,
+      "ciBlockingAllowed": false
+    },
+    "guarantees": {
+      "redactedOnly": true,
+      "containsRawPrincipal": false,
+      "containsRawOrganization": false,
+      "containsRawConversation": false,
+      "containsRawEndpoints": false,
+      "containsRawReason": false,
+      "containsRawParameterValues": false,
+      "containsRawDocument": false,
+      "containsRawPrompt": false,
+      "containsRawRetrievedChunk": false,
+      "deterministic": true,
+      "llmUsed": false,
+      "externalCalls": false,
+      "toolExecution": false,
+      "kubeManagerCalls": false,
+      "retrievalExecuted": false,
+      "vectorStoreCalls": false,
+      "embeddingModelCalls": false,
+      "rerankerCalls": false,
+      "memoryWrite": false,
+      "auditWrite": false
+    }
   }
 ]

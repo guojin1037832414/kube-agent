@@ -49,9 +49,33 @@ class AgentEvalTraceSetGateBundleArtifactTest {
             .containsEntry("gateVerdict", "FAIL")
             .containsEntry("pass", false)
             .containsEntry("releaseEligible", false)
-            .containsEntry("traceSetCount", 4)
-            .containsEntry("failedTraceSets", 4)
-            .containsEntry("emptyTraceSets", 4);
+            .containsEntry("traceSetCount", 7)
+            .containsEntry("failedTraceSets", 7)
+            .containsEntry("emptyTraceSets", 7);
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> traceSetGates = (List<Map<String, Object>>) artifact.get("traceSetGates");
+        assertThat(traceSetGates).hasSize(7);
+        assertThat(traceSetGates)
+            .filteredOn(gate -> gate.get("traceSetId").toString().startsWith("memory-rag-"))
+            .hasSize(3)
+            .allSatisfy(gate -> {
+                assertThat(gate)
+                    .containsEntry("suiteId", "memory-rag-release-gate")
+                    .containsEntry("gateVerdict", "SUITE_RUNTIME_DISABLED")
+                    .containsEntry("pass", false)
+                    .containsEntry("emptyInput", true);
+                assertThat(gate.get("suiteGate")).isNull();
+                Map<String, Object> gatePolicy = objectMapper.convertValue(
+                    gate.get("gatePolicy"),
+                    new TypeReference<Map<String, Object>>() {
+                    }
+                );
+                assertThat(gatePolicy)
+                    .containsEntry("suiteRuntimeDisabled", true)
+                    .containsEntry("runtimeExecutionAllowed", false)
+                    .containsEntry("retrievalRuntimeAllowed", false)
+                    .containsEntry("ciBlockingEnabled", false);
+            });
         Map<String, Object> bundlePolicy = objectMapper.convertValue(
             artifact.get("bundlePolicy"),
             new TypeReference<Map<String, Object>>() {

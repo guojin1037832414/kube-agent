@@ -6,6 +6,32 @@
 
 ---
 
+## [M5.70-1] - Memory/RAG trace-set catalog entries
+
+**Delivery**: Added the three required Memory/RAG trace-set catalog entries while keeping Memory/RAG eval runtime and retrieval runtime closed.
+**Changes**
+- Added `memory-rag-citation-fidelity`, `memory-rag-privacy-tenant`, and `memory-rag-lifecycle-policy` to `observability/eval-trace-sets.json`.
+- Bound all three trace sets to `memory-rag-release-gate` with empty `traceIds`.
+- Marked the Memory/RAG trace sets as Git-review-only evidence catalogs:
+  `catalogOnlyUntilReviewed=true`, `suiteRuntimeExecutionAllowed=false`,
+  `runtimeRetrievalAllowed=false`, and `ciBlockingAllowed=false`.
+- Added fail-closed trace-set gate behavior for suites whose runtime execution is disabled; Memory/RAG trace-set gates now return `SUITE_RUNTIME_DISABLED` with `suiteGate=null`.
+- Added an independent trace-set policy latch: if a future suite runtime is enabled while a Memory/RAG trace set still has `suiteRuntimeExecutionAllowed=false` or `catalogOnlyUntilReviewed=true` with empty `traceIds`, the trace-set gate returns `TRACE_SET_RUNTIME_DISABLED` and still embeds no suite gate.
+- Updated the Memory/RAG eval-suite binding contract from
+  `SUITE_CHECKS_DEFINED_TRACE_SETS_NOT_CURATED` to
+  `TRACE_SETS_DEFINED_REVIEWED_EVIDENCE_NOT_CURATED`.
+- Updated eval workbench, reviewed evidence, release-blocking gate, and controller tests for the seven trace-set catalog state.
+**Verification**
+- `mvn -q "-Dtest=AgentEvalTraceSetCatalogServiceTest,AgentEvalTraceSetGateBundleArtifactTest,AgentEvalWorkbenchOverviewServiceTest,AgentEvalWorkbenchGateBundleSummaryServiceTest,AgentEvalWorkbenchTraceSetDetailServiceTest,AgentEvalWorkbenchPromotionWorkflowServiceTest,AgentMemoryRagEvalSuiteBindingContractServiceTest,AgentReviewedEvalTraceEvidenceServiceTest,AgentReleaseBlockingEvalGateContractServiceTest,AgentMemoryRagReadinessServiceTest,ObservabilityControllerTest" test` passed during implementation.
+**Security**
+- `contractStatus=TRACE_SETS_DEFINED_REVIEWED_EVIDENCE_NOT_CURATED`.
+- `memoryRagEvalSuiteBound=true` still means suite check-code mapping only.
+- `memoryRagTraceSetBound=false` because no reviewed redacted trace ids exist yet.
+- `memory-rag-release-gate` remains catalog-only and non-runnable.
+- Memory/RAG trace-set gates emit `SUITE_RUNTIME_DISABLED`, `pass=false`, `emptyInput=true`, `suiteGate=null`, `runtimeExecutionAllowed=false`, `ciBlockingEnabled=false`, and `retrievalRuntimeAllowed=false`.
+- Memory/RAG trace-set policy remains independently closed even if the attached suite is promoted later; the binding contract reads `catalogOnlyUntilReviewed`, `suiteRuntimeExecutionAllowed`, `runtimeRetrievalAllowed`, and `ciBlockingAllowed` from the catalog rows.
+- No eval runtime execution, reviewed trace evidence promotion, trace-set runtime mutation, CI blocking enablement, retrieval execution, vector-store binding, embedding/reranker/LLM call, prompt mutation, memory write, audit write, Tool execution, `SafeToolExecutor` invocation, HITL invocation, kube-manager call, MCP runtime `tools/call`, external call, dependency upgrade, or NIM / HPC / Slurm / BCM Phase 2 work is added.
+
 ## [M5.69-1] - Memory/RAG release-gate suite catalog
 
 **Delivery**: Added the deterministic `memory-rag-release-gate` suite to the built-in eval suite catalog.

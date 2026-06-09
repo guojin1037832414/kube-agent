@@ -81,15 +81,21 @@ public record AgentMemoryRagEvalSuiteBindingContractResponse(
         int suiteCount = suiteCatalog != null ? suiteCatalog.suiteCount() : 0;
         int traceSetCount = traceSetCatalog != null ? traceSetCatalog.traceSetCount() : 0;
         boolean suiteBound = mapped == required;
+        List<Map<String, Object>> requiredTraceSets = buildRequiredTraceSets(traceSetCatalog);
+        boolean traceSetsDefined = requiredTraceSets.stream()
+            .allMatch(row -> Boolean.TRUE.equals(row.get("definedInCatalog")));
+        boolean traceSetsReviewed = traceSetsDefined && requiredTraceSets.stream()
+            .allMatch(row -> Boolean.TRUE.equals(row.get("reviewedTraceIdsPresent")));
+        boolean traceSetPoliciesClosed = memoryRagTraceSetPoliciesClosed(requiredTraceSets);
         return new AgentMemoryRagEvalSuiteBindingContractResponse(
             SCHEMA_VERSION,
             generatedAt,
-            suiteBound ? "SUITE_CHECKS_DEFINED_TRACE_SETS_NOT_CURATED" : "CONTRACT_DEFINED_NOT_BOUND",
+            resolveContractStatus(suiteBound, traceSetsDefined, traceSetsReviewed),
             "Memory/RAG eval suite binding before retrieval runtime",
             true,
             true,
             suiteBound,
-            false,
+            traceSetsReviewed,
             true,
             false,
             false,
@@ -100,14 +106,29 @@ public record AgentMemoryRagEvalSuiteBindingContractResponse(
             suiteCount,
             traceSetCount,
             bindingRows,
-            buildRequiredTraceSets(traceSetCatalog),
+            requiredTraceSets,
             buildSuiteCandidates(suiteCatalog),
-            buildBlockedReasons(mapped, required),
+            buildBlockedReasons(mapped, required, traceSetsDefined, traceSetsReviewed, traceSetPoliciesClosed),
             buildRecommendedBuildOrder(),
             buildEndpointMap(),
             buildSafety(),
             buildPrivacy(evalGateContract, suiteCatalog, traceSetCatalog)
         );
+    }
+
+    private static String resolveContractStatus(boolean suiteBound,
+                                                boolean traceSetsDefined,
+                                                boolean traceSetsReviewed) {
+        if (!suiteBound) {
+            return "CONTRACT_DEFINED_NOT_BOUND";
+        }
+        if (!traceSetsDefined) {
+            return "SUITE_CHECKS_DEFINED_TRACE_SETS_NOT_CURATED";
+        }
+        if (!traceSetsReviewed) {
+            return "TRACE_SETS_DEFINED_REVIEWED_EVIDENCE_NOT_CURATED";
+        }
+        return "TRACE_SETS_REVIEWED_RUNTIME_NOT_PROMOTED";
     }
 
     private static List<Map<String, Object>> buildBindingRows(AgentMemoryRagEvalGateContractResponse evalGateContract,
@@ -172,10 +193,24 @@ public record AgentMemoryRagEvalSuiteBindingContractResponse(
         row.put("definedInCatalog", current != null);
         row.put("reviewedTraceIdsPresent", current != null && !current.traceIds().isEmpty());
         row.put("runtimeCatalogMutationAllowed", false);
+        row.put("catalogOnlyUntilReviewed", policyBoolean(current, "catalogOnlyUntilReviewed", true));
+        row.put("suiteRuntimeExecutionAllowed", policyBoolean(current, "suiteRuntimeExecutionAllowed", false));
+        row.put("retrievalRuntimeAllowed", policyBoolean(current, "runtimeRetrievalAllowed", false));
+        row.put("ciBlockingAllowed", policyBoolean(current, "ciBlockingAllowed", false));
         row.put("nextAction", current == null
             ? "propose-trace-set-through-git-review"
             : "populate-reviewed-redacted-trace-ids-through-git-review");
         return Map.copyOf(row);
+    }
+
+    private static boolean policyBoolean(AgentEvalTraceSetDefinition definition,
+                                         String key,
+                                         boolean defaultValue) {
+        if (definition == null) {
+            return defaultValue;
+        }
+        Object value = definition.curationPolicy().get(key);
+        return value instanceof Boolean bool ? bool : defaultValue;
     }
 
     private static List<Map<String, Object>> buildSuiteCandidates(AgentEvalSuiteCatalogResponse suiteCatalog) {
@@ -200,17 +235,36 @@ public record AgentMemoryRagEvalSuiteBindingContractResponse(
         return Map.copyOf(row);
     }
 
-    private static List<String> buildBlockedReasons(int mapped, int required) {
+    private static List<String> buildBlockedReasons(int mapped,
+                                                    int required,
+                                                    boolean traceSetsDefined,
+                                                    boolean traceSetsReviewed,
+                                                    boolean traceSetPoliciesClosed) {
         java.util.ArrayList<String> reasons = new java.util.ArrayList<>();
         if (mapped < required) {
             reasons.add("memory-rag-suite-check-codes-missing");
         }
         reasons.add("memory-rag-suite-runtime-not-promoted");
-        reasons.add("memory-rag-trace-sets-not-curated");
+        if (!traceSetsDefined) {
+            reasons.add("memory-rag-trace-sets-not-defined");
+        }
+        if (!traceSetsReviewed) {
+            reasons.add("memory-rag-trace-sets-not-curated");
+        }
+        if (!traceSetPoliciesClosed) {
+            reasons.add("memory-rag-trace-set-runtime-policy-misconfigured");
+        }
         reasons.add("reviewed-redacted-memory-rag-trace-evidence-missing");
         reasons.add("ci-blocking-switch-intentionally-absent");
         reasons.add("retrieval-runtime-intentionally-closed");
         return List.copyOf(reasons);
+    }
+
+    private static boolean memoryRagTraceSetPoliciesClosed(List<Map<String, Object>> requiredTraceSets) {
+        return requiredTraceSets.stream()
+            .allMatch(row -> Boolean.FALSE.equals(row.get("suiteRuntimeExecutionAllowed"))
+                && Boolean.FALSE.equals(row.get("retrievalRuntimeAllowed"))
+                && Boolean.FALSE.equals(row.get("ciBlockingAllowed")));
     }
 
     private static List<String> buildRecommendedBuildOrder() {

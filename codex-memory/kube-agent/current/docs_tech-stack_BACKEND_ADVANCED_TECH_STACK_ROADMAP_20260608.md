@@ -9,6 +9,56 @@
 - 供应链、CI、SBOM、质量门禁进入工程默认路径；
 - Java / Spring / Agent 框架升级以兼容性矩阵推进，不用不可构建的版本号伪装先进。
 
+## 2026-06-09 M5.70 Memory-RAG-Trace-Set-Catalog Rule
+
+M5.70 advances the Memory/RAG roadmap with three Git-reviewed catalog lanes:
+
+```text
+memory-rag-citation-fidelity
+memory-rag-privacy-tenant
+memory-rag-lifecycle-policy
+```
+
+The advanced Agent stack now has concrete trace-set homes for Memory/RAG release evidence before retrieval runtime can influence prompts:
+
+- All three trace sets bind to `memory-rag-release-gate`.
+- All three have `traceIds=[]` until reviewed redacted evidence is curated.
+- All three carry `catalogOnlyUntilReviewed=true`, `suiteRuntimeExecutionAllowed=false`, `runtimeRetrievalAllowed=false`, and `ciBlockingAllowed=false`.
+- Trace-set gates for these rows return `SUITE_RUNTIME_DISABLED` with `suiteGate=null` because the attached Memory/RAG suite remains non-runnable.
+- A second latch now protects the trace-set row itself: if the suite is later promoted but the row still has `suiteRuntimeExecutionAllowed=false` or `catalogOnlyUntilReviewed=true` with empty `traceIds`, the gate returns `TRACE_SET_RUNTIME_DISABLED`.
+- The eval-suite binding contract now reports `TRACE_SETS_DEFINED_REVIEWED_EVIDENCE_NOT_CURATED`.
+- The eval-suite binding contract derives Memory/RAG trace-set runtime, retrieval, and CI policy from the catalog rows, so policy drift becomes visible.
+- `memoryRagTraceSetBound=false` still blocks retrieval, because no reviewed trace ids exist.
+- Phase 2 NIM / HPC / Slurm / BCM remains paused and is not reopened by this catalog work.
+
+Technology judgment: the project is now ready to curate Memory/RAG evidence, but not ready to execute Memory/RAG runtime. Current best practice for a top-tier Agent is to treat RAG source fidelity, privacy/tenant isolation, lifecycle/retention, red-team traces, deterministic evals, and operator visibility as prerequisites for vector-store or reranker authority. Spring AI VectorStore, GraphRAG, rerankers, MCP resources, OpenAI Agents/Evals-style runtime loops, A2A provenance, and OpenTelemetry GenAI adapters stay in the evidence-first lane until these trace sets contain reviewed redacted anchors.
+
+Latest-technology anchor checked on 2026-06-09:
+
+- OpenAI Agents SDK-style tools, handoffs, guardrails, sessions, tracing, HITL, and eval loops map to kube-agent contracts, replay evidence, and workbench gates before runtime delegation expands.
+- Spring AI ChatClient, advisors, chat memory, RAG, VectorStore, MCP, eval, and observability remain the preferred Java/Spring integration surface once compatibility and evidence gates pass.
+- MCP tools/resources/prompts, consent, and tool-safety guidance map to SafeToolExecutor, admin-only catalogs, and future MCP governance.
+- OpenTelemetry GenAI agent/model spans and metrics stay adapter-level because the conventions are still evolving; `atlas.agent.*` remains the stable internal contract.
+- A2A Agent Card, task, message, artifact, streaming, and security concepts map to future handoff/provenance work after local evidence gates mature.
+- GraphRAG, rerankers, and vector stores remain Phase 1 core targets, but only after reviewed trace ids and Memory/RAG advisory gate bundles exist.
+
+Official references checked for this anchor:
+
+- OpenAI Agents SDK: https://openai.github.io/openai-agents-python/
+- Spring AI reference: https://docs.spring.io/spring-ai/reference/
+- Model Context Protocol specification: https://modelcontextprotocol.io/specification/2025-11-25
+- OpenTelemetry GenAI semantic conventions: https://opentelemetry.io/docs/specs/semconv/gen-ai/
+- A2A protocol specification: https://a2a-protocol.org/latest/specification/
+- Microsoft GraphRAG: https://microsoft.github.io/graphrag/
+
+Next order after M5.70:
+
+- Curate reviewed redacted trace ids for `memory-rag-citation-fidelity`, `memory-rag-privacy-tenant`, and `memory-rag-lifecycle-policy`.
+- Generate advisory Memory/RAG gate-bundle evidence only after curated traces exist.
+- Add Vue workbench visibility for Memory/RAG trace-set state and blockers.
+- Promote CI blocking only in a separate reviewed slice.
+- Bind durable memory store and retrieval runtime only after source digest, lifecycle, tenant/privacy, eval evidence, Vue visibility, and recovery memory pass.
+
 ## 2026-06-09 M5.69 Memory-RAG-Release-Gate-Suite-Catalog Rule
 
 M5.69 advances the Memory/RAG roadmap with a built-in deterministic suite:

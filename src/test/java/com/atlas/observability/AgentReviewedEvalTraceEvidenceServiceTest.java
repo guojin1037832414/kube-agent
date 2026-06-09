@@ -49,7 +49,7 @@ class AgentReviewedEvalTraceEvidenceServiceTest {
         assertThat(evidence.releaseBlockingAllowedNow()).isFalse();
         assertThat(evidence.ciBlockingEnabled()).isFalse();
         assertThat(evidence.runtimeMutationAllowed()).isFalse();
-        assertThat(evidence.traceSetCount()).isEqualTo(4);
+        assertThat(evidence.traceSetCount()).isEqualTo(7);
         assertThat(evidence.reviewedTraceSetCount()).isZero();
         assertThat(evidence.reviewedTraceAnchorCount()).isZero();
         assertThat(evidence.traceSetEvidence()).allSatisfy(traceSet -> assertThat(traceSet)

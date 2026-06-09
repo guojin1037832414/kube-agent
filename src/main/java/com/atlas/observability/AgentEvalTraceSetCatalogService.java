@@ -82,6 +82,20 @@ public class AgentEvalTraceSetCatalogService {
 
     private Optional<AgentEvalTraceSetGateArtifact> gate(AgentEvalTraceSetDefinition definition,
                                                         AgentEvalSuiteRequest request) {
+        if (!evalSuiteCatalogService.runtimeExecutionAllowed(definition.suiteId())) {
+            return Optional.of(AgentEvalTraceSetGateArtifact.runtimeDisabled(
+                definition,
+                request,
+                CATALOG_SOURCE
+            ));
+        }
+        if (!traceSetRuntimeExecutionAllowed(definition)) {
+            return Optional.of(AgentEvalTraceSetGateArtifact.traceSetRuntimeDisabled(
+                definition,
+                request,
+                CATALOG_SOURCE
+            ));
+        }
         AgentEvalSuiteRequest suiteRequest = new AgentEvalSuiteRequest(
             definition.traceIds(),
             request != null ? request.limit() : null,
@@ -90,6 +104,15 @@ public class AgentEvalTraceSetCatalogService {
         );
         return evalSuiteCatalogService.gate(definition.suiteId(), suiteRequest)
             .map(suiteGate -> AgentEvalTraceSetGateArtifact.from(definition, suiteGate, request, CATALOG_SOURCE));
+    }
+
+    private boolean traceSetRuntimeExecutionAllowed(AgentEvalTraceSetDefinition definition) {
+        Map<String, Object> policy = definition != null ? definition.curationPolicy() : Map.of();
+        if (Boolean.FALSE.equals(policy.get("suiteRuntimeExecutionAllowed"))) {
+            return false;
+        }
+        return !Boolean.TRUE.equals(policy.get("catalogOnlyUntilReviewed"))
+            || (definition != null && !definition.traceIds().isEmpty());
     }
 
     private AgentEvalSuiteRequest curationReviewRequest(AgentEvalSuiteRequest request) {

@@ -10,7 +10,72 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.69-1
+## Latest Phase 1 Core Memory - M5.70-1
+
+M5.70-1 adds the three required Memory/RAG trace-set catalog entries without opening eval runtime, retrieval runtime, CI blocking, or memory writes.
+
+Delivered:
+
+- Added `memory-rag-citation-fidelity`, `memory-rag-privacy-tenant`, and `memory-rag-lifecycle-policy` to `observability/eval-trace-sets.json`.
+- Bound all three trace sets to `suiteId=memory-rag-release-gate`.
+- Kept `traceIds=[]` for all three entries until reviewed redacted trace evidence is curated through Git review.
+- Added curation policy fields for Memory/RAG evidence:
+  `requiresReviewedSourceEvidenceDigest=true`,
+  `requiresReviewedMemoryLifecycleEvidence=true`,
+  `catalogOnlyUntilReviewed=true`,
+  `suiteRuntimeExecutionAllowed=false`,
+  `runtimeRetrievalAllowed=false`, and
+  `ciBlockingAllowed=false`.
+- Added guarantees that these catalog rows contain no raw document, prompt, retrieved chunk, principal, organization, conversation, endpoint, reason, or parameter values, and that they do not execute retrieval, vector store calls, embedding calls, rerankers, LLMs, Tools, kube-manager calls, memory writes, or audit writes.
+- Added fail-closed trace-set gate behavior for suites whose runtime is disabled: Memory/RAG trace-set gates now return `gateVerdict=SUITE_RUNTIME_DISABLED`, `pass=false`, `emptyInput=true`, and `suiteGate=null`.
+- Added an independent trace-set policy latch after Curie architecture review: if a future suite runtime is enabled but a Memory/RAG trace set still has `suiteRuntimeExecutionAllowed=false` or `catalogOnlyUntilReviewed=true` with empty `traceIds`, the trace-set gate returns `TRACE_SET_RUNTIME_DISABLED` and still embeds no suite gate.
+- Updated the Memory/RAG eval-suite binding contract so trace-set definitions are recognized while reviewed evidence remains missing.
+- Updated the Memory/RAG eval-suite binding contract so required trace-set rows derive `catalogOnlyUntilReviewed`, `suiteRuntimeExecutionAllowed`, `runtimeRetrievalAllowed`, and `ciBlockingAllowed` from the actual catalog policy.
+
+Current state:
+
+- `schemaVersion=agent-memory-rag-eval-suite-binding-contract.v1`.
+- `contractStatus=TRACE_SETS_DEFINED_REVIEWED_EVIDENCE_NOT_CURATED`.
+- `phase1TopTierGoalPreserved=true`.
+- `evalSuiteBindingContractDefined=true`.
+- `memoryRagEvalSuiteBound=true`.
+- `memoryRagTraceSetBound=false`.
+- `reviewedTraceEvidenceRequired=true`.
+- `evalRuntimeExecuted=false`.
+- `ciBlockingEnabled=false`.
+- `retrievalRuntimeAllowedNow=false`.
+- `mappedGateCheckCount=9`.
+- `missingGateCheckCount=0`.
+- `availableSuiteCount=5`.
+- `availableTraceSetCount=7`.
+- `memory-rag-trace-sets-not-defined` is no longer a blocked reason.
+- `memory-rag-trace-sets-not-curated` remains a blocked reason.
+- `memory-rag-trace-set-runtime-policy-misconfigured` is absent because all three Memory/RAG trace-set policies remain closed.
+
+Security boundary:
+
+- M5.70 remains admin-readable, deterministic, and catalog/contract-only.
+- It does not run evals, promote reviewed trace evidence, mutate trace-set catalogs at runtime, enable CI blocking, execute retrieval, bind vector stores, call embedding/reranker/LLM, mutate prompts, write memory, write audit, issue durable receipts, execute Tools, invoke `SafeToolExecutor`, invoke HITL, call kube-manager, expose MCP runtime `tools/call`, call external services, upgrade dependencies, or touch NIM / HPC / Slurm / BCM Phase 2 scope.
+- Runtime safety is now double-latched: the attached `memory-rag-release-gate` suite remains `runtimeExecutionAllowed=false`, and each Memory/RAG trace-set row also carries its own `suiteRuntimeExecutionAllowed=false` / `catalogOnlyUntilReviewed=true` policy.
+- The user mentioned kube-manager query testing through port `8100`; M5.70 does not use that runtime path because this slice is trace-set catalog and binding evidence only.
+
+Learning point: top-tier Memory/RAG evidence is now split into three concrete review lanes: citation/source fidelity, privacy/tenant isolation, and lifecycle/recovery policy. M5.70 teaches that adding a trace-set definition is not the same as giving RAG runtime authority. It is the catalog skeleton that future reviewed traces, advisory gate bundles, Vue workbench rows, and later CI/runtime promotions must attach to.
+
+Latest technology note: "引入全部最先进的技术" continues to mean evidence-first adoption of current Agent patterns, not uncontrolled runtime wiring. OpenAI Agents/Evals-style tools, handoffs, guardrails, sessions, tracing, HITL, and evaluation loops; Spring AI ChatClient/advisors/chat memory/RAG/VectorStore/MCP/eval/observability; MCP tools/resources/prompts governance; OpenTelemetry GenAI agent/model spans and metrics; A2A Agent Card/task/message/artifact/streaming/security concepts; GraphRAG/rerankers/vector stores; and future Java/Spring upgrades remain in Phase 1 scope, but they become runtime authority only after backend-owned contracts, deterministic tests, reviewed redacted traces, Vue operator visibility, and recovery memory prove them safe.
+
+Latest verified command:
+
+- `mvn -q "-Dtest=AgentEvalTraceSetCatalogServiceTest,AgentEvalTraceSetGateBundleArtifactTest,AgentEvalWorkbenchOverviewServiceTest,AgentEvalWorkbenchGateBundleSummaryServiceTest,AgentEvalWorkbenchTraceSetDetailServiceTest,AgentEvalWorkbenchPromotionWorkflowServiceTest,AgentMemoryRagEvalSuiteBindingContractServiceTest,AgentReviewedEvalTraceEvidenceServiceTest,AgentReleaseBlockingEvalGateContractServiceTest,AgentMemoryRagReadinessServiceTest,ObservabilityControllerTest" test`
+
+Next safe development order:
+
+- Curate reviewed redacted trace ids for the three Memory/RAG trace sets through Git review.
+- Generate advisory Memory/RAG gate bundle evidence only after reviewed traces exist.
+- Add Vue workbench visibility for Memory/RAG trace-set rows and blocked reasons.
+- Promote CI blocking only in a later separate reviewed slice.
+- Bind durable memory and retrieval runtime only after source digest, lifecycle, tenant/privacy, eval evidence, Vue visibility, and recovery memory all pass.
+
+## Previous Phase 1 Core Memory - M5.69-1
 
 M5.69-1 adds the deterministic Memory/RAG release-gate suite catalog entry.
 

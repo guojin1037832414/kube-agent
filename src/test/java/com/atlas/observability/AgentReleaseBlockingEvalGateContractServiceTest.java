@@ -53,10 +53,10 @@ class AgentReleaseBlockingEvalGateContractServiceTest {
         assertThat(contract.runtimeMutationAllowed()).isFalse();
         assertThat(contract.reviewedEvidenceReady()).isFalse();
         assertThat(contract.gateBundleReleaseEligible()).isFalse();
-        assertThat(contract.traceSetCount()).isEqualTo(4);
+        assertThat(contract.traceSetCount()).isEqualTo(7);
         assertThat(contract.reviewedTraceSetCount()).isZero();
         assertThat(contract.reviewedTraceAnchorCount()).isZero();
-        assertThat(contract.emptyTraceSets()).isEqualTo(4);
+        assertThat(contract.emptyTraceSets()).isEqualTo(7);
         assertThat(contract.releaseGateChecks()).extracting(check -> check.get("id"))
             .containsExactly(
                 "reviewed-trace-evidence",
@@ -72,6 +72,9 @@ class AgentReleaseBlockingEvalGateContractServiceTest {
             .containsEntry("emptyInput", true)
             .containsEntry("releaseBlockingReady", false)
             .containsEntry("releaseBlockingAllowedNow", false));
+        assertThat(contract.traceSetReleaseRows())
+            .filteredOn(row -> row.get("traceSetId").toString().startsWith("memory-rag-"))
+            .hasSize(3);
         assertThat(contract.blockedReasons()).contains(
             "reviewed-redacted-trace-evidence-missing",
             "gate-bundle-not-release-eligible",
