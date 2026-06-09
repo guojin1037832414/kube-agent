@@ -10,7 +10,35 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.48-1
+## Latest Phase 1 Core Memory - M5.49-1
+
+M5.49-1 adds an admin-only kube-manager HTTP outlet health summary for local resilience observability.
+
+Delivered:
+
+- Added `AgentKubeManagerHttpOutletHealthSummaryResponse`.
+- Added `AgentKubeManagerHttpOutletHealthSummaryService`.
+- Added admin-only `GET /api/agent/observability/kube-manager/http-outlet/health-summary`.
+- The response exposes redacted backend configuration facts, effective read retry policy, effective write no-auto-retry policy, circuit breaker state, bulkhead state, safety proof, and privacy proof.
+- Added service, controller, source-contract, and MockMvc security coverage.
+
+Security boundary:
+
+- The endpoint is admin-only at URL and method levels.
+- It is local-process-only, read-only, and summary-only.
+- It does not call `KubeManagerHttpClient`, `RestClient`, kube-manager `8100`, `/api/login`, Tools, LLMs, or any external service.
+- It does not inspect or expose Bearer tokens, token prefixes, login username/password, raw backend base URL, raw kube-manager paths/query strings, request/response bodies, or exception bodies.
+- It does not mutate circuit breaker or bulkhead state and does not enable write retry.
+- Read requests remain GET retry + circuit breaker + bulkhead; writes remain circuit breaker + bulkhead only.
+- NIM / HPC / Slurm / BCM remain Phase 2 paused scope.
+
+Learning point: a top-tier Agent should make reliability policy observable without turning observability into a hidden remote probe or control-plane mutation. Effective policy must be shown separately from merely configured-but-inactive policy.
+
+Latest verified command:
+
+- `mvn -q "-Dtest=AgentKubeManagerHttpOutletHealthSummaryServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+## Previous Phase 1 Core Memory - M5.48-1
 
 M5.48-1 adds an admin-only workbench-level gate bundle summary model for future `vue-kube-manager` eval workbench pages.
 

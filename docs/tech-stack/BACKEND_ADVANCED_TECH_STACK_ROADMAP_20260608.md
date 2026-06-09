@@ -74,6 +74,11 @@ M5.28-1 已把 Resilience4j 推进到 kube-manager 业务 HTTP 出口：
 - 移除旧 `HttpRetryConfig` 和 Spring Retry 注解路径，避免写操作被统一方法注解误重试；
 - 写请求重试继续 HOLD，直到 idempotency key、durable audit、HITL 和 release evidence 全部具备。
 
+M5.49-1 已把 Resilience4j HTTP outlet 治理推进到 admin-only 可观测摘要：
+- 新增 `GET /api/agent/observability/kube-manager/http-outlet/health-summary`，只读本地配置与 Resilience4j registry，不调用 kube-manager、`RestClient` 或 `/api/login`。
+- 摘要暴露 redacted backend facts、GET read retry effective policy、WRITE no-auto-retry effective policy、circuit breaker state、bulkhead state、safety proof 和 privacy proof。
+- 即使 `kubeManagerWrite` retry 实例存在，也标记为 `configuredButInactive=true`，避免操作员误以为写请求已经自动重试。
+- 该端点不提供 ping、token refresh、fallback login、circuit breaker reset、bulkhead config change 或 enable write retry 动作。
 M5.29-1 已把 Spring Security 推进到 HTTP 安全入口：
 
 - 新增 `AgentSecurityConfig`，用 `SecurityFilterChain` 承接标准 Web 安全主线；

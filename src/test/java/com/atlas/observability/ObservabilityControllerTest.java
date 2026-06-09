@@ -4,14 +4,22 @@ import com.atlas.audit.InMemoryAgentAuditRecorder;
 import com.atlas.auth.AgentPrincipalResolver;
 import com.atlas.auth.UserPermissionContext;
 import com.atlas.dto.ApiResponse;
+import io.github.resilience4j.bulkhead.BulkheadConfig;
+import io.github.resilience4j.bulkhead.BulkheadRegistry;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.github.resilience4j.retry.RetryConfig;
+import io.github.resilience4j.retry.RetryRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mock.env.MockEnvironment;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.time.Duration;
 import java.util.Map;
 import java.util.Set;
 
@@ -45,8 +53,20 @@ class ObservabilityControllerTest {
         new AgentEvalWorkbenchCatalogPatchReviewService(evalTraceSetCatalogService);
     private final AgentEvalWorkbenchGateBundleSummaryService evalWorkbenchGateBundleSummaryService =
         new AgentEvalWorkbenchGateBundleSummaryService(evalTraceSetCatalogService);
+    private final AgentKubeManagerHttpOutletHealthSummaryService kubeManagerHttpOutletHealthSummaryService =
+        new AgentKubeManagerHttpOutletHealthSummaryService(
+            retryRegistry(),
+            circuitBreakerRegistry(),
+            bulkheadRegistry(),
+            new MockEnvironment()
+                .withProperty("atlas.backend.base-url", "http://kube-manager.internal:8100")
+                .withProperty("atlas.backend.connect-timeout-seconds", "10")
+                .withProperty("atlas.backend.read-timeout-seconds", "30")
+                .withProperty("atlas.backend.login-password", "secret-password")
+        );
     private final ObservabilityController controller = new ObservabilityController(
         new AgentMetricsService(new SimpleMeterRegistry()),
+        kubeManagerHttpOutletHealthSummaryService,
         auditRecorder,
         auditRecorder,
         replayTimelineService,
@@ -63,6 +83,39 @@ class ObservabilityControllerTest {
         evalWorkbenchGateBundleSummaryService,
         new AgentPrincipalResolver(userPermissionContext)
     );
+
+    private RetryRegistry retryRegistry() {
+        RetryRegistry registry = RetryRegistry.of(java.util.Map.of(
+            "kubeManagerRead", RetryConfig.custom().maxAttempts(3).waitDuration(Duration.ofMillis(500)).build(),
+            "kubeManagerWrite", RetryConfig.custom().maxAttempts(1).build()
+        ));
+        registry.retry("kubeManagerRead", "kubeManagerRead");
+        registry.retry("kubeManagerWrite", "kubeManagerWrite");
+        return registry;
+    }
+
+    private CircuitBreakerRegistry circuitBreakerRegistry() {
+        CircuitBreakerRegistry registry = CircuitBreakerRegistry.of(java.util.Map.of(
+            "kubeManager", CircuitBreakerConfig.custom()
+                .slidingWindowSize(50)
+                .minimumNumberOfCalls(10)
+                .failureRateThreshold(50)
+                .build()
+        ));
+        registry.circuitBreaker("kubeManager", "kubeManager");
+        return registry;
+    }
+
+    private BulkheadRegistry bulkheadRegistry() {
+        BulkheadRegistry registry = BulkheadRegistry.of(java.util.Map.of(
+            "kubeManager", BulkheadConfig.custom()
+                .maxConcurrentCalls(32)
+                .maxWaitDuration(Duration.ofMillis(100))
+                .build()
+        ));
+        registry.bulkhead("kubeManager", "kubeManager");
+        return registry;
+    }
 
     @AfterEach
     void tearDown() {
@@ -187,6 +240,55 @@ class ObservabilityControllerTest {
         assertThat(response.getBody().getData())
             .containsEntry("backend", "in-memory-ring-buffer")
             .containsEntry("containsRawEndpoints", false);
+    }
+
+    @Test
+    void kubeManagerHttpOutletHealthSummary_shouldRequireAdminAndReturnRedactedLocalPolicy() {
+        ResponseEntity<ApiResponse<AgentKubeManagerHttpOutletHealthSummaryResponse>> anonymous =
+            controller.kubeManagerHttpOutletHealthSummary();
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentKubeManagerHttpOutletHealthSummaryResponse>> user =
+            controller.kubeManagerHttpOutletHealthSummary();
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        userPermissionContext.unbind();
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentKubeManagerHttpOutletHealthSummaryResponse>> admin =
+            controller.kubeManagerHttpOutletHealthSummary();
+
+        assertThat(admin.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(admin.getBody()).isNotNull();
+        AgentKubeManagerHttpOutletHealthSummaryResponse summary = admin.getBody().getData();
+        assertThat(summary.schemaVersion()).isEqualTo("agent-kube-manager-http-outlet-health-summary.v1");
+        assertThat(summary.status()).isEqualTo("READY");
+        assertThat(summary.readPolicy())
+            .containsEntry("automaticRetryEnabled", true)
+            .containsEntry("maxAttempts", 3);
+        assertThat(summary.writePolicy())
+            .containsEntry("automaticRetryEnabled", false)
+            .containsEntry("configuredButInactive", true)
+            .containsEntry("configuredMaxAttempts", 1);
+        assertThat(summary.safety())
+            .containsEntry("localProcessOnly", true)
+            .containsEntry("kubeManagerCalls", false)
+            .containsEntry("remoteProbeExecuted", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("fallbackLogin", false);
+        assertThat(summary.privacy())
+            .containsEntry("containsRawBaseUrl", false)
+            .containsEntry("containsToken", false)
+            .containsEntry("containsLoginPassword", false)
+            .containsEntry("containsRawEndpoint", false);
+        assertThat(summary.toString())
+            .doesNotContain("kube-manager.internal", "secret-password", "Bearer", "user-token", "/api/login");
     }
 
     @Test

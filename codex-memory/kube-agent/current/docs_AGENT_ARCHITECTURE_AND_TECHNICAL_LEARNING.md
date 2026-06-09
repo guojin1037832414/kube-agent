@@ -2,6 +2,32 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-09 M5.49 Kube-Manager HTTP Outlet Health Summary
+
+M5.49 把 kube-manager HTTP 出口的 Resilience4j 治理状态变成 admin-only、local-process-only 的可观测摘要。
+
+```text
+GET /api/agent/observability/kube-manager/http-outlet/health-summary
+    |
+    | local Spring config + Resilience4j registries only
+    v
+AgentKubeManagerHttpOutletHealthSummaryResponse
+    |
+    | backend + readPolicy + writePolicy + circuitBreaker + bulkhead
+    v
+Operator observability page
+```
+
+关键设计：
+- 端点只读本进程配置和 Resilience4j registry，不调用 `KubeManagerHttpClient`、`RestClient`、`/api/login` 或 kube-manager `8100`。
+- `backend` 只暴露 base URL 是否配置、scheme、host/port 是否存在、超时时间，不暴露完整 URL、路径、query、token 或密码。
+- `readPolicy` 表达真实生效的 GET 治理：`kubeManagerRead` retry + `kubeManager` circuit breaker + `kubeManager` bulkhead。
+- `writePolicy` 明确写请求不自动重试。即使配置里存在 `kubeManagerWrite`，也标记为 `configuredButInactive=true`，避免把“配置存在”误解为“写重试已生效”。
+- `circuitBreaker` 和 `bulkhead` 只读当前状态和 bounded metrics，不提供 reset、force open、change config 等状态变更动作。
+- `safety` / `privacy` 明确 `kubeManagerCalls=false`、`remoteProbeExecuted=false`、`fallbackLogin=false`、`tokenInspection=false`、`toolExecution=false`。
+
+学习重点：顶级 Agent 的可观测性不是“页面打开时偷偷探活远端”，而是把本地控制面事实清楚地解释给操作员。远端探活、token 刷新、熔断器重置、写重试开启都属于更高风险动作，必须有独立权限、审计、幂等和回滚设计。
+
 ## 2026-06-09 M5.48 Eval Workbench Gate Bundle Summary 摘要模型
 
 M5.48 把底层 compact trace-set gate bundle 包装成未来 `vue-kube-manager` 可以直接渲染的发布门禁摘要页面。底层 gate bundle 仍然是机器可读 CI artifact；新的 workbench summary 负责把它整理成 bundle summary、trace-set gate rows、CI artifact metadata、blocker summary 和 next actions。

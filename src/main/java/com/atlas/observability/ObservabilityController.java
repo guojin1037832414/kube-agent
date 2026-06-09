@@ -34,6 +34,7 @@ import java.util.Optional;
 public class ObservabilityController {
 
     private final AgentMetricsService metricsService;
+    private final AgentKubeManagerHttpOutletHealthSummaryService kubeManagerHttpOutletHealthSummaryService;
     private final AgentAuditSnapshotProvider auditSnapshotProvider;
     private final AgentAuditQueryService auditQueryService;
     private final AgentReplayTimelineService replayTimelineService;
@@ -51,6 +52,7 @@ public class ObservabilityController {
     private final AgentPrincipalResolver principalResolver;
 
     public ObservabilityController(AgentMetricsService metricsService,
+                                   AgentKubeManagerHttpOutletHealthSummaryService kubeManagerHttpOutletHealthSummaryService,
                                    AgentAuditSnapshotProvider auditSnapshotProvider,
                                    AgentAuditQueryService auditQueryService,
                                    AgentReplayTimelineService replayTimelineService,
@@ -67,6 +69,7 @@ public class ObservabilityController {
                                    AgentEvalWorkbenchGateBundleSummaryService evalWorkbenchGateBundleSummaryService,
                                    AgentPrincipalResolver principalResolver) {
         this.metricsService = metricsService;
+        this.kubeManagerHttpOutletHealthSummaryService = kubeManagerHttpOutletHealthSummaryService;
         this.auditSnapshotProvider = auditSnapshotProvider;
         this.auditQueryService = auditQueryService;
         this.replayTimelineService = replayTimelineService;
@@ -85,6 +88,17 @@ public class ObservabilityController {
     }
 
     /** 查询 Agent 指标快照。 */
+    /** Describe kube-manager HTTP outlet resilience state without probing kube-manager. */
+    @GetMapping("/kube-manager/http-outlet/health-summary")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentKubeManagerHttpOutletHealthSummaryResponse>> kubeManagerHttpOutletHealthSummary() {
+        ResponseEntity<ApiResponse<AgentKubeManagerHttpOutletHealthSummaryResponse>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return ResponseEntity.ok(ApiResponse.ok(kubeManagerHttpOutletHealthSummaryService.summary()));
+    }
+
     @GetMapping("/snapshot")
     @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> snapshot() {

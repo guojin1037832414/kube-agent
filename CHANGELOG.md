@@ -6,6 +6,25 @@
 
 ---
 
+## [M5.49-1] - Kube-manager HTTP outlet health summary
+
+**Delivery**: Added an admin-only local health summary for kube-manager HTTP outlet resilience state.
+**Changes**
+- Added `AgentKubeManagerHttpOutletHealthSummaryResponse`.
+- Added `AgentKubeManagerHttpOutletHealthSummaryService`.
+- Added admin-only `GET /api/agent/observability/kube-manager/http-outlet/health-summary`.
+- The response exposes redacted backend configuration facts, effective read retry policy, effective write no-auto-retry policy, circuit breaker state, bulkhead state, safety proof, and privacy proof.
+- Added service, controller, source-contract, and MockMvc security coverage.
+**Verification**
+- `mvn -q "-Dtest=AgentKubeManagerHttpOutletHealthSummaryServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed.
+**Security**
+- The endpoint is admin-only, local-process-only, read-only, and summary-only.
+- It does not call `KubeManagerHttpClient`, `RestClient`, kube-manager `8100`, `/api/login`, Tools, LLMs, or external services.
+- It does not inspect or expose Bearer tokens, token prefixes, login username/password, raw backend base URL, raw kube-manager paths/query strings, request/response bodies, or exception bodies.
+- It does not mutate circuit breaker or bulkhead state and does not enable write retry.
+- Read requests remain GET retry + circuit breaker + bulkhead; writes remain circuit breaker + bulkhead only.
+- This slice adds no kube-manager write/create/delete/state-changing behavior and does not reopen NIM/HPC/Slurm/BCM scope.
+
 ## [M5.48-1] - Eval workbench gate bundle summary
 
 **Delivery**: Added an admin-only workbench-level gate bundle summary model for future `vue-kube-manager` eval workbench pages.
