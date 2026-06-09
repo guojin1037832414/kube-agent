@@ -137,6 +137,21 @@ public record AgentTopTierReadinessOverviewResponse(
             )
         ));
         cards.add(card(
+            "advanced-technology-adoption",
+            "Advanced Agent technology adoption gate",
+            "READY",
+            "Phase 1 keeps the Java/Spring control plane stable while tracking Responses/Agents, Spring AI 2, MCP runtime, OTel GenAI, A2A, and advanced RAG in a compatibility matrix.",
+            "/api/agent/observability/top-tier/advanced-technology-adoption-contract",
+            List.of("Java/Spring control plane", "Responses/Agents mapping", "MCP runtime matrix", "OTel GenAI adapter", "A2A artifacts"),
+            Map.of(
+                "adoptionContractExists", true,
+                "javaSpringControlPlanePreserved", true,
+                "runtimeUpgradePerformed", false,
+                "dependencyUpgradePerformed", false,
+                "phase2DomainPluginsPaused", true
+            )
+        ));
+        cards.add(card(
             "eval-release-gates",
             "Deterministic eval and release-gate evidence",
             evalWorkbenchCapabilities != null && evalWorkbenchCapabilities.capabilityCount() > 0 ? "PARTIAL" : "BLOCKED",
@@ -287,6 +302,7 @@ public record AgentTopTierReadinessOverviewResponse(
     private static List<String> buildRecommendedBuildOrder() {
         return List.of(
             "wire-vue-top-tier-readiness-overview",
+            "wire-vue-advanced-technology-adoption-contract",
             "populate-reviewed-redacted-eval-trace-evidence",
             "promote-eval-gate-bundle-from-evidence-only-to-reviewed-blocking",
             "bind-memory-rag-eval-gate-before-retrieval-runtime",
@@ -310,6 +326,7 @@ public record AgentTopTierReadinessOverviewResponse(
     private static Map<String, Object> buildEndpointMap() {
         Map<String, Object> endpoints = new LinkedHashMap<>();
         endpoints.put("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview");
+        endpoints.put("advancedTechnologyAdoptionContract", "/api/agent/observability/top-tier/advanced-technology-adoption-contract");
         endpoints.put("kubeManagerGovernanceOverview", "/api/agent/observability/kube-manager/http-outlet/governance-workbench/overview");
         endpoints.put("evalWorkbenchCapabilities", "/api/agent/observability/eval/workbench/capabilities");
         endpoints.put("evalWorkbenchOverview", "/api/agent/observability/eval/workbench/overview");

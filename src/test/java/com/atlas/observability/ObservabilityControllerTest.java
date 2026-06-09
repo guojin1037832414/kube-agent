@@ -110,6 +110,8 @@ class ObservabilityControllerTest {
             evalWorkbenchCapabilitiesService,
             mcpGovernanceOverviewService
         );
+    private final AgentAdvancedTechnologyAdoptionContractService advancedTechnologyAdoptionContractService =
+        new AgentAdvancedTechnologyAdoptionContractService();
     private final ObservabilityController controller = new ObservabilityController(
         new AgentMetricsService(new SimpleMeterRegistry()),
         kubeManagerHttpOutletHealthSummaryService,
@@ -120,6 +122,7 @@ class ObservabilityControllerTest {
         kubeManagerWriteReleaseGateContractService,
         kubeManagerHttpOutletGovernanceWorkbenchOverviewService,
         topTierReadinessOverviewService,
+        advancedTechnologyAdoptionContractService,
         memoryRagReadinessService,
         memoryRagCitationSourceContractService,
         memoryRagSourceEvidenceDigestContractService,
@@ -845,11 +848,12 @@ class ObservabilityControllerTest {
         assertThat(overview.phase1TopTierGoalPreserved()).isTrue();
         assertThat(overview.writeAuthorityClosed()).isTrue();
         assertThat(overview.toolExecutionTriggered()).isFalse();
-        assertThat(overview.capabilityCardCount()).isEqualTo(9);
+        assertThat(overview.capabilityCardCount()).isEqualTo(10);
         assertThat(overview.topGaps())
             .contains("eval-release-gates", "memory-rag-learning", "vue-operator-workbench");
         assertThat(overview.endpointMap())
             .containsEntry("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview")
+            .containsEntry("advancedTechnologyAdoptionContract", "/api/agent/observability/top-tier/advanced-technology-adoption-contract")
             .containsEntry("memoryRagReadiness", "/api/agent/observability/memory-rag/readiness")
             .containsEntry("memoryRagDurableMemoryLifecycleContract", "/api/agent/observability/memory-rag/durable-memory-lifecycle-contract")
             .containsEntry("memoryRagEvalGateContract", "/api/agent/observability/memory-rag/eval-gate-contract")
@@ -877,6 +881,67 @@ class ObservabilityControllerTest {
         assertThat(overview.toString())
             .contains("top-tier", "memory-rag-learning", "mcp-interoperability")
             .doesNotContain("kube-manager.internal", "secret-password", "Bearer", "user-token", "/api/login", "/api/100002");
+    }
+
+    @Test
+    void advancedTechnologyAdoptionContract_shouldRequireAdminAndReturnUnboundContract() {
+        ResponseEntity<ApiResponse<AgentAdvancedTechnologyAdoptionContractResponse>> anonymous =
+            controller.advancedTechnologyAdoptionContract();
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentAdvancedTechnologyAdoptionContractResponse>> user =
+            controller.advancedTechnologyAdoptionContract();
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        userPermissionContext.unbind();
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentAdvancedTechnologyAdoptionContractResponse>> admin =
+            controller.advancedTechnologyAdoptionContract();
+
+        assertThat(admin.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(admin.getBody()).isNotNull();
+        AgentAdvancedTechnologyAdoptionContractResponse contract = admin.getBody().getData();
+        assertThat(contract.schemaVersion()).isEqualTo("agent-advanced-technology-adoption-contract.v1");
+        assertThat(contract.contractStatus()).isEqualTo("CONTRACT_DEFINED_NOT_BOUND");
+        assertThat(contract.phase1TopTierGoalPreserved()).isTrue();
+        assertThat(contract.javaSpringControlPlanePreserved()).isTrue();
+        assertThat(contract.phase2NimHpcSlurmBcmPaused()).isTrue();
+        assertThat(contract.runtimeUpgradePerformed()).isFalse();
+        assertThat(contract.dependencyUpgradePerformed()).isFalse();
+        assertThat(contract.externalAgentRuntimeBound()).isFalse();
+        assertThat(contract.mainlineTechnologies()).extracting(technology -> technology.get("id"))
+            .contains("java-spring-control-plane", "safe-tool-executor-boundary", "memory-rag-contract-stack");
+        assertThat(contract.compatibilityMatrix()).extracting(technology -> technology.get("id"))
+            .contains("spring-boot-4-framework-7", "responses-agents-runtime", "mcp-runtime-server");
+        assertThat(contract.adoptionGates()).extracting(gate -> gate.get("id"))
+            .contains("source-owned-contract", "eval-before-release", "phase2-domain-pause");
+        assertThat(contract.endpointMap())
+            .containsEntry("advancedTechnologyAdoptionContract", "/api/agent/observability/top-tier/advanced-technology-adoption-contract");
+        assertThat(contract.safety())
+            .containsEntry("adminOnly", true)
+            .containsEntry("readOnly", true)
+            .containsEntry("contractOnly", true)
+            .containsEntry("runtimeMutationAllowed", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("llmUsed", false)
+            .containsEntry("kubeManagerCalls", false)
+            .containsEntry("mcpToolCall", false)
+            .containsEntry("nimHpcSlurmBcmTouched", false);
+        assertThat(contract.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("containsAuthorizationHeader", false)
+            .containsEntry("containsToken", false)
+            .containsEntry("containsPassword", false);
+        assertThat(contract.toString())
+            .contains("java-spring-control-plane", "COMPATIBILITY_MATRIX", "source-owned-contract")
+            .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret");
     }
 
     @Test

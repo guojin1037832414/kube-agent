@@ -10,7 +10,63 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.62-1
+## Latest Phase 1 Core Memory - M5.63-1
+
+M5.63-1 adds the Phase 1 advanced technology adoption contract.
+
+Delivered:
+
+- Added `AgentAdvancedTechnologyAdoptionContractResponse`.
+- Added `AgentAdvancedTechnologyAdoptionContractService`.
+- Added admin-only `GET /api/agent/observability/top-tier/advanced-technology-adoption-contract`.
+- Updated top-tier readiness so it now includes an `advanced-technology-adoption` READY capability card and endpoint map entry.
+- Separated stable mainline technologies from compatibility-matrix technologies.
+
+Current state:
+
+- `schemaVersion=agent-advanced-technology-adoption-contract.v1`.
+- `contractStatus=CONTRACT_DEFINED_NOT_BOUND`.
+- `phase1TopTierGoalPreserved=true`.
+- `javaSpringControlPlanePreserved=true`.
+- `phase2NimHpcSlurmBcmPaused=true`.
+- `runtimeUpgradePerformed=false`.
+- `dependencyUpgradePerformed=false`.
+- `externalAgentRuntimeBound=false`.
+
+Stable mainline:
+
+- Java/Spring control plane.
+- Spring AI 1.1.x access layer.
+- `SafeToolExecutor` execution boundary.
+- Deterministic eval workbench.
+- Memory/RAG contract stack.
+- MCP manifest governance.
+- Trace/audit/replay observability.
+- kube-manager HTTP governance.
+
+Compatibility matrix:
+
+- Java 21 / 25 / 26 toolchains.
+- Spring Boot 4 / Spring Framework 7.
+- Spring AI 2.x.
+- Responses/Agents-style tools, tracing, handoffs, and guardrails.
+- Full MCP runtime server / broker.
+- OTel GenAI adapter.
+- A2A artifact provenance.
+- Hybrid RAG, GraphRAG, rerankers, and vector stores.
+
+Security boundary:
+
+- The endpoint is admin-only, read-only, contract-only, and fail-closed.
+- It does not upgrade dependencies, bind external Agent runtimes, call LLMs, execute Tools, invoke `SafeToolExecutor`, invoke HITL, call kube-manager, expose MCP runtime `tools/call`, write audit, issue durable receipts, write memory, execute retrieval, mutate prompts, or touch NIM / HPC / Slurm / BCM Phase 2 scope.
+
+Learning point: top-tier adoption is not blind framework stacking. The project keeps a stable Java/Spring control plane and moves new technologies through contract, identity, tenant/privacy, trace/audit/replay, eval, Vue read-model, and recovery gates before runtime binding.
+
+Latest verified command:
+
+- `mvn -q "-Dtest=AgentAdvancedTechnologyAdoptionContractServiceTest,AgentTopTierReadinessOverviewServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+## Previous Phase 1 Core Memory - M5.62-1
 
 M5.62-1 adds the Phase 1 Memory/RAG eval gate contract.
 

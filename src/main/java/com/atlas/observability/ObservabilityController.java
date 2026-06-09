@@ -42,6 +42,7 @@ public class ObservabilityController {
     private final AgentKubeManagerWriteReleaseGateContractService kubeManagerWriteReleaseGateContractService;
     private final AgentKubeManagerHttpOutletGovernanceWorkbenchOverviewService kubeManagerHttpOutletGovernanceWorkbenchOverviewService;
     private final AgentTopTierReadinessOverviewService topTierReadinessOverviewService;
+    private final AgentAdvancedTechnologyAdoptionContractService advancedTechnologyAdoptionContractService;
     private final AgentMemoryRagReadinessService memoryRagReadinessService;
     private final AgentMemoryRagCitationSourceContractService memoryRagCitationSourceContractService;
     private final AgentMemoryRagSourceEvidenceDigestContractService memoryRagSourceEvidenceDigestContractService;
@@ -72,6 +73,7 @@ public class ObservabilityController {
                                    AgentKubeManagerWriteReleaseGateContractService kubeManagerWriteReleaseGateContractService,
                                    AgentKubeManagerHttpOutletGovernanceWorkbenchOverviewService kubeManagerHttpOutletGovernanceWorkbenchOverviewService,
                                    AgentTopTierReadinessOverviewService topTierReadinessOverviewService,
+                                   AgentAdvancedTechnologyAdoptionContractService advancedTechnologyAdoptionContractService,
                                    AgentMemoryRagReadinessService memoryRagReadinessService,
                                    AgentMemoryRagCitationSourceContractService memoryRagCitationSourceContractService,
                                    AgentMemoryRagSourceEvidenceDigestContractService memoryRagSourceEvidenceDigestContractService,
@@ -101,6 +103,7 @@ public class ObservabilityController {
         this.kubeManagerWriteReleaseGateContractService = kubeManagerWriteReleaseGateContractService;
         this.kubeManagerHttpOutletGovernanceWorkbenchOverviewService = kubeManagerHttpOutletGovernanceWorkbenchOverviewService;
         this.topTierReadinessOverviewService = topTierReadinessOverviewService;
+        this.advancedTechnologyAdoptionContractService = advancedTechnologyAdoptionContractService;
         this.memoryRagReadinessService = memoryRagReadinessService;
         this.memoryRagCitationSourceContractService = memoryRagCitationSourceContractService;
         this.memoryRagSourceEvidenceDigestContractService = memoryRagSourceEvidenceDigestContractService;
@@ -132,6 +135,17 @@ public class ObservabilityController {
             return guard;
         }
         return ResponseEntity.ok(ApiResponse.ok(topTierReadinessOverviewService.overview()));
+    }
+
+    /** Describe how Phase 1 adopts advanced Agent technologies without binding new runtimes. */
+    @GetMapping("/top-tier/advanced-technology-adoption-contract")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentAdvancedTechnologyAdoptionContractResponse>> advancedTechnologyAdoptionContract() {
+        ResponseEntity<ApiResponse<AgentAdvancedTechnologyAdoptionContractResponse>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return ResponseEntity.ok(ApiResponse.ok(advancedTechnologyAdoptionContractService.contract()));
     }
 
     /** 构建 Memory/RAG 学习层就绪契约，不执行检索、不调用向量库。 */

@@ -56,8 +56,8 @@ class AgentTopTierReadinessOverviewServiceTest {
         assertThat(overview.toolExecutionTriggered()).isFalse();
         assertThat(overview.kubeManagerCalls()).isFalse();
         assertThat(overview.llmUsed()).isFalse();
-        assertThat(overview.capabilityCardCount()).isEqualTo(9);
-        assertThat(overview.readyCardCount()).isEqualTo(3);
+        assertThat(overview.capabilityCardCount()).isEqualTo(10);
+        assertThat(overview.readyCardCount()).isEqualTo(4);
         assertThat(overview.partialCardCount()).isEqualTo(4);
         assertThat(overview.blockedCardCount()).isEqualTo(1);
         assertThat(overview.phase2PausedCardCount()).isEqualTo(1);
@@ -66,6 +66,7 @@ class AgentTopTierReadinessOverviewServiceTest {
                 "identity-security",
                 "safe-tool-execution",
                 "trace-audit-replay",
+                "advanced-technology-adoption",
                 "eval-release-gates",
                 "kube-manager-http-governance",
                 "mcp-interoperability",
@@ -88,6 +89,7 @@ class AgentTopTierReadinessOverviewServiceTest {
         );
         assertThat(overview.recommendedBuildOrder()).containsExactly(
             "wire-vue-top-tier-readiness-overview",
+            "wire-vue-advanced-technology-adoption-contract",
             "populate-reviewed-redacted-eval-trace-evidence",
             "promote-eval-gate-bundle-from-evidence-only-to-reviewed-blocking",
             "bind-memory-rag-eval-gate-before-retrieval-runtime",
@@ -97,6 +99,7 @@ class AgentTopTierReadinessOverviewServiceTest {
         );
         assertThat(overview.endpointMap())
             .containsEntry("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview")
+            .containsEntry("advancedTechnologyAdoptionContract", "/api/agent/observability/top-tier/advanced-technology-adoption-contract")
             .containsEntry("mcpGovernanceOverview", "/api/agent/mcp/governance/overview")
             .containsEntry("memoryRagCitationSourceContract", "/api/agent/observability/memory-rag/citation-source-contract")
             .containsEntry("memoryRagSourceEvidenceDigestContract", "/api/agent/observability/memory-rag/source-evidence-digest-contract")

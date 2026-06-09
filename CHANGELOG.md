@@ -6,6 +6,23 @@
 
 ---
 
+## [M5.63-1] - Advanced technology adoption contract
+
+**Delivery**: Added an admin-only top-tier advanced-technology adoption contract for Phase 1.
+**Changes**
+- Added `AgentAdvancedTechnologyAdoptionContractResponse`.
+- Added `AgentAdvancedTechnologyAdoptionContractService`.
+- Added `GET /api/agent/observability/top-tier/advanced-technology-adoption-contract`.
+- Updated the top-tier readiness overview with an `advanced-technology-adoption` capability card and endpoint map entry.
+- Separated stable mainline technologies from compatibility-matrix technologies for Java/Spring, Spring AI, Responses/Agents-style runtime, MCP runtime, OTel GenAI, A2A, and advanced RAG.
+- Added service, controller, top-tier overview, source-contract, and MockMvc security coverage.
+**Verification**
+- `mvn -q "-Dtest=AgentAdvancedTechnologyAdoptionContractServiceTest,AgentTopTierReadinessOverviewServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed during implementation.
+**Security**
+- `contractStatus=CONTRACT_DEFINED_NOT_BOUND`.
+- `runtimeUpgradePerformed=false`, `dependencyUpgradePerformed=false`, and `externalAgentRuntimeBound=false`.
+- No dependency upgrade, runtime binding, Tool execution, `SafeToolExecutor` invocation, HITL invocation, kube-manager call, MCP runtime `tools/call`, LLM call, external call, audit write, durable receipt issuance, memory write, retrieval execution, prompt mutation, or NIM / HPC / Slurm / BCM Phase 2 work is added.
+
 ## [M5.62-1] - Memory/RAG eval gate contract
 
 **Delivery**: Added an admin-only Memory/RAG eval gate contract before any retrieval evidence can influence prompts.

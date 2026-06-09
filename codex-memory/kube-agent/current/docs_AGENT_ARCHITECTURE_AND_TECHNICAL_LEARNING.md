@@ -2,6 +2,39 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-09 M5.63 Advanced Technology Adoption Contract
+
+M5.63 adds a top-tier adoption gate for the owner's latest requirement: Phase 1 must stay top-tier while adopting the newest Agent engineering direction.
+
+```text
+advanced technology request
+        |
+        +-- stable mainline: Java/Spring control plane, SafeToolExecutor,
+        |    trace/audit/replay, eval workbench, Memory/RAG contracts,
+        |    MCP governance, kube-manager governance
+        |
+        +-- compatibility matrix: Java 21/25/26, Boot 4, Spring AI 2,
+             Responses/Agents runtime mapping, MCP runtime server,
+             OTel GenAI, A2A, GraphRAG/rerankers/vector stores
+```
+
+Endpoint:
+
+```text
+/api/agent/observability/top-tier/advanced-technology-adoption-contract
+```
+
+Key design:
+- `AgentAdvancedTechnologyAdoptionContractResponse` publishes `schemaVersion=agent-advanced-technology-adoption-contract.v1` and `contractStatus=CONTRACT_DEFINED_NOT_BOUND`.
+- The contract explicitly preserves Java/Spring as the Phase 1 control plane, while putting Java 21/25/26, Spring Boot 4, Spring AI 2, MCP runtime, OTel GenAI, A2A, and advanced retrieval into a compatibility matrix.
+- The top-tier readiness overview now has an `advanced-technology-adoption` READY card, increasing the capability map from 9 to 10 cards.
+- Adoption gates require source-owned contracts, build/test/recovery, identity/tenant/privacy proof, safe execution boundaries, trace/audit/replay, eval-before-release, Vue read-model-first, and Phase 2 domain pause.
+- The endpoint does not upgrade dependencies, bind external Agent runtimes, call LLMs, execute Tools, call kube-manager, mutate audit/memory, run retrieval, or open MCP `tools/call`.
+
+Learning point: 顶级 Agent 的先进性不是“把所有最新版本直接压进主线”。真正成熟的路线是 stable mainline + compatibility matrix。能被测试、审计、回放、恢复的能力先进入主线；仍在演进或需要外部运行时的技术先进入矩阵，等安全证据和评测证据齐全后再绑定。
+
+Technology point: Java/Spring 仍然是当前后端主语言的先进选择，因为它承载的是 Agent 控制面：身份、租户、安全执行、审计、评测、恢复和长期维护。OpenAI Responses/Agents-style tools/tracing/handoffs/guardrails、MCP runtime、OTel GenAI、A2A、GraphRAG 等都进入一期目标，但必须通过本项目自己的 contract/eval/audit gates。
+
 ## 2026-06-09 M5.62 Memory/RAG Eval Gate Contract
 
 M5.62 defines the eval gate evidence that future Memory/RAG retrieval must pass before memory can influence prompts.

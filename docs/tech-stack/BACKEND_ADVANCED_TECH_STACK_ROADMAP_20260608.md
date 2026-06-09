@@ -9,6 +9,30 @@
 - 供应链、CI、SBOM、质量门禁进入工程默认路径；
 - Java / Spring / Agent 框架升级以兼容性矩阵推进，不用不可构建的版本号伪装先进。
 
+## 2026-06-09 M5.63 Advanced Technology Adoption Gate
+
+M5.63 makes the advanced-technology strategy queryable from the backend:
+
+```text
+GET /api/agent/observability/top-tier/advanced-technology-adoption-contract
+```
+
+The key decision is to keep two lanes:
+
+- Stable mainline: Java 17, Spring Boot 3.5.x, Spring AI 1.1.x, SafeToolExecutor, deterministic eval, trace/audit/replay, Memory/RAG contracts, MCP governance, kube-manager governance.
+- Compatibility matrix: Java 21/25/26, Spring Boot 4, Spring AI 2, Responses/Agents runtime mapping, full MCP runtime, OTel GenAI semantic conventions, A2A, GraphRAG, rerankers, and vector stores.
+
+The backend now exposes this distinction as a contract instead of burying it in docs. That matters because "latest technology" is now a gated engineering policy:
+
+- no blind major-version upgrades;
+- no prompt-only security;
+- no external protocol authority bypass;
+- no vector-first RAG before citations, digests, lifecycle, and eval gates;
+- no Vue runtime control before backend read-model evidence;
+- no Phase 2 NIM / HPC / Slurm / BCM scope creep.
+
+Teaching conclusion: Java/Spring is not old-fashioned in this project; it is the control-plane spine. The advanced work is to integrate new Agent protocols and runtimes through contracts, evals, audit, replay, and governance, not to replace the control plane with an unverified runtime stack.
+
 ## 2026-06-09 M5.62 Eval-Gate-Before-Retrieval Rule
 
 M5.62 refines the Memory/RAG roadmap again: future retrieval must be eval-gated before it is runtime-bound.
