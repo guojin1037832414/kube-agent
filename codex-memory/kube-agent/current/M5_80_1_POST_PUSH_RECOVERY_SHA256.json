@@ -1,0 +1,46 @@
+﻿{
+    "project":  "kube-agent",
+    "wave":  "M5.80-1",
+    "title":  "Advanced technology compatibility matrix evidence readiness post-push checkpoint",
+    "implementationCommit":  "626d9eb",
+    "pushed":  true,
+    "generatedAt":  "2026-06-10T01:48:56.9542621+08:00",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "files":  [
+                  {
+                      "path":  "codex-memory/kube-agent/current/RECOVERY_STATUS.md",
+                      "sha256":  "9C82CDED35F03CEB997E0C77BED581F38BB98789F5ECCC79F02B07D5D11438D3",
+                      "bytes":  85966
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/M5_80_1_WORKSPACE_RECOVERY_SHA256.json",
+                      "sha256":  "F7CCBCB92A5F11B26F7E1EB59A1DD1574590E6DBB96FF2F4E081D3F9A33F040D",
+                      "bytes":  5558
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_M5_80_ADVANCED_TECHNOLOGY_COMPATIBILITY_MATRIX_EVIDENCE_READINESS_20260610.md",
+                      "sha256":  "49B6AFE707DE7D9EF13EB775BB719344A33F8B35015216D620EFAECDD86F4CED",
+                      "bytes":  7407
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "AE22FCC76562B3EB5E6C880797DA13010FA0D12C72A7588C568FF0AAE5E89EEE",
+                      "bytes":  447054
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "ED0A4ACFDAD8FC34DF89F13079C21B44B949D9198D08FA160DCD84D459C6427B",
+                      "bytes":  190787
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "C135376334791FAE9BE8CA6286512DCD8A6AC7769C4AE4CCB3C65F617E12A5A9",
+                      "bytes":  111173
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/CHANGELOG.md",
+                      "sha256":  "C5BB5ECF60E81DA61D79DC243A6CACE5CB6E31326D3C1D6A4F32C230F297AEDF",
+                      "bytes":  385812
+                  }
+              ]
+}
