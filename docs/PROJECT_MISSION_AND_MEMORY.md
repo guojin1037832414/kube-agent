@@ -10,7 +10,33 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.42-1
+## Latest Phase 1 Core Memory - M5.43-1
+
+M5.43-1 adds an admin-only eval workbench capability manifest for future `vue-kube-manager` integration.
+
+Delivered:
+
+- Added `AgentEvalWorkbenchCapability`.
+- Added `AgentEvalWorkbenchCapabilitiesResponse`.
+- Added `AgentEvalWorkbenchCapabilitiesService`.
+- Added admin-only `GET /api/agent/observability/eval/workbench/capabilities`.
+- The manifest describes replay/eval/trace-set promotion capabilities, response schema versions, recommended workflow order, and safety policy flags.
+
+Security boundary:
+
+- The endpoint is admin-only at URL and method levels.
+- It is metadata-only and never queries audit storage, runs eval, executes Tool code, calls kube-manager, or mutates `observability/eval-trace-sets.json`.
+- No raw principal, organization, conversation, kube-manager endpoint, reason text, or parameter values are exposed.
+- No LLM, Tool execution, kube-manager call, network call, durable write, raw audit export, or runtime catalog mutation is added.
+- NIM / HPC / Slurm / BCM remain Phase 2 paused scope.
+
+Learning point: top-tier Agent frontends should discover backend workflow capabilities from a typed manifest instead of hard-coding endpoint lists and hidden release-state assumptions.
+
+Latest verified command:
+
+- `mvn -q "-Dtest=AgentEvalWorkbenchCapabilitiesServiceTest,AgentEvalTraceSetPromotionWorkflowServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+## Previous Phase 1 Core Memory - M5.42-1
 
 M5.42-1 adds a read-only promotion workflow artifact for the future Vue eval workbench. It composes M5.40 candidate discovery, M5.39 curation review, and M5.41 catalog patch proposal into one typed response.
 

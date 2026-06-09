@@ -33,6 +33,8 @@ class ObservabilityControllerTest {
         new AgentEvalTraceSetCandidateDiscoveryService(auditRecorder, evalTraceSetCatalogService);
     private final AgentEvalTraceSetPromotionWorkflowService traceSetPromotionWorkflowService =
         new AgentEvalTraceSetPromotionWorkflowService(traceSetCandidateDiscoveryService, evalTraceSetCatalogService);
+    private final AgentEvalWorkbenchCapabilitiesService evalWorkbenchCapabilitiesService =
+        new AgentEvalWorkbenchCapabilitiesService();
     private final ObservabilityController controller = new ObservabilityController(
         new AgentMetricsService(new SimpleMeterRegistry()),
         auditRecorder,
@@ -43,6 +45,7 @@ class ObservabilityControllerTest {
         evalTraceSetCatalogService,
         traceSetCandidateDiscoveryService,
         traceSetPromotionWorkflowService,
+        evalWorkbenchCapabilitiesService,
         new AgentPrincipalResolver(userPermissionContext)
     );
 
@@ -674,6 +677,54 @@ class ObservabilityControllerTest {
             .contains("trc_eval_gate")
             .doesNotContain("conv-sensitive", "user-sensitive", "org-sensitive", "secret-token-value", "/api/org-sensitive")
             .doesNotContain("reports=", "replay=");
+    }
+
+    @Test
+    void evalWorkbenchCapabilities_shouldRequireAdminUser() {
+        ResponseEntity<ApiResponse<AgentEvalWorkbenchCapabilitiesResponse>> anonymous =
+            controller.evalWorkbenchCapabilities();
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentEvalWorkbenchCapabilitiesResponse>> user =
+            controller.evalWorkbenchCapabilities();
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void evalWorkbenchCapabilities_shouldReturnFrontendManifestForAdminUser() {
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentEvalWorkbenchCapabilitiesResponse>> response =
+            controller.evalWorkbenchCapabilities();
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        AgentEvalWorkbenchCapabilitiesResponse capabilities = response.getBody().getData();
+        assertThat(capabilities.schemaVersion()).isEqualTo("agent-eval-workbench-capabilities.v1");
+        assertThat(capabilities.capabilities()).extracting(AgentEvalWorkbenchCapability::id)
+            .contains("trace-set-promotion-workflow", "trace-set-gate-bundle", "trace-replay-timeline");
+        assertThat(capabilities.recommendedWorkflow())
+            .contains("trace-set-promotion-workflow", "trace-set-gate-bundle");
+        assertThat(capabilities.workbenchPolicy())
+            .containsEntry("frontendTarget", "vue-kube-manager eval workbench")
+            .containsEntry("runtimeCatalogWrite", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("kubeManagerCalls", false);
+        assertThat(capabilities.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("llmUsed", false)
+            .containsEntry("externalCalls", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("kubeManagerCalls", false);
+        assertThat(capabilities.toString())
+            .contains("promotion-workflow", "agent-eval-trace-set-promotion-workflow.v1")
+            .doesNotContain("secret-token-value", "conv-sensitive", "user-sensitive", "org-sensitive", "/api/org-sensitive");
     }
 
     @Test

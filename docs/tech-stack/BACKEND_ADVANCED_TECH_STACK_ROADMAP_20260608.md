@@ -444,6 +444,17 @@ M5.40-1 adds the candidate discovery step before M5.39 curation review:
 
 Technology judgment: this gives eval operations a real evidence workflow without granting new authority. Discovery is read-only and advisory, curation review is deterministic and review-only, and catalog promotion still requires a Git-reviewed patch. This separation is the mature Agent pattern for moving from observability data to release-blocking evidence.
 
+## M5.43-1 Update - Eval Workbench Capability Manifest
+
+M5.43-1 adds a self-describing backend manifest for future `vue-kube-manager` eval workbench screens:
+
+- `GET /api/agent/observability/eval/workbench/capabilities` returns `AgentEvalWorkbenchCapabilitiesResponse`.
+- Capabilities include trace-set catalog, candidate discovery, curation review, catalog patch proposal, promotion workflow, gate bundle, replay timeline, and trace eval report.
+- The manifest exposes response schema versions, endpoint templates, recommended workflow order, and safety flags.
+- It stays metadata-only: no audit query, no eval run, no Tool execution, no kube-manager call, no catalog mutation.
+
+Technology judgment: advanced Agent frontends should be contract-driven. A capability manifest lets the Vue workbench evolve with backend schema and governance rules instead of hard-coding hidden workflow assumptions.
+
 ## M5.42-1 Update - Promotion Workflow Artifact
 
 M5.42-1 adds the backend contract a future Vue eval workbench needs for evidence promotion:

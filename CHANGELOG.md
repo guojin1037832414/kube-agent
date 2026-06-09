@@ -6,6 +6,23 @@
 
 ---
 
+## [M5.43-1] - Eval workbench capabilities manifest
+
+**Delivery**: Added an admin-only capability manifest for future `vue-kube-manager` eval workbench integration.
+**Changes**
+- Added `AgentEvalWorkbenchCapability`.
+- Added `AgentEvalWorkbenchCapabilitiesResponse`.
+- Added `AgentEvalWorkbenchCapabilitiesService`.
+- Added admin-only `GET /api/agent/observability/eval/workbench/capabilities`.
+- The manifest describes replay/eval/trace-set promotion capabilities, response schema versions, recommended workflow order, and safety policy flags.
+- Added service, controller, source-contract, and MockMvc security coverage.
+**Verification**
+- `mvn -q "-Dtest=AgentEvalWorkbenchCapabilitiesServiceTest,AgentEvalTraceSetPromotionWorkflowServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed.
+**Security**
+- The manifest is metadata-only and never queries audit storage, runs eval, executes Tool code, calls kube-manager, or mutates `observability/eval-trace-sets.json`.
+- The response remains deterministic, redacted-only, `llmUsed=false`, `externalCalls=false`, `toolExecution=false`, and `kubeManagerCalls=false`.
+- This slice adds no kube-manager write/create/delete/state-changing behavior and does not reopen NIM/HPC/Slurm/BCM scope.
+
 ## [M5.42-1] - Eval trace-set promotion workflow
 
 **Delivery**: Added a read-only promotion workflow artifact that composes candidate discovery, curation review, and catalog patch proposal for future Vue eval workbench integration.

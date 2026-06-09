@@ -2,6 +2,29 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-09 M5.43 Eval Workbench Capabilities 能力清单
+
+M5.43 给未来 `vue-kube-manager` eval workbench 增加一个后端自描述能力清单。它回答的问题不是“现在执行哪条 trace”，而是“这个后端工作台支持哪些安全能力、每个能力的 endpoint 和 schemaVersion 是什么、推荐 UI 流程怎么走”。
+
+```text
+GET /api/agent/observability/eval/workbench/capabilities
+    |
+    v
+AgentEvalWorkbenchCapabilitiesResponse
+    |
+    | capabilities + recommendedWorkflow + safety policy
+    v
+Vue eval workbench navigation / buttons / drill-down
+```
+
+关键设计：
+- capability manifest 是 metadata-only，不读取审计、不运行 eval、不执行 Tool、不调用 kube-manager。
+- 每个 capability 都声明 `adminOnly`、`readOnly`、`mutatesCatalog=false`、`toolExecution=false`、`kubeManagerCalls=false`。
+- manifest 包含 promotion workflow、patch proposal、gate bundle、replay timeline、eval report 等 schema。
+- 推荐流程是 catalog -> promotion workflow -> patch proposal -> gate bundle -> replay timeline -> eval report。
+
+学习重点：顶级 Agent 的前端不应该把后端 release/eval 流程硬编码在页面里。后端提供 capability manifest，前端按 manifest 渲染工作台，这样 schemaVersion、安全策略和推荐流程可以作为契约演进。
+
 ## 2026-06-09 M5.42 Trace-Set Promotion Workflow 晋升工作流
 
 M5.42 给未来 Vue eval workbench 提供一个 typed orchestration artifact。前端不需要自己依次调用 candidates、curation-review、catalog-patch-proposal 再猜最终状态；后端直接返回完整的候选发现、推荐 trace 选择、复核结果和补丁提案。

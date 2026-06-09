@@ -42,6 +42,7 @@ public class ObservabilityController {
     private final AgentEvalTraceSetCatalogService evalTraceSetCatalogService;
     private final AgentEvalTraceSetCandidateDiscoveryService traceSetCandidateDiscoveryService;
     private final AgentEvalTraceSetPromotionWorkflowService traceSetPromotionWorkflowService;
+    private final AgentEvalWorkbenchCapabilitiesService evalWorkbenchCapabilitiesService;
     private final AgentPrincipalResolver principalResolver;
 
     public ObservabilityController(AgentMetricsService metricsService,
@@ -53,6 +54,7 @@ public class ObservabilityController {
                                    AgentEvalTraceSetCatalogService evalTraceSetCatalogService,
                                    AgentEvalTraceSetCandidateDiscoveryService traceSetCandidateDiscoveryService,
                                    AgentEvalTraceSetPromotionWorkflowService traceSetPromotionWorkflowService,
+                                   AgentEvalWorkbenchCapabilitiesService evalWorkbenchCapabilitiesService,
                                    AgentPrincipalResolver principalResolver) {
         this.metricsService = metricsService;
         this.auditSnapshotProvider = auditSnapshotProvider;
@@ -63,6 +65,7 @@ public class ObservabilityController {
         this.evalTraceSetCatalogService = evalTraceSetCatalogService;
         this.traceSetCandidateDiscoveryService = traceSetCandidateDiscoveryService;
         this.traceSetPromotionWorkflowService = traceSetPromotionWorkflowService;
+        this.evalWorkbenchCapabilitiesService = evalWorkbenchCapabilitiesService;
         this.principalResolver = principalResolver;
     }
 
@@ -215,6 +218,17 @@ public class ObservabilityController {
             .map(response -> ResponseEntity.ok(ApiResponse.ok(response)))
             .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(ApiResponse.fail("未知的 Agent eval suite: " + suiteId)));
+    }
+
+    /** Describe stable backend capabilities for the future Vue eval workbench. */
+    @GetMapping("/eval/workbench/capabilities")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentEvalWorkbenchCapabilitiesResponse>> evalWorkbenchCapabilities() {
+        ResponseEntity<ApiResponse<AgentEvalWorkbenchCapabilitiesResponse>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return ResponseEntity.ok(ApiResponse.ok(evalWorkbenchCapabilitiesService.capabilities()));
     }
 
     /** List versioned golden/red-team trace sets that bind curated evidence anchors to eval suites. */

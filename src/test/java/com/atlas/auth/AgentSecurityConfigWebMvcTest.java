@@ -115,6 +115,10 @@ class AgentSecurityConfigWebMvcTest {
                 .content("{\"traceIds\":[\"trc_123\"]}"))
             .andExpect(status().isForbidden());
 
+        mockMvc.perform(get("/api/agent/observability/eval/workbench/capabilities")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
+            .andExpect(status().isForbidden());
+
         mockMvc.perform(get("/api/agent/observability/eval/trace-sets")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
             .andExpect(status().isForbidden());
@@ -199,6 +203,10 @@ class AgentSecurityConfigWebMvcTest {
         mockMvc.perform(post("/api/agent/observability/eval/suites/core-safety-smoke/gate")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token")
                 .contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/agent/observability/eval/workbench/capabilities")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token"))
             .andExpect(status().isOk());
 
         mockMvc.perform(get("/api/agent/observability/eval/trace-sets")
@@ -408,6 +416,11 @@ class AgentSecurityConfigWebMvcTest {
         @PostMapping("/api/agent/observability/eval/suites/{id}/gate")
         String observabilityEvalSuiteGate(@PathVariable String id, @RequestBody(required = false) String body) {
             return id + body;
+        }
+
+        @GetMapping("/api/agent/observability/eval/workbench/capabilities")
+        String observabilityEvalWorkbenchCapabilities() {
+            return "eval-workbench-capabilities";
         }
 
         @GetMapping("/api/agent/observability/eval/trace-sets")
