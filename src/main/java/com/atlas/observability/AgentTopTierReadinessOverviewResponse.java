@@ -304,6 +304,7 @@ public record AgentTopTierReadinessOverviewResponse(
             "wire-vue-top-tier-readiness-overview",
             "wire-vue-advanced-technology-adoption-contract",
             "wire-vue-phase1-execution-roadmap",
+            "wire-vue-readiness-control-plane",
             "populate-reviewed-redacted-eval-trace-evidence",
             "promote-eval-gate-bundle-from-evidence-only-to-reviewed-blocking",
             "bind-memory-rag-eval-gate-before-retrieval-runtime",
@@ -329,6 +330,7 @@ public record AgentTopTierReadinessOverviewResponse(
         endpoints.put("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview");
         endpoints.put("advancedTechnologyAdoptionContract", "/api/agent/observability/top-tier/advanced-technology-adoption-contract");
         endpoints.put("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap");
+        endpoints.put("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane");
         endpoints.put("kubeManagerGovernanceOverview", "/api/agent/observability/kube-manager/http-outlet/governance-workbench/overview");
         endpoints.put("evalWorkbenchCapabilities", "/api/agent/observability/eval/workbench/capabilities");
         endpoints.put("evalWorkbenchOverview", "/api/agent/observability/eval/workbench/overview");

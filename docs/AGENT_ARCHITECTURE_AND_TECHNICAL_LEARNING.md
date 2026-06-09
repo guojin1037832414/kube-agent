@@ -2,6 +2,37 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-09 M5.65 Vue Readiness Control Plane Contract
+
+M5.65 implements the first M5.64 roadmap slice as a backend-owned Vue binding contract. It gives future `vue-kube-manager` pages a single control-plane read model for what can be rendered and what must remain absent.
+
+```text
+vue-readiness-control-plane
+        |
+        +-- dashboards: readiness, technology, roadmap, kube governance,
+        |    Memory/RAG, eval workbench, MCP governance
+        |
+        +-- required API bindings
+        |
+        +-- operator state rendering rules
+        |
+        +-- forbidden UI actions
+```
+
+Endpoint:
+
+```text
+/api/agent/observability/top-tier/vue-readiness-control-plane
+```
+
+Key design:
+- `AgentVueReadinessControlPlaneResponse` publishes `schemaVersion=agent-vue-readiness-control-plane.v1` and `controlPlaneStatus=BACKEND_CONTRACT_READY_FOR_VUE_BINDING`.
+- It exposes seven dashboards and ten required API bindings, all read-only.
+- It defines rendering states for `READY`, `PARTIAL`, `BLOCKED`, `CONTRACT_DEFINED_NOT_BOUND`, and `PHASE2_PAUSED`.
+- It forbids UI controls for write retry, kube-manager state-changing calls, MCP `tools/call`, retrieval prompt influence, eval catalog mutation, CI blocking switches, durable receipts, HITL triggers, dependency upgrades, and Phase 2 reopening.
+
+Learning point: 顶级 Agent 的 UI 不是按钮集合，而是 operator control plane。前端应先消费后端拥有的 read model，再考虑控制动作。M5.65 把“什么能显示、什么不能显示”变成后端契约，避免 Vue 页面自行推断权限或制造误导性按钮。
+
 ## 2026-06-09 M5.64 Phase 1 Execution Roadmap Contract
 
 M5.64 adds the backend-owned roadmap for the next Phase 1 execution order. It answers a practical top-tier Agent question: after accepting all advanced technologies into scope, which ones are allowed to become runtime capabilities first?

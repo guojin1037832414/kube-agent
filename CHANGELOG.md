@@ -6,6 +6,24 @@
 
 ---
 
+## [M5.65-1] - Vue readiness control plane contract
+
+**Delivery**: Added an admin-only Vue readiness control-plane binding contract for Phase 1 top-tier Agent dashboards.
+**Changes**
+- Added `AgentVueReadinessControlPlaneResponse`.
+- Added `AgentVueReadinessControlPlaneService`.
+- Added `GET /api/agent/observability/top-tier/vue-readiness-control-plane`.
+- Published seven Vue dashboard contracts: top-tier command center, advanced technology adoption, Phase 1 roadmap, kube-manager governance, Memory/RAG readiness, eval workbench, and MCP governance.
+- Published required API bindings, operator state rendering rules, forbidden UI actions, and Vue build order.
+- Updated top-tier readiness, advanced technology adoption, and Phase 1 roadmap endpoint maps to include the new control plane.
+- Added service, controller, source-contract, top-tier, roadmap, adoption contract, and MockMvc security coverage.
+**Verification**
+- `mvn -q "-Dtest=AgentVueReadinessControlPlaneServiceTest,AgentPhase1ExecutionRoadmapServiceTest,AgentAdvancedTechnologyAdoptionContractServiceTest,AgentTopTierReadinessOverviewServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed during implementation.
+**Security**
+- `controlPlaneStatus=BACKEND_CONTRACT_READY_FOR_VUE_BINDING`.
+- `vueBindingReady=true`, `runtimeControlAllowed=false`, and `phase2NimHpcSlurmBcmPaused=true`.
+- No frontend mutation, runtime control, Tool execution, `SafeToolExecutor` invocation, HITL invocation, kube-manager call, MCP runtime `tools/call`, LLM call, external call, audit write, durable receipt issuance, memory write, retrieval execution, dependency upgrade, or NIM / HPC / Slurm / BCM Phase 2 work is added.
+
 ## [M5.64-1] - Phase 1 execution roadmap contract
 
 **Delivery**: Added an admin-only Phase 1 execution roadmap contract for the top-tier Agent goal.

@@ -9,6 +9,23 @@
 - 供应链、CI、SBOM、质量门禁进入工程默认路径；
 - Java / Spring / Agent 框架升级以兼容性矩阵推进，不用不可构建的版本号伪装先进。
 
+## 2026-06-09 M5.65 Vue Readiness Control Plane Gate
+
+M5.65 advances the first M5.64 roadmap step with:
+
+```text
+GET /api/agent/observability/top-tier/vue-readiness-control-plane
+```
+
+The advanced technology stack now has a frontend binding contract:
+
+- Vue should render backend-owned read models before any runtime control.
+- Each dashboard must have explicit primary endpoint and render fields.
+- Operator states must distinguish ready, partial, blocked, contract-defined-not-bound, and Phase 2 paused.
+- The UI must not expose write retry toggles, state-changing kube-manager calls, MCP runtime `tools/call`, retrieval prompt influence, CI blocking switches, HITL triggers, durable receipt issuance, or dependency upgrades.
+
+Technology judgment: modern Agent UX is not a generic admin panel. It is a governed operator control plane. The backend owns the state model and safety boundary; Vue renders evidence and blockers first.
+
 ## 2026-06-09 M5.64 Phase 1 Execution Roadmap Gate
 
 M5.64 adds the backend-owned roadmap endpoint:

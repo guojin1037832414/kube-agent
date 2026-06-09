@@ -125,6 +125,10 @@ class AgentSecurityConfigWebMvcTest {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
             .andExpect(status().isForbidden());
 
+        mockMvc.perform(get("/api/agent/observability/top-tier/vue-readiness-control-plane")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
+            .andExpect(status().isForbidden());
+
         mockMvc.perform(get("/api/agent/observability/memory-rag/readiness")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
             .andExpect(status().isForbidden());
@@ -286,6 +290,10 @@ class AgentSecurityConfigWebMvcTest {
             .andExpect(status().isOk());
 
         mockMvc.perform(get("/api/agent/observability/top-tier/phase1-execution-roadmap")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token"))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/agent/observability/top-tier/vue-readiness-control-plane")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token"))
             .andExpect(status().isOk());
 
@@ -621,6 +629,11 @@ class AgentSecurityConfigWebMvcTest {
         @GetMapping("/api/agent/observability/top-tier/phase1-execution-roadmap")
         String observabilityPhase1ExecutionRoadmap() {
             return "phase1-execution-roadmap";
+        }
+
+        @GetMapping("/api/agent/observability/top-tier/vue-readiness-control-plane")
+        String observabilityVueReadinessControlPlane() {
+            return "vue-readiness-control-plane";
         }
 
         @GetMapping("/api/agent/observability/memory-rag/readiness")

@@ -64,6 +64,7 @@ class AgentPhase1ExecutionRoadmapServiceTest {
                 "top-tier-overview",
                 "technology-adoption",
                 "phase1-roadmap",
+                "vue-readiness-control-plane",
                 "kube-manager-governance",
                 "memory-rag-readiness",
                 "eval-workbench",
@@ -79,6 +80,7 @@ class AgentPhase1ExecutionRoadmapServiceTest {
             );
         assertThat(roadmap.endpointMap())
             .containsEntry("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap")
+            .containsEntry("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane")
             .containsEntry("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview")
             .containsEntry("advancedTechnologyAdoptionContract", "/api/agent/observability/top-tier/advanced-technology-adoption-contract")
             .containsEntry("memoryRagEvalGateContract", "/api/agent/observability/memory-rag/eval-gate-contract");

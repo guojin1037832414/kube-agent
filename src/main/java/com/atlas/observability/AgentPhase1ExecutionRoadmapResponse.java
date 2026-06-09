@@ -116,6 +116,7 @@ public record AgentPhase1ExecutionRoadmapResponse(
             vueTarget("top-tier-overview", "/api/agent/observability/top-tier/readiness-overview"),
             vueTarget("technology-adoption", "/api/agent/observability/top-tier/advanced-technology-adoption-contract"),
             vueTarget("phase1-roadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap"),
+            vueTarget("vue-readiness-control-plane", "/api/agent/observability/top-tier/vue-readiness-control-plane"),
             vueTarget("kube-manager-governance", "/api/agent/observability/kube-manager/http-outlet/governance-workbench/overview"),
             vueTarget("memory-rag-readiness", "/api/agent/observability/memory-rag/readiness"),
             vueTarget("eval-workbench", "/api/agent/observability/eval/workbench/overview"),
@@ -138,6 +139,7 @@ public record AgentPhase1ExecutionRoadmapResponse(
     private static Map<String, Object> buildEndpointMap() {
         Map<String, Object> endpoints = new LinkedHashMap<>();
         endpoints.put("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap");
+        endpoints.put("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane");
         endpoints.put("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview");
         endpoints.put("advancedTechnologyAdoptionContract", "/api/agent/observability/top-tier/advanced-technology-adoption-contract");
         endpoints.put("kubeManagerGovernanceOverview", "/api/agent/observability/kube-manager/http-outlet/governance-workbench/overview");

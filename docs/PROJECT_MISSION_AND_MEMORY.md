@@ -10,7 +10,40 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.64-1
+## Latest Phase 1 Core Memory - M5.65-1
+
+M5.65-1 adds the Vue readiness control-plane contract.
+
+Delivered:
+
+- Added `AgentVueReadinessControlPlaneResponse`.
+- Added `AgentVueReadinessControlPlaneService`.
+- Added admin-only `GET /api/agent/observability/top-tier/vue-readiness-control-plane`.
+- Updated top-tier readiness, advanced technology adoption, and Phase 1 roadmap endpoint maps to include the new control plane.
+- Added service, controller, source-contract, top-tier, roadmap, adoption contract, and MockMvc security coverage.
+
+Current state:
+
+- `schemaVersion=agent-vue-readiness-control-plane.v1`.
+- `controlPlaneStatus=BACKEND_CONTRACT_READY_FOR_VUE_BINDING`.
+- `phase1TopTierGoalPreserved=true`.
+- `phase2NimHpcSlurmBcmPaused=true`.
+- `vueBindingReady=true`.
+- `runtimeControlAllowed=false`.
+- `dashboardCount=7`.
+
+Security boundary:
+
+- The endpoint is admin-only, read-only, Vue-contract-only, and fail-closed.
+- It does not mutate frontend state, add runtime control buttons, execute Tools, invoke `SafeToolExecutor`, invoke HITL, call kube-manager, expose MCP runtime `tools/call`, call LLMs/external services, write audit, issue durable receipts, write memory, execute retrieval, upgrade dependencies, or touch NIM / HPC / Slurm / BCM Phase 2 scope.
+
+Learning point: Phase 1 UI should be a governed operator control plane, not a scattered set of buttons. M5.65 tells Vue which backend read models to render and which runtime controls must remain absent.
+
+Latest verified command:
+
+- `mvn -q "-Dtest=AgentVueReadinessControlPlaneServiceTest,AgentPhase1ExecutionRoadmapServiceTest,AgentAdvancedTechnologyAdoptionContractServiceTest,AgentTopTierReadinessOverviewServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+## Previous Phase 1 Core Memory - M5.64-1
 
 M5.64-1 adds the Phase 1 execution roadmap contract.
 

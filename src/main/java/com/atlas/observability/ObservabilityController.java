@@ -44,6 +44,7 @@ public class ObservabilityController {
     private final AgentTopTierReadinessOverviewService topTierReadinessOverviewService;
     private final AgentAdvancedTechnologyAdoptionContractService advancedTechnologyAdoptionContractService;
     private final AgentPhase1ExecutionRoadmapService phase1ExecutionRoadmapService;
+    private final AgentVueReadinessControlPlaneService vueReadinessControlPlaneService;
     private final AgentMemoryRagReadinessService memoryRagReadinessService;
     private final AgentMemoryRagCitationSourceContractService memoryRagCitationSourceContractService;
     private final AgentMemoryRagSourceEvidenceDigestContractService memoryRagSourceEvidenceDigestContractService;
@@ -76,6 +77,7 @@ public class ObservabilityController {
                                    AgentTopTierReadinessOverviewService topTierReadinessOverviewService,
                                    AgentAdvancedTechnologyAdoptionContractService advancedTechnologyAdoptionContractService,
                                    AgentPhase1ExecutionRoadmapService phase1ExecutionRoadmapService,
+                                   AgentVueReadinessControlPlaneService vueReadinessControlPlaneService,
                                    AgentMemoryRagReadinessService memoryRagReadinessService,
                                    AgentMemoryRagCitationSourceContractService memoryRagCitationSourceContractService,
                                    AgentMemoryRagSourceEvidenceDigestContractService memoryRagSourceEvidenceDigestContractService,
@@ -107,6 +109,7 @@ public class ObservabilityController {
         this.topTierReadinessOverviewService = topTierReadinessOverviewService;
         this.advancedTechnologyAdoptionContractService = advancedTechnologyAdoptionContractService;
         this.phase1ExecutionRoadmapService = phase1ExecutionRoadmapService;
+        this.vueReadinessControlPlaneService = vueReadinessControlPlaneService;
         this.memoryRagReadinessService = memoryRagReadinessService;
         this.memoryRagCitationSourceContractService = memoryRagCitationSourceContractService;
         this.memoryRagSourceEvidenceDigestContractService = memoryRagSourceEvidenceDigestContractService;
@@ -160,6 +163,17 @@ public class ObservabilityController {
             return guard;
         }
         return ResponseEntity.ok(ApiResponse.ok(phase1ExecutionRoadmapService.roadmap()));
+    }
+
+    /** Publish the Vue readiness control-plane binding contract without adding runtime controls. */
+    @GetMapping("/top-tier/vue-readiness-control-plane")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentVueReadinessControlPlaneResponse>> vueReadinessControlPlane() {
+        ResponseEntity<ApiResponse<AgentVueReadinessControlPlaneResponse>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return ResponseEntity.ok(ApiResponse.ok(vueReadinessControlPlaneService.controlPlane()));
     }
 
     /** 构建 Memory/RAG 学习层就绪契约，不执行检索、不调用向量库。 */

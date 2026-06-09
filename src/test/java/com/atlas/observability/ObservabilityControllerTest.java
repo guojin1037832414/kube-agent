@@ -114,6 +114,8 @@ class ObservabilityControllerTest {
         new AgentAdvancedTechnologyAdoptionContractService();
     private final AgentPhase1ExecutionRoadmapService phase1ExecutionRoadmapService =
         new AgentPhase1ExecutionRoadmapService();
+    private final AgentVueReadinessControlPlaneService vueReadinessControlPlaneService =
+        new AgentVueReadinessControlPlaneService();
     private final ObservabilityController controller = new ObservabilityController(
         new AgentMetricsService(new SimpleMeterRegistry()),
         kubeManagerHttpOutletHealthSummaryService,
@@ -126,6 +128,7 @@ class ObservabilityControllerTest {
         topTierReadinessOverviewService,
         advancedTechnologyAdoptionContractService,
         phase1ExecutionRoadmapService,
+        vueReadinessControlPlaneService,
         memoryRagReadinessService,
         memoryRagCitationSourceContractService,
         memoryRagSourceEvidenceDigestContractService,
@@ -858,6 +861,7 @@ class ObservabilityControllerTest {
             .containsEntry("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview")
             .containsEntry("advancedTechnologyAdoptionContract", "/api/agent/observability/top-tier/advanced-technology-adoption-contract")
             .containsEntry("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap")
+            .containsEntry("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane")
             .containsEntry("memoryRagReadiness", "/api/agent/observability/memory-rag/readiness")
             .containsEntry("memoryRagDurableMemoryLifecycleContract", "/api/agent/observability/memory-rag/durable-memory-lifecycle-contract")
             .containsEntry("memoryRagEvalGateContract", "/api/agent/observability/memory-rag/eval-gate-contract")
@@ -928,7 +932,8 @@ class ObservabilityControllerTest {
             .contains("source-owned-contract", "eval-before-release", "phase2-domain-pause");
         assertThat(contract.endpointMap())
             .containsEntry("advancedTechnologyAdoptionContract", "/api/agent/observability/top-tier/advanced-technology-adoption-contract")
-            .containsEntry("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap");
+            .containsEntry("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap")
+            .containsEntry("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane");
         assertThat(contract.safety())
             .containsEntry("adminOnly", true)
             .containsEntry("readOnly", true)
@@ -993,6 +998,7 @@ class ObservabilityControllerTest {
             );
         assertThat(roadmap.endpointMap())
             .containsEntry("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap")
+            .containsEntry("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane")
             .containsEntry("advancedTechnologyAdoptionContract", "/api/agent/observability/top-tier/advanced-technology-adoption-contract")
             .containsEntry("memoryRagEvalGateContract", "/api/agent/observability/memory-rag/eval-gate-contract");
         assertThat(roadmap.safety())
@@ -1012,6 +1018,74 @@ class ObservabilityControllerTest {
             .containsEntry("containsPassword", false);
         assertThat(roadmap.toString())
             .contains("vue-readiness-control-plane", "memory-rag-eval-suite-binding", "mcp-runtime-safe-call-plane")
+            .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret");
+    }
+
+    @Test
+    void vueReadinessControlPlane_shouldRequireAdminAndReturnReadOnlyBindingContract() {
+        ResponseEntity<ApiResponse<AgentVueReadinessControlPlaneResponse>> anonymous =
+            controller.vueReadinessControlPlane();
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentVueReadinessControlPlaneResponse>> user =
+            controller.vueReadinessControlPlane();
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        userPermissionContext.unbind();
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentVueReadinessControlPlaneResponse>> admin =
+            controller.vueReadinessControlPlane();
+
+        assertThat(admin.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(admin.getBody()).isNotNull();
+        AgentVueReadinessControlPlaneResponse controlPlane = admin.getBody().getData();
+        assertThat(controlPlane.schemaVersion()).isEqualTo("agent-vue-readiness-control-plane.v1");
+        assertThat(controlPlane.controlPlaneStatus()).isEqualTo("BACKEND_CONTRACT_READY_FOR_VUE_BINDING");
+        assertThat(controlPlane.phase1TopTierGoalPreserved()).isTrue();
+        assertThat(controlPlane.phase2NimHpcSlurmBcmPaused()).isTrue();
+        assertThat(controlPlane.vueBindingReady()).isTrue();
+        assertThat(controlPlane.runtimeControlAllowed()).isFalse();
+        assertThat(controlPlane.dashboards()).extracting(dashboard -> dashboard.get("id"))
+            .contains(
+                "top-tier-command-center",
+                "advanced-technology-adoption",
+                "phase1-execution-roadmap",
+                "kube-manager-governance",
+                "memory-rag-readiness",
+                "eval-workbench",
+                "mcp-governance"
+            );
+        assertThat(controlPlane.forbiddenUiActions())
+            .contains("enable-kube-manager-write-retry", "run-mcp-tools-call", "run-retrieval-against-prompt");
+        assertThat(controlPlane.endpointMap())
+            .containsEntry("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane")
+            .containsEntry("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap")
+            .containsEntry("mcpManifest", "/api/agent/mcp/manifest");
+        assertThat(controlPlane.safety())
+            .containsEntry("adminOnly", true)
+            .containsEntry("readOnly", true)
+            .containsEntry("vueContractOnly", true)
+            .containsEntry("runtimeControlAllowed", false)
+            .containsEntry("runtimeMutationAllowed", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("llmUsed", false)
+            .containsEntry("kubeManagerCalls", false)
+            .containsEntry("mcpToolCall", false)
+            .containsEntry("nimHpcSlurmBcmTouched", false);
+        assertThat(controlPlane.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("containsAuthorizationHeader", false)
+            .containsEntry("containsToken", false)
+            .containsEntry("containsPassword", false);
+        assertThat(controlPlane.toString())
+            .contains("top-tier-command-center", "phase1-execution-roadmap", "keep-runtime-control-buttons-absent")
             .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret");
     }
 
