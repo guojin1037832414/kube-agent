@@ -6,6 +6,25 @@
 
 ---
 
+## [M5.66-1] - Reviewed eval trace evidence contract
+
+**Delivery**: Added an admin-only reviewed eval trace evidence control-plane contract for Phase 1 release-gate hardening.
+**Changes**
+- Added `AgentReviewedEvalTraceEvidenceResponse`.
+- Added `AgentReviewedEvalTraceEvidenceService`.
+- Added `GET /api/agent/observability/eval/reviewed-trace-evidence`.
+- Published trace-set evidence rows, review pipeline, quality gates, standards alignment, next actions, endpoint map, safety proof, and privacy proof.
+- Updated eval workbench capabilities and overview next actions to include reviewed trace evidence readiness.
+- Updated Phase 1 roadmap, Vue readiness control plane, advanced technology adoption, and top-tier readiness endpoint maps to include the new evidence contract.
+- Added service, controller, source-contract, top-tier, roadmap, Vue, adoption contract, workbench, and MockMvc security coverage.
+**Verification**
+- `mvn -q "-Dtest=AgentReviewedEvalTraceEvidenceServiceTest,AgentEvalWorkbenchCapabilitiesServiceTest,AgentEvalWorkbenchOverviewServiceTest,AgentPhase1ExecutionRoadmapServiceTest,AgentVueReadinessControlPlaneServiceTest,AgentAdvancedTechnologyAdoptionContractServiceTest,AgentTopTierReadinessOverviewServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed during implementation.
+**Security**
+- `evidenceStatus=NEEDS_REVIEWED_REDACTED_TRACE_EVIDENCE` until all trace sets contain reviewed anchors.
+- `reviewedEvidenceReady=false`, `releaseBlockingAllowedNow=false`, `ciBlockingEnabled=false`, and `runtimeMutationAllowed=false` in the current empty-catalog state.
+- Even when future reviewed anchors exist, this contract keeps `releaseBlockingAllowedNow=false` and `ciBlockingEnabled=false`; M5.67 must explicitly promote release gates.
+- No eval execution, CI blocking change, trace-set mutation, catalog write, raw audit query, replay embedding, Tool execution, `SafeToolExecutor` invocation, HITL invocation, kube-manager call, MCP runtime `tools/call`, LLM call, external call, audit write, durable receipt issuance, memory write, retrieval execution, dependency upgrade, or NIM / HPC / Slurm / BCM Phase 2 work is added.
+
 ## [M5.65-1] - Vue readiness control plane contract
 
 **Delivery**: Added an admin-only Vue readiness control-plane binding contract for Phase 1 top-tier Agent dashboards.

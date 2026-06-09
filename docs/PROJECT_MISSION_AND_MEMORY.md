@@ -10,7 +10,44 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.65-1
+## Latest Phase 1 Core Memory - M5.66-1
+
+M5.66-1 adds the reviewed eval trace evidence contract.
+
+Delivered:
+
+- Added `AgentReviewedEvalTraceEvidenceResponse`.
+- Added `AgentReviewedEvalTraceEvidenceService`.
+- Added admin-only `GET /api/agent/observability/eval/reviewed-trace-evidence`.
+- Updated eval workbench capabilities and overview next actions to include reviewed trace evidence readiness.
+- Updated Phase 1 roadmap, Vue readiness control plane, advanced technology adoption, and top-tier readiness endpoint maps to include the new evidence contract.
+- Added service, controller, source-contract, top-tier, roadmap, Vue, adoption contract, workbench, and MockMvc security coverage.
+
+Current state:
+
+- `schemaVersion=agent-reviewed-eval-trace-evidence.v1`.
+- `evidenceStatus=NEEDS_REVIEWED_REDACTED_TRACE_EVIDENCE`.
+- `phase1TopTierGoalPreserved=true`.
+- `reviewedEvidenceReady=false`.
+- `releaseBlockingAllowedNow=false`.
+- `ciBlockingEnabled=false`.
+- `runtimeMutationAllowed=false`.
+- `traceSetCount=4`.
+- `reviewedTraceSetCount=0`.
+- `reviewedTraceAnchorCount=0`.
+
+Security boundary:
+
+- The endpoint is admin-only, read-only, contract-only, summary-only, and fail-closed.
+- It does not run evals, change CI blocking, mutate trace-set catalogs, query raw audit evidence, embed replay payloads, execute Tools, invoke `SafeToolExecutor`, invoke HITL, call kube-manager, expose MCP runtime `tools/call`, call LLMs/external services, write audit, issue durable receipts, write memory, execute retrieval, upgrade dependencies, or touch NIM / HPC / Slurm / BCM Phase 2 scope.
+
+Learning point: top-tier Agent release quality needs reviewed trace evidence, not only eval schemas. M5.66 converts modern Agent tracing, deterministic eval, MCP governance, OTel GenAI observability, OWASP LLM security, and W3C trace context ideas into one backend-owned evidence contract.
+
+Latest verified command:
+
+- `mvn -q "-Dtest=AgentReviewedEvalTraceEvidenceServiceTest,AgentEvalWorkbenchCapabilitiesServiceTest,AgentEvalWorkbenchOverviewServiceTest,AgentPhase1ExecutionRoadmapServiceTest,AgentVueReadinessControlPlaneServiceTest,AgentAdvancedTechnologyAdoptionContractServiceTest,AgentTopTierReadinessOverviewServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+## Previous Phase 1 Core Memory - M5.65-1
 
 M5.65-1 adds the Vue readiness control-plane contract.
 

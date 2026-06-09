@@ -83,7 +83,10 @@ class AgentPhase1ExecutionRoadmapServiceTest {
             .containsEntry("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane")
             .containsEntry("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview")
             .containsEntry("advancedTechnologyAdoptionContract", "/api/agent/observability/top-tier/advanced-technology-adoption-contract")
+            .containsEntry("reviewedEvalTraceEvidence", "/api/agent/observability/eval/reviewed-trace-evidence")
             .containsEntry("memoryRagEvalGateContract", "/api/agent/observability/memory-rag/eval-gate-contract");
+        assertThat(roadmap.executionSteps().get(1))
+            .containsEntry("status", "BACKEND_CONTRACT_READY");
         assertThat(roadmap.safety())
             .containsEntry("adminOnly", true)
             .containsEntry("readOnly", true)

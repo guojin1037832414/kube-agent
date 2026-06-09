@@ -82,6 +82,9 @@ public record AgentAdvancedTechnologyAdoptionContractResponse(
             technology("trace-audit-replay-observability", "MAINLINE_STABLE",
                 "Trace, redacted audit, replay timeline, and telemetry projection remain the evidence backbone.",
                 "operator visibility and recoverability"),
+            technology("reviewed-eval-trace-evidence", "MAINLINE_CONTRACT",
+                "Reviewed redacted trace evidence links replay, deterministic eval, human Git review, and future release-blocking gates.",
+                "quality evidence before runtime expansion"),
             technology("kube-manager-http-governance", "MAINLINE_STABLE",
                 "Read-side resilience and write-side release contracts govern kube-manager access.",
                 "manager integration safety")
@@ -157,6 +160,7 @@ public record AgentAdvancedTechnologyAdoptionContractResponse(
     private static Map<String, Object> buildStandardsAlignment() {
         Map<String, Object> standards = new LinkedHashMap<>();
         standards.put("openAiResponsesAndAgentsMappedToLocalContracts", true);
+        standards.put("openAiTracingAndEvalEvidenceMappedToReviewedTraceContracts", true);
         standards.put("springAiMainlineAndUpgradeMatrixSeparated", true);
         standards.put("mcpDiscoverySeparatedFromRuntimeAuthority", true);
         standards.put("otelGenAiMappedThroughStableInternalFields", true);
@@ -173,6 +177,7 @@ public record AgentAdvancedTechnologyAdoptionContractResponse(
         endpoints.put("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane");
         endpoints.put("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview");
         endpoints.put("evalWorkbenchCapabilities", "/api/agent/observability/eval/workbench/capabilities");
+        endpoints.put("reviewedEvalTraceEvidence", "/api/agent/observability/eval/reviewed-trace-evidence");
         endpoints.put("kubeManagerGovernanceOverview", "/api/agent/observability/kube-manager/http-outlet/governance-workbench/overview");
         endpoints.put("mcpGovernanceOverview", "/api/agent/mcp/governance/overview");
         endpoints.put("memoryRagReadiness", "/api/agent/observability/memory-rag/readiness");

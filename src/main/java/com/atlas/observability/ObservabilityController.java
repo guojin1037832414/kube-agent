@@ -60,6 +60,7 @@ public class ObservabilityController {
     private final AgentEvalTraceSetPromotionWorkflowService traceSetPromotionWorkflowService;
     private final AgentEvalWorkbenchCapabilitiesService evalWorkbenchCapabilitiesService;
     private final AgentEvalWorkbenchOverviewService evalWorkbenchOverviewService;
+    private final AgentReviewedEvalTraceEvidenceService reviewedEvalTraceEvidenceService;
     private final AgentEvalWorkbenchTraceSetDetailService evalWorkbenchTraceSetDetailService;
     private final AgentEvalWorkbenchPromotionWorkflowService evalWorkbenchPromotionWorkflowService;
     private final AgentEvalWorkbenchCatalogPatchReviewService evalWorkbenchCatalogPatchReviewService;
@@ -93,6 +94,7 @@ public class ObservabilityController {
                                    AgentEvalTraceSetPromotionWorkflowService traceSetPromotionWorkflowService,
                                    AgentEvalWorkbenchCapabilitiesService evalWorkbenchCapabilitiesService,
                                    AgentEvalWorkbenchOverviewService evalWorkbenchOverviewService,
+                                   AgentReviewedEvalTraceEvidenceService reviewedEvalTraceEvidenceService,
                                    AgentEvalWorkbenchTraceSetDetailService evalWorkbenchTraceSetDetailService,
                                    AgentEvalWorkbenchPromotionWorkflowService evalWorkbenchPromotionWorkflowService,
                                    AgentEvalWorkbenchCatalogPatchReviewService evalWorkbenchCatalogPatchReviewService,
@@ -125,6 +127,7 @@ public class ObservabilityController {
         this.traceSetPromotionWorkflowService = traceSetPromotionWorkflowService;
         this.evalWorkbenchCapabilitiesService = evalWorkbenchCapabilitiesService;
         this.evalWorkbenchOverviewService = evalWorkbenchOverviewService;
+        this.reviewedEvalTraceEvidenceService = reviewedEvalTraceEvidenceService;
         this.evalWorkbenchTraceSetDetailService = evalWorkbenchTraceSetDetailService;
         this.evalWorkbenchPromotionWorkflowService = evalWorkbenchPromotionWorkflowService;
         this.evalWorkbenchCatalogPatchReviewService = evalWorkbenchCatalogPatchReviewService;
@@ -478,6 +481,17 @@ public class ObservabilityController {
             return guard;
         }
         return ResponseEntity.ok(ApiResponse.ok(evalWorkbenchOverviewService.overview()));
+    }
+
+    /** Publish reviewed eval trace evidence readiness without mutating catalogs or running evals. */
+    @GetMapping("/eval/reviewed-trace-evidence")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentReviewedEvalTraceEvidenceResponse>> reviewedEvalTraceEvidence() {
+        ResponseEntity<ApiResponse<AgentReviewedEvalTraceEvidenceResponse>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return ResponseEntity.ok(ApiResponse.ok(reviewedEvalTraceEvidenceService.evidence()));
     }
 
     /** Build a frontend-ready gate-bundle summary without accepting caller trace IDs. */

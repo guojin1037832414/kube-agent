@@ -48,6 +48,7 @@ class AgentAdvancedTechnologyAdoptionContractServiceTest {
                 "memory-rag-contract-stack",
                 "mcp-manifest-governance",
                 "trace-audit-replay-observability",
+                "reviewed-eval-trace-evidence",
                 "kube-manager-http-governance"
             );
         assertThat(contract.compatibilityMatrix()).extracting(technology -> technology.get("id"))
@@ -91,6 +92,7 @@ class AgentAdvancedTechnologyAdoptionContractServiceTest {
         );
         assertThat(contract.standardsAlignment())
             .containsEntry("openAiResponsesAndAgentsMappedToLocalContracts", true)
+            .containsEntry("openAiTracingAndEvalEvidenceMappedToReviewedTraceContracts", true)
             .containsEntry("springAiMainlineAndUpgradeMatrixSeparated", true)
             .containsEntry("mcpDiscoverySeparatedFromRuntimeAuthority", true)
             .containsEntry("otelGenAiMappedThroughStableInternalFields", true)
@@ -102,6 +104,7 @@ class AgentAdvancedTechnologyAdoptionContractServiceTest {
             .containsEntry("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap")
             .containsEntry("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane")
             .containsEntry("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview")
+            .containsEntry("reviewedEvalTraceEvidence", "/api/agent/observability/eval/reviewed-trace-evidence")
             .containsEntry("memoryRagEvalGateContract", "/api/agent/observability/memory-rag/eval-gate-contract");
         assertThat(contract.safety())
             .containsEntry("adminOnly", true)

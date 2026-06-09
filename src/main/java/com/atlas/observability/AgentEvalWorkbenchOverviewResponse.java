@@ -68,6 +68,7 @@ public record AgentEvalWorkbenchOverviewResponse(
                                                  AgentEvalTraceSetGateBundleArtifact gateBundle) {
         List<String> actions = new ArrayList<>();
         if (needsEvidenceCount > 0) {
+            actions.add("inspect-reviewed-trace-evidence-readiness");
             actions.add("discover-redacted-candidates");
             actions.add("promote-candidates-through-git-review");
         }

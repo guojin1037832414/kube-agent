@@ -2,6 +2,40 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-09 M5.66 Reviewed Eval Trace Evidence Contract
+
+M5.66 implements the second M5.64 roadmap slice as a backend-owned reviewed evidence contract. It answers the release-quality question: do our eval gates have real reviewed redacted trace anchors, or are they still schema-only?
+
+```text
+redacted audit + replay timeline
+        |
+        +-- candidate discovery
+        +-- curation review
+        +-- Vue catalog patch review
+        +-- human Git review
+        +-- gate bundle regeneration
+        |
+        v
+reviewed eval trace evidence contract
+```
+
+Endpoint:
+
+```text
+/api/agent/observability/eval/reviewed-trace-evidence
+```
+
+Key design:
+- `AgentReviewedEvalTraceEvidenceResponse` publishes `schemaVersion=agent-reviewed-eval-trace-evidence.v1`.
+- Current state is fail-closed: `evidenceStatus=NEEDS_REVIEWED_REDACTED_TRACE_EVIDENCE`, `reviewedEvidenceReady=false`, `releaseBlockingAllowedNow=false`, and `ciBlockingEnabled=false`.
+- It lists per-trace-set evidence rows for the four built-in Phase 1 trace sets and shows all four still need reviewed anchors.
+- It publishes the review pipeline, quality gates, standards alignment, next actions, endpoint map, safety proof, and privacy proof.
+- Even future reviewed anchors do not automatically enable CI blocking; M5.67 must explicitly promote release gates.
+
+Learning point: 顶级 Agent 的 eval 不是“跑几个测试看看分数”。成熟做法是把 trace evidence 变成 release-quality artifact：可回放、已脱敏、可评测、经过人工 Git review、能进入 gate bundle、但不会自动获得运行时权限。M5.66 把这条证据链变成后端契约，避免后续 release gate 只依赖口头承诺。
+
+Technology point: M5.66 把 OpenAI Agents-style tracing/evals、MCP tool-call governance、OpenTelemetry GenAI 观测、OWASP LLM 风险门禁、W3C Trace Context 统一映射到本项目的稳定 Java/Spring 控制面。最新技术进入主线的方式是 evidence contract，而不是直接打开外部运行时、CI blocking 或工具调用权限。
+
 ## 2026-06-09 M5.65 Vue Readiness Control Plane Contract
 
 M5.65 implements the first M5.64 roadmap slice as a backend-owned Vue binding contract. It gives future `vue-kube-manager` pages a single control-plane read model for what can be rendered and what must remain absent.

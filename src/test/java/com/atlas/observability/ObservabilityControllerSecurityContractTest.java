@@ -59,6 +59,7 @@ class ObservabilityControllerSecurityContractTest {
         assertThat(source).contains("@PostMapping(\"/eval/suites/{suiteId}/gate\")");
         assertThat(source).contains("@GetMapping(\"/eval/workbench/capabilities\")");
         assertThat(source).contains("@GetMapping(\"/eval/workbench/overview\")");
+        assertThat(source).contains("@GetMapping(\"/eval/reviewed-trace-evidence\")");
         assertThat(source).contains("@GetMapping(\"/eval/workbench/gate-bundle-summary\")");
         assertThat(source).contains("@GetMapping(\"/eval/workbench/trace-sets/{traceSetId}\")");
         assertThat(source).contains("@PostMapping(\"/eval/workbench/trace-sets/{traceSetId}/promotion-workflow\")");
@@ -97,6 +98,7 @@ class ObservabilityControllerSecurityContractTest {
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentEvalSuiteGateArtifact>> evalSuiteGate(@PathVariable String suiteId,");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentEvalWorkbenchCapabilitiesResponse>> evalWorkbenchCapabilities()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentEvalWorkbenchOverviewResponse>> evalWorkbenchOverview()");
+        assertThat(source).contains("public ResponseEntity<ApiResponse<AgentReviewedEvalTraceEvidenceResponse>> reviewedEvalTraceEvidence()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentEvalWorkbenchGateBundleSummaryResponse>> evalWorkbenchGateBundleSummary()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentEvalWorkbenchTraceSetDetailResponse>> evalWorkbenchTraceSetDetail(");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentEvalWorkbenchPromotionWorkflowResponse>> evalWorkbenchPromotionWorkflow(");

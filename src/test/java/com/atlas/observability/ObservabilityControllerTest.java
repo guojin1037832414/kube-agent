@@ -53,6 +53,8 @@ class ObservabilityControllerTest {
         new AgentEvalWorkbenchCapabilitiesService();
     private final AgentEvalWorkbenchOverviewService evalWorkbenchOverviewService =
         new AgentEvalWorkbenchOverviewService(evalWorkbenchCapabilitiesService, evalTraceSetCatalogService);
+    private final AgentReviewedEvalTraceEvidenceService reviewedEvalTraceEvidenceService =
+        new AgentReviewedEvalTraceEvidenceService(evalTraceSetCatalogService);
     private final AgentEvalWorkbenchTraceSetDetailService evalWorkbenchTraceSetDetailService =
         new AgentEvalWorkbenchTraceSetDetailService(evalTraceSetCatalogService);
     private final AgentEvalWorkbenchPromotionWorkflowService evalWorkbenchPromotionWorkflowService =
@@ -144,6 +146,7 @@ class ObservabilityControllerTest {
         traceSetPromotionWorkflowService,
         evalWorkbenchCapabilitiesService,
         evalWorkbenchOverviewService,
+        reviewedEvalTraceEvidenceService,
         evalWorkbenchTraceSetDetailService,
         evalWorkbenchPromotionWorkflowService,
         evalWorkbenchCatalogPatchReviewService,
@@ -2020,6 +2023,61 @@ class ObservabilityControllerTest {
         assertThat(overview.toString())
             .contains("workbench-overview", "phase1-core-golden")
             .doesNotContain("reports=", "replay=")
+            .doesNotContain("secret-token-value", "conv-sensitive", "user-sensitive", "org-sensitive", "/api/org-sensitive");
+    }
+
+    @Test
+    void reviewedEvalTraceEvidence_shouldRequireAdminUser() {
+        ResponseEntity<ApiResponse<AgentReviewedEvalTraceEvidenceResponse>> anonymous =
+            controller.reviewedEvalTraceEvidence();
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentReviewedEvalTraceEvidenceResponse>> user =
+            controller.reviewedEvalTraceEvidence();
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void reviewedEvalTraceEvidence_shouldReturnReadOnlyEvidenceContractForAdminUser() {
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentReviewedEvalTraceEvidenceResponse>> response =
+            controller.reviewedEvalTraceEvidence();
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        AgentReviewedEvalTraceEvidenceResponse evidence = response.getBody().getData();
+        assertThat(evidence.schemaVersion()).isEqualTo("agent-reviewed-eval-trace-evidence.v1");
+        assertThat(evidence.evidenceStatus()).isEqualTo("NEEDS_REVIEWED_REDACTED_TRACE_EVIDENCE");
+        assertThat(evidence.traceSetCount()).isEqualTo(4);
+        assertThat(evidence.reviewedTraceSetCount()).isZero();
+        assertThat(evidence.reviewedTraceAnchorCount()).isZero();
+        assertThat(evidence.reviewPipeline()).extracting(stage -> stage.get("id"))
+            .contains("redacted-candidate-discovery", "curation-review", "human-git-review", "release-blocking-promotion");
+        assertThat(evidence.standardsAlignment()).extracting(standard -> standard.get("id"))
+            .contains("openai-agents-tracing", "mcp-tools-governance", "otel-genai-semconv", "owasp-llm-top-10");
+        assertThat(evidence.safety())
+            .containsEntry("adminOnly", true)
+            .containsEntry("readOnly", true)
+            .containsEntry("runtimeMutationAllowed", false)
+            .containsEntry("catalogMutationAllowed", false)
+            .containsEntry("releaseBlockingAllowedNow", false)
+            .containsEntry("ciBlockingEnabled", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("kubeManagerCalls", false);
+        assertThat(evidence.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("containsRawParameterValues", false)
+            .containsEntry("llmUsed", false)
+            .containsEntry("externalCalls", false);
+        assertThat(evidence.toString())
+            .contains("reviewed-trace-evidence", "phase1-core-golden")
             .doesNotContain("secret-token-value", "conv-sensitive", "user-sensitive", "org-sensitive", "/api/org-sensitive");
     }
 

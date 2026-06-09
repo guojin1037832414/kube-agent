@@ -26,6 +26,7 @@ class AgentEvalWorkbenchCapabilitiesServiceTest {
                 "workbench-promotion-workflow",
                 "workbench-catalog-patch-review",
                 "workbench-gate-bundle-summary",
+                "reviewed-trace-evidence",
                 "trace-set-candidate-discovery",
                 "trace-set-curation-review",
                 "trace-set-catalog-patch-proposal",
@@ -53,6 +54,7 @@ class AgentEvalWorkbenchCapabilitiesServiceTest {
                 "workbench-promotion-workflow",
                 "workbench-catalog-patch-review",
                 "workbench-gate-bundle-summary",
+                "reviewed-trace-evidence",
                 "trace-set-catalog-patch-proposal",
                 "trace-set-gate-bundle",
                 "trace-replay-timeline",
@@ -80,6 +82,7 @@ class AgentEvalWorkbenchCapabilitiesServiceTest {
                 "workbench-trace-set-detail",
                 "agent-eval-workbench-catalog-patch-review.v1",
                 "agent-eval-workbench-gate-bundle-summary.v1",
+                "agent-reviewed-eval-trace-evidence.v1",
                 "agent-eval-workbench-promotion-workflow.v1"
             )
             .doesNotContain("conv-sensitive", "user-sensitive", "org-sensitive", "secret-token-value", "/api/org-sensitive");

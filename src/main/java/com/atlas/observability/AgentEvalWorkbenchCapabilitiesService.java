@@ -84,6 +84,17 @@ public class AgentEvalWorkbenchCapabilitiesService {
                 List.of("bundleSummary", "traceSetGateRows", "ciArtifact", "blockerSummary")
             ),
             capability(
+                "reviewed-trace-evidence",
+                "Reviewed eval trace evidence",
+                "review",
+                "GET",
+                "/api/agent/observability/eval/reviewed-trace-evidence",
+                "",
+                AgentReviewedEvalTraceEvidenceResponse.SCHEMA_VERSION,
+                List.of("traceSetCatalog", "reviewedTraceAnchors", "standardsAlignment"),
+                List.of("traceSetEvidence", "reviewPipeline", "qualityGates", "nextActions")
+            ),
+            capability(
                 "trace-set-candidate-discovery",
                 "Trace-set candidate discovery",
                 "discover",
@@ -170,6 +181,7 @@ public class AgentEvalWorkbenchCapabilitiesService {
                 "workbench-promotion-workflow",
                 "workbench-catalog-patch-review",
                 "workbench-gate-bundle-summary",
+                "reviewed-trace-evidence",
                 "trace-set-catalog-patch-proposal",
                 "trace-set-gate-bundle",
                 "trace-replay-timeline",

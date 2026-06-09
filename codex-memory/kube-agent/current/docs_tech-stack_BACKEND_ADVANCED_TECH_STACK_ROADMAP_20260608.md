@@ -9,6 +9,23 @@
 - 供应链、CI、SBOM、质量门禁进入工程默认路径；
 - Java / Spring / Agent 框架升级以兼容性矩阵推进，不用不可构建的版本号伪装先进。
 
+## 2026-06-09 M5.66 Reviewed-Trace-Evidence-Before-Release-Gates Rule
+
+M5.66 advances the second Phase 1 roadmap step with:
+
+```text
+GET /api/agent/observability/eval/reviewed-trace-evidence
+```
+
+The advanced Agent stack now has a release-evidence contract:
+
+- Reviewed redacted trace anchors must exist before eval gates can become release-blocking.
+- Candidate discovery, curation review, Vue catalog patch review, human Git review, and gate bundle regeneration are separate evidence stages.
+- Empty trace sets intentionally keep `reviewedEvidenceReady=false`, `releaseBlockingAllowedNow=false`, and `ciBlockingEnabled=false`.
+- Future reviewed anchors still do not automatically enable release blocking; that promotion must be an explicit later slice.
+
+Technology judgment: modern Agent engineering treats traces as release artifacts. OpenAI Agents-style tracing/evals, MCP tool governance, OTel GenAI telemetry, OWASP LLM security gates, and W3C trace context all point to the same rule: runtime authority should expand only after reviewed evidence proves behavior, privacy, tenant isolation, and replayability.
+
 ## 2026-06-09 M5.65 Vue Readiness Control Plane Gate
 
 M5.65 advances the first M5.64 roadmap step with:

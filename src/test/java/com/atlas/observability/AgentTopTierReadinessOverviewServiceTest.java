@@ -105,6 +105,7 @@ class AgentTopTierReadinessOverviewServiceTest {
             .containsEntry("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap")
             .containsEntry("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane")
             .containsEntry("mcpGovernanceOverview", "/api/agent/mcp/governance/overview")
+            .containsEntry("reviewedEvalTraceEvidence", "/api/agent/observability/eval/reviewed-trace-evidence")
             .containsEntry("memoryRagCitationSourceContract", "/api/agent/observability/memory-rag/citation-source-contract")
             .containsEntry("memoryRagSourceEvidenceDigestContract", "/api/agent/observability/memory-rag/source-evidence-digest-contract")
             .containsEntry("memoryRagDurableMemoryLifecycleContract", "/api/agent/observability/memory-rag/durable-memory-lifecycle-contract")

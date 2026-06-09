@@ -81,7 +81,7 @@ public record AgentVueReadinessControlPlaneResponse(
             dashboard("eval-workbench", "READY_TO_BIND",
                 "Render eval workbench overview, trace-set rows, gate bundle state, and promotion entrypoints.",
                 "/api/agent/observability/eval/workbench/overview",
-                List.of("traceSetRows", "gateBundleSummary", "nextActions", "endpointTemplates")),
+                List.of("traceSetRows", "gateBundleSummary", "reviewedTraceEvidence", "nextActions", "endpointTemplates")),
             dashboard("mcp-governance", "READY_TO_BIND",
                 "Render MCP manifest/governance without exposing runtime tools/call authority.",
                 "/api/agent/mcp/governance/overview",
@@ -98,6 +98,7 @@ public record AgentVueReadinessControlPlaneResponse(
             apiBinding("memory-rag-readiness", "/api/agent/observability/memory-rag/readiness", "GET", true),
             apiBinding("memory-rag-eval-gate", "/api/agent/observability/memory-rag/eval-gate-contract", "GET", true),
             apiBinding("eval-workbench-overview", "/api/agent/observability/eval/workbench/overview", "GET", true),
+            apiBinding("reviewed-trace-evidence", "/api/agent/observability/eval/reviewed-trace-evidence", "GET", true),
             apiBinding("eval-gate-bundle-summary", "/api/agent/observability/eval/workbench/gate-bundle-summary", "GET", true),
             apiBinding("mcp-governance", "/api/agent/mcp/governance/overview", "GET", true),
             apiBinding("mcp-manifest", "/api/agent/mcp/manifest", "GET", true)
@@ -155,6 +156,7 @@ public record AgentVueReadinessControlPlaneResponse(
         endpoints.put("memoryRagReadiness", "/api/agent/observability/memory-rag/readiness");
         endpoints.put("memoryRagEvalGateContract", "/api/agent/observability/memory-rag/eval-gate-contract");
         endpoints.put("evalWorkbenchOverview", "/api/agent/observability/eval/workbench/overview");
+        endpoints.put("reviewedEvalTraceEvidence", "/api/agent/observability/eval/reviewed-trace-evidence");
         endpoints.put("evalWorkbenchGateBundleSummary", "/api/agent/observability/eval/workbench/gate-bundle-summary");
         endpoints.put("mcpGovernanceOverview", "/api/agent/mcp/governance/overview");
         endpoints.put("mcpManifest", "/api/agent/mcp/manifest");

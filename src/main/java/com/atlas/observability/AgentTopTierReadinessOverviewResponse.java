@@ -160,6 +160,7 @@ public record AgentTopTierReadinessOverviewResponse(
             List.of("deterministic eval", "trace-set catalog", "gate bundle", "catalog patch review"),
             Map.of(
                 "capabilityCount", evalWorkbenchCapabilities != null ? evalWorkbenchCapabilities.capabilityCount() : 0,
+                "reviewedTraceEvidenceContractExists", true,
                 "ciBlockingEnabled", false,
                 "needsReviewedCuratedTraceIds", true
             )
@@ -334,6 +335,7 @@ public record AgentTopTierReadinessOverviewResponse(
         endpoints.put("kubeManagerGovernanceOverview", "/api/agent/observability/kube-manager/http-outlet/governance-workbench/overview");
         endpoints.put("evalWorkbenchCapabilities", "/api/agent/observability/eval/workbench/capabilities");
         endpoints.put("evalWorkbenchOverview", "/api/agent/observability/eval/workbench/overview");
+        endpoints.put("reviewedEvalTraceEvidence", "/api/agent/observability/eval/reviewed-trace-evidence");
         endpoints.put("mcpGovernanceOverview", "/api/agent/mcp/governance/overview");
         endpoints.put("mcpManifest", "/api/agent/mcp/manifest");
         endpoints.put("memoryRagReadiness", "/api/agent/observability/memory-rag/readiness");

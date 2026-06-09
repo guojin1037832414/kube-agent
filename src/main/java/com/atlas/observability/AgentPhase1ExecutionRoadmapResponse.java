@@ -63,9 +63,9 @@ public record AgentPhase1ExecutionRoadmapResponse(
                 List.of("top-tier-readiness-overview", "advanced-technology-adoption-contract", "kube-manager-governance-workbench", "memory-rag-readiness")),
             step(2, "reviewed-eval-trace-evidence",
                 "Curate reviewed redacted traces so eval gates stop being schema-only evidence.",
-                "NOT_STARTED",
-                List.of("replay-timeline-exists", "trace-set-catalog-exists", "catalog-patch-review-exists"),
-                List.of("eval-workbench-overview", "trace-set-detail", "catalog-patch-review")),
+                "BACKEND_CONTRACT_READY",
+                List.of("reviewed-trace-evidence-contract", "replay-timeline-exists", "trace-set-catalog-exists", "catalog-patch-review-exists"),
+                List.of("reviewed-trace-evidence", "eval-workbench-overview", "trace-set-detail", "catalog-patch-review")),
             step(3, "release-blocking-eval-gates",
                 "Promote deterministic eval gate bundles from advisory evidence to reviewed release gates.",
                 "BLOCKED_BY_TRACE_EVIDENCE",
@@ -144,6 +144,7 @@ public record AgentPhase1ExecutionRoadmapResponse(
         endpoints.put("advancedTechnologyAdoptionContract", "/api/agent/observability/top-tier/advanced-technology-adoption-contract");
         endpoints.put("kubeManagerGovernanceOverview", "/api/agent/observability/kube-manager/http-outlet/governance-workbench/overview");
         endpoints.put("evalWorkbenchOverview", "/api/agent/observability/eval/workbench/overview");
+        endpoints.put("reviewedEvalTraceEvidence", "/api/agent/observability/eval/reviewed-trace-evidence");
         endpoints.put("memoryRagReadiness", "/api/agent/observability/memory-rag/readiness");
         endpoints.put("memoryRagEvalGateContract", "/api/agent/observability/memory-rag/eval-gate-contract");
         endpoints.put("mcpGovernanceOverview", "/api/agent/mcp/governance/overview");

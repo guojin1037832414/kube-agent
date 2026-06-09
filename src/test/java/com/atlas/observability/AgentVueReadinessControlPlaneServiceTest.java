@@ -53,6 +53,7 @@ class AgentVueReadinessControlPlaneServiceTest {
                 "readiness-overview",
                 "advanced-technology-adoption",
                 "phase1-roadmap",
+                "reviewed-trace-evidence",
                 "memory-rag-eval-gate",
                 "eval-gate-bundle-summary",
                 "mcp-manifest"
@@ -82,6 +83,7 @@ class AgentVueReadinessControlPlaneServiceTest {
         assertThat(controlPlane.endpointMap())
             .containsEntry("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane")
             .containsEntry("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap")
+            .containsEntry("reviewedEvalTraceEvidence", "/api/agent/observability/eval/reviewed-trace-evidence")
             .containsEntry("memoryRagEvalGateContract", "/api/agent/observability/memory-rag/eval-gate-contract")
             .containsEntry("mcpManifest", "/api/agent/mcp/manifest");
         assertThat(controlPlane.safety())
