@@ -45,6 +45,7 @@ public class ObservabilityController {
     private final AgentAdvancedTechnologyAdoptionContractService advancedTechnologyAdoptionContractService;
     private final AgentAdvancedTechnologyCompatibilityMatrixService advancedTechnologyCompatibilityMatrixService;
     private final AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecService advancedTechnologyCompatibilityMatrixVueBindingSpecService;
+    private final AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessService advancedTechnologyCompatibilityMatrixEvidenceReadinessService;
     private final AgentOfficialVersionProtocolWatchService officialVersionProtocolWatchService;
     private final AgentOfficialVersionProtocolWatchDashboardService officialVersionProtocolWatchDashboardService;
     private final AgentOfficialVersionProtocolWatchVueBindingSpecService officialVersionProtocolWatchVueBindingSpecService;
@@ -90,6 +91,7 @@ public class ObservabilityController {
                                    AgentAdvancedTechnologyAdoptionContractService advancedTechnologyAdoptionContractService,
                                    AgentAdvancedTechnologyCompatibilityMatrixService advancedTechnologyCompatibilityMatrixService,
                                    AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecService advancedTechnologyCompatibilityMatrixVueBindingSpecService,
+                                   AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessService advancedTechnologyCompatibilityMatrixEvidenceReadinessService,
                                     AgentOfficialVersionProtocolWatchService officialVersionProtocolWatchService,
                                     AgentOfficialVersionProtocolWatchDashboardService officialVersionProtocolWatchDashboardService,
                                     AgentOfficialVersionProtocolWatchVueBindingSpecService officialVersionProtocolWatchVueBindingSpecService,
@@ -134,6 +136,7 @@ public class ObservabilityController {
         this.advancedTechnologyAdoptionContractService = advancedTechnologyAdoptionContractService;
         this.advancedTechnologyCompatibilityMatrixService = advancedTechnologyCompatibilityMatrixService;
         this.advancedTechnologyCompatibilityMatrixVueBindingSpecService = advancedTechnologyCompatibilityMatrixVueBindingSpecService;
+        this.advancedTechnologyCompatibilityMatrixEvidenceReadinessService = advancedTechnologyCompatibilityMatrixEvidenceReadinessService;
         this.officialVersionProtocolWatchService = officialVersionProtocolWatchService;
         this.officialVersionProtocolWatchDashboardService = officialVersionProtocolWatchDashboardService;
         this.officialVersionProtocolWatchVueBindingSpecService = officialVersionProtocolWatchVueBindingSpecService;
@@ -210,6 +213,17 @@ public class ObservabilityController {
             return guard;
         }
         return ResponseEntity.ok(ApiResponse.ok(advancedTechnologyCompatibilityMatrixVueBindingSpecService.spec()));
+    }
+
+    /** Publish evidence readiness for each advanced technology matrix lane without running gates or upgrades. */
+    @GetMapping("/top-tier/advanced-technology-compatibility-matrix/evidence-readiness")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessResponse>> advancedTechnologyCompatibilityMatrixEvidenceReadiness() {
+        ResponseEntity<ApiResponse<AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessResponse>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return ResponseEntity.ok(ApiResponse.ok(advancedTechnologyCompatibilityMatrixEvidenceReadinessService.readiness()));
     }
 
     /** Publish the official version/protocol watch without external calls or runtime upgrades. */

@@ -286,6 +286,8 @@ public record AgentAdvancedTechnologyCompatibilityMatrixResponse(
         endpoints.put("advancedTechnologyCompatibilityMatrix", MATRIX_ENDPOINT);
         endpoints.put("advancedTechnologyCompatibilityMatrixVueBindingSpec",
             AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecResponse.BINDING_SPEC_ENDPOINT);
+        endpoints.put("advancedTechnologyCompatibilityMatrixEvidenceReadiness",
+            AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessResponse.EVIDENCE_READINESS_ENDPOINT);
         endpoints.put("advancedTechnologyAdoptionContract",
             "/api/agent/observability/top-tier/advanced-technology-adoption-contract");
         endpoints.put("officialVersionProtocolWatch", AgentOfficialVersionProtocolWatchResponse.WATCH_ENDPOINT);

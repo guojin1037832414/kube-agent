@@ -6,6 +6,23 @@
 
 ---
 
+## [M5.80-1] - Advanced technology compatibility matrix evidence readiness
+
+**Delivery**: Added a backend-owned evidence-readiness layer that maps every advanced-technology compatibility lane to reviewed trace, Memory/RAG fixture, release-gate, Vue visibility, recovery, and Git-review gaps.
+**Changes**
+- Added `GET /api/agent/observability/top-tier/advanced-technology-compatibility-matrix/evidence-readiness`.
+- Added `AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessResponse` and `AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessService`.
+- Published 10 matrix evidence rows, 7 blocking gate rows, 14 disabled runtime actions, and embedded source read models from compatibility matrix, reviewed eval trace evidence, and Memory/RAG reviewed trace manifest.
+- Integrated the endpoint into advanced technology adoption, official watch, official watch dashboard, official watch binding spec, compatibility matrix, compatibility matrix binding spec, top-tier readiness, Phase 1 roadmap, Vue readiness control plane, Vue workbench implementation package, Controller, and security contracts.
+- Extended the top-tier Vue workbench implementation package to 3 route specs, 5 API client bindings, 3 page assemblies, 8 shared component contracts, and 7 acceptance fixtures.
+- Updated Vue readiness dashboard count to `16` and added `advanced-technology-compatibility-matrix-evidence-readiness`.
+**Verification**
+- `mvn -q "-DskipTests" validate` passed.
+- `mvn -q "-Dtest=AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessServiceTest,AgentAdvancedTechnologyCompatibilityMatrixServiceTest,AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecServiceTest,AgentTopTierVueWorkbenchImplementationPackageServiceTest,AgentTopTierReadinessOverviewServiceTest,AgentAdvancedTechnologyAdoptionContractServiceTest,AgentOfficialVersionProtocolWatchServiceTest,AgentOfficialVersionProtocolWatchDashboardServiceTest,AgentOfficialVersionProtocolWatchVueBindingSpecServiceTest,AgentPhase1ExecutionRoadmapServiceTest,AgentVueReadinessControlPlaneServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed during implementation.
+**Security**
+- The evidence-readiness layer is admin-only, read-only, evidence-readiness-only, source-read-model-composition-only, and external-call-free at request time.
+- It does not modify `pom.xml`, upgrade dependencies, switch Java/Spring/Spring AI baselines, accept caller trace IDs, run evals, discover candidates, run curation review, mutate trace-set catalogs, enable CI blocking, run LLMs, execute Tools, invoke `SafeToolExecutor`, invoke HITL, call kube-manager or port `8100`, expose MCP runtime `tools/call`, run A2A handoff, execute retrieval/vector/reranker/GraphRAG, write memory, write audit, issue durable receipts, or touch NIM / HPC / Slurm / BCM Phase 2 work.
+
 ## [M5.79-1] - Top-tier Vue workbench implementation package
 
 **Delivery**: Added a backend-owned implementation package for `vue-kube-manager` so the official technology watch and compatibility matrix can be implemented as one read-only top-tier Agent workbench without frontend-owned governance logic.

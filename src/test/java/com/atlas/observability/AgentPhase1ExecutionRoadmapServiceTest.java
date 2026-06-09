@@ -66,6 +66,7 @@ class AgentPhase1ExecutionRoadmapServiceTest {
                 "technology-adoption",
                 "advanced-technology-compatibility-matrix",
                 "advanced-technology-compatibility-matrix-binding-spec",
+                "advanced-technology-compatibility-matrix-evidence-readiness",
                 "official-version-protocol-watch",
                 "official-version-protocol-watch-dashboard",
                 "official-version-protocol-watch-binding-spec",
@@ -95,6 +96,8 @@ class AgentPhase1ExecutionRoadmapServiceTest {
                 "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix")
             .containsEntry("advancedTechnologyCompatibilityMatrixVueBindingSpec",
                 "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/vue-binding-spec")
+            .containsEntry("advancedTechnologyCompatibilityMatrixEvidenceReadiness",
+                "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/evidence-readiness")
             .containsEntry("officialVersionProtocolWatch", "/api/agent/observability/top-tier/official-version-protocol-watch")
             .containsEntry("officialVersionProtocolWatchDashboard",
                 "/api/agent/observability/top-tier/official-version-protocol-watch/dashboard")

@@ -64,15 +64,16 @@ class AgentTopTierVueWorkbenchImplementationPackageServiceTest {
             .isEqualTo("vue-kube-manager Phase 1 top-tier Agent latest-technology workbench");
         assertThat(response.sourceBindingSpecsEmbedded()).isTrue();
         assertThat(response.runtimeControlAllowed()).isFalse();
-        assertThat(response.routeSpecCount()).isEqualTo(2);
-        assertThat(response.apiClientBindingCount()).isEqualTo(4);
-        assertThat(response.pageAssemblyCount()).isEqualTo(2);
-        assertThat(response.sharedComponentCount()).isEqualTo(7);
-        assertThat(response.acceptanceFixtureCount()).isEqualTo(6);
+        assertThat(response.routeSpecCount()).isEqualTo(3);
+        assertThat(response.apiClientBindingCount()).isEqualTo(5);
+        assertThat(response.pageAssemblyCount()).isEqualTo(3);
+        assertThat(response.sharedComponentCount()).isEqualTo(8);
+        assertThat(response.acceptanceFixtureCount()).isEqualTo(7);
         assertThat(response.routeSpecs()).extracting(route -> route.get("id"))
             .containsExactly(
                 "top-tier-official-version-protocol-watch",
-                "top-tier-advanced-technology-compatibility-matrix"
+                "top-tier-advanced-technology-compatibility-matrix",
+                "top-tier-advanced-technology-evidence-readiness"
             );
         assertThat(response.routeSpecs()).allSatisfy(route -> assertThat(route)
             .containsEntry("requiresAdminSession", true)
@@ -84,7 +85,8 @@ class AgentTopTierVueWorkbenchImplementationPackageServiceTest {
                 "fetchOfficialWatchDashboard",
                 "fetchOfficialWatchBindingSpec",
                 "fetchCompatibilityMatrix",
-                "fetchCompatibilityMatrixBindingSpec"
+                "fetchCompatibilityMatrixBindingSpec",
+                "fetchCompatibilityMatrixEvidenceReadiness"
             );
         assertThat(response.apiClientBindings()).allSatisfy(client -> assertThat(client)
             .containsEntry("method", "GET")
@@ -93,14 +95,15 @@ class AgentTopTierVueWorkbenchImplementationPackageServiceTest {
             .containsEntry("runtimeBackendCallAllowed", false)
             .containsEntry("kubeManager8100Required", false));
         assertThat(response.pageAssemblies()).extracting(page -> page.get("pageId"))
-            .containsExactly("official-watch-page", "compatibility-matrix-page");
+            .containsExactly("official-watch-page", "compatibility-matrix-page",
+                "evidence-readiness-page");
         assertThat(response.pageAssemblies()).allSatisfy(page -> assertThat(page)
             .containsEntry("ownsGovernanceLogic", false)
             .containsEntry("usesBackendStateRules", true)
             .containsEntry("runtimeControlAllowed", false));
         assertThat(response.sharedComponentContracts()).extracting(component -> component.get("componentName"))
             .containsExactly("StatusBadge", "MetricNumber", "EvidenceTagList", "ReadonlyTable",
-                "DisabledActionList", "ExternalOfficialLink", "ReadonlyJsonPanel");
+                "DisabledActionList", "ExternalOfficialLink", "ReadonlyJsonPanel", "EvidenceGapTable");
         assertThat(response.sharedComponentContracts()).allSatisfy(component -> assertThat(component)
             .containsEntry("readOnly", true)
             .containsEntry("runtimeControlAllowed", false)
@@ -109,8 +112,9 @@ class AgentTopTierVueWorkbenchImplementationPackageServiceTest {
             .containsExactly(
                 "official-watch-page-renders-with-mocked-binding-spec",
                 "compatibility-matrix-page-renders-with-mocked-binding-spec",
+                "evidence-readiness-page-renders-with-mocked-readiness",
                 "cross-page-navigation-keeps-read-only-state",
-                "runtime-buttons-absent-in-both-pages",
+                "runtime-buttons-absent-in-all-pages",
                 "admin-auth-required-for-all-api-calls",
                 "source-json-drilldown-redacted"
             );
@@ -133,6 +137,7 @@ class AgentTopTierVueWorkbenchImplementationPackageServiceTest {
             "create-top-tier-agent-workbench-navigation",
             "implement-official-watch-page-from-binding-spec",
             "implement-compatibility-matrix-page-from-binding-spec",
+            "implement-evidence-readiness-page-from-read-model",
             "verify-runtime-control-buttons-are-absent"
         );
         assertThat(response.officialWatchBindingSpec().schemaVersion())
@@ -145,17 +150,19 @@ class AgentTopTierVueWorkbenchImplementationPackageServiceTest {
             .containsEntry("officialVersionProtocolWatchVueBindingSpec",
                 "/api/agent/observability/top-tier/official-version-protocol-watch/vue-binding-spec")
             .containsEntry("advancedTechnologyCompatibilityMatrixVueBindingSpec",
-                "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/vue-binding-spec");
+                "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/vue-binding-spec")
+            .containsEntry("advancedTechnologyCompatibilityMatrixEvidenceReadiness",
+                "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/evidence-readiness");
         assertThat(response.packagePolicy())
             .containsEntry("adminOnly", true)
             .containsEntry("readOnly", true)
             .containsEntry("implementationPackageOnly", true)
             .containsEntry("vueWorkbenchOnly", true)
-            .containsEntry("routeSpecCount", 2)
-            .containsEntry("apiClientBindingCount", 4)
-            .containsEntry("pageAssemblyCount", 2)
-            .containsEntry("sharedComponentCount", 7)
-            .containsEntry("acceptanceFixtureCount", 6)
+            .containsEntry("routeSpecCount", 3)
+            .containsEntry("apiClientBindingCount", 5)
+            .containsEntry("pageAssemblyCount", 3)
+            .containsEntry("sharedComponentCount", 8)
+            .containsEntry("acceptanceFixtureCount", 7)
             .containsEntry("runtimeButtonsAllowed", false)
             .containsEntry("dependencyUpgradeButtonsAllowed", false);
         assertThat(response.safety())
@@ -184,7 +191,7 @@ class AgentTopTierVueWorkbenchImplementationPackageServiceTest {
         assertThat(response.toString())
             .contains("top-tier-official-version-protocol-watch",
                 "top-tier-advanced-technology-compatibility-matrix",
-                "runtime-buttons-absent-in-both-pages")
+                "runtime-buttons-absent-in-all-pages")
             .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret");
     }
 

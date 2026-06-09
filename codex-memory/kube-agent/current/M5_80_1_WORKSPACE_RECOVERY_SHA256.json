@@ -1,0 +1,99 @@
+﻿{
+    "project":  "kube-agent",
+    "wave":  "M5.80-1",
+    "title":  "Advanced technology compatibility matrix evidence readiness",
+    "generatedAt":  "2026-06-10T01:46:59.4625817+08:00",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "files":  [
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessResponse.java",
+                      "sha256":  "5808D4A9E762D9996F0BCCEEACD880248420E0B5AE634191B15A3C369F26633F",
+                      "bytes":  29195
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessService.java",
+                      "sha256":  "DB9A919AE37914A8E0F6C43465A4997D41A2C9F3CEFE88188A0752D2359DCDE6",
+                      "bytes":  2295
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/ObservabilityController.java",
+                      "sha256":  "61FA1FCBA0136AA2B783A37B9FEBB185078C5D866822E0921399AC83BBBAB5FF",
+                      "bytes":  52749
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessServiceTest.java",
+                      "sha256":  "43CB4BC972D3C5282CD5C94387B4201315A5E5D56FE09CACE762B3FE2E81B68E",
+                      "bytes":  22173
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/ObservabilityControllerTest.java",
+                      "sha256":  "32954038C71A6FE239C1F6C0182FF80E6B67D79EE5136DBFD76CC4FC2DF303F1",
+                      "bytes":  215716
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/ObservabilityControllerSecurityContractTest.java",
+                      "sha256":  "EE11E68F062F96637F6F48963916A5542785568098E8591A5AB8CCD95A3CCED4",
+                      "bytes":  14213
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/auth/AgentSecurityConfigWebMvcTest.java",
+                      "sha256":  "A8E4E015C1E304B41BD1D194CD01F75E60BDCCE4B72C1E691D34BA8109BE73B4",
+                      "bytes":  47281
+                  },
+                  {
+                      "path":  "docs/M5_80_ADVANCED_TECHNOLOGY_COMPATIBILITY_MATRIX_EVIDENCE_READINESS_20260610.md",
+                      "sha256":  "49B6AFE707DE7D9EF13EB775BB719344A33F8B35015216D620EFAECDD86F4CED",
+                      "bytes":  7407
+                  },
+                  {
+                      "path":  "docs/PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "AE22FCC76562B3EB5E6C880797DA13010FA0D12C72A7588C568FF0AAE5E89EEE",
+                      "bytes":  447054
+                  },
+                  {
+                      "path":  "docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "ED0A4ACFDAD8FC34DF89F13079C21B44B949D9198D08FA160DCD84D459C6427B",
+                      "bytes":  190787
+                  },
+                  {
+                      "path":  "docs/tech-stack/BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "C135376334791FAE9BE8CA6286512DCD8A6AC7769C4AE4CCB3C65F617E12A5A9",
+                      "bytes":  111173
+                  },
+                  {
+                      "path":  "CHANGELOG.md",
+                      "sha256":  "C5BB5ECF60E81DA61D79DC243A6CACE5CB6E31326D3C1D6A4F32C230F297AEDF",
+                      "bytes":  385812
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/RECOVERY_STATUS.md",
+                      "sha256":  "4765C284F5285DEB070C13738834C3C310460AE9A15364786A6D97B571B55045",
+                      "bytes":  85843
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_M5_80_ADVANCED_TECHNOLOGY_COMPATIBILITY_MATRIX_EVIDENCE_READINESS_20260610.md",
+                      "sha256":  "49B6AFE707DE7D9EF13EB775BB719344A33F8B35015216D620EFAECDD86F4CED",
+                      "bytes":  7407
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "AE22FCC76562B3EB5E6C880797DA13010FA0D12C72A7588C568FF0AAE5E89EEE",
+                      "bytes":  447054
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "ED0A4ACFDAD8FC34DF89F13079C21B44B949D9198D08FA160DCD84D459C6427B",
+                      "bytes":  190787
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "C135376334791FAE9BE8CA6286512DCD8A6AC7769C4AE4CCB3C65F617E12A5A9",
+                      "bytes":  111173
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/CHANGELOG.md",
+                      "sha256":  "C5BB5ECF60E81DA61D79DC243A6CACE5CB6E31326D3C1D6A4F32C230F297AEDF",
+                      "bytes":  385812
+                  }
+              ]
+}

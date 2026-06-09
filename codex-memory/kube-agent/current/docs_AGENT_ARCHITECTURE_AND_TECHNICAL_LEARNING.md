@@ -2,6 +2,58 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-10 M5.80 Advanced Technology Evidence Readiness
+
+M5.80 adds the evidence-readiness layer for the advanced technology compatibility matrix. It answers: when the project says it wants "all the most advanced technologies", how do we prevent that from becoming an unsafe dependency bump or runtime switch?
+
+```text
+M5.77 compatibility matrix
+        |
+        +-----------------------------+
+                                      v
+M5.80 evidence readiness       every technology lane becomes
+                                      |
+        +-----------------------------+
+        |
+        +-- reviewed eval trace evidence gap
+        +-- Memory/RAG reviewed fixture gap
+        +-- release gate gap
+        +-- Vue read-only visibility gap
+        +-- recovery memory gap
+        +-- human Git review gap
+```
+
+Endpoint:
+
+```text
+GET /api/agent/observability/top-tier/advanced-technology-compatibility-matrix/evidence-readiness
+```
+
+Current state:
+
+- `schemaVersion=agent-advanced-technology-compatibility-matrix-evidence-readiness.v1`
+- `readinessStatus=EVIDENCE_READINESS_BLOCKED_BY_REVIEWED_TRACE_GAPS`
+- `matrixItemCount=10`
+- `evidenceRowCount=10`
+- `blockedEvidenceRowCount=10`
+- `reviewedTraceSetCount=0`
+- `memoryRagRequiredTraceSetCount=3`
+- `runtimeControlAllowed=false`
+- `ciBlockingAllowedNow=false`
+
+Key design:
+
+- The service composes only three read models: compatibility matrix, reviewed eval trace evidence, and Memory/RAG reviewed trace evidence manifest.
+- It does not call candidate discovery, curation review, trace-set gates, eval suites, audit query, retrieval, tools, LLMs, or kube-manager.
+- Every advanced technology lane receives the same baseline proof model: official source, reviewed trace, focused tests, Vue visibility, recovery memory, and Git review.
+- High-risk lanes add extra proof: MCP needs consent/SafeToolExecutor/audit/eval; Memory/RAG needs citation/source/tenant/lifecycle fixtures; kube-manager writes need idempotency/safety/readback/release-gate evidence; CI needs real reviewed trace evidence before blocking releases.
+
+Learning point: 顶级 Agent 的“先进”不是按版本号堆出来的，而是按证据链生长出来的。M5.80 把每个先进技术候选项变成可见的证据缺口，这样学习者能看到为什么 Java 21/25、Spring Boot 4、Spring AI 2、OpenAI Agents、MCP tools/call、A2A、OTel GenAI、GraphRAG、reranker、vector store、CI blocking 还不能直接进入 runtime。
+
+Technology point: Evidence readiness is the bridge between architecture ambition and release discipline. It keeps the project modern without allowing "latest" to bypass identity, Tool governance, audit, replay, eval, privacy, Vue UX, and recovery memory.
+
+M5.80 also upgrades the M5.79 Vue workbench implementation package from two pages to three pages. The third page is the evidence-readiness board, so `vue-kube-manager` can teach operators not only what technologies are being tracked, but why each one is still blocked.
+
 ## 2026-06-10 M5.79 Top-Tier Vue Workbench Implementation Package
 
 M5.79 turns the two latest-technology Vue binding specs into a page-level implementation package. It answers: how can `vue-kube-manager` implement the official watch page and compatibility matrix page as one governed workbench without inventing routes, API client behavior, shared components, fixtures, or runtime controls?
@@ -58,7 +110,7 @@ Key design:
 Multi-expert review:
 
 - Newton / frontend-contract review recommended a cross-page workbench package because single-page specs still leave Vue guessing about route, tab, drilldown, disabled action, and fixture behavior. M5.79 implements that recommendation.
-- Faraday / backend-architecture review recommended a follow-up evidence-readiness endpoint that maps compatibility-matrix lanes to reviewed trace/eval/Memory-RAG evidence gaps. This is kept as the likely next slice rather than mixed into M5.79.
+- Faraday / backend-architecture review recommended a follow-up evidence-readiness endpoint that maps compatibility-matrix lanes to reviewed trace/eval/Memory-RAG evidence gaps. M5.80 implements that recommendation as a separate read-only slice.
 
 Learning point: 顶级 Agent 的前端不是“把接口数据显示出来”。它是一个 operator UX + learning UX + governance UX。后端要发布的不只是数据，还包括页面边界、组件语义、验收 fixture、禁用动作和安全证明。
 

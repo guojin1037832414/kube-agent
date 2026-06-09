@@ -123,6 +123,8 @@ class AgentOfficialVersionProtocolWatchVueBindingSpecServiceTest {
                 "/api/agent/observability/top-tier/official-version-protocol-watch/vue-binding-spec")
             .containsEntry("advancedTechnologyCompatibilityMatrixVueBindingSpec",
                 "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/vue-binding-spec")
+            .containsEntry("advancedTechnologyCompatibilityMatrixEvidenceReadiness",
+                "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/evidence-readiness")
             .containsEntry("officialVersionProtocolWatchDashboard",
                 "/api/agent/observability/top-tier/official-version-protocol-watch/dashboard");
         assertThat(spec.bindingPolicy())

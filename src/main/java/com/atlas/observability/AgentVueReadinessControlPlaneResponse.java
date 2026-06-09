@@ -76,6 +76,11 @@ public record AgentVueReadinessControlPlaneResponse(
                 AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecResponse.BINDING_SPEC_ENDPOINT,
                 List.of("componentSpecs", "fieldBindings", "tableColumnGroups", "stateRenderingRules",
                     "disabledActionBindings", "testFixtures", "implementationChecklist")),
+            dashboard("advanced-technology-compatibility-matrix-evidence-readiness", "READY_TO_BIND",
+                "Render evidence readiness rows that map each advanced technology lane to reviewed trace, Memory/RAG fixture, release gate, Vue, and Git review gaps.",
+                AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessResponse.EVIDENCE_READINESS_ENDPOINT,
+                List.of("matrixEvidenceRows", "blockingGateRows", "disabledRuntimeActions",
+                    "nextActions", "readinessPolicy")),
             dashboard("official-version-protocol-watch", "READY_TO_BIND",
                 "Render official source review dates, protocol tracks, adoption decisions, and runtime blockers.",
                 AgentOfficialVersionProtocolWatchResponse.WATCH_ENDPOINT,
@@ -135,6 +140,9 @@ public record AgentVueReadinessControlPlaneResponse(
                 AgentAdvancedTechnologyCompatibilityMatrixResponse.MATRIX_ENDPOINT, "GET", true),
             apiBinding("advanced-technology-compatibility-matrix-binding-spec",
                 AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecResponse.BINDING_SPEC_ENDPOINT, "GET", true),
+            apiBinding("advanced-technology-compatibility-matrix-evidence-readiness",
+                AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessResponse.EVIDENCE_READINESS_ENDPOINT,
+                "GET", true),
             apiBinding("official-version-protocol-watch", AgentOfficialVersionProtocolWatchResponse.WATCH_ENDPOINT, "GET", true),
             apiBinding("official-version-protocol-watch-dashboard",
                 AgentOfficialVersionProtocolWatchDashboardResponse.DASHBOARD_ENDPOINT, "GET", true),
@@ -195,6 +203,7 @@ public record AgentVueReadinessControlPlaneResponse(
             "bind-advanced-technology-adoption-matrix",
             "bind-advanced-technology-compatibility-matrix",
             "bind-advanced-technology-compatibility-matrix-binding-spec",
+            "bind-advanced-technology-compatibility-matrix-evidence-readiness",
             "bind-official-version-protocol-watch",
             "bind-official-version-protocol-watch-dashboard",
             "bind-official-version-protocol-watch-binding-spec",
@@ -219,6 +228,8 @@ public record AgentVueReadinessControlPlaneResponse(
             AgentAdvancedTechnologyCompatibilityMatrixResponse.MATRIX_ENDPOINT);
         endpoints.put("advancedTechnologyCompatibilityMatrixVueBindingSpec",
             AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecResponse.BINDING_SPEC_ENDPOINT);
+        endpoints.put("advancedTechnologyCompatibilityMatrixEvidenceReadiness",
+            AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessResponse.EVIDENCE_READINESS_ENDPOINT);
         endpoints.put("officialVersionProtocolWatch", AgentOfficialVersionProtocolWatchResponse.WATCH_ENDPOINT);
         endpoints.put("officialVersionProtocolWatchDashboard",
             AgentOfficialVersionProtocolWatchDashboardResponse.DASHBOARD_ENDPOINT);

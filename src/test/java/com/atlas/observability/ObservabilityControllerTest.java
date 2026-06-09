@@ -148,6 +148,12 @@ class ObservabilityControllerTest {
         new AgentAdvancedTechnologyCompatibilityMatrixService(officialVersionProtocolWatchService);
     private final AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecService advancedTechnologyCompatibilityMatrixVueBindingSpecService =
         new AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecService(advancedTechnologyCompatibilityMatrixService);
+    private final AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessService advancedTechnologyCompatibilityMatrixEvidenceReadinessService =
+        new AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessService(
+            advancedTechnologyCompatibilityMatrixService,
+            reviewedEvalTraceEvidenceService,
+            memoryRagReviewedTraceEvidenceManifestService
+        );
     private final AgentOfficialVersionProtocolWatchDashboardService officialVersionProtocolWatchDashboardService =
         new AgentOfficialVersionProtocolWatchDashboardService(officialVersionProtocolWatchService);
     private final AgentOfficialVersionProtocolWatchVueBindingSpecService officialVersionProtocolWatchVueBindingSpecService =
@@ -174,6 +180,7 @@ class ObservabilityControllerTest {
         advancedTechnologyAdoptionContractService,
         advancedTechnologyCompatibilityMatrixService,
         advancedTechnologyCompatibilityMatrixVueBindingSpecService,
+        advancedTechnologyCompatibilityMatrixEvidenceReadinessService,
         officialVersionProtocolWatchService,
         officialVersionProtocolWatchDashboardService,
         officialVersionProtocolWatchVueBindingSpecService,
@@ -994,6 +1001,8 @@ class ObservabilityControllerTest {
                 "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix")
             .containsEntry("advancedTechnologyCompatibilityMatrixVueBindingSpec",
                 "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/vue-binding-spec")
+            .containsEntry("advancedTechnologyCompatibilityMatrixEvidenceReadiness",
+                "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/evidence-readiness")
             .containsEntry("officialVersionProtocolWatch", "/api/agent/observability/top-tier/official-version-protocol-watch")
             .containsEntry("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap")
             .containsEntry("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane");
@@ -1062,6 +1071,8 @@ class ObservabilityControllerTest {
                 "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix")
             .containsEntry("advancedTechnologyCompatibilityMatrixVueBindingSpec",
                 "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/vue-binding-spec")
+            .containsEntry("advancedTechnologyCompatibilityMatrixEvidenceReadiness",
+                "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/evidence-readiness")
             .containsEntry("officialVersionProtocolWatch",
                 "/api/agent/observability/top-tier/official-version-protocol-watch");
         assertThat(matrix.safety())
@@ -1129,7 +1140,9 @@ class ObservabilityControllerTest {
             .containsEntry("advancedTechnologyCompatibilityMatrixVueBindingSpec",
                 "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/vue-binding-spec")
             .containsEntry("advancedTechnologyCompatibilityMatrix",
-                "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix");
+                "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix")
+            .containsEntry("advancedTechnologyCompatibilityMatrixEvidenceReadiness",
+                "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/evidence-readiness");
         assertThat(spec.bindingPolicy())
             .containsEntry("bindingSpecOnly", true)
             .containsEntry("runtimeButtonsAllowed", false)
@@ -1145,6 +1158,80 @@ class ObservabilityControllerTest {
             .isEqualTo("agent-advanced-technology-compatibility-matrix.v1");
         assertThat(spec.toString())
             .contains("CandidateUpgradeLaneMatrix", "runtime-buttons-absent")
+            .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret");
+    }
+
+    @Test
+    void advancedTechnologyCompatibilityMatrixEvidenceReadiness_shouldRequireAdminAndReturnEvidenceReadiness() {
+        ResponseEntity<ApiResponse<AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessResponse>> anonymous =
+            controller.advancedTechnologyCompatibilityMatrixEvidenceReadiness();
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessResponse>> user =
+            controller.advancedTechnologyCompatibilityMatrixEvidenceReadiness();
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        userPermissionContext.unbind();
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessResponse>> admin =
+            controller.advancedTechnologyCompatibilityMatrixEvidenceReadiness();
+
+        assertThat(admin.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(admin.getBody()).isNotNull();
+        AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessResponse readiness =
+            admin.getBody().getData();
+        assertThat(readiness.schemaVersion())
+            .isEqualTo("agent-advanced-technology-compatibility-matrix-evidence-readiness.v1");
+        assertThat(readiness.readinessStatus())
+            .isEqualTo("EVIDENCE_READINESS_BLOCKED_BY_REVIEWED_TRACE_GAPS");
+        assertThat(readiness.matrixItemCount()).isEqualTo(10);
+        assertThat(readiness.evidenceRowCount()).isEqualTo(10);
+        assertThat(readiness.blockedEvidenceRowCount()).isEqualTo(10);
+        assertThat(readiness.memoryRagRequiredTraceSetCount()).isEqualTo(3);
+        assertThat(readiness.runtimeControlAllowed()).isFalse();
+        assertThat(readiness.ciBlockingAllowedNow()).isFalse();
+        assertThat(readiness.matrixEvidenceRows()).extracting(row -> row.get("laneId"))
+            .contains("mcp-runtime-call-plane", "memory-rag-graphrag-reranker-vectorstore",
+                "kubernetes-manager-control-plane", "supply-chain-ci-quality");
+        assertThat(readiness.blockingGateRows()).extracting(row -> row.get("id"))
+            .contains("reviewed-eval-trace-evidence", "memory-rag-reviewed-fixtures",
+                "ci-blocking-release-decision");
+        assertThat(readiness.disabledRuntimeActions()).extracting(action -> action.get("actionId"))
+            .contains("enable-mcp-tools-call", "enable-rag-runtime",
+                "enable-kube-manager-write-runtime", "enable-ci-blocking");
+        assertThat(readiness.endpointMap())
+            .containsEntry("advancedTechnologyCompatibilityMatrixEvidenceReadiness",
+                "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/evidence-readiness")
+            .containsEntry("reviewedEvalTraceEvidence",
+                "/api/agent/observability/eval/reviewed-trace-evidence")
+            .containsEntry("memoryRagReviewedTraceEvidenceManifest",
+                "/api/agent/observability/memory-rag/workbench/trace-set-curation/review-manifest");
+        assertThat(readiness.readinessPolicy())
+            .containsEntry("callerTraceIdsAccepted", false)
+            .containsEntry("runtimeControlAllowed", false)
+            .containsEntry("catalogMutationAllowed", false);
+        assertThat(readiness.safety())
+            .containsEntry("candidateDiscoveryInvoked", false)
+            .containsEntry("curationReviewInvoked", false)
+            .containsEntry("evalRuntimeExecuted", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("kubeManagerCalls", false)
+            .containsEntry("phase2NimHpcSlurmBcmTouched", false);
+        assertThat(readiness.sourceMatrix().schemaVersion())
+            .isEqualTo("agent-advanced-technology-compatibility-matrix.v1");
+        assertThat(readiness.reviewedEvalTraceEvidence().schemaVersion())
+            .isEqualTo("agent-reviewed-eval-trace-evidence.v1");
+        assertThat(readiness.memoryRagReviewedTraceEvidenceManifest().schemaVersion())
+            .isEqualTo("agent-memory-rag-reviewed-trace-evidence-manifest.v1");
+        assertThat(readiness.toString())
+            .contains("evidence-readiness", "memory-rag-reviewed-trace-fixtures", "enable-ci-blocking")
             .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret");
     }
 
@@ -1374,17 +1461,19 @@ class ObservabilityControllerTest {
         assertThat(implementationPackage.schemaVersion())
             .isEqualTo("agent-top-tier-vue-workbench-implementation-package.v1");
         assertThat(implementationPackage.packageStatus()).isEqualTo("IMPLEMENTATION_PACKAGE_READY");
-        assertThat(implementationPackage.routeSpecCount()).isEqualTo(2);
-        assertThat(implementationPackage.apiClientBindingCount()).isEqualTo(4);
-        assertThat(implementationPackage.pageAssemblyCount()).isEqualTo(2);
-        assertThat(implementationPackage.sharedComponentCount()).isEqualTo(7);
-        assertThat(implementationPackage.acceptanceFixtureCount()).isEqualTo(6);
+        assertThat(implementationPackage.routeSpecCount()).isEqualTo(3);
+        assertThat(implementationPackage.apiClientBindingCount()).isEqualTo(5);
+        assertThat(implementationPackage.pageAssemblyCount()).isEqualTo(3);
+        assertThat(implementationPackage.sharedComponentCount()).isEqualTo(8);
+        assertThat(implementationPackage.acceptanceFixtureCount()).isEqualTo(7);
         assertThat(implementationPackage.runtimeControlAllowed()).isFalse();
         assertThat(implementationPackage.routeSpecs()).extracting(route -> route.get("id"))
             .contains("top-tier-official-version-protocol-watch",
-                "top-tier-advanced-technology-compatibility-matrix");
+                "top-tier-advanced-technology-compatibility-matrix",
+                "top-tier-advanced-technology-evidence-readiness");
         assertThat(implementationPackage.apiClientBindings()).extracting(client -> client.get("name"))
-            .contains("fetchOfficialWatchBindingSpec", "fetchCompatibilityMatrixBindingSpec");
+            .contains("fetchOfficialWatchBindingSpec", "fetchCompatibilityMatrixBindingSpec",
+                "fetchCompatibilityMatrixEvidenceReadiness");
         assertThat(implementationPackage.forbiddenRuntimeControls()).allSatisfy(control -> assertThat(control)
             .containsEntry("buttonVisible", false)
             .containsEntry("clickHandlerAllowed", false)
@@ -1405,13 +1494,15 @@ class ObservabilityControllerTest {
             .containsEntry("officialVersionProtocolWatchVueBindingSpec",
                 "/api/agent/observability/top-tier/official-version-protocol-watch/vue-binding-spec")
             .containsEntry("advancedTechnologyCompatibilityMatrixVueBindingSpec",
-                "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/vue-binding-spec");
+                "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/vue-binding-spec")
+            .containsEntry("advancedTechnologyCompatibilityMatrixEvidenceReadiness",
+                "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/evidence-readiness");
         assertThat(implementationPackage.officialWatchBindingSpec().schemaVersion())
             .isEqualTo("agent-official-version-protocol-watch-vue-binding-spec.v1");
         assertThat(implementationPackage.compatibilityMatrixBindingSpec().schemaVersion())
             .isEqualTo("agent-advanced-technology-compatibility-matrix-vue-binding-spec.v1");
         assertThat(implementationPackage.toString())
-            .contains("runtime-buttons-absent-in-both-pages", "DisabledActionList")
+            .contains("runtime-buttons-absent-in-all-pages", "DisabledActionList", "EvidenceGapTable")
             .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret");
     }
 

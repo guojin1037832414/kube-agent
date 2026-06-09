@@ -112,6 +112,8 @@ class AgentOfficialVersionProtocolWatchServiceTest {
                 "/api/agent/observability/top-tier/official-version-protocol-watch/vue-binding-spec")
             .containsEntry("advancedTechnologyCompatibilityMatrixVueBindingSpec",
                 "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/vue-binding-spec")
+            .containsEntry("advancedTechnologyCompatibilityMatrixEvidenceReadiness",
+                "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/evidence-readiness")
             .containsEntry("advancedTechnologyAdoptionContract",
                 "/api/agent/observability/top-tier/advanced-technology-adoption-contract")
             .containsEntry("memoryRagReviewedTraceEvidenceManifest",

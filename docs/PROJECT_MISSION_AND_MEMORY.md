@@ -10,6 +10,71 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
+## Latest Phase 1 Core Memory - M5.80-1
+
+M5.80-1 adds the backend-owned evidence-readiness layer for the advanced technology compatibility matrix. This turns the M5.77 matrix from a list of candidate advanced technologies into a lane-by-lane evidence board: each Java/Spring/OpenAI/MCP/A2A/OTel/Memory-RAG/kube-manager/CI lane now shows reviewed trace, Memory/RAG fixture, release-gate, Vue visibility, recovery, and Git-review gaps before any runtime or dependency change can be considered.
+
+Endpoint:
+
+```text
+GET /api/agent/observability/top-tier/advanced-technology-compatibility-matrix/evidence-readiness
+```
+
+Delivered:
+
+- Added `AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessResponse`.
+- Added `AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessService`.
+- Added admin-only Controller method `advancedTechnologyCompatibilityMatrixEvidenceReadiness()`.
+- Published 10 matrix evidence rows, 7 blocking gate rows, 14 disabled runtime actions, and explicit next actions.
+- Embedded source read models from compatibility matrix, reviewed eval trace evidence, and Memory/RAG reviewed trace evidence manifest.
+- Integrated the endpoint into advanced technology adoption, official watch, official watch dashboard, official watch binding spec, compatibility matrix, compatibility matrix binding spec, top-tier readiness overview, Phase 1 roadmap, and Vue readiness control plane.
+- Extended M5.79 top-tier Vue workbench implementation package from 2 pages to 3 pages by adding the advanced technology evidence-readiness page.
+- Updated Vue readiness dashboard count to `16`.
+- Added the teaching document `docs/M5_80_ADVANCED_TECHNOLOGY_COMPATIBILITY_MATRIX_EVIDENCE_READINESS_20260610.md`.
+
+Current state:
+
+- `schemaVersion=agent-advanced-technology-compatibility-matrix-evidence-readiness.v1`.
+- `readinessStatus=EVIDENCE_READINESS_BLOCKED_BY_REVIEWED_TRACE_GAPS`.
+- `matrixItemCount=10`.
+- `evidenceRowCount=10`.
+- `blockedEvidenceRowCount=10`.
+- `reviewedTraceSetCount=0`.
+- `reviewedTraceAnchorCount=0`.
+- `memoryRagRequiredTraceSetCount=3`.
+- `memoryRagReviewedTraceSetCount=0`.
+- `runtimeControlAllowed=false`.
+- `runtimeUpgradeAllowedNow=false`.
+- `dependencyUpgradeAllowedNow=false`.
+- `ciBlockingAllowedNow=false`.
+- `catalogMutationAllowed=false`.
+
+Security boundary:
+
+- M5.80 is admin-only, read-only, evidence-readiness-only, source-read-model-composition-only, and external-call-free at request time.
+- It does not modify `pom.xml`, upgrade dependencies, switch Java/Spring/Spring AI baselines, accept caller trace IDs, run evals, discover candidates, run curation review, mutate trace-set catalogs, enable CI blocking, run LLMs, execute Tools, call `SafeToolExecutor`, invoke HITL, call kube-manager including port `8100`, expose MCP runtime `tools/call`, run A2A handoff, execute retrieval/vector/reranker/GraphRAG, write memory, write audit, issue durable receipts, or touch NIM / HPC / Slurm / BCM Phase 2 scope.
+
+Multi-expert memory:
+
+- Faraday / backend-architecture review recommended the evidence-readiness layer after M5.79; M5.80 implements that recommendation.
+- Newton / security-contract review emphasized Controller, WebMvc, and source-guard coverage for the new endpoint; M5.80 added focused service, Controller, security contract, and aggregate tests.
+- Curie / docs-learning review emphasized that evidence readiness is a teaching surface, not a runtime switch; M5.80 documents this as the latest safe technology-adoption pattern.
+
+Learning point: top-tier Agent engineering does not mean blindly installing the newest library. It means turning every newest technology into an evidence lane first: official source -> compatibility matrix -> evidence readiness -> reviewed tests -> release gate -> runtime binding.
+
+Latest verified commands:
+
+- `mvn -q "-DskipTests" validate`
+- `mvn -q "-Dtest=AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessServiceTest,AgentAdvancedTechnologyCompatibilityMatrixServiceTest,AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecServiceTest,AgentTopTierVueWorkbenchImplementationPackageServiceTest,AgentTopTierReadinessOverviewServiceTest,AgentAdvancedTechnologyAdoptionContractServiceTest,AgentOfficialVersionProtocolWatchServiceTest,AgentOfficialVersionProtocolWatchDashboardServiceTest,AgentOfficialVersionProtocolWatchVueBindingSpecServiceTest,AgentPhase1ExecutionRoadmapServiceTest,AgentVueReadinessControlPlaneServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+Next safe development order:
+
+- Wire `vue-kube-manager` to consume M5.79/M5.80 and render the three-page advanced technology workbench when that repo is writable.
+- Continue reviewed redacted eval trace evidence curation.
+- Complete Memory/RAG reviewed trace fixtures.
+- Promote release-blocking eval gates only after reviewed evidence exists.
+- Keep MCP runtime, A2A handoff, retrieval runtime, CI blocking, kube-manager writes, and Phase 2 NIM/HPC/Slurm/BCM release-gated.
+
 ## Latest Phase 1 Core Memory - M5.79-1
 
 M5.79-1 adds the backend-owned top-tier Vue workbench implementation package. This is the bridge from separate backend Vue binding specs to a page-level implementation contract: `vue-kube-manager` can now implement the official technology watch page and compatibility matrix page from one backend-published package of routes, API clients, shared components, fixtures, disabled runtime controls, and acceptance order.
@@ -65,8 +130,8 @@ Latest verified commands:
 
 Next safe development order:
 
-- Add M5.80 `advanced-technology-compatibility-matrix/evidence-readiness` as a read-only evidence gap layer.
-- Then wire `vue-kube-manager` to consume M5.79 and render the official watch + compatibility matrix workbench with mocked fixtures.
+- M5.80 evidence-readiness is now complete; use the newer M5.80 section above as the current rule.
+- Then wire `vue-kube-manager` to consume M5.79/M5.80 and render the official watch + compatibility matrix + evidence-readiness workbench with mocked fixtures.
 - Continue reviewed redacted eval and Memory/RAG trace evidence curation.
 - Keep MCP runtime, A2A handoff, retrieval runtime, CI blocking, kube-manager writes, and Phase 2 NIM/HPC/Slurm/BCM release-gated.
 

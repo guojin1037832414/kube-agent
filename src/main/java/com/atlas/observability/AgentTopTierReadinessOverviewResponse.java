@@ -275,6 +275,8 @@ public record AgentTopTierReadinessOverviewResponse(
         evidence.put("compatibilityMatrixEndpoint", AgentAdvancedTechnologyCompatibilityMatrixResponse.MATRIX_ENDPOINT);
         evidence.put("compatibilityMatrixVueBindingSpecEndpoint",
             AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecResponse.BINDING_SPEC_ENDPOINT);
+        evidence.put("compatibilityMatrixEvidenceReadinessEndpoint",
+            AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessResponse.EVIDENCE_READINESS_ENDPOINT);
         evidence.put("officialVersionProtocolWatchExists", true);
         evidence.put("officialVersionProtocolWatchEndpoint", AgentOfficialVersionProtocolWatchResponse.WATCH_ENDPOINT);
         evidence.put("officialVersionProtocolWatchDashboardEndpoint",
@@ -323,6 +325,7 @@ public record AgentTopTierReadinessOverviewResponse(
             "wire-vue-advanced-technology-adoption-contract",
             "wire-vue-advanced-technology-compatibility-matrix",
             "wire-vue-advanced-technology-compatibility-matrix-binding-spec",
+            "wire-vue-advanced-technology-compatibility-matrix-evidence-readiness",
             "wire-vue-official-version-protocol-watch",
             "wire-vue-official-version-protocol-watch-dashboard",
             "wire-vue-official-version-protocol-watch-binding-spec",
@@ -357,6 +360,8 @@ public record AgentTopTierReadinessOverviewResponse(
             AgentAdvancedTechnologyCompatibilityMatrixResponse.MATRIX_ENDPOINT);
         endpoints.put("advancedTechnologyCompatibilityMatrixVueBindingSpec",
             AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecResponse.BINDING_SPEC_ENDPOINT);
+        endpoints.put("advancedTechnologyCompatibilityMatrixEvidenceReadiness",
+            AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessResponse.EVIDENCE_READINESS_ENDPOINT);
         endpoints.put("officialVersionProtocolWatch", AgentOfficialVersionProtocolWatchResponse.WATCH_ENDPOINT);
         endpoints.put("officialVersionProtocolWatchDashboard",
             AgentOfficialVersionProtocolWatchDashboardResponse.DASHBOARD_ENDPOINT);
