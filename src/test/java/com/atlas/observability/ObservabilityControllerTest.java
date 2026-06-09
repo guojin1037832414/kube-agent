@@ -144,6 +144,8 @@ class ObservabilityControllerTest {
         new AgentAdvancedTechnologyAdoptionContractService();
     private final AgentOfficialVersionProtocolWatchService officialVersionProtocolWatchService =
         new AgentOfficialVersionProtocolWatchService();
+    private final AgentOfficialVersionProtocolWatchDashboardService officialVersionProtocolWatchDashboardService =
+        new AgentOfficialVersionProtocolWatchDashboardService(officialVersionProtocolWatchService);
     private final AgentPhase1ExecutionRoadmapService phase1ExecutionRoadmapService =
         new AgentPhase1ExecutionRoadmapService();
     private final AgentVueReadinessControlPlaneService vueReadinessControlPlaneService =
@@ -160,6 +162,7 @@ class ObservabilityControllerTest {
         topTierReadinessOverviewService,
         advancedTechnologyAdoptionContractService,
         officialVersionProtocolWatchService,
+        officialVersionProtocolWatchDashboardService,
         phase1ExecutionRoadmapService,
         vueReadinessControlPlaneService,
         memoryRagReadinessService,
@@ -1028,6 +1031,7 @@ class ObservabilityControllerTest {
         assertThat(watch.externalCallsPerformed()).isFalse();
         assertThat(watch.officialSources()).extracting(source -> source.get("id"))
             .contains("spring-ai-reference", "openai-agents-sdk", "mcp-2025-11-25",
+                "nsa-mcp-security-2026-06",
                 "a2a-latest-spec", "otel-genai-semconv", "owasp-llm-top-10-2025");
         assertThat(watch.technologyTracks()).extracting(track -> track.get("id"))
             .contains("java-spring-governed-control-plane", "mcp-runtime-call-plane",
@@ -1055,6 +1059,77 @@ class ObservabilityControllerTest {
             .containsEntry("containsPassword", false);
         assertThat(watch.toString())
             .contains("official-source-review", "mcp-2025-11-25", "otel-genai-semconv")
+            .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret");
+    }
+
+    @Test
+    void officialVersionProtocolWatchDashboard_shouldRequireAdminAndReturnVueDashboard() {
+        ResponseEntity<ApiResponse<AgentOfficialVersionProtocolWatchDashboardResponse>> anonymous =
+            controller.officialVersionProtocolWatchDashboard();
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentOfficialVersionProtocolWatchDashboardResponse>> user =
+            controller.officialVersionProtocolWatchDashboard();
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        userPermissionContext.unbind();
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentOfficialVersionProtocolWatchDashboardResponse>> admin =
+            controller.officialVersionProtocolWatchDashboard();
+
+        assertThat(admin.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(admin.getBody()).isNotNull();
+        AgentOfficialVersionProtocolWatchDashboardResponse dashboard = admin.getBody().getData();
+        assertThat(dashboard.schemaVersion()).isEqualTo("agent-official-version-protocol-watch-dashboard.v1");
+        assertThat(dashboard.dashboardStatus()).isEqualTo("DASHBOARD_READY_TO_RENDER_OFFICIAL_WATCH");
+        assertThat(dashboard.sourceCardCount()).isEqualTo(8);
+        assertThat(dashboard.technologyTrackCardCount()).isEqualTo(8);
+        assertThat(dashboard.runtimeControlAllowed()).isFalse();
+        assertThat(dashboard.sourceCards()).extracting(card -> card.get("id"))
+            .contains("spring-ai-reference", "openai-agents-sdk", "mcp-2025-11-25",
+                "nsa-mcp-security-2026-06");
+        assertThat(dashboard.disabledRuntimeActions()).extracting(action -> action.get("id"))
+            .contains("upgrade-dependencies-from-dashboard", "enable-mcp-tools-call",
+                "enable-a2a-runtime-handoff", "enable-retrieval-runtime");
+        assertThat(dashboard.endpointMap())
+            .containsEntry("officialVersionProtocolWatchDashboard",
+                "/api/agent/observability/top-tier/official-version-protocol-watch/dashboard")
+            .containsEntry("officialVersionProtocolWatch",
+                "/api/agent/observability/top-tier/official-version-protocol-watch");
+        assertThat(dashboard.dashboardPolicy())
+            .containsEntry("adminOnly", true)
+            .containsEntry("dashboardOnly", true)
+            .containsEntry("readOnly", true)
+            .containsEntry("runtimeControlAllowed", false)
+            .containsEntry("dependencyUpgradeAllowed", false)
+            .containsEntry("mcpToolsCallAllowed", false)
+            .containsEntry("a2aRuntimeHandoffAllowed", false)
+            .containsEntry("retrievalRuntimeAllowed", false)
+            .containsEntry("phase2NimHpcSlurmBcmPaused", true);
+        assertThat(dashboard.safety())
+            .containsEntry("toolExecution", false)
+            .containsEntry("safeToolExecutorInvocation", false)
+            .containsEntry("kubeManagerCalls", false)
+            .containsEntry("mcpToolsCall", false)
+            .containsEntry("a2aRuntimeHandoff", false)
+            .containsEntry("llmUsed", false)
+            .containsEntry("externalCalls", false)
+            .containsEntry("retrievalExecuted", false)
+            .containsEntry("phase2NimHpcSlurmBcmTouched", false);
+        assertThat(dashboard.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("containsAuthorizationHeader", false)
+            .containsEntry("containsToken", false)
+            .containsEntry("containsPassword", false);
+        assertThat(dashboard.toString())
+            .contains("official-version-protocol-watch-dashboard", "blocked-shortcuts")
             .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret");
     }
 

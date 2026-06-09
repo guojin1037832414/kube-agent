@@ -111,6 +111,8 @@ class AgentAdvancedTechnologyAdoptionContractServiceTest {
         assertThat(contract.endpointMap())
             .containsEntry("advancedTechnologyAdoptionContract", "/api/agent/observability/top-tier/advanced-technology-adoption-contract")
             .containsEntry("officialVersionProtocolWatch", "/api/agent/observability/top-tier/official-version-protocol-watch")
+            .containsEntry("officialVersionProtocolWatchDashboard",
+                "/api/agent/observability/top-tier/official-version-protocol-watch/dashboard")
             .containsEntry("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap")
             .containsEntry("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane")
             .containsEntry("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview")

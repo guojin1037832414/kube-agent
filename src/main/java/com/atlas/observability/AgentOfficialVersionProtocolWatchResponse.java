@@ -98,6 +98,12 @@ public record AgentOfficialVersionProtocolWatchResponse(
                 "OFFICIAL_PROTOCOL_SPEC",
                 "Latest MCP snapshot is tracked for capabilities, lifecycle, authorization, tools, resources, prompts, and Tasks semantics.",
                 "MANIFEST_FIRST_RUNTIME_LATER"),
+            source("nsa-mcp-security-2026-06",
+                "NSA MCP Security Cybersecurity Information",
+                "https://media.defense.gov/2026/Jun/02/2003943289/-1/-1/0/CSI_MCP_SECURITY.PDF",
+                "OFFICIAL_SECURITY_GUIDANCE",
+                "Latest MCP security guidance is tracked for threat controls before any runtime MCP tools/call authority.",
+                "SECURITY_GATE_BASELINE"),
             source("a2a-latest-spec",
                 "Agent2Agent latest specification",
                 "https://a2a-protocol.org/latest/specification/",
@@ -197,6 +203,7 @@ public record AgentOfficialVersionProtocolWatchResponse(
         standards.put("openAiResponsesApiTracked", true);
         standards.put("openAiAgentsSdkTracked", true);
         standards.put("mcp20251125SpecTracked", true);
+        standards.put("nsaMcpSecurityGuidanceTracked", true);
         standards.put("a2aLatestSpecTracked", true);
         standards.put("otelGenAiDevelopmentStatusRespected", true);
         standards.put("owaspLlmTop10MappedToSecurityGates", true);
@@ -208,6 +215,8 @@ public record AgentOfficialVersionProtocolWatchResponse(
     private static Map<String, Object> buildEndpointMap() {
         Map<String, Object> endpoints = new LinkedHashMap<>();
         endpoints.put("officialVersionProtocolWatch", WATCH_ENDPOINT);
+        endpoints.put("officialVersionProtocolWatchDashboard",
+            AgentOfficialVersionProtocolWatchDashboardResponse.DASHBOARD_ENDPOINT);
         endpoints.put("advancedTechnologyAdoptionContract",
             "/api/agent/observability/top-tier/advanced-technology-adoption-contract");
         endpoints.put("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap");

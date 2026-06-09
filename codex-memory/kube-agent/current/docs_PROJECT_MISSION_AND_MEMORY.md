@@ -10,6 +10,59 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
+## Latest Phase 1 Core Memory - M5.75-1
+
+M5.75-1 adds the Vue-ready dashboard for the official version/protocol watch. This turns the latest-technology watch into cards, rows, disabled runtime actions, render sections, and policy maps that `vue-kube-manager` can render directly.
+
+Endpoint:
+
+```text
+GET /api/agent/observability/top-tier/official-version-protocol-watch/dashboard
+```
+
+Delivered:
+
+- Added `AgentOfficialVersionProtocolWatchDashboardResponse`.
+- Added `AgentOfficialVersionProtocolWatchDashboardService`.
+- Added admin-only Controller method `officialVersionProtocolWatchDashboard()`.
+- Embedded the M5.74 `sourceWatch` and published `sourceCards`, `technologyTrackCards`, `adoptionGateRows`, `blockedRuntimeShortcutRows`, `disabledRuntimeActions`, `renderSections`, `dashboardPolicy`, `safety`, and `privacy`.
+- Integrated the dashboard endpoint into the official watch, advanced technology adoption, top-tier readiness overview, Phase 1 roadmap, and Vue readiness control plane.
+- Refreshed the official source watch with `nsa-mcp-security-2026-06`, the 2026-06-02 NSA MCP Security Cybersecurity Information PDF, so MCP security guidance is visible before any `tools/call` runtime.
+- Added service, Controller, source-security, WebMvc, advanced technology, top-tier readiness, roadmap, and Vue readiness tests.
+- Added the teaching document `docs/M5_75_OFFICIAL_VERSION_PROTOCOL_WATCH_DASHBOARD_20260609.md`.
+
+Current state:
+
+- `schemaVersion=agent-official-version-protocol-watch-dashboard.v1`.
+- `dashboardStatus=DASHBOARD_READY_TO_RENDER_OFFICIAL_WATCH`.
+- `sourceCardCount=8`.
+- `technologyTrackCardCount=8`.
+- `adoptionGateCount=7`.
+- `blockedRuntimeShortcutCount=6`.
+- `runtimeControlAllowed=false`.
+- `phase1TopTierGoalPreserved=true`.
+- `phase2NimHpcSlurmBcmPaused=true`.
+- Underlying official watch now has `officialSourceCount=8` and tracks `nsaMcpSecurityGuidanceTracked=true`.
+
+Security boundary:
+
+- M5.75 is admin-only, read-only, dashboard-only, Vue-workbench-only, and reviewed-source-only.
+- It does not perform network calls at request time; official sources are reviewed during development/Git review.
+- It does not upgrade dependencies, bind external Agent runtimes, run LLMs, execute Tools, call `SafeToolExecutor`, invoke HITL, call kube-manager including port `8100`, expose MCP runtime `tools/call`, run A2A handoff, execute retrieval/vector/reranker/GraphRAG, write memory, write audit, issue durable receipts, mutate catalogs, enable CI blocking, or touch NIM / HPC / Slurm / BCM Phase 2 scope.
+
+Learning point: Vue should not invent governance logic. For a top-tier Agent, the backend owns the official-source evidence, runtime blockers, disabled actions, and safety policy; the frontend renders them faithfully and keeps runtime enable buttons absent until separate release-gated slices exist.
+
+Latest verified command:
+
+- `mvn -q "-Dtest=AgentOfficialVersionProtocolWatchDashboardServiceTest,AgentOfficialVersionProtocolWatchServiceTest,AgentAdvancedTechnologyAdoptionContractServiceTest,AgentTopTierReadinessOverviewServiceTest,AgentPhase1ExecutionRoadmapServiceTest,AgentVueReadinessControlPlaneServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+Next safe development order:
+
+- Wire `vue-kube-manager` to render the official version/protocol watch dashboard cards and disabled actions.
+- Continue reviewed redacted eval and Memory/RAG trace evidence curation.
+- Only after reviewed evidence exists, prototype MCP runtime, A2A handoff, retrieval runtime, and CI blocking in separate release-gated slices.
+- Keep NIM / HPC / Slurm / BCM paused for Phase 2.
+
 ## Latest Phase 1 Core Memory - M5.74-1
 
 M5.74-1 adds the official version/protocol watch for top-tier Agent technology adoption. This turns "use all the latest advanced technologies" into a backend-owned, admin-only, read-only contract instead of a blind dependency upgrade.

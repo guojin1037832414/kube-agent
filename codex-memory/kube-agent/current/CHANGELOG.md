@@ -6,6 +6,23 @@
 
 ---
 
+## [M5.75-1] - Official version/protocol watch dashboard
+
+**Delivery**: Added a Vue-ready, admin-only dashboard for the official version/protocol watch and refreshed the watch with the 2026-06 NSA MCP security guidance.
+**Changes**
+- Added `GET /api/agent/observability/top-tier/official-version-protocol-watch/dashboard`.
+- Added `AgentOfficialVersionProtocolWatchDashboardResponse` and `AgentOfficialVersionProtocolWatchDashboardService`.
+- Published Vue-ready `sourceCards`, `technologyTrackCards`, `adoptionGateRows`, `blockedRuntimeShortcutRows`, `disabledRuntimeActions`, and `renderSections`.
+- Embedded the M5.74 `sourceWatch` so `vue-kube-manager` can render evidence without owning governance logic.
+- Added `nsa-mcp-security-2026-06` as an official MCP security guidance source in the watch; `officialSourceCount` is now `8`.
+- Integrated the dashboard into official watch, advanced technology adoption, top-tier readiness, Phase 1 roadmap, and Vue readiness endpoint maps/build orders.
+- Added service, Controller, source-security, WebMvc security, and aggregate-read-model coverage.
+**Verification**
+- `mvn -q "-Dtest=AgentOfficialVersionProtocolWatchDashboardServiceTest,AgentOfficialVersionProtocolWatchServiceTest,AgentAdvancedTechnologyAdoptionContractServiceTest,AgentTopTierReadinessOverviewServiceTest,AgentPhase1ExecutionRoadmapServiceTest,AgentVueReadinessControlPlaneServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed during implementation.
+**Security**
+- The dashboard is admin-only, read-only, dashboard-only, Vue-workbench-only, and external-call-free at request time.
+- It does not upgrade dependencies, run LLMs, execute Tools, invoke `SafeToolExecutor`, invoke HITL, call kube-manager or port `8100`, expose MCP runtime `tools/call`, run A2A handoff, execute retrieval/vector/reranker/GraphRAG, write memory, write audit, issue durable receipts, mutate catalogs, enable CI blocking, or touch NIM / HPC / Slurm / BCM Phase 2 work.
+
 ## [M5.74-1] - Official version/protocol watch
 
 **Delivery**: Added an admin-only, read-only official source watch for the latest Agent technology and protocol adoption path.

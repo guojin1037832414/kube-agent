@@ -9,6 +9,42 @@
 - 供应链、CI、SBOM、质量门禁进入工程默认路径；
 - Java / Spring / Agent 框架升级以兼容性矩阵推进，不用不可构建的版本号伪装先进。
 
+## 2026-06-09 M5.75 Official-Version-Protocol-Watch-Dashboard Rule
+
+M5.75 adds the backend-owned Vue dashboard for latest-technology governance:
+
+```text
+GET /api/agent/observability/top-tier/official-version-protocol-watch/dashboard
+```
+
+This is now the Phase 1 UI-facing rule for adopting advanced Agent technologies:
+
+- The backend, not Vue, owns the official-source evidence, technology-track status, adoption gates, blocked shortcuts, disabled runtime actions, and safety/privacy policy.
+- `vue-kube-manager` should render `sourceCards`, `technologyTrackCards`, `adoptionGateRows`, `blockedRuntimeShortcutRows`, `disabledRuntimeActions`, and `renderSections`.
+- Runtime enablement buttons must stay absent for dependency upgrades, MCP `tools/call`, A2A handoff, retrieval/vector/reranker/GraphRAG, CI blocking, kube-manager writes, and Phase 2 domain reopening.
+- The official source watch now includes the 2026-06-02 NSA MCP Security Cybersecurity Information as `nsa-mcp-security-2026-06`; `officialSourceCount=8`.
+- This source refresh improves the MCP security gate but does not open the MCP runtime call plane.
+
+Technology judgment: the latest security guidance is most valuable when it changes gates, evidence, and operator visibility before it changes execution. M5.75 keeps Java/Spring as the governed control plane and gives Vue a faithful evidence dashboard. Full MCP runtime, A2A, retrieval, GraphRAG, rerankers, vector stores, and CI blocking remain later reviewed slices with compatibility tests, eval gates, audit/replay evidence, SafeToolExecutor/HITL boundaries, and recovery checkpoints.
+
+Official references checked for this anchor:
+
+- NSA MCP Security Cybersecurity Information: https://media.defense.gov/2026/Jun/02/2003943289/-1/-1/0/CSI_MCP_SECURITY.PDF
+- Model Context Protocol specification: https://modelcontextprotocol.io/specification/2025-11-25
+- Spring AI reference: https://docs.spring.io/spring-ai/reference/
+- OpenAI Responses migration guide: https://platform.openai.com/docs/guides/migrate-to-responses
+- OpenAI Agents SDK guide: https://platform.openai.com/docs/guides/agents-sdk/
+- OpenTelemetry GenAI semantic conventions: https://opentelemetry.io/docs/specs/semconv/gen-ai/
+- A2A protocol specification: https://a2a-protocol.org/latest/specification/
+- OWASP Top 10 for LLM Applications: https://genai.owasp.org/llm-top-10/
+
+Next order after M5.75:
+
+- Wire `vue-kube-manager` to render the dashboard and keep all runtime controls disabled/absent.
+- Continue reviewed redacted eval and Memory/RAG trace evidence curation.
+- Add compatibility-matrix tests before any Java/Spring/Spring AI/OpenAI/MCP/A2A/OTel/RAG dependency/runtime upgrade.
+- Keep NIM / HPC / Slurm / BCM paused for Phase 2.
+
 ## 2026-06-09 M5.74 Official-Version-Protocol-Watch Rule
 
 M5.74 adds the backend-owned official version/protocol watch:

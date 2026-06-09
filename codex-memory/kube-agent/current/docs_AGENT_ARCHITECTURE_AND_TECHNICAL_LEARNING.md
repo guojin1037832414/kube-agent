@@ -2,6 +2,68 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-09 M5.75 Official Version / Protocol Watch Dashboard
+
+M5.75 turns the M5.74 official watch into a Vue-ready dashboard. It answers: how can `vue-kube-manager` show the newest Agent technology sources, security guidance, adoption tracks, gates, blockers, and disabled runtime actions without duplicating governance rules in the frontend?
+
+```text
+M5.74 official version/protocol watch
+        |
+        +-- officialSources
+        +-- technologyTracks
+        +-- adoptionGates
+        +-- blockedRuntimeShortcuts
+        |
+        v
+M5.75 Vue-ready dashboard
+        |
+        +-- sourceCards
+        +-- technologyTrackCards
+        +-- adoptionGateRows
+        +-- blockedRuntimeShortcutRows
+        +-- disabledRuntimeActions
+        +-- renderSections / dashboardPolicy
+        |
+        v
+vue-kube-manager renders evidence and hides runtime buttons
+```
+
+Endpoint:
+
+```text
+GET /api/agent/observability/top-tier/official-version-protocol-watch/dashboard
+```
+
+Current state:
+- `schemaVersion=agent-official-version-protocol-watch-dashboard.v1`
+- `dashboardStatus=DASHBOARD_READY_TO_RENDER_OFFICIAL_WATCH`
+- `sourceCardCount=8`
+- `technologyTrackCardCount=8`
+- `adoptionGateCount=7`
+- `blockedRuntimeShortcutCount=6`
+- `runtimeControlAllowed=false`
+
+Key design:
+- The dashboard service composes only `AgentOfficialVersionProtocolWatchService.watch()`.
+- The response embeds the source watch so the frontend can drill from cards back to the official-source contract.
+- It creates disabled action descriptors for dependency upgrades, MCP `tools/call`, A2A handoff, retrieval runtime, CI blocking, and Phase 2 domain reopening.
+- It integrates into the top-tier readiness recommended build order and the Vue readiness control plane as `official-version-protocol-watch-dashboard`.
+- It adds the 2026-06-02 NSA MCP Security Cybersecurity Information as `nsa-mcp-security-2026-06`, increasing official watch sources from 7 to 8.
+
+Learning point: 顶级 Agent 的前端不是“按钮集合”，而是治理证据的操作台。后端给出可渲染的卡片、禁用动作和安全证明，Vue 负责清晰呈现；运行时能力必须在独立的 release-gated slice 中开启。
+
+Technology point: 最新 MCP 安全指南进入 watch/dashboard 后，只增强安全门禁和学习材料，不改变 runtime authority。MCP `tools/call`、A2A、retrieval、GraphRAG、reranker、vector store、CI blocking 仍需要 reviewed traces、eval gates、audit/replay、SafeToolExecutor/HITL 证据和 Git review。
+
+Official references:
+- NSA MCP Security Cybersecurity Information: https://media.defense.gov/2026/Jun/02/2003943289/-1/-1/0/CSI_MCP_SECURITY.PDF
+- MCP specification 2025-11-25: https://modelcontextprotocol.io/specification/2025-11-25
+- Spring AI Reference: https://docs.spring.io/spring-ai/reference/
+- OpenAI Responses API migration guide: https://platform.openai.com/docs/guides/migrate-to-responses
+- OpenAI Agents SDK guide: https://platform.openai.com/docs/guides/agents-sdk/
+- OpenTelemetry GenAI semantic conventions: https://opentelemetry.io/docs/specs/semconv/gen-ai/
+- A2A protocol specification: https://a2a-protocol.org/latest/specification/
+- OWASP Top 10 for LLM Applications: https://genai.owasp.org/llm-top-10/
+
 ## 2026-06-09 M5.74 Official Version / Protocol Watch
 
 M5.74 adds a backend-owned official source watch for the latest Agent technology stack. It answers: how do we keep the project aligned with current Spring AI, OpenAI Responses/Agents, MCP, A2A, OpenTelemetry GenAI, OWASP LLM, and advanced RAG directions without blindly upgrading the only recoverable mainline?

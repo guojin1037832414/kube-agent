@@ -41,7 +41,7 @@ class AgentOfficialVersionProtocolWatchServiceTest {
         assertThat(watch.runtimeUpgradePerformed()).isFalse();
         assertThat(watch.dependencyUpgradePerformed()).isFalse();
         assertThat(watch.externalCallsPerformed()).isFalse();
-        assertThat(watch.officialSourceCount()).isEqualTo(7);
+        assertThat(watch.officialSourceCount()).isEqualTo(8);
         assertThat(watch.technologyTrackCount()).isEqualTo(8);
         assertThat(watch.officialSources()).extracting(source -> source.get("id"))
             .containsExactly(
@@ -49,6 +49,7 @@ class AgentOfficialVersionProtocolWatchServiceTest {
                 "openai-responses-api",
                 "openai-agents-sdk",
                 "mcp-2025-11-25",
+                "nsa-mcp-security-2026-06",
                 "a2a-latest-spec",
                 "otel-genai-semconv",
                 "owasp-llm-top-10-2025"
@@ -97,6 +98,7 @@ class AgentOfficialVersionProtocolWatchServiceTest {
             .containsEntry("openAiResponsesApiTracked", true)
             .containsEntry("openAiAgentsSdkTracked", true)
             .containsEntry("mcp20251125SpecTracked", true)
+            .containsEntry("nsaMcpSecurityGuidanceTracked", true)
             .containsEntry("a2aLatestSpecTracked", true)
             .containsEntry("otelGenAiDevelopmentStatusRespected", true)
             .containsEntry("owaspLlmTop10MappedToSecurityGates", true)
@@ -104,6 +106,8 @@ class AgentOfficialVersionProtocolWatchServiceTest {
         assertThat(watch.endpointMap())
             .containsEntry("officialVersionProtocolWatch",
                 "/api/agent/observability/top-tier/official-version-protocol-watch")
+            .containsEntry("officialVersionProtocolWatchDashboard",
+                "/api/agent/observability/top-tier/official-version-protocol-watch/dashboard")
             .containsEntry("advancedTechnologyAdoptionContract",
                 "/api/agent/observability/top-tier/advanced-technology-adoption-contract")
             .containsEntry("memoryRagReviewedTraceEvidenceManifest",

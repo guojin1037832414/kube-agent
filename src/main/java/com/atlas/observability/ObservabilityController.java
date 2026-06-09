@@ -44,6 +44,7 @@ public class ObservabilityController {
     private final AgentTopTierReadinessOverviewService topTierReadinessOverviewService;
     private final AgentAdvancedTechnologyAdoptionContractService advancedTechnologyAdoptionContractService;
     private final AgentOfficialVersionProtocolWatchService officialVersionProtocolWatchService;
+    private final AgentOfficialVersionProtocolWatchDashboardService officialVersionProtocolWatchDashboardService;
     private final AgentPhase1ExecutionRoadmapService phase1ExecutionRoadmapService;
     private final AgentVueReadinessControlPlaneService vueReadinessControlPlaneService;
     private final AgentMemoryRagReadinessService memoryRagReadinessService;
@@ -84,6 +85,7 @@ public class ObservabilityController {
                                    AgentTopTierReadinessOverviewService topTierReadinessOverviewService,
                                    AgentAdvancedTechnologyAdoptionContractService advancedTechnologyAdoptionContractService,
                                    AgentOfficialVersionProtocolWatchService officialVersionProtocolWatchService,
+                                   AgentOfficialVersionProtocolWatchDashboardService officialVersionProtocolWatchDashboardService,
                                    AgentPhase1ExecutionRoadmapService phase1ExecutionRoadmapService,
                                    AgentVueReadinessControlPlaneService vueReadinessControlPlaneService,
                                    AgentMemoryRagReadinessService memoryRagReadinessService,
@@ -123,6 +125,7 @@ public class ObservabilityController {
         this.topTierReadinessOverviewService = topTierReadinessOverviewService;
         this.advancedTechnologyAdoptionContractService = advancedTechnologyAdoptionContractService;
         this.officialVersionProtocolWatchService = officialVersionProtocolWatchService;
+        this.officialVersionProtocolWatchDashboardService = officialVersionProtocolWatchDashboardService;
         this.phase1ExecutionRoadmapService = phase1ExecutionRoadmapService;
         this.vueReadinessControlPlaneService = vueReadinessControlPlaneService;
         this.memoryRagReadinessService = memoryRagReadinessService;
@@ -184,6 +187,17 @@ public class ObservabilityController {
             return guard;
         }
         return ResponseEntity.ok(ApiResponse.ok(officialVersionProtocolWatchService.watch()));
+    }
+
+    /** Build a Vue-ready dashboard for the official version/protocol watch without runtime controls. */
+    @GetMapping("/top-tier/official-version-protocol-watch/dashboard")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentOfficialVersionProtocolWatchDashboardResponse>> officialVersionProtocolWatchDashboard() {
+        ResponseEntity<ApiResponse<AgentOfficialVersionProtocolWatchDashboardResponse>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return ResponseEntity.ok(ApiResponse.ok(officialVersionProtocolWatchDashboardService.dashboard()));
     }
 
     /** Publish the Phase 1 execution order as a read-only roadmap contract. */
