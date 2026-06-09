@@ -53,6 +53,7 @@ public class ObservabilityController {
     private final AgentMemoryRagEvalSuiteBindingContractService memoryRagEvalSuiteBindingContractService;
     private final AgentMemoryRagTraceSetCurationContractService memoryRagTraceSetCurationContractService;
     private final AgentMemoryRagTraceSetCurationWorkbenchOverviewService memoryRagTraceSetCurationWorkbenchOverviewService;
+    private final AgentMemoryRagReviewedTraceEvidenceManifestService memoryRagReviewedTraceEvidenceManifestService;
     private final AgentAuditSnapshotProvider auditSnapshotProvider;
     private final AgentAuditQueryService auditQueryService;
     private final AgentReplayTimelineService replayTimelineService;
@@ -91,6 +92,7 @@ public class ObservabilityController {
                                    AgentMemoryRagEvalSuiteBindingContractService memoryRagEvalSuiteBindingContractService,
                                    AgentMemoryRagTraceSetCurationContractService memoryRagTraceSetCurationContractService,
                                    AgentMemoryRagTraceSetCurationWorkbenchOverviewService memoryRagTraceSetCurationWorkbenchOverviewService,
+                                   AgentMemoryRagReviewedTraceEvidenceManifestService memoryRagReviewedTraceEvidenceManifestService,
                                    AgentAuditSnapshotProvider auditSnapshotProvider,
                                    AgentAuditQueryService auditQueryService,
                                    AgentReplayTimelineService replayTimelineService,
@@ -128,6 +130,7 @@ public class ObservabilityController {
         this.memoryRagEvalSuiteBindingContractService = memoryRagEvalSuiteBindingContractService;
         this.memoryRagTraceSetCurationContractService = memoryRagTraceSetCurationContractService;
         this.memoryRagTraceSetCurationWorkbenchOverviewService = memoryRagTraceSetCurationWorkbenchOverviewService;
+        this.memoryRagReviewedTraceEvidenceManifestService = memoryRagReviewedTraceEvidenceManifestService;
         this.auditSnapshotProvider = auditSnapshotProvider;
         this.auditQueryService = auditQueryService;
         this.replayTimelineService = replayTimelineService;
@@ -277,6 +280,17 @@ public class ObservabilityController {
             return guard;
         }
         return ResponseEntity.ok(ApiResponse.ok(memoryRagTraceSetCurationWorkbenchOverviewService.overview()));
+    }
+
+    /** Publish the Memory/RAG reviewed trace-evidence intake manifest without accepting trace IDs. */
+    @GetMapping("/memory-rag/workbench/trace-set-curation/review-manifest")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentMemoryRagReviewedTraceEvidenceManifestResponse>> memoryRagReviewedTraceEvidenceManifest() {
+        ResponseEntity<ApiResponse<AgentMemoryRagReviewedTraceEvidenceManifestResponse>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return ResponseEntity.ok(ApiResponse.ok(memoryRagReviewedTraceEvidenceManifestService.manifest()));
     }
 
     /** Describe kube-manager HTTP outlet resilience state without probing kube-manager. */

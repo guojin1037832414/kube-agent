@@ -2,6 +2,76 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-09 M5.73 Memory/RAG Reviewed Trace-Evidence Manifest
+
+M5.73 adds the evidence intake manifest that sits below the M5.72 workbench overview. It answers: before we add reviewed redacted trace IDs to `eval-trace-sets.json`, what exact fixture schema, digest evidence, review workflow, and advanced technology mappings must a human reviewer see?
+
+```text
+M5.72 workbench overview
+        |
+        +-- curationCards
+        +-- suiteLatchCard
+        +-- disabledRuntimeActions
+        |
+        v
+M5.73 reviewed trace-evidence manifest
+        |
+        +-- requiredTraceSets
+        +-- requiredTraceAnchorSchema
+        +-- requiredDigestEvidence
+        +-- evidenceIntakeSchema
+        +-- reviewWorkflow
+        +-- advancedTechnologyMappings
+        |
+        v
+future human/Git reviewed redacted trace IDs
+        |
+        v
+future advisory gate bundle, then separate CI/runtime promotion
+```
+
+Endpoint:
+
+```text
+GET /api/agent/observability/memory-rag/workbench/trace-set-curation/review-manifest
+```
+
+Current state:
+- `schemaVersion=agent-memory-rag-reviewed-trace-evidence-manifest.v1`
+- `manifestStatus=WAITING_FOR_REVIEWED_REDACTED_TRACE_FIXTURES`
+- `requiredTraceSetCount=3`
+- `reviewedTraceSetCount=0`
+- `reviewedTraceAnchorCount=0`
+- `authoritativeFixtureCount=0`
+- `promotionReadyTraceSetCount=0`
+- `runtimeControlAllowed=false`
+
+Key design:
+- The service composes Memory/RAG contracts and readiness only:
+  `curationContractService.contract()`,
+  `sourceEvidenceDigestContractService.contract()`,
+  `durableMemoryLifecycleContractService.contract()`,
+  `evalGateContractService.contract()`,
+  `evalSuiteBindingContractService.contract()`, and
+  `memoryRagReadinessService.readiness()`.
+- It does not call `.gate()`, `.gateBundle()`, `.run()`, `.curationReview()`, candidate discovery, raw audit query, replay, retrieval, vector store, embedding, reranker, LLM, MCP tools/call, kube-manager, memory write, audit write, or catalog write.
+- It keeps trace values hidden: `traceIdsVisibleInManifest=false` and `traceIdsAcceptedFromCaller=false`.
+- It adds per-trace-set `requiredDigestEvidence`, such as `sourceDigest`, `chunkDigest`, `tenantPartitionDigest`, `retentionPolicyId`, `deleteProofDigest`, and `evalGateDigest`.
+- It adds `advancedTechnologyMappings`, so Spring AI RAG/VectorStore, OpenAI Agents tracing/guardrails/evals, MCP tools/resources/prompts, OpenTelemetry GenAI, A2A provenance, and OWASP LLM risks are visible as evidence gates rather than runtime buttons.
+- It integrates into the Vue readiness control plane and Phase 1 roadmap as a first-class backend-owned dashboard target.
+
+Learning point: 顶级 Agent 的 RAG 不是“接一个向量库就完事”。真正的 RAG 上线前，需要证明来源、引用、租户边界、生命周期、删除/导出/恢复、红队隐私样例、确定性 eval、可观测性和人工 Git review 都闭环。M5.73 把这些要求变成可测试的后端契约，避免未来为了“看起来先进”而绕过证据链。
+
+Technology point: Java/Spring is still the control plane. The latest Agent technologies enter as typed contracts and read models first, because that is how we keep strong identity, tenant isolation, SafeToolExecutor boundaries, trace/replay/eval evidence, and Vue operator visibility. Runtime adoption of Spring AI retrieval, MCP call plane, OpenAI-style handoffs, A2A, OTel GenAI, GraphRAG, rerankers, and vector stores remains gated by reviewed evidence.
+
+Official references:
+- Spring AI Reference: https://docs.spring.io/spring-ai/reference/
+- OpenAI Agents SDK: https://openai.github.io/openai-agents-python/
+- MCP specification 2025-11-25: https://modelcontextprotocol.io/specification/2025-11-25
+- OpenTelemetry GenAI semantic conventions: https://opentelemetry.io/docs/specs/semconv/gen-ai/
+- A2A protocol specification: https://a2a-protocol.org/latest/specification/
+- OWASP Top 10 for LLM Applications: https://owasp.org/www-project-top-10-for-large-language-model-applications/
+
 ## 2026-06-09 M5.72 Memory/RAG Trace-Set Curation Workbench
 
 M5.72 turns the M5.71 curation contract into a Vue-ready workbench read model. It answers: can `vue-kube-manager` render Memory/RAG trace-set curation cards, suite latch state, missing evidence, and disabled runtime actions without owning governance logic or opening runtime authority?

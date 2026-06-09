@@ -163,6 +163,8 @@ public record AgentMemoryRagReadinessResponse(
         evidence.put("memoryRagTraceSetCurationContractBound", false);
         evidence.put("memoryRagTraceSetCurationWorkbenchDefined", true);
         evidence.put("memoryRagTraceSetCurationWorkbenchBound", false);
+        evidence.put("memoryRagReviewedTraceEvidenceManifestDefined", true);
+        evidence.put("memoryRagReviewedTraceEvidenceManifestBound", false);
         evidence.put("memoryRagReviewedTraceEvidenceCurated", false);
         evidence.put("citationFidelityGateExists", false);
         evidence.put("privacyLeakageGateExists", false);
@@ -201,6 +203,7 @@ public record AgentMemoryRagReadinessResponse(
             "define-memory-rag-release-gate-suite-check-codes",
             "define-memory-rag-trace-set-curation-contract",
             "define-memory-rag-trace-set-curation-workbench",
+            "define-memory-rag-reviewed-trace-evidence-manifest",
             "bind-durable-memory-runtime-after-lifecycle-and-source-digest-contract",
             "bind-tenant-isolated-vector-store-through-reviewed-retrieval-policy",
             "add-redacted-runbook-and-kube-manager-doc-ingestion-pipeline",
@@ -242,6 +245,8 @@ public record AgentMemoryRagReadinessResponse(
         evidence.put("memoryRagTraceSetCurationContractBound", false);
         evidence.put("memoryRagTraceSetCurationWorkbenchDefined", true);
         evidence.put("memoryRagTraceSetCurationWorkbenchBound", false);
+        evidence.put("memoryRagReviewedTraceEvidenceManifestDefined", true);
+        evidence.put("memoryRagReviewedTraceEvidenceManifestBound", false);
         evidence.put("memoryRagReviewedTraceEvidenceCurated", false);
         evidence.put("vueWorkbenchBound", false);
         return Map.copyOf(evidence);
@@ -259,6 +264,8 @@ public record AgentMemoryRagReadinessResponse(
             "/api/agent/observability/memory-rag/trace-set-curation-contract");
         endpoints.put("memoryRagTraceSetCurationWorkbenchOverview",
             AgentMemoryRagTraceSetCurationWorkbenchOverviewResponse.OVERVIEW_ENDPOINT);
+        endpoints.put("memoryRagReviewedTraceEvidenceManifest",
+            AgentMemoryRagReviewedTraceEvidenceManifestResponse.MANIFEST_ENDPOINT);
         endpoints.put("memorySummaries", "/api/agent/memory/summaries");
         endpoints.put("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview");
         endpoints.put("evalWorkbenchCapabilities", "/api/agent/observability/eval/workbench/capabilities");
@@ -292,7 +299,8 @@ public record AgentMemoryRagReadinessResponse(
             "deterministic Memory/RAG eval suite",
             "memory-rag-release-gate suite catalog entry",
             "Memory/RAG trace-set curation contract",
-            "Memory/RAG trace-set curation Vue workbench"
+            "Memory/RAG trace-set curation Vue workbench",
+            "Memory/RAG reviewed trace evidence manifest"
         ));
         protocol.put("compatibilityMatrixCandidates", List.of(
             "GraphRAG",

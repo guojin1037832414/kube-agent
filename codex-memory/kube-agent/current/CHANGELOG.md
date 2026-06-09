@@ -6,6 +6,36 @@
 
 ---
 
+## [M5.73-1] - Memory/RAG reviewed trace-evidence manifest
+
+**Delivery**: Added a Vue-ready, admin-only Memory/RAG reviewed trace-evidence manifest that defines the authoritative fixture intake checklist before any reviewed trace IDs are promoted.
+**Changes**
+- Added `GET /api/agent/observability/memory-rag/workbench/trace-set-curation/review-manifest`.
+- Added `AgentMemoryRagReviewedTraceEvidenceManifestResponse` and `AgentMemoryRagReviewedTraceEvidenceManifestService`.
+- The manifest composes only safe Memory/RAG contracts:
+  `AgentMemoryRagTraceSetCurationContractService.contract()`,
+  `AgentMemoryRagSourceEvidenceDigestContractService.contract()`,
+  `AgentMemoryRagDurableMemoryLifecycleContractService.contract()`,
+  `AgentMemoryRagEvalGateContractService.contract()`,
+  `AgentMemoryRagEvalSuiteBindingContractService.contract()`, and
+  `AgentMemoryRagReadinessService.readiness()`.
+- Published fixture-intake rows for `memory-rag-citation-fidelity`,
+  `memory-rag-privacy-tenant`, and `memory-rag-lifecycle-policy`.
+- Published `requiredTraceAnchorSchema`, `requiredDigestEvidence`,
+  `evidenceIntakeSchema`, `reviewWorkflow`, and `advancedTechnologyMappings`.
+- Mapped Spring AI Memory/RAG/VectorStore, OpenAI Agents tracing/guardrails/evals,
+  MCP tools/resources/prompts, OpenTelemetry GenAI, A2A provenance, and OWASP LLM
+  risks to reviewed evidence gates rather than runtime authority.
+- Integrated the manifest into the Memory/RAG workbench overview, curation contract,
+  readiness, Phase 1 roadmap, Vue readiness control plane, and advanced technology endpoint maps.
+- Added direct controller coverage, source-level security contract coverage, WebMvc security coverage, and read-model service coverage.
+**Verification**
+- `mvn -q "-Dtest=AgentMemoryRagReviewedTraceEvidenceManifestServiceTest,AgentMemoryRagTraceSetCurationWorkbenchOverviewServiceTest,AgentMemoryRagTraceSetCurationContractServiceTest,AgentMemoryRagReadinessServiceTest,AgentPhase1ExecutionRoadmapServiceTest,AgentVueReadinessControlPlaneServiceTest,AgentAdvancedTechnologyAdoptionContractServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed during implementation.
+**Security**
+- The manifest is admin-only, read-only, manifest-only, Vue-workbench-only, and fail-closed.
+- It accepts no caller trace IDs and exposes no raw trace values.
+- It does not run evals, call `gate`, call `gateBundle`, discover candidates, execute curation review, promote fixtures, mutate `observability/eval-trace-sets.json`, enable CI blocking, execute retrieval, bind vector stores, call embedding/reranker/LLM, mutate prompts, write memory, write audit, issue durable receipts, execute Tools, invoke `SafeToolExecutor`, invoke HITL, call kube-manager or port `8100`, expose MCP runtime `tools/call`, call external services, upgrade dependencies, or touch NIM / HPC / Slurm / BCM Phase 2 work.
+
 ## [M5.72-1] - Memory/RAG trace-set curation workbench
 
 **Delivery**: Added a Vue-ready, admin-only Memory/RAG trace-set curation workbench overview without opening eval runtime, retrieval runtime, CI blocking, or catalog mutation.

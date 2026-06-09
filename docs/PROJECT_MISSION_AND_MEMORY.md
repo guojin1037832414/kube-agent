@@ -10,6 +10,71 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
+## Latest Phase 1 Core Memory - M5.73-1
+
+M5.73-1 adds a Vue-ready Memory/RAG reviewed trace-evidence manifest. This is the evidence intake checklist between the M5.72 workbench overview and future human/Git-reviewed trace IDs.
+
+Endpoint:
+
+```text
+GET /api/agent/observability/memory-rag/workbench/trace-set-curation/review-manifest
+```
+
+Delivered:
+
+- Added `AgentMemoryRagReviewedTraceEvidenceManifestResponse`.
+- Added `AgentMemoryRagReviewedTraceEvidenceManifestService`.
+- Added admin-only Controller method `memoryRagReviewedTraceEvidenceManifest()`.
+- Integrated the manifest into `AgentMemoryRagTraceSetCurationWorkbenchOverviewResponse`, `AgentMemoryRagTraceSetCurationContractResponse`, `AgentMemoryRagReadinessResponse`, `AgentPhase1ExecutionRoadmapResponse`, `AgentVueReadinessControlPlaneResponse`, and `AgentAdvancedTechnologyAdoptionContractResponse`.
+- Added service, Controller, source-security, WebMvc, Vue readiness, roadmap, readiness, workbench, curation contract, and advanced technology adoption tests.
+
+Current state:
+
+- `schemaVersion=agent-memory-rag-reviewed-trace-evidence-manifest.v1`.
+- `manifestStatus=WAITING_FOR_REVIEWED_REDACTED_TRACE_FIXTURES`.
+- `requiredTraceSetCount=3`.
+- `reviewedTraceSetCount=0`.
+- `reviewedTraceAnchorCount=0`.
+- `authoritativeFixtureCount=0`.
+- `promotionReadyTraceSetCount=0`.
+- `runtimeControlAllowed=false`.
+- Required trace sets remain `memory-rag-citation-fidelity`, `memory-rag-privacy-tenant`, and `memory-rag-lifecycle-policy`.
+- Each row declares `catalogPatchTarget=src/main/resources/observability/eval-trace-sets.json`, `traceIdsVisibleInManifest=false`, `authoritativeFixturePresent=false`, `safeToPromoteNow=false`, `safeToRunEvalNow=false`, `safeToEnableRetrievalNow=false`, and `safeToEnableCiBlockingNow=false`.
+
+Security boundary:
+
+- M5.73 is admin-only, read-only, manifest-only, Vue-workbench-only, and fail-closed.
+- It composes only Memory/RAG contracts and readiness read models.
+- It accepts no caller trace IDs and exposes no raw trace values.
+- It does not run evals, call `gate`, call `gateBundle`, query raw audit, discover candidates, execute curation review, promote trace IDs, mutate trace-set catalogs, enable CI blocking, execute retrieval, bind vector stores, call embedding/reranker/LLM, mutate prompts, write memory, write audit, issue durable receipts, execute Tools, invoke `SafeToolExecutor`, invoke HITL, call kube-manager including port `8100`, expose MCP runtime `tools/call`, call external services, upgrade dependencies, or touch NIM / HPC / Slurm / BCM Phase 2 scope.
+
+Learning point: a top-tier Agent cannot treat RAG traces as a casual list of IDs. Before retrieval can influence prompts, every trace anchor needs source digest evidence, lifecycle evidence, tenant/privacy evidence, deterministic eval intent, and human Git review. M5.73 turns that rule into a typed backend contract that Vue can render and students can study.
+
+Latest technology note checked on 2026-06-09:
+
+- Java/Spring remains the governed control plane for Phase 1.
+- Spring AI Memory/RAG/VectorStore, OpenAI Agents tracing/guardrails/evals, MCP tools/resources/prompts, OpenTelemetry GenAI, A2A provenance, GraphRAG, rerankers, and vector stores remain in scope as advanced Agent technology.
+- They enter the project through contracts, read models, reviewed trace evidence, eval gates, Vue operator visibility, and compatibility matrices before runtime authority.
+
+Official references:
+
+- Spring AI Reference: https://docs.spring.io/spring-ai/reference/
+- OpenAI Agents SDK: https://openai.github.io/openai-agents-python/
+- MCP specification 2025-11-25: https://modelcontextprotocol.io/specification/2025-11-25
+- OpenTelemetry GenAI semantic conventions: https://opentelemetry.io/docs/specs/semconv/gen-ai/
+- A2A protocol specification: https://a2a-protocol.org/latest/specification/
+- OWASP Top 10 for LLM Applications: https://owasp.org/www-project-top-10-for-large-language-model-applications/
+
+Latest verified command:
+
+- `mvn -q "-Dtest=AgentMemoryRagReviewedTraceEvidenceManifestServiceTest,AgentMemoryRagTraceSetCurationWorkbenchOverviewServiceTest,AgentMemoryRagTraceSetCurationContractServiceTest,AgentMemoryRagReadinessServiceTest,AgentPhase1ExecutionRoadmapServiceTest,AgentVueReadinessControlPlaneServiceTest,AgentAdvancedTechnologyAdoptionContractServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+Next safe development order:
+
+- Capture or curate authoritative reviewed redacted Memory/RAG trace fixtures through human/Git review.
+- Only after reviewed fixtures exist, generate advisory Memory/RAG gate-bundle evidence as a separate reviewed slice.
+- Keep CI blocking, retrieval runtime, durable memory runtime, MCP tools/call, kube-manager write authority, and Phase 2 NIM/HPC/Slurm/BCM closed.
+
 ## Latest Phase 1 Core Memory - M5.72-1
 
 M5.72-1 adds the Vue-ready Memory/RAG trace-set curation workbench overview on top of the M5.71 curation contract.

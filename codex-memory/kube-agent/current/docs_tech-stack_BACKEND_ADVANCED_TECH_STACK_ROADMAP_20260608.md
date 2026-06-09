@@ -9,6 +9,49 @@
 - 供应链、CI、SBOM、质量门禁进入工程默认路径；
 - Java / Spring / Agent 框架升级以兼容性矩阵推进，不用不可构建的版本号伪装先进。
 
+## 2026-06-09 M5.73 Memory-RAG-Reviewed-Trace-Evidence-Manifest Rule
+
+M5.73 adds the backend-owned reviewed trace-evidence manifest:
+
+```text
+GET /api/agent/observability/memory-rag/workbench/trace-set-curation/review-manifest
+```
+
+The advanced Agent stack now has a typed fixture-intake contract before reviewed redacted trace IDs are added to the catalog:
+
+- It composes only Memory/RAG contracts and readiness:
+  `AgentMemoryRagTraceSetCurationContractService.contract()`,
+  `AgentMemoryRagSourceEvidenceDigestContractService.contract()`,
+  `AgentMemoryRagDurableMemoryLifecycleContractService.contract()`,
+  `AgentMemoryRagEvalGateContractService.contract()`,
+  `AgentMemoryRagEvalSuiteBindingContractService.contract()`, and
+  `AgentMemoryRagReadinessService.readiness()`.
+- It publishes required trace-set rows for citation fidelity, privacy/tenant isolation, and lifecycle policy.
+- It publishes `requiredTraceAnchorSchema`, `requiredDigestEvidence`, `evidenceIntakeSchema`, `reviewWorkflow`, `manifestPolicy`, `safety`, and `privacy`.
+- It maps Spring AI Memory/RAG/VectorStore, OpenAI Agents tracing/guardrails/evals, MCP tools/resources/prompts, OpenTelemetry GenAI, A2A provenance, and OWASP LLM risks into reviewed evidence gates.
+- It does not accept caller trace IDs and keeps `traceIdsVisibleInManifest=false`.
+- It keeps eval runtime, retrieval runtime, vector-store calls, embedding/reranker/LLM calls, MCP `tools/call`, kube-manager calls, catalog mutation, and CI blocking closed.
+- Phase 2 NIM / HPC / Slurm / BCM remains paused and is not reopened by this work.
+
+Technology judgment: Java/Spring remains the Phase 1 control plane because the project is building governed Agent authority, not a prompt-only demo. The newest technologies are introduced as trace/eval/review/telemetry/provenance contracts first. Spring Boot 4, Spring AI 2, Java 21/25, full MCP runtime, A2A runtime handoff, GraphRAG, rerankers, and vector stores stay in compatibility-matrix or later gated runtime slices until this reviewed evidence lane becomes real.
+
+Official references checked for this anchor:
+
+- Spring AI reference: https://docs.spring.io/spring-ai/reference/
+- OpenAI Agents SDK: https://openai.github.io/openai-agents-python/
+- Model Context Protocol specification: https://modelcontextprotocol.io/specification/2025-11-25
+- OpenTelemetry GenAI semantic conventions: https://opentelemetry.io/docs/specs/semconv/gen-ai/
+- A2A protocol specification: https://a2a-protocol.org/latest/specification/
+- OWASP Top 10 for LLM Applications: https://owasp.org/www-project-top-10-for-large-language-model-applications/
+
+Next order after M5.73:
+
+- Curate authoritative reviewed redacted trace fixtures through human/Git review.
+- Generate advisory Memory/RAG gate-bundle evidence only after reviewed fixtures exist.
+- Promote CI blocking only in a separate reviewed slice.
+- Bind durable memory store and retrieval runtime only after source digest, lifecycle, tenant/privacy, eval evidence, Vue visibility, and recovery memory pass.
+- Run separate compatibility spikes for Java 21/25, Spring Boot 4, Spring AI 2, MCP runtime, A2A, GraphRAG, rerankers, and vector stores.
+
 ## 2026-06-09 M5.72 Memory-RAG-Trace-Set-Curation-Workbench Rule
 
 M5.72 adds the backend-owned Vue workbench:

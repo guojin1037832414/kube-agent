@@ -257,6 +257,7 @@ public record AgentMemoryRagTraceSetCurationWorkbenchOverviewResponse(
         return List.of(
             "memory-rag-readiness",
             "trace-set-curation-workbench-overview",
+            "review-memory-rag-trace-evidence-manifest",
             "trace-set-curation-contract",
             "memory-rag-eval-suite-binding-contract",
             "git-review-redacted-trace-set-catalog-patch",
@@ -290,6 +291,8 @@ public record AgentMemoryRagTraceSetCurationWorkbenchOverviewResponse(
     private static Map<String, Object> buildEndpointMap() {
         Map<String, Object> endpoints = new LinkedHashMap<>();
         endpoints.put("memoryRagTraceSetCurationWorkbenchOverview", OVERVIEW_ENDPOINT);
+        endpoints.put("memoryRagReviewedTraceEvidenceManifest",
+            AgentMemoryRagReviewedTraceEvidenceManifestResponse.MANIFEST_ENDPOINT);
         endpoints.put("memoryRagTraceSetCurationContract",
             "/api/agent/observability/memory-rag/trace-set-curation-contract");
         endpoints.put("memoryRagReadiness", "/api/agent/observability/memory-rag/readiness");

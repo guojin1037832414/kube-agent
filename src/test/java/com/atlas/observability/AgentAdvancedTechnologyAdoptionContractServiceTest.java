@@ -113,7 +113,9 @@ class AgentAdvancedTechnologyAdoptionContractServiceTest {
             .containsEntry("reviewedEvalTraceEvidence", "/api/agent/observability/eval/reviewed-trace-evidence")
             .containsEntry("releaseBlockingEvalGateContract", "/api/agent/observability/eval/release-blocking-gate-contract")
             .containsEntry("memoryRagEvalGateContract", "/api/agent/observability/memory-rag/eval-gate-contract")
-            .containsEntry("memoryRagEvalSuiteBindingContract", "/api/agent/observability/memory-rag/eval-suite-binding-contract");
+            .containsEntry("memoryRagEvalSuiteBindingContract", "/api/agent/observability/memory-rag/eval-suite-binding-contract")
+            .containsEntry("memoryRagReviewedTraceEvidenceManifest",
+                "/api/agent/observability/memory-rag/workbench/trace-set-curation/review-manifest");
         assertThat(contract.safety())
             .containsEntry("adminOnly", true)
             .containsEntry("readOnly", true)

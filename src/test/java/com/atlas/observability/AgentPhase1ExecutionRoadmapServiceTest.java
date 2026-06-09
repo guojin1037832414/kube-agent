@@ -68,6 +68,7 @@ class AgentPhase1ExecutionRoadmapServiceTest {
                 "kube-manager-governance",
                 "memory-rag-readiness",
                 "memory-rag-trace-set-curation-workbench",
+                "memory-rag-reviewed-trace-evidence-manifest",
                 "eval-workbench",
                 "mcp-governance"
             );
@@ -91,9 +92,12 @@ class AgentPhase1ExecutionRoadmapServiceTest {
             .containsEntry("memoryRagTraceSetCurationContract",
                 "/api/agent/observability/memory-rag/trace-set-curation-contract")
             .containsEntry("memoryRagTraceSetCurationWorkbenchOverview",
-                "/api/agent/observability/memory-rag/workbench/trace-set-curation/overview");
+                "/api/agent/observability/memory-rag/workbench/trace-set-curation/overview")
+            .containsEntry("memoryRagReviewedTraceEvidenceManifest",
+                "/api/agent/observability/memory-rag/workbench/trace-set-curation/review-manifest");
         assertThat(roadmap.executionSteps().get(3).get("requiredEvidence").toString())
-            .contains("memory-rag-trace-set-curation-contract", "memory-rag-trace-set-curation-workbench");
+            .contains("memory-rag-trace-set-curation-contract", "memory-rag-trace-set-curation-workbench",
+                "memory-rag-reviewed-trace-evidence-manifest");
         assertThat(roadmap.executionSteps().get(1))
             .containsEntry("status", "BACKEND_CONTRACT_READY");
         assertThat(roadmap.executionSteps().get(2))

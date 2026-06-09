@@ -194,6 +194,8 @@ public record AgentAdvancedTechnologyAdoptionContractResponse(
         endpoints.put("memoryRagReadiness", "/api/agent/observability/memory-rag/readiness");
         endpoints.put("memoryRagEvalGateContract", "/api/agent/observability/memory-rag/eval-gate-contract");
         endpoints.put("memoryRagEvalSuiteBindingContract", "/api/agent/observability/memory-rag/eval-suite-binding-contract");
+        endpoints.put("memoryRagReviewedTraceEvidenceManifest",
+            AgentMemoryRagReviewedTraceEvidenceManifestResponse.MANIFEST_ENDPOINT);
         return Map.copyOf(endpoints);
     }
 

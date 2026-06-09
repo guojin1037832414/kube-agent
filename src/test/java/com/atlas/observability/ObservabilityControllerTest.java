@@ -125,6 +125,15 @@ class ObservabilityControllerTest {
             memoryRagEvalSuiteBindingContractService,
             memoryRagReadinessService
         );
+    private final AgentMemoryRagReviewedTraceEvidenceManifestService memoryRagReviewedTraceEvidenceManifestService =
+        new AgentMemoryRagReviewedTraceEvidenceManifestService(
+            memoryRagTraceSetCurationContractService,
+            memoryRagSourceEvidenceDigestContractService,
+            memoryRagDurableMemoryLifecycleContractService,
+            memoryRagEvalGateContractService,
+            memoryRagEvalSuiteBindingContractService,
+            memoryRagReadinessService
+        );
     private final AgentTopTierReadinessOverviewService topTierReadinessOverviewService =
         new AgentTopTierReadinessOverviewService(
             kubeManagerHttpOutletGovernanceWorkbenchOverviewService,
@@ -158,6 +167,7 @@ class ObservabilityControllerTest {
         memoryRagEvalSuiteBindingContractService,
         memoryRagTraceSetCurationContractService,
         memoryRagTraceSetCurationWorkbenchOverviewService,
+        memoryRagReviewedTraceEvidenceManifestService,
         auditRecorder,
         auditRecorder,
         replayTimelineService,
@@ -1691,6 +1701,8 @@ class ObservabilityControllerTest {
         assertThat(overview.endpointMap())
             .containsEntry("memoryRagTraceSetCurationWorkbenchOverview",
                 "/api/agent/observability/memory-rag/workbench/trace-set-curation/overview")
+            .containsEntry("memoryRagReviewedTraceEvidenceManifest",
+                "/api/agent/observability/memory-rag/workbench/trace-set-curation/review-manifest")
             .containsEntry("memoryRagTraceSetCurationContract",
                 "/api/agent/observability/memory-rag/trace-set-curation-contract")
             .containsEntry("memoryRagReadiness", "/api/agent/observability/memory-rag/readiness");
@@ -1750,6 +1762,100 @@ class ObservabilityControllerTest {
         assertThat(overview.memoryRagReadiness().schemaVersion()).isEqualTo("agent-memory-rag-readiness.v1");
         assertThat(overview.toString())
             .contains("trace-set-curation-workbench", "memory-rag-citation-fidelity")
+            .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret");
+    }
+
+    @Test
+    void memoryRagReviewedTraceEvidenceManifest_shouldRequireAdminAndReturnIntakeManifest() {
+        ResponseEntity<ApiResponse<AgentMemoryRagReviewedTraceEvidenceManifestResponse>> anonymous =
+            controller.memoryRagReviewedTraceEvidenceManifest();
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentMemoryRagReviewedTraceEvidenceManifestResponse>> user =
+            controller.memoryRagReviewedTraceEvidenceManifest();
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        userPermissionContext.unbind();
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentMemoryRagReviewedTraceEvidenceManifestResponse>> admin =
+            controller.memoryRagReviewedTraceEvidenceManifest();
+
+        assertThat(admin.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(admin.getBody()).isNotNull();
+        AgentMemoryRagReviewedTraceEvidenceManifestResponse manifest = admin.getBody().getData();
+        assertThat(manifest.schemaVersion())
+            .isEqualTo("agent-memory-rag-reviewed-trace-evidence-manifest.v1");
+        assertThat(manifest.manifestStatus()).isEqualTo("WAITING_FOR_REVIEWED_REDACTED_TRACE_FIXTURES");
+        assertThat(manifest.requiredTraceSetCount()).isEqualTo(3);
+        assertThat(manifest.reviewedTraceSetCount()).isZero();
+        assertThat(manifest.authoritativeFixtureCount()).isZero();
+        assertThat(manifest.runtimeControlAllowed()).isFalse();
+        assertThat(manifest.requiredTraceSets()).extracting(row -> row.get("traceSetId"))
+            .containsExactly(
+                "memory-rag-citation-fidelity",
+                "memory-rag-privacy-tenant",
+                "memory-rag-lifecycle-policy"
+            );
+        assertThat(manifest.requiredTraceSets()).allSatisfy(row -> assertThat(row)
+            .containsEntry("catalogPatchTarget", "src/main/resources/observability/eval-trace-sets.json")
+            .containsEntry("traceIdsVisibleInManifest", false)
+            .containsEntry("authoritativeFixturePresent", false)
+            .containsEntry("safeToPromoteNow", false)
+            .containsEntry("safeToRunEvalNow", false)
+            .containsEntry("safeToEnableRetrievalNow", false)
+            .containsEntry("safeToEnableCiBlockingNow", false)
+            .containsEntry("catalogMutationAllowed", false)
+            .containsEntry("runtimeCatalogWrite", false));
+        assertThat(manifest.advancedTechnologyMappings()).extracting(mapping -> mapping.get("id"))
+            .contains(
+                "spring-ai-memory-rag-vectorstore",
+                "openai-agents-tracing-guardrails-evals",
+                "mcp-2025-11-25-tools-resources-prompts",
+                "otel-genai-semantic-conventions",
+                "a2a-agent-card-task-artifact-provenance"
+            );
+        assertThat(manifest.endpointMap())
+            .containsEntry("memoryRagReviewedTraceEvidenceManifest",
+                "/api/agent/observability/memory-rag/workbench/trace-set-curation/review-manifest")
+            .containsEntry("memoryRagTraceSetCurationWorkbenchOverview",
+                "/api/agent/observability/memory-rag/workbench/trace-set-curation/overview");
+        assertThat(manifest.manifestPolicy())
+            .containsEntry("readOnly", true)
+            .containsEntry("traceIdsAcceptedFromCaller", false)
+            .containsEntry("catalogMutationAllowed", false)
+            .containsEntry("runtimeCatalogWrite", false)
+            .containsEntry("requiresHumanGitReview", true)
+            .containsEntry("evalRuntimeAllowedNow", false)
+            .containsEntry("retrievalRuntimeAllowedNow", false)
+            .containsEntry("ciBlockingAllowedNow", false);
+        assertThat(manifest.safety())
+            .containsEntry("readOnly", true)
+            .containsEntry("candidateDiscoveryInvoked", false)
+            .containsEntry("curationReviewInvoked", false)
+            .containsEntry("traceSetGateInvoked", false)
+            .containsEntry("evalRuntimeExecuted", false)
+            .containsEntry("retrievalExecuted", false)
+            .containsEntry("vectorStoreCalls", false)
+            .containsEntry("embeddingModelCalls", false)
+            .containsEntry("llmUsed", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("kubeManagerCalls", false)
+            .containsEntry("mcpToolCall", false);
+        assertThat(manifest.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("traceIdsVisibleInManifest", false)
+            .containsEntry("containsRawPrompt", false)
+            .containsEntry("containsRawDocument", false)
+            .containsEntry("containsRawRetrievedChunk", false);
+        assertThat(manifest.toString())
+            .contains("review-manifest", "memory-rag-citation-fidelity")
             .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret");
     }
 

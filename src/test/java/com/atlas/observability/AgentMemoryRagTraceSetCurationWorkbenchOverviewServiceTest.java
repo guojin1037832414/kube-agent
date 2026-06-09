@@ -117,6 +117,7 @@ class AgentMemoryRagTraceSetCurationWorkbenchOverviewServiceTest {
         assertThat(overview.recommendedWorkflow()).containsExactly(
             "memory-rag-readiness",
             "trace-set-curation-workbench-overview",
+            "review-memory-rag-trace-evidence-manifest",
             "trace-set-curation-contract",
             "memory-rag-eval-suite-binding-contract",
             "git-review-redacted-trace-set-catalog-patch",
@@ -132,6 +133,8 @@ class AgentMemoryRagTraceSetCurationWorkbenchOverviewServiceTest {
         assertThat(overview.endpointMap())
             .containsEntry("memoryRagTraceSetCurationWorkbenchOverview",
                 "/api/agent/observability/memory-rag/workbench/trace-set-curation/overview")
+            .containsEntry("memoryRagReviewedTraceEvidenceManifest",
+                "/api/agent/observability/memory-rag/workbench/trace-set-curation/review-manifest")
             .containsEntry("memoryRagTraceSetCurationContract",
                 "/api/agent/observability/memory-rag/trace-set-curation-contract")
             .containsEntry("memoryRagReadiness", "/api/agent/observability/memory-rag/readiness");

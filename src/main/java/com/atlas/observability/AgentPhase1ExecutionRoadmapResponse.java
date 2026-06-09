@@ -67,7 +67,8 @@ public record AgentPhase1ExecutionRoadmapResponse(
                 "Curate reviewed redacted traces so eval gates stop being schema-only evidence.",
                 "BACKEND_CONTRACT_READY",
                 List.of("reviewed-trace-evidence-contract", "replay-timeline-exists", "trace-set-catalog-exists", "catalog-patch-review-exists"),
-                List.of("reviewed-trace-evidence", "eval-workbench-overview", "trace-set-detail", "catalog-patch-review")),
+                List.of("reviewed-trace-evidence", "memory-rag-reviewed-trace-evidence-manifest",
+                    "eval-workbench-overview", "trace-set-detail", "catalog-patch-review")),
             step(3, "release-blocking-eval-gates",
                 "Promote deterministic eval gate bundles from advisory evidence to reviewed release gates.",
                 "BACKEND_CONTRACT_READY_BUT_BLOCKED",
@@ -78,9 +79,11 @@ public record AgentPhase1ExecutionRoadmapResponse(
                 "BACKEND_CONTRACT_READY_BUT_NOT_BOUND",
                 List.of("memory-rag-eval-suite-binding-contract", "memory-rag-trace-set-curation-contract",
                     "memory-rag-trace-set-curation-workbench",
+                    "memory-rag-reviewed-trace-evidence-manifest",
                     "memory-rag-eval-gate-contract", "source-evidence-digest-contract", "durable-lifecycle-contract"),
                 List.of("memory-rag-eval-suite-binding-contract", "memory-rag-trace-set-curation-contract",
-                    "memory-rag-trace-set-curation-workbench", "memory-rag-eval-gate-contract",
+                    "memory-rag-trace-set-curation-workbench", "memory-rag-reviewed-trace-evidence-manifest",
+                    "memory-rag-eval-gate-contract",
                     "memory-rag-readiness")),
             step(5, "durable-memory-store-binding",
                 "Bind durable memory only after lifecycle, source digest, retention, delete/export/recovery, and eval gates are ready.",
@@ -127,6 +130,8 @@ public record AgentPhase1ExecutionRoadmapResponse(
             vueTarget("memory-rag-readiness", "/api/agent/observability/memory-rag/readiness"),
             vueTarget("memory-rag-trace-set-curation-workbench",
                 AgentMemoryRagTraceSetCurationWorkbenchOverviewResponse.OVERVIEW_ENDPOINT),
+            vueTarget("memory-rag-reviewed-trace-evidence-manifest",
+                AgentMemoryRagReviewedTraceEvidenceManifestResponse.MANIFEST_ENDPOINT),
             vueTarget("eval-workbench", "/api/agent/observability/eval/workbench/overview"),
             vueTarget("mcp-governance", "/api/agent/mcp/governance/overview")
         );
@@ -161,6 +166,8 @@ public record AgentPhase1ExecutionRoadmapResponse(
             "/api/agent/observability/memory-rag/trace-set-curation-contract");
         endpoints.put("memoryRagTraceSetCurationWorkbenchOverview",
             AgentMemoryRagTraceSetCurationWorkbenchOverviewResponse.OVERVIEW_ENDPOINT);
+        endpoints.put("memoryRagReviewedTraceEvidenceManifest",
+            AgentMemoryRagReviewedTraceEvidenceManifestResponse.MANIFEST_ENDPOINT);
         endpoints.put("mcpGovernanceOverview", "/api/agent/mcp/governance/overview");
         return Map.copyOf(endpoints);
     }
