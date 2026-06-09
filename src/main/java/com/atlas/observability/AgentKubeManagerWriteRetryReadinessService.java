@@ -81,8 +81,8 @@ public class AgentKubeManagerWriteRetryReadinessService {
         return List.of(
             requirement(
                 "server-derived-idempotency-key",
-                "BLOCKING",
-                "Each retried write must use a server-derived key bound to audit receipt, request spec, principal, organization, and operation.",
+                "PARTIAL",
+                "A generic server-derived key derivation contract exists, but it is not yet bound to kube-manager HTTP writes.",
                 false
             ),
             requirement(
@@ -150,7 +150,10 @@ public class AgentKubeManagerWriteRetryReadinessService {
         evidence.put("adminAuditQueryExists", true);
         evidence.put("replayTimelineExists", true);
         evidence.put("evalGateBundleExists", true);
-        evidence.put("genericKubeManagerIdempotencyBoundaryExists", false);
+        evidence.put("genericKubeManagerIdempotencyBoundaryExists", true);
+        evidence.put("genericKubeManagerIdempotencyBoundaryBoundToHttpOutlet", false);
+        evidence.put("serverDerivedIdempotencyKeyDeriverExists", true);
+        evidence.put("callerProvidedIdempotencyKeyAccepted", false);
         evidence.put("genericWriteOperationAllowlistExists", false);
         evidence.put("retryPredicateBoundToWriteFailureClasses", false);
         evidence.put("postWriteReadbackContractExists", false);
@@ -161,7 +164,7 @@ public class AgentKubeManagerWriteRetryReadinessService {
 
     private List<String> blockedReasons() {
         return List.of(
-            "generic-kube-manager-idempotency-boundary-missing",
+            "generic-kube-manager-idempotency-boundary-not-bound-to-http-outlet",
             "write-operation-allowlist-missing",
             "write-retry-predicate-not-bound",
             "post-write-readback-contract-missing",
@@ -194,6 +197,7 @@ public class AgentKubeManagerWriteRetryReadinessService {
     private Map<String, Object> endpointTemplates() {
         Map<String, Object> endpoints = new LinkedHashMap<>();
         endpoints.put("healthSummary", "/api/agent/observability/kube-manager/http-outlet/health-summary");
+        endpoints.put("writeIdempotencyContract", "/api/agent/observability/kube-manager/http-outlet/write-idempotency-contract");
         endpoints.put("writeRetryReadiness", "/api/agent/observability/kube-manager/http-outlet/write-retry-readiness");
         endpoints.put("auditByTrace", "/api/agent/observability/audit/trace/{traceId}");
         endpoints.put("replayByTrace", "/api/agent/observability/replay/trace/{traceId}");

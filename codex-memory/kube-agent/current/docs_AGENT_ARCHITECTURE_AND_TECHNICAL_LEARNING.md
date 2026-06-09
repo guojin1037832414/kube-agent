@@ -2,6 +2,33 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-09 M5.51 Kube-Manager Write Idempotency Contract
+
+M5.51 把 M5.50 readiness 中的“server-derived idempotency key”推进成通用 Java 契约。
+
+```text
+Trusted server-side evidence
+    |
+    | SHA-256 canonicalization
+    v
+KubeManagerWriteIdempotencyKeyDeriver
+    |
+    | km-write-v1-{64hex}
+    v
+Future write attempt contract
+```
+
+关键设计：
+
+- `KubeManagerWriteIdempotencyKeyInput` 只接受服务端可信证据，不包含 caller-provided idempotency key 字段。
+- 派生证据包括 audit receipt、request spec digest、principal fingerprint、organization fingerprint、operation type、HTTP method、path template、request body digest、release evidence digest。
+- 只允许 `POST/PATCH/PUT/DELETE`，拒绝 `GET`。
+- `AgentKubeManagerWriteIdempotencyContractService` 只做 admin-only read model，说明合同存在但尚未绑定 HTTP outlet。
+- M5.50 readiness 更新为 `genericKubeManagerIdempotencyBoundaryExists=true`，但 `genericKubeManagerIdempotencyBoundaryBoundToHttpOutlet=false`，所以 `readinessVerdict=NOT_READY` 不变。
+- 本轮不调用 kube-manager、不注入 HTTP header、不写 audit、不签发 durable receipt、不启用 write retry。
+
+学习重点：幂等键不能让调用方随便传。对于 Agent 系统，prompt injection、前端误用、参数伪造都可能污染 caller input。更成熟的做法是用服务端可信证据派生 key，让“同一证据同一 key、任一关键证据变化 key 变化”成为可测试协议。
+
 ## 2026-06-09 M5.50 Kube-Manager Write Retry Readiness Contract
 
 M5.50 把 kube-manager 写操作自动重试从“未来风险点”变成 admin-only 的 readiness 合约。

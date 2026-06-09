@@ -90,6 +90,15 @@ M5.50-1 adds the next safe Resilience4j governance layer: an admin-only write re
 
 Technology judgment: this is the correct advanced-agent path for dangerous reliability features. Read retry can improve availability; write retry can amplify side effects. Therefore the project keeps write retry disabled while making the future enablement protocol visible, testable, and teachable.
 
+M5.51-1 turns the first M5.50 prerequisite into a generic contract:
+- New pure Java `KubeManagerWriteIdempotencyKeyDeriver` derives `km-write-v1-{sha256}` from trusted server-side evidence.
+- The input contract requires audit receipt id/digest, request spec digest, principal fingerprint, organization fingerprint, operation type, HTTP method, path template, request body digest, and release evidence digest.
+- Caller-provided idempotency keys are not represented in the input contract and cannot override the derived key.
+- New admin-only endpoint `GET /api/agent/observability/kube-manager/http-outlet/write-idempotency-contract` describes the contract without exposing raw keys or raw evidence.
+- The contract is not bound to `KubeManagerHttpClient`, does not inject headers, and does not enable write retry.
+
+Technology judgment: this is how advanced Agent systems should introduce idempotency. The trusted evidence contract comes before HTTP binding and long before retry enablement.
+
 M5.29-1 已把 Spring Security 推进到 HTTP 安全入口：
 
 - 新增 `AgentSecurityConfig`，用 `SecurityFilterChain` 承接标准 Web 安全主线；

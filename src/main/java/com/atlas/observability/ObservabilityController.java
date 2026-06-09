@@ -36,6 +36,7 @@ public class ObservabilityController {
     private final AgentMetricsService metricsService;
     private final AgentKubeManagerHttpOutletHealthSummaryService kubeManagerHttpOutletHealthSummaryService;
     private final AgentKubeManagerWriteRetryReadinessService kubeManagerWriteRetryReadinessService;
+    private final AgentKubeManagerWriteIdempotencyContractService kubeManagerWriteIdempotencyContractService;
     private final AgentAuditSnapshotProvider auditSnapshotProvider;
     private final AgentAuditQueryService auditQueryService;
     private final AgentReplayTimelineService replayTimelineService;
@@ -55,6 +56,7 @@ public class ObservabilityController {
     public ObservabilityController(AgentMetricsService metricsService,
                                    AgentKubeManagerHttpOutletHealthSummaryService kubeManagerHttpOutletHealthSummaryService,
                                    AgentKubeManagerWriteRetryReadinessService kubeManagerWriteRetryReadinessService,
+                                   AgentKubeManagerWriteIdempotencyContractService kubeManagerWriteIdempotencyContractService,
                                    AgentAuditSnapshotProvider auditSnapshotProvider,
                                    AgentAuditQueryService auditQueryService,
                                    AgentReplayTimelineService replayTimelineService,
@@ -73,6 +75,7 @@ public class ObservabilityController {
         this.metricsService = metricsService;
         this.kubeManagerHttpOutletHealthSummaryService = kubeManagerHttpOutletHealthSummaryService;
         this.kubeManagerWriteRetryReadinessService = kubeManagerWriteRetryReadinessService;
+        this.kubeManagerWriteIdempotencyContractService = kubeManagerWriteIdempotencyContractService;
         this.auditSnapshotProvider = auditSnapshotProvider;
         this.auditQueryService = auditQueryService;
         this.replayTimelineService = replayTimelineService;
@@ -111,6 +114,17 @@ public class ObservabilityController {
             return guard;
         }
         return ResponseEntity.ok(ApiResponse.ok(kubeManagerWriteRetryReadinessService.readiness()));
+    }
+
+    /** Describe the server-derived idempotency-key contract before it is bound to real writes. */
+    @GetMapping("/kube-manager/http-outlet/write-idempotency-contract")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentKubeManagerWriteIdempotencyContractResponse>> kubeManagerWriteIdempotencyContract() {
+        ResponseEntity<ApiResponse<AgentKubeManagerWriteIdempotencyContractResponse>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return ResponseEntity.ok(ApiResponse.ok(kubeManagerWriteIdempotencyContractService.contract()));
     }
 
     @GetMapping("/snapshot")

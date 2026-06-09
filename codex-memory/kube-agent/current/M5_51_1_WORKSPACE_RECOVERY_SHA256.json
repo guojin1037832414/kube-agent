@@ -1,0 +1,103 @@
+﻿{
+    "milestone":  "M5.51-1",
+    "title":  "Kube-manager write idempotency contract",
+    "generatedAt":  "2026-06-09T12:24:20+08:00",
+    "files":  [
+                  {
+                      "path":  "CHANGELOG.md",
+                      "sha256":  "F4347402279C833D61264D170729475671D658126C1EFC21BBC2E98198C6BDB8"
+                  },
+                  {
+                      "path":  "docs/PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "20BE45C551186FB72F1B458A40ED7A05FF33D70C35ED895743BD6C02EF6256EA"
+                  },
+                  {
+                      "path":  "docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "F1DBBA59855D9002D91077ECB401A9475E9FD71FB91C177B50B33EC234625E74"
+                  },
+                  {
+                      "path":  "docs/tech-stack/BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "0101BD3A27A971DDD5642F11BBA42EEB546122045A31289EEA0EC8213D116D69"
+                  },
+                  {
+                      "path":  "docs/M5_51_KUBE_MANAGER_WRITE_IDEMPOTENCY_CONTRACT_20260609.md",
+                      "sha256":  "CA8FC8C716092B57099F0B8FF00F291C9D2BC4FA4D1090A53471EEC159D38D42"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/CHANGELOG.md",
+                      "sha256":  "F4347402279C833D61264D170729475671D658126C1EFC21BBC2E98198C6BDB8"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/RECOVERY_STATUS.md",
+                      "sha256":  "677C587F501E6C3279EE5775829B4C88438100D6B47FA557C1ED9A45F4B36212"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "20BE45C551186FB72F1B458A40ED7A05FF33D70C35ED895743BD6C02EF6256EA"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "F1DBBA59855D9002D91077ECB401A9475E9FD71FB91C177B50B33EC234625E74"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "0101BD3A27A971DDD5642F11BBA42EEB546122045A31289EEA0EC8213D116D69"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_M5_51_KUBE_MANAGER_WRITE_IDEMPOTENCY_CONTRACT_20260609.md",
+                      "sha256":  "CA8FC8C716092B57099F0B8FF00F291C9D2BC4FA4D1090A53471EEC159D38D42"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/http/KubeManagerWriteIdempotencyKeyInput.java",
+                      "sha256":  "266377A7DB6BA6D4C045D2941D9F78F477CB8DD335DD2BE16C87D0D1F4CDDFD4"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/http/KubeManagerWriteIdempotencyKeyResult.java",
+                      "sha256":  "B34F34745DE6B8F61CCAC989690DF04A4EFB94C65AE6962E482AA371A77B6712"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/http/KubeManagerWriteIdempotencyKeyDeriver.java",
+                      "sha256":  "B79EF67A5754377EDF39A7CEFD1C78ED310C12662C1AE7692D03F2CF3208AE39"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentKubeManagerWriteIdempotencyContractResponse.java",
+                      "sha256":  "58243620300D1CC8A02656C240415697C8C5601714FBFCDFEB100355D4B2664B"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentKubeManagerWriteIdempotencyContractService.java",
+                      "sha256":  "5C51B9860118F1BDBEF911039D8F62E6B6A1C210E35969B0C0B04C5CAA853B99"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentKubeManagerWriteRetryReadinessService.java",
+                      "sha256":  "F0F9E18F0FE0F0E8A6DDB806468286ACC5329B4E02AB4031894FB6EA0DC81FB3"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/ObservabilityController.java",
+                      "sha256":  "BC5C6D620B86D8F08D2C42BAEBE323FC17914315A10D221AF63B4A2CB18ABE93"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/http/KubeManagerWriteIdempotencyKeyDeriverTest.java",
+                      "sha256":  "5E708D5A9B0F5AAC7D8D288AD95123794832D10C39389BDD15884F9F079B673C"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/AgentKubeManagerWriteIdempotencyContractServiceTest.java",
+                      "sha256":  "27D3057BBE83262A28B9E3ACEE788846F37C4B516B6972F118976D9F4C9C593D"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/AgentKubeManagerWriteRetryReadinessServiceTest.java",
+                      "sha256":  "A73AF202DAA0F72128539FAC2A935B71262A3032423A8C5A8D8BA527006FD17A"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/ObservabilityControllerTest.java",
+                      "sha256":  "DFC1C623BA8F9522B9B54648EAF4A3CBB85B01B73030936FC1856CE57464F517"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/ObservabilityControllerSecurityContractTest.java",
+                      "sha256":  "45A3D1C970200112B05FE5402EB109CF87F761746FEA7A8829B15331D86053AF"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/auth/AgentSecurityConfigWebMvcTest.java",
+                      "sha256":  "50731FBBD7D2DF4BD59CDC58E0971E4B632ED4FCA6FB41A2074AB4BADC573292"
+                  }
+              ]
+}

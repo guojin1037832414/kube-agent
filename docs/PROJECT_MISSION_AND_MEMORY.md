@@ -10,7 +10,39 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.50-1
+## Latest Phase 1 Core Memory - M5.51-1
+
+M5.51-1 adds the generic kube-manager write idempotency-key contract required before any future controlled write retry can be considered.
+
+Delivered:
+
+- Added `KubeManagerWriteIdempotencyKeyInput`.
+- Added `KubeManagerWriteIdempotencyKeyResult`.
+- Added `KubeManagerWriteIdempotencyKeyDeriver`.
+- Added `AgentKubeManagerWriteIdempotencyContractResponse`.
+- Added `AgentKubeManagerWriteIdempotencyContractService`.
+- Added admin-only `GET /api/agent/observability/kube-manager/http-outlet/write-idempotency-contract`.
+- Updated M5.50 readiness so generic idempotency is now `exists=true` but `boundToHttpOutlet=false`.
+- Added deriver, service, controller, source-contract, and MockMvc security coverage.
+
+Security boundary:
+
+- The deriver is pure Java and derives keys from server-side evidence only.
+- The input does not contain a caller-provided idempotency key field.
+- The observability endpoint is admin-only, local-process-only, read-only, and summary-only.
+- No `KubeManagerHttpClient`, `RestClient`, kube-manager `8100`, `/api/login`, Tool, LLM, external service, audit writer, durable receipt writer, HTTP header injection, resilience registry mutation, runtime enable switch, or write retry enablement is added.
+- The contract does not expose raw keys, raw principal, raw organization, raw backend path, raw request body, token, password, or Authorization header.
+- NIM / HPC / Slurm / BCM remain Phase 2 paused scope.
+
+Learning point: top-tier Agent idempotency must be server-derived from trusted evidence. "Caller sends an idempotency key" is not enough for an Agent that may be influenced by prompt injection, UI misuse, or forged parameters.
+
+Latest verified commands:
+
+- `mvn -q "-DskipTests" validate`
+- `git diff --check`
+- `mvn -q "-Dtest=KubeManagerWriteIdempotencyKeyDeriverTest,AgentKubeManagerWriteIdempotencyContractServiceTest,AgentKubeManagerWriteRetryReadinessServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+## Previous Phase 1 Core Memory - M5.50-1
 
 M5.50-1 adds an admin-only kube-manager write retry readiness contract.
 

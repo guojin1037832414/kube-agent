@@ -66,10 +66,13 @@ class ObservabilityControllerTest {
         );
     private final AgentKubeManagerWriteRetryReadinessService kubeManagerWriteRetryReadinessService =
         new AgentKubeManagerWriteRetryReadinessService(retryRegistry());
+    private final AgentKubeManagerWriteIdempotencyContractService kubeManagerWriteIdempotencyContractService =
+        new AgentKubeManagerWriteIdempotencyContractService();
     private final ObservabilityController controller = new ObservabilityController(
         new AgentMetricsService(new SimpleMeterRegistry()),
         kubeManagerHttpOutletHealthSummaryService,
         kubeManagerWriteRetryReadinessService,
+        kubeManagerWriteIdempotencyContractService,
         auditRecorder,
         auditRecorder,
         replayTimelineService,
@@ -330,10 +333,12 @@ class ObservabilityControllerTest {
             .containsEntry("runtimeEnableEndpointPresent", false);
         assertThat(readiness.currentEvidence())
             .containsEntry("highRiskDurablePrewriteGateExists", true)
-            .containsEntry("genericKubeManagerIdempotencyBoundaryExists", false)
+            .containsEntry("genericKubeManagerIdempotencyBoundaryExists", true)
+            .containsEntry("genericKubeManagerIdempotencyBoundaryBoundToHttpOutlet", false)
+            .containsEntry("callerProvidedIdempotencyKeyAccepted", false)
             .containsEntry("runtimeWriteRetryEnablementSwitchExists", false)
             .containsEntry("nimHpcSlurmBcmPhase2Paused", true);
-        assertThat(readiness.blockedReasons()).contains("generic-kube-manager-idempotency-boundary-missing");
+        assertThat(readiness.blockedReasons()).contains("generic-kube-manager-idempotency-boundary-not-bound-to-http-outlet");
         assertThat(readiness.safety())
             .containsEntry("localProcessOnly", true)
             .containsEntry("kubeManagerCalls", false)
@@ -348,6 +353,63 @@ class ObservabilityControllerTest {
             .containsEntry("containsRawEndpoint", false);
         assertThat(readiness.toString())
             .doesNotContain("kube-manager.internal", "secret-password", "Bearer", "user-token", "/api/login");
+    }
+
+    @Test
+    void kubeManagerWriteIdempotencyContract_shouldRequireAdminAndReturnUnboundServerDerivedContract() {
+        ResponseEntity<ApiResponse<AgentKubeManagerWriteIdempotencyContractResponse>> anonymous =
+            controller.kubeManagerWriteIdempotencyContract();
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentKubeManagerWriteIdempotencyContractResponse>> user =
+            controller.kubeManagerWriteIdempotencyContract();
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        userPermissionContext.unbind();
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentKubeManagerWriteIdempotencyContractResponse>> admin =
+            controller.kubeManagerWriteIdempotencyContract();
+
+        assertThat(admin.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(admin.getBody()).isNotNull();
+        AgentKubeManagerWriteIdempotencyContractResponse contract = admin.getBody().getData();
+        assertThat(contract.schemaVersion()).isEqualTo("agent-kube-manager-write-idempotency-contract.v1");
+        assertThat(contract.contractStatus()).isEqualTo("CONTRACT_DEFINED_NOT_BOUND");
+        assertThat(contract.serverDerivedKeyContractExists()).isTrue();
+        assertThat(contract.boundToHttpOutlet()).isFalse();
+        assertThat(contract.callerProvidedIdempotencyKeyAccepted()).isFalse();
+        assertThat(contract.writeRetryEnabled()).isFalse();
+        assertThat(contract.keyContract())
+            .containsEntry("keySource", "server-derived-sha256-bound-evidence.v1")
+            .containsEntry("actualKeyExposed", false)
+            .containsEntry("retryAllowedByThisContract", false);
+        assertThat(contract.bindingStatus())
+            .containsEntry("boundToKubeManagerHttpClient", false)
+            .containsEntry("httpHeaderInjectionEnabled", false)
+            .containsEntry("writeRetryEnabled", false)
+            .containsEntry("callerOverrideAllowed", false);
+        assertThat(contract.safety())
+            .containsEntry("kubeManagerCalls", false)
+            .containsEntry("restClientUsed", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("auditWrite", false)
+            .containsEntry("httpHeaderInjection", false)
+            .containsEntry("writeRetryEnablement", false);
+        assertThat(contract.privacy())
+            .containsEntry("actualKeyExposed", false)
+            .containsEntry("rawEvidenceExposed", false)
+            .containsEntry("containsRawBaseUrl", false)
+            .containsEntry("containsToken", false)
+            .containsEntry("containsLoginPassword", false);
+        assertThat(contract.toString())
+            .doesNotContain("secret-password", "Bearer", "user-token", "/api/login", "/api/100002");
     }
 
     @Test

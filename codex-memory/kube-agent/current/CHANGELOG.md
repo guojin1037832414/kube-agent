@@ -6,6 +6,30 @@
 
 ---
 
+## [M5.51-1] - Kube-manager write idempotency contract
+
+**Delivery**: Added a generic server-derived idempotency-key contract for future controlled kube-manager writes.
+**Changes**
+- Added `KubeManagerWriteIdempotencyKeyInput`.
+- Added `KubeManagerWriteIdempotencyKeyResult`.
+- Added `KubeManagerWriteIdempotencyKeyDeriver`.
+- Added `AgentKubeManagerWriteIdempotencyContractResponse`.
+- Added `AgentKubeManagerWriteIdempotencyContractService`.
+- Added admin-only `GET /api/agent/observability/kube-manager/http-outlet/write-idempotency-contract`.
+- Updated write retry readiness to report that the generic idempotency boundary exists but is not bound to the HTTP outlet.
+- Added deriver, service, controller, source-contract, and MockMvc security coverage.
+**Verification**
+- `mvn -q "-DskipTests" validate` passed.
+- `git diff --check` passed.
+- `mvn -q "-Dtest=KubeManagerWriteIdempotencyKeyDeriverTest,AgentKubeManagerWriteIdempotencyContractServiceTest,AgentKubeManagerWriteRetryReadinessServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed.
+**Security**
+- The deriver is pure Java and not a Spring runtime writer.
+- The endpoint is admin-only, local-process-only, read-only, and summary-only.
+- Caller-provided idempotency keys are not accepted.
+- No kube-manager call, `RestClient`, Tool execution, LLM call, external call, audit write, durable receipt issuance, HTTP header injection, resilience registry mutation, runtime enable switch, or write retry enablement is added.
+- Raw keys, raw principal, raw organization, raw paths, raw request bodies, tokens, passwords, and Authorization headers are not exposed.
+- NIM / HPC / Slurm / BCM remain Phase 2 paused scope.
+
 ## [M5.50-1] - Kube-manager write retry readiness contract
 
 **Delivery**: Added an admin-only readiness contract for future controlled kube-manager write retry enablement.

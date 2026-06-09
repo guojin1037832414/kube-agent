@@ -74,14 +74,17 @@ class AgentKubeManagerWriteRetryReadinessServiceTest {
             .containsEntry("adminAuditQueryExists", true)
             .containsEntry("replayTimelineExists", true)
             .containsEntry("evalGateBundleExists", true)
-            .containsEntry("genericKubeManagerIdempotencyBoundaryExists", false)
+            .containsEntry("genericKubeManagerIdempotencyBoundaryExists", true)
+            .containsEntry("genericKubeManagerIdempotencyBoundaryBoundToHttpOutlet", false)
+            .containsEntry("serverDerivedIdempotencyKeyDeriverExists", true)
+            .containsEntry("callerProvidedIdempotencyKeyAccepted", false)
             .containsEntry("genericWriteOperationAllowlistExists", false)
             .containsEntry("retryPredicateBoundToWriteFailureClasses", false)
             .containsEntry("postWriteReadbackContractExists", false)
             .containsEntry("runtimeWriteRetryEnablementSwitchExists", false)
             .containsEntry("nimHpcSlurmBcmPhase2Paused", true);
         assertThat(readiness.blockedReasons()).contains(
-            "generic-kube-manager-idempotency-boundary-missing",
+            "generic-kube-manager-idempotency-boundary-not-bound-to-http-outlet",
             "write-operation-allowlist-missing",
             "post-write-readback-contract-missing",
             "runtime-enable-switch-intentionally-absent"
@@ -93,6 +96,7 @@ class AgentKubeManagerWriteRetryReadinessServiceTest {
             .containsEntry("defaultIfAnyCheckMissing", "fail-closed-no-auto-retry");
         assertThat(readiness.endpointTemplates())
             .containsEntry("healthSummary", "/api/agent/observability/kube-manager/http-outlet/health-summary")
+            .containsEntry("writeIdempotencyContract", "/api/agent/observability/kube-manager/http-outlet/write-idempotency-contract")
             .containsEntry("writeRetryReadiness", "/api/agent/observability/kube-manager/http-outlet/write-retry-readiness")
             .containsEntry("runtimeEnableWriteRetry", "not-exposed");
         assertThat(readiness.safety())
@@ -159,7 +163,9 @@ class AgentKubeManagerWriteRetryReadinessServiceTest {
         assertThat(readiness.currentEvidence())
             .containsEntry("writeRetryRegistryInstancePresent", false)
             .containsEntry("writeRetryConfiguredButInactive", false)
-            .containsEntry("writeRetryBoundIntoExecutionPath", false);
+            .containsEntry("writeRetryBoundIntoExecutionPath", false)
+            .containsEntry("genericKubeManagerIdempotencyBoundaryExists", true)
+            .containsEntry("genericKubeManagerIdempotencyBoundaryBoundToHttpOutlet", false);
     }
 
     @Test
