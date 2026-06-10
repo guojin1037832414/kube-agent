@@ -1,0 +1,72 @@
+﻿{
+    "project":  "kube-agent",
+    "wave":  "M5.81-1",
+    "title":  "Backend technology modernization decision post-push recovery checkpoint",
+    "generatedAt":  "2026-06-10T08:03:51.8496912+08:00",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "implementationCommit":  "b5a6b31 feat(M5.81): add backend technology modernization decision",
+    "implementationPushed":  true,
+    "remote":  "origin/codex/m521-29-top-agent-mission",
+    "files":  [
+                  {
+                      "path":  "codex-memory/kube-agent/current/RECOVERY_STATUS.md",
+                      "sha256":  "F61B7129E82942F0D8A977124D22992B62CF4173E65A5AEF23A362249289AF71",
+                      "bytes":  87399
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/M5_81_1_WORKSPACE_RECOVERY_SHA256.json",
+                      "sha256":  "70E6B9466B502981EAB38EC2585CFBC4B0167A1E4B942C376324851CC4C75C34",
+                      "bytes":  9788
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_M5_81_BACKEND_TECHNOLOGY_MODERNIZATION_DECISION_20260610.md",
+                      "sha256":  "2C2A2B81E3A19F1889FF6A4B0CF592C51AD4434FBEE5CF2785017D968F3C174C",
+                      "bytes":  8666
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "BED3A631AD79890304807A458B4D851A76E86CAEC9169A4EE883C502AB041D3A",
+                      "bytes":  452840
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "7EBCD91EBA9A7C8B4D96F913C73B2BC974619EE9DBB916CE44D0D9F9927F4D74",
+                      "bytes":  194591
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "B7874198CE96A1E0865F0403270A524580ABC65BE5D72D9B7901F943FB9E25FC",
+                      "bytes":  113328
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_M5_77_ADVANCED_TECHNOLOGY_COMPATIBILITY_MATRIX_20260610.md",
+                      "sha256":  "ECD5AC41846FAEE150FDB401993D0831E2632B402931CED434BE945C67BC447A",
+                      "bytes":  6198
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/CHANGELOG.md",
+                      "sha256":  "1CF222C315A590C64388E6F240AB666BCCE63194F04531974E19E3D1EE5C939A",
+                      "bytes":  389031
+                  },
+                  {
+                      "path":  "docs/M5_81_BACKEND_TECHNOLOGY_MODERNIZATION_DECISION_20260610.md",
+                      "sha256":  "2C2A2B81E3A19F1889FF6A4B0CF592C51AD4434FBEE5CF2785017D968F3C174C",
+                      "bytes":  8666
+                  },
+                  {
+                      "path":  "docs/PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "BED3A631AD79890304807A458B4D851A76E86CAEC9169A4EE883C502AB041D3A",
+                      "bytes":  452840
+                  },
+                  {
+                      "path":  "docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "7EBCD91EBA9A7C8B4D96F913C73B2BC974619EE9DBB916CE44D0D9F9927F4D74",
+                      "bytes":  194591
+                  },
+                  {
+                      "path":  "CHANGELOG.md",
+                      "sha256":  "1CF222C315A590C64388E6F240AB666BCCE63194F04531974E19E3D1EE5C939A",
+                      "bytes":  389031
+                  }
+              ]
+}
