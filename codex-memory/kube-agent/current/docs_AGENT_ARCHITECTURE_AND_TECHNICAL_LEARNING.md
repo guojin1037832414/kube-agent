@@ -2,6 +2,77 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-10 M5.81 Backend Technology Modernization Decision
+
+M5.81 adds the backend technology modernization decision layer. It answers the user's latest strategic question: if Phase 1 must become a top-tier Agent and must track the newest Agent technologies, should the backend stay Java/Spring, or should it jump directly to newer runtimes and frameworks?
+
+Endpoint:
+
+```text
+GET /api/agent/observability/top-tier/backend-technology-modernization-decision
+```
+
+Current decision:
+
+- `schemaVersion=agent-backend-technology-modernization-decision.v1`
+- `decisionStatus=JAVA_SPRING_MAINLINE_ADVANCED_COMPATIBILITY_LANES_BLOCKED_BY_EVIDENCE`
+- `javaBackendStillPreferred=true`
+- `javaSpringControlPlanePreserved=true`
+- `phase2NimHpcSlurmBcmPaused=true`
+- `officialSourceCount=8`
+- `mainlineDecisionCount=8`
+- `compatibilityLaneCount=10`
+- `blockedCompatibilityLaneCount=10`
+- `modernizationGateCount=8`
+- `blockedShortcutCount=9`
+- `learningStepCount=8`
+- `mainlineRuntimeUpgradeAllowedNow=false`
+- `dependencyUpgradeAllowedNow=false`
+- `runtimeControlAllowed=false`
+- `ciBlockingAllowedNow=false`
+
+Architecture decision:
+
+```text
+Java/Spring typed control plane
+        |
+        +-- identity / RBAC / tenant boundary
+        +-- SafeToolExecutor / HITL / durable audit
+        +-- replay / deterministic eval / release gates
+        +-- backend-owned Vue read models
+        +-- recovery memory and Git-reviewed checkpoints
+        |
+        v
+Latest technology lanes enter through evidence, not direct runtime authority
+        |
+        +-- Java 21 / 25
+        +-- Spring Boot 4 / Framework 7
+        +-- Spring AI 2.0.0-RC2
+        +-- OpenAI Responses / Agents patterns
+        +-- MCP 2025-11-25 tools/call
+        +-- A2A provenance
+        +-- OTel GenAI semconv adapter
+        +-- GraphRAG / reranker / vector store
+        +-- kube-manager writes
+        +-- SBOM / dependency audit / CI blocking
+```
+
+Key design:
+
+- The service composes only the official version/protocol watch and the evidence-readiness read model.
+- It turns "引入全部最先进技术" into a governed decision: mainline, compatibility lane, blocked shortcut, modernization gate, learning path, endpoint map, safety proof, and privacy proof.
+- It refreshes the official-source posture to `2026-06-10`; Spring AI 2 is tracked as `2.0.0-RC2` preview in the compatibility lane, not as a mainline dependency.
+- It expands the top-tier Vue workbench package from three pages to four pages and the Vue readiness control plane from 16 to 17 targets.
+
+Learning point: 顶级 Agent 的后端不是追求“看起来最新”的运行时，而是要有一个能承载权限、审计、评测、发布门禁、前端工作台和恢复记忆的 typed control plane。Java/Spring 在这里不是保守选择，而是控制平面选择。最新技术必须进入视野，但要先走 official source -> compatibility matrix -> evidence readiness -> reviewed tests -> release gate -> runtime binding。
+
+Multi-expert review:
+
+- Confucius / security-architecture review found no P0/P1/P2 blockers and confirmed the endpoint is admin-only, read-only, and free of LLM, Tool, SafeToolExecutor, HITL, kube-manager/8100, MCP tools/call, A2A runtime, retrieval/vector/reranker/GraphRAG, audit/memory write, dependency upgrade, and Phase 2 domain touch.
+- Erdos / docs-recovery review confirmed the required M5.81 documentation and recovery-memory checklist, including workspace-local memory under `codex-memory/kube-agent/current`.
+
+Next work: wire `vue-kube-manager` to the four-page workbench package, then curate reviewed redacted eval traces and Memory/RAG fixtures. Java 21/25, Boot 4, Spring AI 2.0.0-RC2, MCP runtime, A2A, retrieval, CI blocking, and kube-manager writes remain evidence-gated. NIM / HPC / Slurm / BCM remain Phase 2.
+
 ## 2026-06-10 M5.80 Advanced Technology Evidence Readiness
 
 M5.80 adds the evidence-readiness layer for the advanced technology compatibility matrix. It answers: when the project says it wants "all the most advanced technologies", how do we prevent that from becoming an unsafe dependency bump or runtime switch?
@@ -1512,7 +1583,7 @@ human/Git review -> eval-trace-sets.json -> gate bundle
 
 学习重点：顶级 Agent 的“证据晋升”必须是有类型、有审查、有 Git 轨迹的流程。runtime 只能产生候选和提案，不能直接获得 release authority。这样可以防止一次临时排障、一次本地请求、一个伪造 traceId 变成未来 CI 的发布依据。
 
-技术基线备注：2026-06-09 查阅官方文档后，当前主线继续使用已验证的 Spring Boot 3.5.14 / Spring AI 1.1.7；Spring Boot 4.0.6、Spring AI 2.0.0-RC1、MCP 2025-06-18 工具规范、OpenTelemetry GenAI semantic conventions 进入兼容矩阵和后续 contract-first 适配，不做无测试的盲升。
+技术基线备注：M5.81 在 2026-06-10 复核官方文档后，当前主线继续使用已验证的 Spring Boot 3.5.14 / Spring AI 1.1.7；Spring Boot 4.0.6、Spring AI 2.0.0-RC2、MCP 2025-11-25、OpenTelemetry GenAI semantic conventions 进入兼容矩阵和后续 contract-first 适配，不做无测试的盲升。
 
 ## 2026-06-09 M5.40 Trace-Set Candidate Discovery 候选发现
 

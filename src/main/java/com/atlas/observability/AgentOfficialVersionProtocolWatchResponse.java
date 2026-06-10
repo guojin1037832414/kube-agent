@@ -40,7 +40,7 @@ public record AgentOfficialVersionProtocolWatchResponse(
     public static final String SCHEMA_VERSION = "agent-official-version-protocol-watch.v1";
     public static final String WATCH_ENDPOINT =
         "/api/agent/observability/top-tier/official-version-protocol-watch";
-    private static final String SOURCE_REVIEW_DATE = "2026-06-09";
+    private static final String SOURCE_REVIEW_DATE = "2026-06-10";
 
     public static AgentOfficialVersionProtocolWatchResponse of(Instant generatedAt) {
         List<Map<String, Object>> sources = buildOfficialSources();
@@ -227,6 +227,8 @@ public record AgentOfficialVersionProtocolWatchResponse(
             AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecResponse.BINDING_SPEC_ENDPOINT);
         endpoints.put("advancedTechnologyCompatibilityMatrixEvidenceReadiness",
             AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessResponse.EVIDENCE_READINESS_ENDPOINT);
+        endpoints.put("backendTechnologyModernizationDecision",
+            AgentBackendTechnologyModernizationDecisionResponse.DECISION_ENDPOINT);
         endpoints.put("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap");
         endpoints.put("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane");
         endpoints.put("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview");

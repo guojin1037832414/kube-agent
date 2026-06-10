@@ -94,6 +94,7 @@ class AgentTopTierReadinessOverviewServiceTest {
             "wire-vue-advanced-technology-compatibility-matrix",
             "wire-vue-advanced-technology-compatibility-matrix-binding-spec",
             "wire-vue-advanced-technology-compatibility-matrix-evidence-readiness",
+            "wire-vue-backend-technology-modernization-decision",
             "wire-vue-official-version-protocol-watch",
             "wire-vue-official-version-protocol-watch-dashboard",
             "wire-vue-official-version-protocol-watch-binding-spec",
@@ -116,6 +117,8 @@ class AgentTopTierReadinessOverviewServiceTest {
                 "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/vue-binding-spec")
             .containsEntry("advancedTechnologyCompatibilityMatrixEvidenceReadiness",
                 "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/evidence-readiness")
+            .containsEntry("backendTechnologyModernizationDecision",
+                "/api/agent/observability/top-tier/backend-technology-modernization-decision")
             .containsEntry("officialVersionProtocolWatch", "/api/agent/observability/top-tier/official-version-protocol-watch")
             .containsEntry("officialVersionProtocolWatchDashboard",
                 "/api/agent/observability/top-tier/official-version-protocol-watch/dashboard")
@@ -169,6 +172,8 @@ class AgentTopTierReadinessOverviewServiceTest {
                 "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/vue-binding-spec")
             .containsEntry("compatibilityMatrixEvidenceReadinessEndpoint",
                 "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/evidence-readiness")
+            .containsEntry("backendTechnologyModernizationDecisionEndpoint",
+                "/api/agent/observability/top-tier/backend-technology-modernization-decision")
             .containsEntry("officialVersionProtocolWatchDashboardEndpoint",
                 "/api/agent/observability/top-tier/official-version-protocol-watch/dashboard")
             .containsEntry("officialVersionProtocolWatchVueBindingSpecEndpoint",

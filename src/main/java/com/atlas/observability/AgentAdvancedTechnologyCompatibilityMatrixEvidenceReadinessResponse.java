@@ -400,6 +400,8 @@ public record AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessRespons
     private static Map<String, Object> buildEndpointMap() {
         Map<String, Object> endpoints = new LinkedHashMap<>();
         endpoints.put("advancedTechnologyCompatibilityMatrixEvidenceReadiness", EVIDENCE_READINESS_ENDPOINT);
+        endpoints.put("backendTechnologyModernizationDecision",
+            AgentBackendTechnologyModernizationDecisionResponse.DECISION_ENDPOINT);
         endpoints.put("advancedTechnologyCompatibilityMatrix",
             AgentAdvancedTechnologyCompatibilityMatrixResponse.MATRIX_ENDPOINT);
         endpoints.put("advancedTechnologyCompatibilityMatrixVueBindingSpec",

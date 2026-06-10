@@ -63,7 +63,7 @@ M5.77 定义 10 条高级技术兼容矩阵项：
 
 - `java-runtime-toolchains`: Java 17 mainline，Java 21 / Java 25 compatibility lanes。
 - `spring-boot-framework`: Spring Boot 3.5.x mainline，Spring Boot 4 / Framework 7 compatibility lane。
-- `spring-ai-access-layer`: Spring AI 1.1.7 stable，Spring AI 2.0.0-RC1 preview lane。
+- `spring-ai-access-layer`: Spring AI 1.1.7 stable，Spring AI 2.0.0-RC2 preview lane。
 - `openai-responses-agents`: Responses / Agents SDK / tools / handoffs / guardrails / tracing / evals。
 - `mcp-runtime-call-plane`: MCP manifest/governance 到 future tools/list / tools/call。
 - `a2a-multi-agent-provenance`: A2A Agent Card / task / artifact / streaming。
@@ -175,4 +175,3 @@ Release-gated runtime:
 ```bash
 mvn -q "-Dtest=AgentAdvancedTechnologyCompatibilityMatrixServiceTest,AgentAdvancedTechnologyAdoptionContractServiceTest,AgentOfficialVersionProtocolWatchServiceTest,AgentOfficialVersionProtocolWatchDashboardServiceTest,AgentOfficialVersionProtocolWatchVueBindingSpecServiceTest,AgentTopTierReadinessOverviewServiceTest,AgentPhase1ExecutionRoadmapServiceTest,AgentVueReadinessControlPlaneServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test
 ```
-

@@ -89,6 +89,7 @@ class AgentAdvancedTechnologyAdoptionContractServiceTest {
             "publish-official-version-protocol-watch",
             "add-official-version-and-protocol-watch-to-compatibility-matrix",
             "publish-top-tier-vue-workbench-implementation-package",
+            "publish-backend-technology-modernization-decision",
             "bind-memory-rag-eval-suite-before-retrieval-runtime",
             "wire-vue-top-tier-readiness-and-technology-adoption-workbench",
             "promote-reviewed-eval-and-security-gates-to-release-blocking",
@@ -118,6 +119,8 @@ class AgentAdvancedTechnologyAdoptionContractServiceTest {
                 "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/vue-binding-spec")
             .containsEntry("advancedTechnologyCompatibilityMatrixEvidenceReadiness",
                 "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/evidence-readiness")
+            .containsEntry("backendTechnologyModernizationDecision",
+                "/api/agent/observability/top-tier/backend-technology-modernization-decision")
             .containsEntry("officialVersionProtocolWatchVueBindingSpec",
                 "/api/agent/observability/top-tier/official-version-protocol-watch/vue-binding-spec")
             .containsEntry("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap")

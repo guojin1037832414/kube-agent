@@ -10,6 +10,78 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
+## Latest Phase 1 Core Memory - M5.81-1
+
+M5.81-1 adds the backend technology modernization decision endpoint. It answers the latest strategic backend choice: Java/Spring remains the preferred Phase 1 top-tier Agent control plane, while Java 21/25, Spring Boot 4, Spring AI 2.0.0-RC2, MCP runtime, A2A, OpenAI Responses/Agents runtime patterns, OTel GenAI, GraphRAG/reranker/vector store, kube-manager writes, SBOM/dependency audit, and CI blocking stay in evidence-gated compatibility lanes.
+
+Endpoint:
+
+```text
+GET /api/agent/observability/top-tier/backend-technology-modernization-decision
+```
+
+Delivered:
+
+- Added `AgentBackendTechnologyModernizationDecisionResponse`.
+- Added `AgentBackendTechnologyModernizationDecisionService`.
+- Added admin-only Controller method `backendTechnologyModernizationDecision()`.
+- Published 8 mainline decisions, 10 compatibility-lane decisions, 8 modernization gates, 9 blocked shortcuts, 8 learning steps, endpoint map, decision policy, safety proof, and privacy proof.
+- Embedded source read models from official version/protocol watch and advanced technology compatibility matrix evidence readiness.
+- Integrated the endpoint into advanced technology adoption, official watch, official watch dashboard, official watch binding spec, compatibility matrix, compatibility matrix binding spec, evidence readiness, top-tier readiness overview, Phase 1 roadmap, Vue readiness control plane, and top-tier Vue workbench implementation package.
+- Extended the Vue readiness dashboard count to `17`.
+- Extended the top-tier Vue workbench implementation package to 4 routes, 6 API client bindings, 4 page assemblies, 9 shared components, and 8 acceptance fixtures.
+- Refreshed official-source review date to `2026-06-10`.
+- Updated Spring AI 2 preview lane from `2.0.0-RC1` to `2.0.0-RC2` without changing runtime dependencies.
+- Added the teaching document `docs/M5_81_BACKEND_TECHNOLOGY_MODERNIZATION_DECISION_20260610.md`.
+
+Current state:
+
+- `schemaVersion=agent-backend-technology-modernization-decision.v1`.
+- `decisionStatus=JAVA_SPRING_MAINLINE_ADVANCED_COMPATIBILITY_LANES_BLOCKED_BY_EVIDENCE`.
+- `officialSourceCount=8`.
+- `mainlineDecisionCount=8`.
+- `compatibilityLaneCount=10`.
+- `blockedCompatibilityLaneCount=10`.
+- `modernizationGateCount=8`.
+- `blockedShortcutCount=9`.
+- `learningStepCount=8`.
+- `javaBackendStillPreferred=true`.
+- `javaSpringControlPlanePreserved=true`.
+- `phase2NimHpcSlurmBcmPaused=true`.
+- `compatibilityBranchAllowed=true`.
+- `mainlineRuntimeUpgradeAllowedNow=false`.
+- `dependencyUpgradeAllowedNow=false`.
+- `runtimeControlAllowed=false`.
+- `ciBlockingAllowedNow=false`.
+
+Security boundary:
+
+- M5.81 is admin-only, read-only, decision-only, source-read-model-composition-only, and external-call-free at request time.
+- It composes only `officialVersionProtocolWatchService.watch()` and `evidenceReadinessService.readiness()`.
+- It does not modify `pom.xml`, upgrade dependencies, switch Java/Spring/Spring AI baselines, create compatibility branches, run evals, discover candidates, run curation review, mutate trace-set catalogs, enable CI blocking, run LLMs, execute Tools, call `SafeToolExecutor`, invoke HITL, call kube-manager including port `8100`, expose MCP runtime `tools/call`, run A2A runtime handoff, execute retrieval/vector/embedding/reranker/GraphRAG, write memory, write audit, issue durable receipts, or touch NIM / HPC / Slurm / BCM Phase 2 scope.
+
+Multi-expert memory:
+
+- Confucius / security-architecture review found no P0/P1/P2 blockers and confirmed admin-only/read-only behavior plus absence of hidden runtime authority.
+- Erdos / docs-recovery review confirmed the M5.81 documentation checklist, recovery memory checklist, required counts, validation commands, and continued workspace-local memory policy under `F:\gitProject\kube-agent\codex-memory\kube-agent\current`.
+
+Learning point: a top-tier Agent does not blindly replace its backend with the newest runtime. It keeps a typed authority control plane and admits the newest technologies through evidence: official source -> compatibility matrix -> evidence readiness -> reviewed tests -> release gate -> runtime binding.
+
+Latest verified commands for this slice must include:
+
+- `mvn -q "-DskipTests" validate`
+- `mvn -q "-Dtest=AgentBackendTechnologyModernizationDecisionServiceTest,AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessServiceTest,AgentAdvancedTechnologyCompatibilityMatrixServiceTest,AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecServiceTest,AgentTopTierVueWorkbenchImplementationPackageServiceTest,AgentTopTierReadinessOverviewServiceTest,AgentAdvancedTechnologyAdoptionContractServiceTest,AgentOfficialVersionProtocolWatchServiceTest,AgentOfficialVersionProtocolWatchDashboardServiceTest,AgentOfficialVersionProtocolWatchVueBindingSpecServiceTest,AgentPhase1ExecutionRoadmapServiceTest,AgentVueReadinessControlPlaneServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+- `git diff --check`
+
+Next safe development order:
+
+- Wire `vue-kube-manager` to consume the four-page workbench package: official watch, compatibility matrix, evidence readiness, and backend modernization decision.
+- Continue reviewed redacted eval trace evidence curation.
+- Complete Memory/RAG reviewed trace fixtures.
+- Create separate compatibility branches for Java 21/25, Spring Boot 4, and Spring AI 2.0.0-RC2 only after current mainline remains green.
+- Prototype MCP/A2A/RAG only behind SafeToolExecutor, release gates, reviewed evidence, Vue visibility, and recovery memory.
+- Keep kube-manager writes, CI blocking, MCP runtime, A2A runtime handoff, retrieval prompt influence, and Phase 2 NIM/HPC/Slurm/BCM release-gated.
+
 ## Latest Phase 1 Core Memory - M5.80-1
 
 M5.80-1 adds the backend-owned evidence-readiness layer for the advanced technology compatibility matrix. This turns the M5.77 matrix from a list of candidate advanced technologies into a lane-by-lane evidence board: each Java/Spring/OpenAI/MCP/A2A/OTel/Memory-RAG/kube-manager/CI lane now shows reviewed trace, Memory/RAG fixture, release-gate, Vue visibility, recovery, and Git-review gaps before any runtime or dependency change can be considered.
@@ -69,7 +141,7 @@ Latest verified commands:
 
 Next safe development order:
 
-- Wire `vue-kube-manager` to consume M5.79/M5.80 and render the three-page advanced technology workbench when that repo is writable.
+- Wire `vue-kube-manager` to consume M5.79/M5.80/M5.81 and render the four-page advanced technology workbench when that repo is writable.
 - Continue reviewed redacted eval trace evidence curation.
 - Complete Memory/RAG reviewed trace fixtures.
 - Promote release-blocking eval gates only after reviewed evidence exists.
@@ -131,7 +203,7 @@ Latest verified commands:
 Next safe development order:
 
 - M5.80 evidence-readiness is now complete; use the newer M5.80 section above as the current rule.
-- Then wire `vue-kube-manager` to consume M5.79/M5.80 and render the official watch + compatibility matrix + evidence-readiness workbench with mocked fixtures.
+- Then wire `vue-kube-manager` to consume M5.79/M5.80/M5.81 and render the official watch + compatibility matrix + evidence-readiness + backend modernization decision workbench with mocked fixtures.
 - Continue reviewed redacted eval and Memory/RAG trace evidence curation.
 - Keep MCP runtime, A2A handoff, retrieval runtime, CI blocking, kube-manager writes, and Phase 2 NIM/HPC/Slurm/BCM release-gated.
 
@@ -1667,11 +1739,11 @@ Latest verified command:
 
 - `mvn -q "-Dtest=AgentEvalTraceSetCatalogServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
 
-Latest official technology check on 2026-06-09:
+Latest official technology check refreshed by M5.81 on 2026-06-10:
 
 - Spring Boot docs list stable `4.0.6` and `3.5.14`; this repo keeps verified mainline on `3.5.14` while tracking Boot 4 in compatibility matrix.
-- Spring AI docs list stable `1.1.7` and preview `2.0.0-RC1`; this repo keeps verified mainline on `1.1.7` while tracking Spring AI 2 in compatibility matrix.
-- MCP official specification snapshots include `2025-06-18` with `tools/list` and `tools/call`; Phase 1 keeps a safe adapter/manifest posture before full external MCP broker behavior.
+- Spring AI docs list stable `1.1.7` and preview `2.0.0-RC2`; this repo keeps verified mainline on `1.1.7` while tracking Spring AI 2 in compatibility matrix.
+- MCP latest official specification snapshot is `2025-11-25`; Phase 1 keeps a safe adapter/manifest posture before full external MCP broker behavior.
 - OpenTelemetry semantic conventions docs show `1.41.1`, including Generative AI and MCP registry areas; this repo keeps stable `atlas.agent.*` attributes while isolating experimental OTel/GenAI attributes.
 
 ## Previous Phase 1 Core Memory - M5.40-1

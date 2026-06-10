@@ -9,6 +9,34 @@
 - 供应链、CI、SBOM、质量门禁进入工程默认路径；
 - Java / Spring / Agent 框架升级以兼容性矩阵推进，不用不可构建的版本号伪装先进。
 
+## 2026-06-10 M5.81 Backend-Technology-Modernization-Decision Rule
+
+M5.81 adds the backend-owned modernization decision endpoint:
+
+```text
+GET /api/agent/observability/top-tier/backend-technology-modernization-decision
+```
+
+This is now the Phase 1 rule after M5.80:
+
+- Java/Spring remains the preferred typed control plane for identity, RBAC, Tool authority, HITL, audit, replay, eval, release gates, Vue read models, and recovery memory.
+- Latest technology remains fully in scope, but moves through official source watch, compatibility matrix, evidence readiness, reviewed tests, release gate, and Git-reviewed runtime binding.
+- Spring AI 2 preview tracking is refreshed to `2.0.0-RC2`; it remains compatibility-matrix work, not a mainline dependency.
+- The top-tier Vue workbench package now contains four routes: official watch, compatibility matrix, evidence readiness, and backend modernization decision.
+- Vue readiness control plane now tracks 17 dashboard/workbench targets.
+- Runtime MCP, A2A, retrieval, CI blocking, kube-manager writes, dependency upgrades, and Phase 2 NIM/HPC/Slurm/BCM remain closed until their evidence gates pass.
+
+Technology judgment: Java/Spring is not being kept because it is old or easy. It is being kept because a top-tier Agent needs a typed authority control plane before it needs a flashy runtime label. The newest technologies are learned, tracked, and designed through compatibility lanes before they are allowed to affect production behavior.
+
+Next order after M5.81:
+
+- Wire `vue-kube-manager` to consume the four-page workbench package when the frontend repo is writable.
+- Capture real reviewed redacted eval trace evidence.
+- Complete Memory/RAG reviewed trace fixtures.
+- Add Java 21/25, Spring Boot 4, and Spring AI 2.0.0-RC2 compatibility branches only after the current mainline stays green.
+- Prototype MCP/A2A/RAG behind SafeToolExecutor, release gates, reviewed evidence, Vue visibility, and recovery memory.
+- Keep kube-manager writes, CI blocking, MCP runtime, A2A runtime handoff, retrieval prompt influence, and Phase 2 NIM/HPC/Slurm/BCM release-gated.
+
 ## 2026-06-10 M5.80 Advanced-Technology-Evidence-Readiness Rule
 
 M5.80 adds the backend-owned evidence-readiness layer for the advanced technology compatibility matrix:
@@ -28,9 +56,9 @@ This is now the Phase 1 rule after M5.77-M5.79:
 
 Technology judgment: "latest technology" is now represented as a chain of evidence: official source -> matrix lane -> evidence readiness -> reviewed tests -> release gate -> runtime binding. This is the safe path for a top-tier Agent that must be modern, learnable, auditable, and recoverable.
 
-Next order after M5.80:
+Next order after M5.80, superseded by the M5.81 section above:
 
-- Wire `vue-kube-manager` to consume M5.79/M5.80 when the frontend repo is writable.
+- Wire `vue-kube-manager` to consume M5.79/M5.80/M5.81 when the frontend repo is writable.
 - Capture real reviewed redacted eval trace evidence.
 - Complete Memory/RAG reviewed trace fixtures.
 - Promote release-blocking eval gates only after reviewed evidence exists.
@@ -61,8 +89,8 @@ Multi-expert decision:
 
 Next order after M5.79:
 
-- M5.80 evidence-readiness is now complete; use the newer M5.80 section above as the current rule.
-- Wire `vue-kube-manager` to consume the expanded three-page workbench package when that repo is writable.
+- M5.80 evidence-readiness is now complete; use the newer M5.81 section above as the current rule.
+- Wire `vue-kube-manager` to consume the expanded four-page workbench package when that repo is writable.
 - Continue reviewed redacted eval and Memory/RAG trace evidence curation.
 - Keep runtime MCP, A2A, retrieval, CI blocking, kube-manager writes, and Phase 2 NIM/HPC/Slurm/BCM closed until their gates pass.
 
@@ -528,10 +556,10 @@ Technology judgment: this is the practical way to "introduce all advanced techno
 
 Do not start yet: NIM runtime reopening, HPC/Slurm/BCM plugins, kube-manager state-changing writes, unsafe MCP tool calls, retrieval prompt influence before eval gates, or blind Spring Boot 4 / Spring AI 2 mainline migration.
 
-Official-version check on 2026-06-09:
+Official-version check refreshed by M5.81 on 2026-06-10:
 - Spring Boot docs list `4.0.6` and `3.5.14` as stable lines.
-- Spring AI docs list `1.1.7` as the stable line and `2.0.0-RC1` as preview/compatibility-matrix work.
-- MCP tools spec defines `tools/list` and `tools/call` plus human-in-the-loop safety expectations.
+- Spring AI docs list `1.1.7` as the stable line and `2.0.0-RC2` as preview/compatibility-matrix work.
+- MCP 2025-11-25 remains the latest tracked protocol snapshot; runtime `tools/call` still requires human-in-the-loop safety expectations and local authority binding.
 - OpenTelemetry GenAI semantic conventions remain `Development`, so internal stable fields stay the mainline contract.
 
 ## 2026-06-09 M5.63 Advanced Technology Adoption Gate
@@ -970,12 +998,12 @@ M5.30-3 已经把 durable audit 从 readiness gate 升级为 prewrite receipt ga
 
 ## 官方版本依据
 
-2026-06-09 复核官方文档后的事实基线：
+2026-06-10 M5.81 复核官方文档后的事实基线：
 
 - Spring Boot 官方文档当前稳定线同时包含 `4.0.6` 和 `3.5.14`；`4.0.6` 需要 Java 17+，并要求 Spring Framework 7.0.7+。
-- Spring AI 官方文档当前稳定线是 `1.1.7`，`2.0.0-RC1` 仍在 Preview 区域。
+- Spring AI 官方文档当前稳定线是 `1.1.7`，`2.0.0-RC2` 仍在 Preview 区域。
 - Oracle Java SE 路线图将 Java SE 17、21、25 都列为 LTS，其中 Java 25 GA 于 2025-09，Premier Support 到 2030-09。
-- MCP 官方规范持续迭代，2025-06-18 工具规范已明确 `tools/list` / `tools/call`、structured output、annotations 等能力；本项目仍只把它作为受控外部 Tool 发现与调用协议接入，不能绕过权限、HITL、审计和 SafeToolExecutor。
+- MCP 官方规范持续迭代，M5.81 当前跟踪最新 `2025-11-25` 快照；本项目仍只把它作为受控外部 Tool 发现与调用协议接入，不能绕过权限、HITL、审计和 SafeToolExecutor。
 - OpenTelemetry GenAI 语义约定对 Agent/LLM/Tool 很关键，但官方状态仍是 Development，并且要求现有 instrumentation 不要默认切到最新实验约定；本项目继续先以内部字段映射和兼容层落地，避免直接把发展中属性名固化成无法迁移的数据库契约。
 
 因此，本项目主线当前采用 `Spring Boot 3.5.14 + Spring AI 1.1.7 + Java 17` 作为可验证稳定底座；`Spring Boot 4 + Spring AI 2 + Java 21/25` 进入兼容性矩阵和试验分支。
@@ -1142,11 +1170,11 @@ M5.33-1 moves Agent eval from roadmap language into the backend mainline:
 - The eval report checks replay order, trace consistency, phase sequence, impossible execution/result combinations, high-risk prewrite evidence, high-risk confirmation markers, outcome health, truncation, and privacy.
 - The report includes `deterministic=true`, `llmUsed=false`, and `externalCalls=false`, making it suitable as a future CI/release-gate input.
 
-2026-06-09 official-source refresh:
+2026-06-10 M5.81 official-source refresh:
 
-- Spring AI 1.1.7 remains the current stable Spring AI mainline for this project; Spring AI 2.0.0-RC1 remains compatibility-matrix work. Official Spring AI docs confirm Tool Calling, MCP, Vector Store/RAG, observability, and evaluator APIs as first-class directions.
+- Spring AI 1.1.7 remains the current stable Spring AI mainline for this project; Spring AI 2.0.0-RC2 remains compatibility-matrix work. Official Spring AI docs confirm Tool Calling, MCP, Vector Store/RAG, observability, and evaluator APIs as first-class directions.
 - Spring Boot official docs list 4.0.6 and 3.5.14 as stable documentation lines. This project stays on the already verified Spring Boot 3.5.14 mainline until the Boot 4 / Framework 7 compatibility matrix passes.
-- MCP specification work continues to evolve quickly; the official 2025-06-18 tools spec already defines `tools/list` and `tools/call`. Phase 1 should expose read-only manifest/schema first; future `tools/call` must still pass through `SafeToolExecutor`, HITL, trace, audit, and eval.
+- MCP specification work continues to evolve quickly; M5.81 tracks the official 2025-11-25 snapshot. Phase 1 should expose read-only manifest/schema first; future `tools/call` must still pass through `SafeToolExecutor`, HITL, trace, audit, and eval.
 - OpenTelemetry GenAI/agent semantic conventions are still marked Development, so kube-agent should keep stable internal `atlas.agent.*` attributes and map to GenAI semconv through a compatibility layer rather than freezing experimental names into storage.
 - OpenAI's current Agent/Evals guidance reinforces the same architecture direction: tools, guardrails, memory/vector stores, orchestration, trace grading, and eval workflows are core Agent capabilities. kube-agent implements the same ideas in a Java/Spring control plane bound to kube-manager safety requirements.
 
@@ -1349,13 +1377,13 @@ M5.41-1 closes the next eval release-governance gap: reviewed candidates can now
 
 Technology judgment: top-tier Agent release evidence should flow through typed promotion artifacts instead of runtime mutation. This is the safer bridge from observability data to Git-reviewed CI evidence. The next advanced steps are Vue eval workbench integration, catalog patch preview UX, real curated trace population from safe local captures, and then flipping the gate bundle from evidence-only to blocking once the catalog has reviewed real evidence.
 
-## 2026-06-09 Latest Official Technology Check
+## 2026-06-10 M5.81 Latest Official Technology Check
 
 The Phase 1 mainline continues to follow "stable verified core + compatibility matrix":
 
 - Spring Boot official docs list stable `4.0.6` and `3.5.14`; this repository remains on verified `3.5.14` while tracking Boot 4 migration under tests.
-- Spring AI official docs list stable `1.1.7` and preview `2.0.0-RC1`; this repository remains on verified `1.1.7` while tracking Spring AI 2 under compatibility work.
-- MCP tools specification defines `tools/list` and `tools/call`; Phase 1 should keep MCP work behind safe manifest/schema adapters until authorization, consent, and Tool safety contracts are complete.
+- Spring AI official docs list stable `1.1.7` and preview `2.0.0-RC2`; this repository remains on verified `1.1.7` while tracking Spring AI 2 under compatibility work.
+- MCP latest tracked specification is `2025-11-25`; Phase 1 should keep MCP work behind safe manifest/schema adapters until authorization, consent, and Tool safety contracts are complete.
 - OpenTelemetry semantic conventions are at `1.41.1` and include Generative AI / MCP areas; the mainline keeps stable `atlas.agent.*` attributes and isolates experimental semconv attributes until contract tests prove they are safe.
 
 Rule: a technology is "introduced" into this project only after it has a typed contract, security boundary, tests, documentation, recovery memory, and CI/release evidence. Version-chasing without those gates is not top-tier engineering.

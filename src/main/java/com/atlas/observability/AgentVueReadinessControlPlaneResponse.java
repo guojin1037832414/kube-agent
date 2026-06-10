@@ -81,6 +81,11 @@ public record AgentVueReadinessControlPlaneResponse(
                 AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessResponse.EVIDENCE_READINESS_ENDPOINT,
                 List.of("matrixEvidenceRows", "blockingGateRows", "disabledRuntimeActions",
                     "nextActions", "readinessPolicy")),
+            dashboard("backend-technology-modernization-decision", "READY_TO_BIND",
+                "Render why Java/Spring stays as the Phase 1 control plane and how Java 21/25, Boot 4, Spring AI 2, MCP, A2A, and RAG move through evidence gates.",
+                AgentBackendTechnologyModernizationDecisionResponse.DECISION_ENDPOINT,
+                List.of("mainlineDecisions", "compatibilityLaneDecisions", "modernizationGates",
+                    "blockedShortcuts", "learningPath", "decisionPolicy")),
             dashboard("official-version-protocol-watch", "READY_TO_BIND",
                 "Render official source review dates, protocol tracks, adoption decisions, and runtime blockers.",
                 AgentOfficialVersionProtocolWatchResponse.WATCH_ENDPOINT,
@@ -143,6 +148,8 @@ public record AgentVueReadinessControlPlaneResponse(
             apiBinding("advanced-technology-compatibility-matrix-evidence-readiness",
                 AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessResponse.EVIDENCE_READINESS_ENDPOINT,
                 "GET", true),
+            apiBinding("backend-technology-modernization-decision",
+                AgentBackendTechnologyModernizationDecisionResponse.DECISION_ENDPOINT, "GET", true),
             apiBinding("official-version-protocol-watch", AgentOfficialVersionProtocolWatchResponse.WATCH_ENDPOINT, "GET", true),
             apiBinding("official-version-protocol-watch-dashboard",
                 AgentOfficialVersionProtocolWatchDashboardResponse.DASHBOARD_ENDPOINT, "GET", true),
@@ -204,6 +211,7 @@ public record AgentVueReadinessControlPlaneResponse(
             "bind-advanced-technology-compatibility-matrix",
             "bind-advanced-technology-compatibility-matrix-binding-spec",
             "bind-advanced-technology-compatibility-matrix-evidence-readiness",
+            "bind-backend-technology-modernization-decision",
             "bind-official-version-protocol-watch",
             "bind-official-version-protocol-watch-dashboard",
             "bind-official-version-protocol-watch-binding-spec",
@@ -230,6 +238,8 @@ public record AgentVueReadinessControlPlaneResponse(
             AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecResponse.BINDING_SPEC_ENDPOINT);
         endpoints.put("advancedTechnologyCompatibilityMatrixEvidenceReadiness",
             AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessResponse.EVIDENCE_READINESS_ENDPOINT);
+        endpoints.put("backendTechnologyModernizationDecision",
+            AgentBackendTechnologyModernizationDecisionResponse.DECISION_ENDPOINT);
         endpoints.put("officialVersionProtocolWatch", AgentOfficialVersionProtocolWatchResponse.WATCH_ENDPOINT);
         endpoints.put("officialVersionProtocolWatchDashboard",
             AgentOfficialVersionProtocolWatchDashboardResponse.DASHBOARD_ENDPOINT);

@@ -160,6 +160,7 @@ public record AgentAdvancedTechnologyAdoptionContractResponse(
             "publish-official-version-protocol-watch",
             "add-official-version-and-protocol-watch-to-compatibility-matrix",
             "publish-top-tier-vue-workbench-implementation-package",
+            "publish-backend-technology-modernization-decision",
             "bind-memory-rag-eval-suite-before-retrieval-runtime",
             "wire-vue-top-tier-readiness-and-technology-adoption-workbench",
             "promote-reviewed-eval-and-security-gates-to-release-blocking",
@@ -195,6 +196,8 @@ public record AgentAdvancedTechnologyAdoptionContractResponse(
             AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecResponse.BINDING_SPEC_ENDPOINT);
         endpoints.put("advancedTechnologyCompatibilityMatrixEvidenceReadiness",
             AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessResponse.EVIDENCE_READINESS_ENDPOINT);
+        endpoints.put("backendTechnologyModernizationDecision",
+            AgentBackendTechnologyModernizationDecisionResponse.DECISION_ENDPOINT);
         endpoints.put("officialVersionProtocolWatch", AgentOfficialVersionProtocolWatchResponse.WATCH_ENDPOINT);
         endpoints.put("officialVersionProtocolWatchDashboard",
             AgentOfficialVersionProtocolWatchDashboardResponse.DASHBOARD_ENDPOINT);

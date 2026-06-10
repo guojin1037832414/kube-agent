@@ -33,7 +33,7 @@ class AgentOfficialVersionProtocolWatchServiceTest {
         assertThat(watch.schemaVersion()).isEqualTo("agent-official-version-protocol-watch.v1");
         assertThat(watch.generatedAt()).isEqualTo(Instant.parse("2026-06-09T14:30:00Z"));
         assertThat(watch.watchStatus()).isEqualTo("OFFICIAL_WATCH_DEFINED_NOT_RUNTIME_BOUND");
-        assertThat(watch.sourceReviewDate()).isEqualTo("2026-06-09");
+        assertThat(watch.sourceReviewDate()).isEqualTo("2026-06-10");
         assertThat(watch.officialSourcesOnly()).isTrue();
         assertThat(watch.phase1TopTierGoalPreserved()).isTrue();
         assertThat(watch.javaSpringControlPlanePreserved()).isTrue();
@@ -55,7 +55,7 @@ class AgentOfficialVersionProtocolWatchServiceTest {
                 "owasp-llm-top-10-2025"
             );
         assertThat(watch.officialSources()).allSatisfy(source -> assertThat(source)
-            .containsEntry("sourceReviewDate", "2026-06-09")
+            .containsEntry("sourceReviewDate", "2026-06-10")
             .containsEntry("runtimeBound", false));
         assertThat(watch.technologyTracks()).extracting(track -> track.get("id"))
             .containsExactly(

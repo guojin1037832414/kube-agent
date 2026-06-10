@@ -142,6 +142,10 @@ class AgentSecurityConfigWebMvcTest {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
             .andExpect(status().isForbidden());
 
+        mockMvc.perform(get("/api/agent/observability/top-tier/backend-technology-modernization-decision")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
+            .andExpect(status().isForbidden());
+
         mockMvc.perform(get("/api/agent/observability/top-tier/official-version-protocol-watch")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
             .andExpect(status().isForbidden());
@@ -359,6 +363,10 @@ class AgentSecurityConfigWebMvcTest {
             .andExpect(status().isOk());
 
         mockMvc.perform(get("/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/evidence-readiness")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token"))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/agent/observability/top-tier/backend-technology-modernization-decision")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token"))
             .andExpect(status().isOk());
 
@@ -752,6 +760,11 @@ class AgentSecurityConfigWebMvcTest {
         @GetMapping("/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/evidence-readiness")
         String observabilityAdvancedTechnologyCompatibilityMatrixEvidenceReadiness() {
             return "advanced-technology-compatibility-matrix-evidence-readiness";
+        }
+
+        @GetMapping("/api/agent/observability/top-tier/backend-technology-modernization-decision")
+        String observabilityBackendTechnologyModernizationDecision() {
+            return "backend-technology-modernization-decision";
         }
 
         @GetMapping("/api/agent/observability/top-tier/official-version-protocol-watch")

@@ -138,7 +138,7 @@ public record AgentAdvancedTechnologyCompatibilityMatrixResponse(
                 List.of("security-filter-chain-regression", "webmvc-controller-contracts",
                     "actuator-observability-regression"),
                 "Boot 4 is tracked as a matrix item, not a blind mainline bump."),
-            item("spring-ai-access-layer", "Spring AI 1.1.7 stable", "Spring AI 2.0.0-RC1 preview lane",
+            item("spring-ai-access-layer", "Spring AI 1.1.7 stable", "Spring AI 2.0.0-RC2 preview lane",
                 "COMPATIBILITY_REQUIRED",
                 List.of("tool-callback-api-regression", "mcp-starter-compatibility-review",
                     "chat-memory-rag-advisor-contract-review"),
@@ -288,6 +288,8 @@ public record AgentAdvancedTechnologyCompatibilityMatrixResponse(
             AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecResponse.BINDING_SPEC_ENDPOINT);
         endpoints.put("advancedTechnologyCompatibilityMatrixEvidenceReadiness",
             AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessResponse.EVIDENCE_READINESS_ENDPOINT);
+        endpoints.put("backendTechnologyModernizationDecision",
+            AgentBackendTechnologyModernizationDecisionResponse.DECISION_ENDPOINT);
         endpoints.put("advancedTechnologyAdoptionContract",
             "/api/agent/observability/top-tier/advanced-technology-adoption-contract");
         endpoints.put("officialVersionProtocolWatch", AgentOfficialVersionProtocolWatchResponse.WATCH_ENDPOINT);

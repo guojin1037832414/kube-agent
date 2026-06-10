@@ -154,6 +154,11 @@ class ObservabilityControllerTest {
             reviewedEvalTraceEvidenceService,
             memoryRagReviewedTraceEvidenceManifestService
         );
+    private final AgentBackendTechnologyModernizationDecisionService backendTechnologyModernizationDecisionService =
+        new AgentBackendTechnologyModernizationDecisionService(
+            officialVersionProtocolWatchService,
+            advancedTechnologyCompatibilityMatrixEvidenceReadinessService
+        );
     private final AgentOfficialVersionProtocolWatchDashboardService officialVersionProtocolWatchDashboardService =
         new AgentOfficialVersionProtocolWatchDashboardService(officialVersionProtocolWatchService);
     private final AgentOfficialVersionProtocolWatchVueBindingSpecService officialVersionProtocolWatchVueBindingSpecService =
@@ -181,6 +186,7 @@ class ObservabilityControllerTest {
         advancedTechnologyCompatibilityMatrixService,
         advancedTechnologyCompatibilityMatrixVueBindingSpecService,
         advancedTechnologyCompatibilityMatrixEvidenceReadinessService,
+        backendTechnologyModernizationDecisionService,
         officialVersionProtocolWatchService,
         officialVersionProtocolWatchDashboardService,
         officialVersionProtocolWatchVueBindingSpecService,
@@ -1236,6 +1242,96 @@ class ObservabilityControllerTest {
     }
 
     @Test
+    void backendTechnologyModernizationDecision_shouldRequireAdminAndReturnDecision() {
+        ResponseEntity<ApiResponse<AgentBackendTechnologyModernizationDecisionResponse>> anonymous =
+            controller.backendTechnologyModernizationDecision();
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentBackendTechnologyModernizationDecisionResponse>> user =
+            controller.backendTechnologyModernizationDecision();
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        userPermissionContext.unbind();
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentBackendTechnologyModernizationDecisionResponse>> admin =
+            controller.backendTechnologyModernizationDecision();
+
+        assertThat(admin.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(admin.getBody()).isNotNull();
+        AgentBackendTechnologyModernizationDecisionResponse decision = admin.getBody().getData();
+        assertThat(decision.schemaVersion())
+            .isEqualTo("agent-backend-technology-modernization-decision.v1");
+        assertThat(decision.decisionStatus())
+            .isEqualTo("JAVA_SPRING_MAINLINE_ADVANCED_COMPATIBILITY_LANES_BLOCKED_BY_EVIDENCE");
+        assertThat(decision.javaBackendStillPreferred()).isTrue();
+        assertThat(decision.javaSpringControlPlanePreserved()).isTrue();
+        assertThat(decision.phase2NimHpcSlurmBcmPaused()).isTrue();
+        assertThat(decision.mainlineRuntimeUpgradeAllowedNow()).isFalse();
+        assertThat(decision.dependencyUpgradeAllowedNow()).isFalse();
+        assertThat(decision.compatibilityBranchAllowed()).isTrue();
+        assertThat(decision.runtimeControlAllowed()).isFalse();
+        assertThat(decision.ciBlockingAllowedNow()).isFalse();
+        assertThat(decision.officialSourceCount()).isEqualTo(8);
+        assertThat(decision.mainlineDecisionCount()).isEqualTo(8);
+        assertThat(decision.compatibilityLaneCount()).isEqualTo(10);
+        assertThat(decision.blockedCompatibilityLaneCount()).isEqualTo(10);
+        assertThat(decision.modernizationGateCount()).isEqualTo(8);
+        assertThat(decision.blockedShortcutCount()).isEqualTo(9);
+        assertThat(decision.learningStepCount()).isEqualTo(8);
+        assertThat(decision.mainlineDecisions()).extracting(row -> row.get("id"))
+            .contains("java-17-build-baseline", "spring-boot-3-5-control-plane",
+                "spring-ai-1-1-access-layer", "safe-tool-executor-hitl-audit");
+        assertThat(decision.compatibilityLaneDecisions()).extracting(row -> row.get("laneId"))
+            .contains("java-runtime-toolchains", "spring-boot-framework", "spring-ai-access-layer",
+                "mcp-runtime-call-plane", "memory-rag-graphrag-reranker-vectorstore",
+                "supply-chain-ci-quality");
+        assertThat(decision.compatibilityLaneDecisions()).allSatisfy(row -> assertThat(row)
+            .containsEntry("compatibilityBranchAllowed", true)
+            .containsEntry("mainlineUpgradeAllowedNow", false)
+            .containsEntry("runtimeControlAllowed", false));
+        assertThat(decision.endpointMap())
+            .containsEntry("backendTechnologyModernizationDecision",
+                "/api/agent/observability/top-tier/backend-technology-modernization-decision")
+            .containsEntry("advancedTechnologyCompatibilityMatrixEvidenceReadiness",
+                "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/evidence-readiness")
+            .containsEntry("officialVersionProtocolWatch",
+                "/api/agent/observability/top-tier/official-version-protocol-watch");
+        assertThat(decision.decisionPolicy())
+            .containsEntry("readOnly", true)
+            .containsEntry("decisionOnly", true)
+            .containsEntry("javaBackendStillPreferred", true)
+            .containsEntry("mainlineRuntimeUpgradeAllowedNow", false)
+            .containsEntry("dependencyUpgradeAllowedNow", false)
+            .containsEntry("runtimeControlAllowed", false)
+            .containsEntry("phase2NimHpcSlurmBcmTouched", false);
+        assertThat(decision.safety())
+            .containsEntry("toolExecution", false)
+            .containsEntry("kubeManagerCalls", false)
+            .containsEntry("mcpToolsCall", false)
+            .containsEntry("a2aRuntimeHandoff", false)
+            .containsEntry("llmUsed", false)
+            .containsEntry("externalCalls", false)
+            .containsEntry("auditWrite", false)
+            .containsEntry("memoryWrite", false)
+            .containsEntry("retrievalExecuted", false)
+            .containsEntry("phase2NimHpcSlurmBcmTouched", false);
+        assertThat(decision.sourceWatch().schemaVersion())
+            .isEqualTo("agent-official-version-protocol-watch.v1");
+        assertThat(decision.evidenceReadiness().schemaVersion())
+            .isEqualTo("agent-advanced-technology-compatibility-matrix-evidence-readiness.v1");
+        assertThat(decision.toString())
+            .contains("Java 17", "Spring Boot 3.5", "Spring AI 1.1", "backend-technology-modernization-decision")
+            .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret");
+    }
+
+    @Test
     void officialVersionProtocolWatch_shouldRequireAdminAndReturnOfficialSourceWatch() {
         ResponseEntity<ApiResponse<AgentOfficialVersionProtocolWatchResponse>> anonymous =
             controller.officialVersionProtocolWatch();
@@ -1461,19 +1557,20 @@ class ObservabilityControllerTest {
         assertThat(implementationPackage.schemaVersion())
             .isEqualTo("agent-top-tier-vue-workbench-implementation-package.v1");
         assertThat(implementationPackage.packageStatus()).isEqualTo("IMPLEMENTATION_PACKAGE_READY");
-        assertThat(implementationPackage.routeSpecCount()).isEqualTo(3);
-        assertThat(implementationPackage.apiClientBindingCount()).isEqualTo(5);
-        assertThat(implementationPackage.pageAssemblyCount()).isEqualTo(3);
-        assertThat(implementationPackage.sharedComponentCount()).isEqualTo(8);
-        assertThat(implementationPackage.acceptanceFixtureCount()).isEqualTo(7);
+        assertThat(implementationPackage.routeSpecCount()).isEqualTo(4);
+        assertThat(implementationPackage.apiClientBindingCount()).isEqualTo(6);
+        assertThat(implementationPackage.pageAssemblyCount()).isEqualTo(4);
+        assertThat(implementationPackage.sharedComponentCount()).isEqualTo(9);
+        assertThat(implementationPackage.acceptanceFixtureCount()).isEqualTo(8);
         assertThat(implementationPackage.runtimeControlAllowed()).isFalse();
         assertThat(implementationPackage.routeSpecs()).extracting(route -> route.get("id"))
             .contains("top-tier-official-version-protocol-watch",
                 "top-tier-advanced-technology-compatibility-matrix",
-                "top-tier-advanced-technology-evidence-readiness");
+                "top-tier-advanced-technology-evidence-readiness",
+                "top-tier-backend-technology-modernization-decision");
         assertThat(implementationPackage.apiClientBindings()).extracting(client -> client.get("name"))
             .contains("fetchOfficialWatchBindingSpec", "fetchCompatibilityMatrixBindingSpec",
-                "fetchCompatibilityMatrixEvidenceReadiness");
+                "fetchCompatibilityMatrixEvidenceReadiness", "fetchBackendTechnologyModernizationDecision");
         assertThat(implementationPackage.forbiddenRuntimeControls()).allSatisfy(control -> assertThat(control)
             .containsEntry("buttonVisible", false)
             .containsEntry("clickHandlerAllowed", false)
@@ -1496,13 +1593,16 @@ class ObservabilityControllerTest {
             .containsEntry("advancedTechnologyCompatibilityMatrixVueBindingSpec",
                 "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/vue-binding-spec")
             .containsEntry("advancedTechnologyCompatibilityMatrixEvidenceReadiness",
-                "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/evidence-readiness");
+                "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/evidence-readiness")
+            .containsEntry("backendTechnologyModernizationDecision",
+                "/api/agent/observability/top-tier/backend-technology-modernization-decision");
         assertThat(implementationPackage.officialWatchBindingSpec().schemaVersion())
             .isEqualTo("agent-official-version-protocol-watch-vue-binding-spec.v1");
         assertThat(implementationPackage.compatibilityMatrixBindingSpec().schemaVersion())
             .isEqualTo("agent-advanced-technology-compatibility-matrix-vue-binding-spec.v1");
         assertThat(implementationPackage.toString())
-            .contains("runtime-buttons-absent-in-all-pages", "DisabledActionList", "EvidenceGapTable")
+            .contains("runtime-buttons-absent-in-all-pages", "DisabledActionList", "EvidenceGapTable",
+                "LearningPathTimeline")
             .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret");
     }
 

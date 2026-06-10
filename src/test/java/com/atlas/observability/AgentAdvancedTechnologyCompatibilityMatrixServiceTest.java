@@ -70,6 +70,9 @@ class AgentAdvancedTechnologyCompatibilityMatrixServiceTest {
         assertThat(matrix.matrixItems()).allSatisfy(item -> assertThat(item)
             .containsEntry("mainlineAllowedNow", false)
             .containsEntry("runtimeControlAllowed", false));
+        assertThat(matrix.matrixItems()).anySatisfy(item -> assertThat(item)
+            .containsEntry("id", "spring-ai-access-layer")
+            .containsEntry("candidateTarget", "Spring AI 2.0.0-RC2 preview lane"));
         assertThat(matrix.migrationGates()).extracting(gate -> gate.get("id"))
             .contains("official-source-rechecked", "compatibility-branch-created",
                 "build-and-focused-tests-green", "security-boundary-regression-green",
@@ -128,6 +131,8 @@ class AgentAdvancedTechnologyCompatibilityMatrixServiceTest {
             .isEqualTo("agent-official-version-protocol-watch.v1");
         assertThat(matrix.toString())
             .contains("spring-ai-access-layer", "mcp-runtime-call-plane", "upgrade-pom-from-readiness-page")
+            .contains("Spring AI 2.0.0-RC2 preview lane")
+            .doesNotContain("Spring AI 2.0.0-RC1 preview lane")
             .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret");
     }
 

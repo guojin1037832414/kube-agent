@@ -6,6 +6,26 @@
 
 ---
 
+## [M5.81-1] - Backend technology modernization decision
+
+**Delivery**: Added a backend-owned modernization decision endpoint that keeps Java/Spring as the Phase 1 top-tier Agent control plane while moving the newest Java/Spring/Spring AI/MCP/A2A/RAG/CI technologies through compatibility and evidence gates.
+**Changes**
+- Added `GET /api/agent/observability/top-tier/backend-technology-modernization-decision`.
+- Added `AgentBackendTechnologyModernizationDecisionResponse` and `AgentBackendTechnologyModernizationDecisionService`.
+- Published 8 mainline decisions, 10 compatibility-lane decisions, 8 modernization gates, 9 blocked shortcuts, 8 learning steps, decision policy, safety proof, and privacy proof.
+- Embedded official version/protocol watch and advanced technology compatibility matrix evidence readiness as source read models.
+- Integrated the endpoint into advanced technology adoption, official watch, official watch dashboard, official watch binding spec, compatibility matrix, compatibility matrix binding spec, evidence readiness, top-tier readiness, Phase 1 roadmap, Vue readiness control plane, Vue workbench implementation package, Controller, and security contracts.
+- Extended the top-tier Vue workbench implementation package to 4 route specs, 6 API client bindings, 4 page assemblies, 9 shared component contracts, and 8 acceptance fixtures.
+- Updated Vue readiness dashboard count to `17` and added `backend-technology-modernization-decision`.
+- Refreshed official-source review date to `2026-06-10` and updated the Spring AI 2 preview lane to `2.0.0-RC2` without changing runtime dependencies.
+**Verification**
+- `mvn -q "-DskipTests" validate` passed.
+- `mvn -q "-Dtest=AgentBackendTechnologyModernizationDecisionServiceTest,AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessServiceTest,AgentAdvancedTechnologyCompatibilityMatrixServiceTest,AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecServiceTest,AgentTopTierVueWorkbenchImplementationPackageServiceTest,AgentTopTierReadinessOverviewServiceTest,AgentAdvancedTechnologyAdoptionContractServiceTest,AgentOfficialVersionProtocolWatchServiceTest,AgentOfficialVersionProtocolWatchDashboardServiceTest,AgentOfficialVersionProtocolWatchVueBindingSpecServiceTest,AgentPhase1ExecutionRoadmapServiceTest,AgentVueReadinessControlPlaneServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed.
+- `git diff --check` passed with Windows line-ending warnings only.
+**Security**
+- The modernization decision layer is admin-only, read-only, decision-only, source-read-model-composition-only, and external-call-free at request time.
+- It does not modify `pom.xml`, upgrade dependencies, switch Java/Spring/Spring AI baselines, create compatibility branches, run evals, discover candidates, run curation review, mutate trace-set catalogs, enable CI blocking, run LLMs, execute Tools, invoke `SafeToolExecutor`, invoke HITL, call kube-manager or port `8100`, expose MCP runtime `tools/call`, run A2A runtime handoff, execute retrieval/vector/embedding/reranker/GraphRAG, write memory, write audit, issue durable receipts, or touch NIM / HPC / Slurm / BCM Phase 2 work.
+
 ## [M5.80-1] - Advanced technology compatibility matrix evidence readiness
 
 **Delivery**: Added a backend-owned evidence-readiness layer that maps every advanced-technology compatibility lane to reviewed trace, Memory/RAG fixture, release-gate, Vue visibility, recovery, and Git-review gaps.

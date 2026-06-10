@@ -129,6 +129,15 @@ public record AgentTopTierVueWorkbenchImplementationPackageResponse(
                 AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessResponse.EVIDENCE_READINESS_ENDPOINT,
                 List.of("EvidenceReadinessSummaryStrip", "TechnologyEvidenceGapTable",
                     "EvidenceGateChecklist", "DisabledRuntimeActionList", "EvidenceReadinessSourceJsonPanel")
+            ),
+            routeSpec(
+                "top-tier-backend-technology-modernization-decision",
+                "/agent/top-tier/backend-technology-modernization-decision",
+                "Backend technology modernization decision",
+                AgentBackendTechnologyModernizationDecisionResponse.DECISION_ENDPOINT,
+                List.of("BackendDecisionSummaryStrip", "MainlineDecisionTable",
+                    "CompatibilityLaneDecisionTable", "ModernizationGateChecklist",
+                    "AgentLearningPathTimeline", "BackendDecisionSourceJsonPanel")
             )
         );
     }
@@ -167,7 +176,10 @@ public record AgentTopTierVueWorkbenchImplementationPackageResponse(
                 "compatibilityMatrixBindingSpec"),
             apiClient("fetchCompatibilityMatrixEvidenceReadiness", "GET",
                 AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessResponse.EVIDENCE_READINESS_ENDPOINT,
-                "compatibilityMatrixEvidenceReadiness")
+                "compatibilityMatrixEvidenceReadiness"),
+            apiClient("fetchBackendTechnologyModernizationDecision", "GET",
+                AgentBackendTechnologyModernizationDecisionResponse.DECISION_ENDPOINT,
+                "backendTechnologyModernizationDecision")
         );
     }
 
@@ -200,7 +212,12 @@ public record AgentTopTierVueWorkbenchImplementationPackageResponse(
             pageAssembly("evidence-readiness-page",
                 AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessResponse.EVIDENCE_READINESS_ENDPOINT,
                 List.of("load-evidence-readiness", "render-evidence-gap-table", "render-blocking-gates",
-                    "render-disabled-runtime-actions", "assert-no-enable-buttons"))
+                    "render-disabled-runtime-actions", "assert-no-enable-buttons")),
+            pageAssembly("backend-technology-modernization-decision-page",
+                AgentBackendTechnologyModernizationDecisionResponse.DECISION_ENDPOINT,
+                List.of("load-backend-modernization-decision", "render-mainline-decisions",
+                    "render-compatibility-lane-decisions", "render-learning-path",
+                    "assert-no-upgrade-buttons"))
         );
     }
 
@@ -226,7 +243,9 @@ public record AgentTopTierVueWorkbenchImplementationPackageResponse(
             sharedComponent("DisabledActionList", "Render forbidden actions without buttons or click handlers."),
             sharedComponent("ExternalOfficialLink", "Open official URLs as navigation evidence only."),
             sharedComponent("ReadonlyJsonPanel", "Render embedded source read models without inline editing."),
-            sharedComponent("EvidenceGapTable", "Render lane-to-evidence gaps without computing release authority.")
+            sharedComponent("EvidenceGapTable", "Render lane-to-evidence gaps without computing release authority."),
+            sharedComponent("LearningPathTimeline",
+                "Render teaching steps without turning them into runtime workflow actions.")
         );
     }
 
@@ -248,6 +267,8 @@ public record AgentTopTierVueWorkbenchImplementationPackageResponse(
                 "Render baselines, candidate lanes, migration gates, blocked shortcuts, and test lanes from mocked HTTP."),
             fixture("evidence-readiness-page-renders-with-mocked-readiness",
                 "Render advanced technology evidence gaps, blocking gates, next actions, and disabled runtime actions from mocked HTTP."),
+            fixture("backend-modernization-decision-page-renders-with-mocked-decision",
+                "Render Java/Spring mainline decisions, compatibility lanes, modernization gates, and learning path from mocked HTTP."),
             fixture("cross-page-navigation-keeps-read-only-state",
                 "Switch between all top-tier technology pages without losing backend-owned read-only state."),
             fixture("runtime-buttons-absent-in-all-pages",
@@ -314,11 +335,12 @@ public record AgentTopTierVueWorkbenchImplementationPackageResponse(
     private static List<String> buildImplementationOrder() {
         return List.of(
             "create-top-tier-agent-workbench-navigation",
-            "add-api-client-methods-for-five-read-only-endpoints",
+            "add-api-client-methods-for-six-read-only-endpoints",
             "implement-shared-read-only-renderers",
             "implement-official-watch-page-from-binding-spec",
             "implement-compatibility-matrix-page-from-binding-spec",
             "implement-evidence-readiness-page-from-read-model",
+            "implement-backend-modernization-decision-page-from-read-model",
             "add-mocked-fixture-tests-for-disabled-actions",
             "verify-runtime-control-buttons-are-absent"
         );
@@ -337,6 +359,8 @@ public record AgentTopTierVueWorkbenchImplementationPackageResponse(
             AgentAdvancedTechnologyCompatibilityMatrixResponse.MATRIX_ENDPOINT);
         endpoints.put("advancedTechnologyCompatibilityMatrixEvidenceReadiness",
             AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessResponse.EVIDENCE_READINESS_ENDPOINT);
+        endpoints.put("backendTechnologyModernizationDecision",
+            AgentBackendTechnologyModernizationDecisionResponse.DECISION_ENDPOINT);
         endpoints.put("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane");
         return Map.copyOf(endpoints);
     }

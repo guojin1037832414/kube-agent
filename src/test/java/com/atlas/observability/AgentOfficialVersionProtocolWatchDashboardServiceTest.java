@@ -65,7 +65,7 @@ class AgentOfficialVersionProtocolWatchDashboardServiceTest {
             assertThat(card)
                 .containsEntry("status", "OFFICIAL_SOURCE_REVIEWED")
                 .containsEntry("severity", "INFO")
-                .containsEntry("sourceReviewDate", "2026-06-09")
+                .containsEntry("sourceReviewDate", "2026-06-10")
                 .containsEntry("runtimeBound", false)
                 .containsEntry("readOnly", true)
                 .containsEntry("externalNavigationOnly", true)
