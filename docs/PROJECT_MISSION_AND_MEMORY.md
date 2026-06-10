@@ -10,7 +10,72 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.83-1
+## Latest Phase 1 Core Memory - M5.84-1
+
+M5.84-1 adds the top-tier Vue workbench migration package endpoint. It answers the immediate handoff constraint: the backend can read `F:/gitProject/vue-kube-manager`, but the current writable workspace is `F:/gitProject/kube-agent`, and the frontend repo also needs an explicit Git safe-directory decision before edits. Therefore this slice publishes a dry-run migration package instead of pretending the frontend repository was modified.
+
+Endpoint:
+
+```text
+GET /api/agent/observability/top-tier/vue-workbench-migration-package
+```
+
+Delivered:
+
+- Added `AgentTopTierVueWorkbenchMigrationPackageResponse`.
+- Added `AgentTopTierVueWorkbenchMigrationPackageService`.
+- Added admin-only Controller method `topTierVueWorkbenchMigrationPackage()`.
+- Published 5 repository facts, 5 route patches, 10 file blueprints, 8 GET-only API client exports, 9 Jest test blueprints, 8 validation checks, 12 forbidden runtime assertions, and a 10-step frontend apply order.
+- Embedded `AgentTopTierVueWorkbenchAcceptanceContractResponse` as the source acceptance contract.
+- Added fail-closed checks for missing acceptance contract, unexpected acceptance status, or source runtime authority.
+- Integrated the endpoint into advanced technology adoption, Phase 1 roadmap, top-tier readiness overview, Vue readiness control plane, Controller, source-security, and Spring Security contracts.
+- Updated Vue readiness dashboard count to `20`.
+- Added the teaching document `docs/M5_84_TOP_TIER_VUE_WORKBENCH_MIGRATION_PACKAGE_20260610.md`.
+
+Current state:
+
+- `schemaVersion=agent-top-tier-vue-workbench-migration-package.v1`.
+- `migrationStatus=MIGRATION_PACKAGE_READY_TO_APPLY_TO_VUE_KUBE_MANAGER`.
+- `frontendTarget=vue-kube-manager Vue 2 / Element UI top-tier Agent workbench migration`.
+- `directFrontendWritePerformed=false`.
+- `frontendRepositoryWritableInCurrentWorkspace=false`.
+- `gitSafeDirectoryRequired=true`.
+- `acceptanceContractEmbedded=true`.
+- `readOnlyMigrationOnly=true`.
+- `runtimeControlAllowed=false`.
+- `repositoryFactCount=5`.
+- `routePatchCount=5`.
+- `fileBlueprintCount=10`.
+- `apiExportCount=8`.
+- `testBlueprintCount=9`.
+- `validationCheckCount=8`.
+- `forbiddenRuntimeAssertionCount=12`.
+
+Security boundary:
+
+- M5.84 is admin-only, GET-only, read-only, migration-package-only, dry-run-only, source-contract-composition-only, and external-call-free at request time.
+- It composes only `acceptanceContractService.contract()`.
+- It does not modify `pom.xml`, upgrade dependencies, switch Java/Spring/Spring AI baselines, write `vue-kube-manager`, call kube-manager including port `8100`, run evals, execute Tools, call `SafeToolExecutor`, invoke HITL, expose MCP runtime `tools/call`, run A2A runtime handoff, execute retrieval/vector/embedding/reranker/GraphRAG, write memory, write audit, issue durable receipts, enable CI blocking, or touch NIM / HPC / Slurm / BCM Phase 2 scope.
+
+Multi-expert memory:
+
+- Parfit / frontend explorer confirmed the real `vue-kube-manager` route and permission model: Vue 2 / Element UI, `asyncRoutes`, `BackendLayout`, exact-path menu permissions, `@/utils/request`, Jest + Vue Test Utils, and no existing local menu permission mock.
+- Carver / backend architecture review recommended M5.84 as a migration package, not a frontend write generator.
+
+Learning point: a top-tier Agent is taught through auditable migration artifacts as much as through runtime code. M5.84 teaches how to turn a backend acceptance contract into a frontend patch plan with route rules, GET-only API exports, fixtures, tests, scans, and forbidden authority checks.
+
+Latest verified commands for this slice include:
+
+- `mvn -q "-Dtest=AgentTopTierVueWorkbenchMigrationPackageServiceTest,AgentTopTierVueWorkbenchAcceptanceContractServiceTest,AgentVueReadinessControlPlaneServiceTest,AgentPhase1ExecutionRoadmapServiceTest,AgentAdvancedTechnologyAdoptionContractServiceTest,AgentTopTierReadinessOverviewServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+Next safe development order:
+
+- Make `vue-kube-manager` writable/trusted, apply the M5.84 migration package as a reviewed frontend patch, and run the frontend lint/unit/CI checks plus forbidden-runtime scans.
+- Continue reviewed redacted eval trace evidence curation.
+- Complete Memory/RAG reviewed trace fixtures.
+- Keep Java/Spring/Spring AI major upgrades, MCP runtime, A2A handoff, retrieval runtime, CI blocking, kube-manager writes, and Phase 2 NIM/HPC/Slurm/BCM release-gated.
+
+## Previous Phase 1 Core Memory - M5.83-1
 
 M5.83-1 adds the top-tier Vue workbench acceptance contract endpoint. It answers the current frontend handoff problem: before editing `vue-kube-manager`, the backend must publish the exact route, API, fixture, Jest, forbidden-selector, security, and teaching contract that the five-page Agent technology workbench must satisfy.
 

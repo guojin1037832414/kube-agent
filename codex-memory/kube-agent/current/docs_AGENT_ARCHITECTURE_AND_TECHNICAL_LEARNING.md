@@ -2,6 +2,79 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-10 M5.84 Top-tier Vue Workbench Migration Package
+
+M5.84 adds a backend-owned dry-run migration package for applying the top-tier Agent technology workbench to `vue-kube-manager`. It is the bridge between the M5.83 acceptance contract and a future real frontend patch.
+
+Endpoint:
+
+```text
+GET /api/agent/observability/top-tier/vue-workbench-migration-package
+```
+
+Current contract:
+
+- `schemaVersion=agent-top-tier-vue-workbench-migration-package.v1`
+- `migrationStatus=MIGRATION_PACKAGE_READY_TO_APPLY_TO_VUE_KUBE_MANAGER`
+- `repositoryFactCount=5`
+- `routePatchCount=5`
+- `fileBlueprintCount=10`
+- `apiExportCount=8`
+- `testBlueprintCount=9`
+- `validationCheckCount=8`
+- `forbiddenRuntimeAssertionCount=12`
+- `directFrontendWritePerformed=false`
+- `frontendRepositoryWritableInCurrentWorkspace=false`
+- `gitSafeDirectoryRequired=true`
+- `readOnlyMigrationOnly=true`
+- `runtimeControlAllowed=false`
+
+Architecture path:
+
+```text
+M5.83 acceptance contract
+        |
+        v
+M5.84 migration package
+        |
+        +-- repository facts and Git safe-directory warning
+        +-- asyncRoutes / BackendLayout route snippets
+        +-- GET-only api module blueprint
+        +-- five read-only Element UI page blueprints
+        +-- mocked fixtures and Jest test blueprints
+        +-- validation scans and forbidden runtime assertions
+```
+
+Key design:
+
+- The package does not write `F:/gitProject/vue-kube-manager`; it describes a reviewed patch because the frontend repo is currently outside the writable root and Git reports a safe-directory requirement.
+- The package records the real Vue permission trap: menu filtering uses exact path matching with `menus.some(menu => menu.path === route.path)`, so children must use absolute `/agent/top-tier/*` paths and the parent `/agent` must not require permission unless the backend menu API also returns `/agent`.
+- The generated API blueprint uses only `@/utils/request`, `method: 'get'`, `params: query`, and `response.data` unwrapping.
+- The generated tests prove both visible UI and absent authority: Element UI selectors should render evidence, while MCP `tools/call`, kube-manager writes, RAG runtime, dependency upgrades, CI blocking, HITL, and Phase 2 reopen buttons must be absent.
+
+Latest-technology calibration:
+
+- Official Spring Boot docs show stable `4.0.6` while `3.5.14` remains a stable line; this project keeps major migration behind compatibility branches.
+- Official Spring AI docs show stable `1.1.7`; the `2.0` line stays compatibility/evidence work until tests and release gates pass.
+- OpenAI Agents guidance treats Agents as applications that plan, call tools, collaborate across specialists, and keep state; M5.84 turns these concepts into frontend governance and teaching checks before runtime authority.
+- MCP latest specification is `2025-11-25`; M5.84 keeps MCP resources/prompts/tools visible as governance evidence while forbidding runtime `tools/call`.
+- A2A latest released specification is `1.0.0`; M5.84 keeps it as a provenance and interoperability lane, not runtime handoff.
+- OTel GenAI semantic conventions remain `Development`, so any GenAI span mapping must stay opt-in and evidence-gated.
+
+Learning point: a top-tier Agent workbench is not only a UI. It is a migration artifact that teaches why route permissions, API method shape, fixture isolation, XSS-safe rendering, validation scans, and forbidden controls all matter before an Agent runtime is allowed to act.
+
+Safety invariant:
+
+- M5.84 is admin-only, GET-only, read-only, migration-package-only, dry-run-only, source-contract-composition-only, and external-call-free at request time.
+- It does not modify `pom.xml`, upgrade Java/Spring/Spring AI, write `vue-kube-manager`, run evals, execute Tools, invoke `SafeToolExecutor`, invoke HITL, call kube-manager or port `8100`, expose MCP runtime `tools/call`, run A2A runtime handoff, execute retrieval/vector/embedding/reranker/GraphRAG, write memory, write audit, issue durable receipts, enable CI blocking, or touch NIM / HPC / Slurm / BCM Phase 2 scope.
+
+Multi-expert review:
+
+- Parfit / frontend explorer confirmed the real `vue-kube-manager` route model: Vue 2, Element UI, `asyncRoutes`, `BackendLayout`, exact-path menu permissions, `@/utils/request`, Jest + Vue Test Utils, and no existing local menu permission mock.
+- Carver / backend architecture reviewer recommended making M5.84 a migration kit/package rather than a generator that writes the frontend repository.
+
+Next work: make `vue-kube-manager` writable/trusted, apply the M5.84 package as a reviewed frontend patch, run lint/unit/CI plus forbidden-runtime scans, then commit and push frontend and recovery memory. Runtime MCP, A2A, retrieval, CI blocking, kube-manager writes, Java/Spring/Spring AI major upgrades, and Phase 2 NIM/HPC/Slurm/BCM remain release-gated.
+
 ## 2026-06-10 M5.83 Top-tier Vue Workbench Acceptance Contract
 
 M5.83 adds the backend-owned acceptance contract for the future `vue-kube-manager` top-tier Agent workbench. It turns the M5.79-M5.82 implementation package into executable frontend expectations: route shape, API client shape, mocked fixtures, Jest scenarios, forbidden runtime selectors, governance alignment, and teaching checkpoints.

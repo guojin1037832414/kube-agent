@@ -115,6 +115,11 @@ public record AgentVueReadinessControlPlaneResponse(
                 AgentTopTierVueWorkbenchAcceptanceContractResponse.ACCEPTANCE_CONTRACT_ENDPOINT,
                 List.of("frontendStackFacts", "routeMountSpecs", "apiClientSpecs", "pageFixtureSpecs",
                     "acceptanceScenarios", "forbiddenRuntimeSelectors", "testCommands")),
+            dashboard("top-tier-vue-workbench-migration-package", "READY_TO_BIND",
+                "Render or apply the dry-run migration package that turns the acceptance contract into frontend file blueprints, route snippets, Jest tests, and validation scans.",
+                AgentTopTierVueWorkbenchMigrationPackageResponse.MIGRATION_PACKAGE_ENDPOINT,
+                List.of("repositoryFacts", "routePatches", "fileBlueprints", "apiClientExports",
+                    "testBlueprints", "validationChecks", "forbiddenRuntimeAssertions")),
             dashboard("phase1-execution-roadmap", "READY_TO_BIND",
                 "Render the ordered Phase 1 execution steps and do-not-start-yet boundaries.",
                 "/api/agent/observability/top-tier/phase1-execution-roadmap",
@@ -171,6 +176,8 @@ public record AgentVueReadinessControlPlaneResponse(
                 AgentTopTierVueWorkbenchImplementationPackageResponse.PACKAGE_ENDPOINT, "GET", true),
             apiBinding("top-tier-vue-workbench-acceptance-contract",
                 AgentTopTierVueWorkbenchAcceptanceContractResponse.ACCEPTANCE_CONTRACT_ENDPOINT, "GET", true),
+            apiBinding("top-tier-vue-workbench-migration-package",
+                AgentTopTierVueWorkbenchMigrationPackageResponse.MIGRATION_PACKAGE_ENDPOINT, "GET", true),
             apiBinding("phase1-roadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap", "GET", true),
             apiBinding("kube-manager-governance", "/api/agent/observability/kube-manager/http-outlet/governance-workbench/overview", "GET", true),
             apiBinding("memory-rag-readiness", "/api/agent/observability/memory-rag/readiness", "GET", true),
@@ -232,6 +239,7 @@ public record AgentVueReadinessControlPlaneResponse(
             "bind-official-version-protocol-watch-binding-spec",
             "bind-top-tier-vue-workbench-implementation-package",
             "bind-top-tier-vue-workbench-acceptance-contract",
+            "bind-top-tier-vue-workbench-migration-package",
             "bind-phase1-execution-roadmap-timeline",
             "bind-kube-manager-governance-cards",
             "bind-memory-rag-readiness-and-contract-links",
@@ -267,6 +275,8 @@ public record AgentVueReadinessControlPlaneResponse(
             AgentTopTierVueWorkbenchImplementationPackageResponse.PACKAGE_ENDPOINT);
         endpoints.put("topTierVueWorkbenchAcceptanceContract",
             AgentTopTierVueWorkbenchAcceptanceContractResponse.ACCEPTANCE_CONTRACT_ENDPOINT);
+        endpoints.put("topTierVueWorkbenchMigrationPackage",
+            AgentTopTierVueWorkbenchMigrationPackageResponse.MIGRATION_PACKAGE_ENDPOINT);
         endpoints.put("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap");
         endpoints.put("kubeManagerGovernanceOverview", "/api/agent/observability/kube-manager/http-outlet/governance-workbench/overview");
         endpoints.put("memoryRagReadiness", "/api/agent/observability/memory-rag/readiness");

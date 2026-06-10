@@ -222,18 +222,21 @@ public record AgentTopTierReadinessOverviewResponse(
             "vue-operator-workbench",
             "Vue operator workbench integration",
             "PARTIAL",
-            "Backend page contracts, implementation package, and Vue 2 acceptance contract exist; frontend implementation still needs to consume and verify the full readiness/control-plane map.",
+            "Backend page contracts, implementation package, Vue 2 acceptance contract, and dry-run migration package exist; frontend implementation still needs to apply and verify the full readiness/control-plane map.",
             "/api/agent/observability/top-tier/readiness-overview",
             List.of("eval workbench contracts", "kube-manager governance workbench", "top-tier readiness overview",
-                "top-tier Vue workbench acceptance contract"),
-            Map.of(
-                "backendContractsExist", true,
-                "vueWorkbenchImplementationPackageEndpoint",
-                AgentTopTierVueWorkbenchImplementationPackageResponse.PACKAGE_ENDPOINT,
-                "vueWorkbenchAcceptanceContractEndpoint",
-                AgentTopTierVueWorkbenchAcceptanceContractResponse.ACCEPTANCE_CONTRACT_ENDPOINT,
-                "frontendConsumptionVerified", false,
-                "runtimeControlButtonsAllowed", false
+                "top-tier Vue workbench acceptance contract", "top-tier Vue workbench migration package"),
+            Map.ofEntries(
+                Map.entry("backendContractsExist", true),
+                Map.entry("vueWorkbenchImplementationPackageEndpoint",
+                    AgentTopTierVueWorkbenchImplementationPackageResponse.PACKAGE_ENDPOINT),
+                Map.entry("vueWorkbenchAcceptanceContractEndpoint",
+                    AgentTopTierVueWorkbenchAcceptanceContractResponse.ACCEPTANCE_CONTRACT_ENDPOINT),
+                Map.entry("vueWorkbenchMigrationPackageEndpoint",
+                    AgentTopTierVueWorkbenchMigrationPackageResponse.MIGRATION_PACKAGE_ENDPOINT),
+                Map.entry("directFrontendWritePerformed", false),
+                Map.entry("frontendConsumptionVerified", false),
+                Map.entry("runtimeControlButtonsAllowed", false)
             )
         ));
         cards.add(card(
@@ -293,6 +296,8 @@ public record AgentTopTierReadinessOverviewResponse(
             AgentOfficialVersionProtocolWatchDashboardResponse.DASHBOARD_ENDPOINT);
         evidence.put("officialVersionProtocolWatchVueBindingSpecEndpoint",
             AgentOfficialVersionProtocolWatchVueBindingSpecResponse.BINDING_SPEC_ENDPOINT);
+        evidence.put("topTierVueWorkbenchMigrationPackageEndpoint",
+            AgentTopTierVueWorkbenchMigrationPackageResponse.MIGRATION_PACKAGE_ENDPOINT);
         evidence.put("javaSpringControlPlanePreserved", true);
         evidence.put("runtimeUpgradePerformed", false);
         evidence.put("dependencyUpgradePerformed", false);
@@ -343,6 +348,7 @@ public record AgentTopTierReadinessOverviewResponse(
             "wire-vue-official-version-protocol-watch-binding-spec",
             "wire-vue-top-tier-workbench-implementation-package",
             "wire-vue-top-tier-workbench-acceptance-contract",
+            "wire-vue-top-tier-workbench-migration-package",
             "wire-vue-phase1-execution-roadmap",
             "wire-vue-readiness-control-plane",
             "populate-reviewed-redacted-eval-trace-evidence",
@@ -388,6 +394,8 @@ public record AgentTopTierReadinessOverviewResponse(
             AgentTopTierVueWorkbenchImplementationPackageResponse.PACKAGE_ENDPOINT);
         endpoints.put("topTierVueWorkbenchAcceptanceContract",
             AgentTopTierVueWorkbenchAcceptanceContractResponse.ACCEPTANCE_CONTRACT_ENDPOINT);
+        endpoints.put("topTierVueWorkbenchMigrationPackage",
+            AgentTopTierVueWorkbenchMigrationPackageResponse.MIGRATION_PACKAGE_ENDPOINT);
         endpoints.put("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap");
         endpoints.put("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane");
         endpoints.put("kubeManagerGovernanceOverview", "/api/agent/observability/kube-manager/http-outlet/governance-workbench/overview");

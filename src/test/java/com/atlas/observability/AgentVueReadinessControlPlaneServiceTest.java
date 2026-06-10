@@ -37,7 +37,7 @@ class AgentVueReadinessControlPlaneServiceTest {
         assertThat(controlPlane.phase2NimHpcSlurmBcmPaused()).isTrue();
         assertThat(controlPlane.vueBindingReady()).isTrue();
         assertThat(controlPlane.runtimeControlAllowed()).isFalse();
-        assertThat(controlPlane.dashboardCount()).isEqualTo(19);
+        assertThat(controlPlane.dashboardCount()).isEqualTo(20);
         assertThat(controlPlane.dashboards()).extracting(dashboard -> dashboard.get("id"))
             .containsExactly(
                 "top-tier-command-center",
@@ -52,6 +52,7 @@ class AgentVueReadinessControlPlaneServiceTest {
                 "official-version-protocol-watch-binding-spec",
                 "top-tier-vue-workbench-implementation-package",
                 "top-tier-vue-workbench-acceptance-contract",
+                "top-tier-vue-workbench-migration-package",
                 "phase1-execution-roadmap",
                 "kube-manager-governance",
                 "memory-rag-readiness",
@@ -74,6 +75,7 @@ class AgentVueReadinessControlPlaneServiceTest {
                 "official-version-protocol-watch-binding-spec",
                 "top-tier-vue-workbench-implementation-package",
                 "top-tier-vue-workbench-acceptance-contract",
+                "top-tier-vue-workbench-migration-package",
                 "phase1-roadmap",
                 "reviewed-trace-evidence",
                 "release-blocking-gate-contract",
@@ -110,6 +112,7 @@ class AgentVueReadinessControlPlaneServiceTest {
             "bind-official-version-protocol-watch-binding-spec",
             "bind-top-tier-vue-workbench-implementation-package",
             "bind-top-tier-vue-workbench-acceptance-contract",
+            "bind-top-tier-vue-workbench-migration-package",
             "bind-phase1-execution-roadmap-timeline",
             "bind-kube-manager-governance-cards",
             "bind-memory-rag-readiness-and-contract-links",
@@ -140,6 +143,8 @@ class AgentVueReadinessControlPlaneServiceTest {
                 "/api/agent/observability/top-tier/vue-workbench-implementation-package")
             .containsEntry("topTierVueWorkbenchAcceptanceContract",
                 "/api/agent/observability/top-tier/vue-workbench-acceptance-contract")
+            .containsEntry("topTierVueWorkbenchMigrationPackage",
+                "/api/agent/observability/top-tier/vue-workbench-migration-package")
             .containsEntry("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap")
             .containsEntry("reviewedEvalTraceEvidence", "/api/agent/observability/eval/reviewed-trace-evidence")
             .containsEntry("releaseBlockingEvalGateContract", "/api/agent/observability/eval/release-blocking-gate-contract")

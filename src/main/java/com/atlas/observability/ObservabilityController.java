@@ -53,6 +53,7 @@ public class ObservabilityController {
     private final AgentOfficialVersionProtocolWatchVueBindingSpecService officialVersionProtocolWatchVueBindingSpecService;
     private final AgentTopTierVueWorkbenchImplementationPackageService topTierVueWorkbenchImplementationPackageService;
     private final AgentTopTierVueWorkbenchAcceptanceContractService topTierVueWorkbenchAcceptanceContractService;
+    private final AgentTopTierVueWorkbenchMigrationPackageService topTierVueWorkbenchMigrationPackageService;
     private final AgentPhase1ExecutionRoadmapService phase1ExecutionRoadmapService;
     private final AgentVueReadinessControlPlaneService vueReadinessControlPlaneService;
     private final AgentMemoryRagReadinessService memoryRagReadinessService;
@@ -102,6 +103,7 @@ public class ObservabilityController {
                                     AgentOfficialVersionProtocolWatchVueBindingSpecService officialVersionProtocolWatchVueBindingSpecService,
                                     AgentTopTierVueWorkbenchImplementationPackageService topTierVueWorkbenchImplementationPackageService,
                                     AgentTopTierVueWorkbenchAcceptanceContractService topTierVueWorkbenchAcceptanceContractService,
+                                    AgentTopTierVueWorkbenchMigrationPackageService topTierVueWorkbenchMigrationPackageService,
                                     AgentPhase1ExecutionRoadmapService phase1ExecutionRoadmapService,
                                    AgentVueReadinessControlPlaneService vueReadinessControlPlaneService,
                                    AgentMemoryRagReadinessService memoryRagReadinessService,
@@ -150,6 +152,7 @@ public class ObservabilityController {
         this.officialVersionProtocolWatchVueBindingSpecService = officialVersionProtocolWatchVueBindingSpecService;
         this.topTierVueWorkbenchImplementationPackageService = topTierVueWorkbenchImplementationPackageService;
         this.topTierVueWorkbenchAcceptanceContractService = topTierVueWorkbenchAcceptanceContractService;
+        this.topTierVueWorkbenchMigrationPackageService = topTierVueWorkbenchMigrationPackageService;
         this.phase1ExecutionRoadmapService = phase1ExecutionRoadmapService;
         this.vueReadinessControlPlaneService = vueReadinessControlPlaneService;
         this.memoryRagReadinessService = memoryRagReadinessService;
@@ -310,6 +313,17 @@ public class ObservabilityController {
             return guard;
         }
         return ResponseEntity.ok(ApiResponse.ok(topTierVueWorkbenchAcceptanceContractService.contract()));
+    }
+
+    /** Publish the dry-run migration package for applying the workbench to vue-kube-manager. */
+    @GetMapping("/top-tier/vue-workbench-migration-package")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentTopTierVueWorkbenchMigrationPackageResponse>> topTierVueWorkbenchMigrationPackage() {
+        ResponseEntity<ApiResponse<AgentTopTierVueWorkbenchMigrationPackageResponse>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return ResponseEntity.ok(ApiResponse.ok(topTierVueWorkbenchMigrationPackageService.migrationPackage()));
     }
 
     /** Publish the Phase 1 execution order as a read-only roadmap contract. */

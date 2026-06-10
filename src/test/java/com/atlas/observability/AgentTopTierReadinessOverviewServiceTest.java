@@ -101,6 +101,7 @@ class AgentTopTierReadinessOverviewServiceTest {
             "wire-vue-official-version-protocol-watch-binding-spec",
             "wire-vue-top-tier-workbench-implementation-package",
             "wire-vue-top-tier-workbench-acceptance-contract",
+            "wire-vue-top-tier-workbench-migration-package",
             "wire-vue-phase1-execution-roadmap",
             "wire-vue-readiness-control-plane",
             "populate-reviewed-redacted-eval-trace-evidence",
@@ -132,6 +133,8 @@ class AgentTopTierReadinessOverviewServiceTest {
                 "/api/agent/observability/top-tier/vue-workbench-implementation-package")
             .containsEntry("topTierVueWorkbenchAcceptanceContract",
                 "/api/agent/observability/top-tier/vue-workbench-acceptance-contract")
+            .containsEntry("topTierVueWorkbenchMigrationPackage",
+                "/api/agent/observability/top-tier/vue-workbench-migration-package")
             .containsEntry("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap")
             .containsEntry("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane")
             .containsEntry("mcpGovernanceOverview", "/api/agent/mcp/governance/overview")
@@ -187,7 +190,9 @@ class AgentTopTierReadinessOverviewServiceTest {
             .containsEntry("officialVersionProtocolWatchDashboardEndpoint",
                 "/api/agent/observability/top-tier/official-version-protocol-watch/dashboard")
             .containsEntry("officialVersionProtocolWatchVueBindingSpecEndpoint",
-                "/api/agent/observability/top-tier/official-version-protocol-watch/vue-binding-spec");
+                "/api/agent/observability/top-tier/official-version-protocol-watch/vue-binding-spec")
+            .containsEntry("topTierVueWorkbenchMigrationPackageEndpoint",
+                "/api/agent/observability/top-tier/vue-workbench-migration-package");
         assertThat(overview.kubeManagerGovernance().workbenchStatus()).isEqualTo("WRITE_GOVERNANCE_NOT_READY");
         assertThat(overview.evalWorkbenchCapabilities().capabilityCount()).isGreaterThan(0);
         assertThat(overview.mcpGovernance().governanceStatus()).isEqualTo("MANIFEST_ONLY_NOT_CALLABLE");

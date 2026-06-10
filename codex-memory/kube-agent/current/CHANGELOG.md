@@ -6,6 +6,23 @@
 
 ---
 
+## [M5.84-1] - Top-tier Vue workbench migration package
+
+**Delivery**: Added a backend-owned dry-run migration package endpoint that turns the M5.83 acceptance contract into concrete `vue-kube-manager` repository facts, route snippets, file blueprints, GET-only API exports, Jest test blueprints, validation scans, and forbidden-runtime assertions without writing the frontend repository.
+**Changes**
+- Added `GET /api/agent/observability/top-tier/vue-workbench-migration-package`.
+- Added `AgentTopTierVueWorkbenchMigrationPackageResponse` and `AgentTopTierVueWorkbenchMigrationPackageService`.
+- Published 5 repository facts, 5 `asyncRoutes` route patches, 10 file blueprints, 8 GET-only API exports, 9 Jest test blueprints, 8 validation checks, 12 forbidden runtime assertions, and a 10-step frontend apply order.
+- Embedded the M5.83 top-tier Vue workbench acceptance contract and fail-closed when the source contract is missing, not ready, or unexpectedly opens runtime authority.
+- Captured real `vue-kube-manager` handoff constraints: frontend path `F:/gitProject/vue-kube-manager`, current writable root `F:/gitProject/kube-agent`, Git safe-directory requirement, `asyncRoutes` + `BackendLayout`, absolute child paths, and exact menu matching through `menus.some(menu => menu.path === route.path)`.
+- Integrated the endpoint into advanced technology adoption, Phase 1 roadmap, top-tier readiness, Vue readiness control plane, Controller, source-security, and Spring Security tests.
+- Updated the Vue readiness dashboard count to `20` and added `top-tier-vue-workbench-migration-package`.
+**Verification**
+- `mvn -q "-Dtest=AgentTopTierVueWorkbenchMigrationPackageServiceTest,AgentTopTierVueWorkbenchAcceptanceContractServiceTest,AgentVueReadinessControlPlaneServiceTest,AgentPhase1ExecutionRoadmapServiceTest,AgentAdvancedTechnologyAdoptionContractServiceTest,AgentTopTierReadinessOverviewServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed during implementation.
+**Security**
+- The migration package is admin-only, GET-only, read-only, migration-package-only, dry-run-only, source-contract-composition-only, and external-call-free at request time.
+- It does not modify `pom.xml`, upgrade dependencies, switch Java/Spring/Spring AI baselines, write `vue-kube-manager`, call kube-manager or port `8100`, run evals, execute Tools, invoke `SafeToolExecutor`, invoke HITL, expose MCP runtime `tools/call`, run A2A runtime handoff, execute retrieval/vector/embedding/reranker/GraphRAG, write memory, write audit, issue durable receipts, enable CI blocking, or touch NIM / HPC / Slurm / BCM Phase 2 work.
+
 ## [M5.83-1] - Top-tier Vue workbench acceptance contract
 
 **Delivery**: Added a backend-owned Vue acceptance contract endpoint that turns the M5.79-M5.82 implementation package into concrete `vue-kube-manager` route, API client, fixture, Jest, security, and teaching requirements.

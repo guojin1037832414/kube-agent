@@ -9,6 +9,38 @@
 - 供应链、CI、SBOM、质量门禁进入工程默认路径；
 - Java / Spring / Agent 框架升级以兼容性矩阵推进，不用不可构建的版本号伪装先进。
 
+## 2026-06-10 M5.84 Top-Tier-Vue-Workbench-Migration-Package Rule
+
+M5.84 adds the backend-owned dry-run migration package for the latest-technology Vue workbench:
+
+```text
+GET /api/agent/observability/top-tier/vue-workbench-migration-package
+```
+
+This is now the Phase 1 frontend handoff rule after M5.83:
+
+- The backend publishes a concrete migration package rather than directly writing `vue-kube-manager` from a workspace that is not writable for that repo.
+- The package records repository facts, route patches, file blueprints, API exports, Jest test blueprints, validation checks, forbidden runtime assertions, and apply order.
+- `vue-kube-manager` must apply the package under `asyncRoutes` + `BackendLayout`, with absolute `/agent/top-tier/*` child paths and exact menu permission fixtures.
+- API exports are GET-only, use `@/utils/request`, unwrap `response.data`, and forbid mutating methods.
+- Jest must prove both read-only rendering and absence of runtime controls.
+- The current official-source calibration is:
+  - [Spring Boot Reference](https://docs.spring.io/spring-boot/reference/index.html): stable `4.0.6` exists; `3.5.14` is also stable, so major migration remains a compatibility branch.
+  - [Spring AI Reference](https://docs.spring.io/spring-ai/reference/index.html): stable `1.1.7` remains the stable line; `2.0` stays compatibility/evidence work until release gates pass.
+  - [OpenAI Agents SDK guide](https://platform.openai.com/docs/guides/agents): Agents own orchestration, tools, approvals, state, handoffs, guardrails, observability, and evals; this project maps those into Java/Spring contracts and Vue visibility before runtime authority.
+  - [MCP latest specification](https://modelcontextprotocol.io/specification/latest): latest resolves to `2025-11-25`; resources/prompts/tools are visible as governance evidence, while runtime `tools/call` stays closed.
+  - [A2A latest specification](https://a2a-protocol.org/latest/specification/): latest released version is `1.0.0`; A2A remains a provenance/interoperability lane, not runtime handoff.
+  - [OpenTelemetry GenAI semantic conventions](https://opentelemetry.io/docs/specs/semconv/gen-ai/): status is `Development`, so GenAI semantics remain opt-in/evidence-gated.
+
+Technology judgment: the most advanced move now is not a blind stack jump. It is a precise migration contract that makes the existing Vue 2 operator console render top-tier Agent governance safely, while the backend continues to track Java 21/25, Spring Boot 4, Spring AI 2, MCP, A2A, OTel GenAI, GraphRAG, rerankers, vector stores, CI hard gates, and kube-manager writes through evidence-first lanes.
+
+Next order after M5.84:
+
+- Make `vue-kube-manager` writable/trusted and apply the M5.84 package as a reviewed frontend patch.
+- Run frontend lint, unit tests, route scans, API mutation scans, runtime selector scans, and `git diff --check`.
+- Continue reviewed redacted eval trace evidence and Memory/RAG reviewed fixtures.
+- Keep Java/Spring/Spring AI major upgrades, MCP runtime, A2A handoff, retrieval, CI blocking, kube-manager writes, and Phase 2 NIM/HPC/Slurm/BCM release-gated.
+
 ## 2026-06-10 M5.83 Top-Tier-Vue-Workbench-Acceptance-Contract Rule
 
 M5.83 adds the backend-owned acceptance contract for the latest-technology Vue workbench:

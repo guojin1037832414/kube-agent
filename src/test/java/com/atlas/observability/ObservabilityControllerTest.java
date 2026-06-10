@@ -177,6 +177,8 @@ class ObservabilityControllerTest {
         );
     private final AgentTopTierVueWorkbenchAcceptanceContractService topTierVueWorkbenchAcceptanceContractService =
         new AgentTopTierVueWorkbenchAcceptanceContractService(topTierVueWorkbenchImplementationPackageService);
+    private final AgentTopTierVueWorkbenchMigrationPackageService topTierVueWorkbenchMigrationPackageService =
+        new AgentTopTierVueWorkbenchMigrationPackageService(topTierVueWorkbenchAcceptanceContractService);
     private final AgentPhase1ExecutionRoadmapService phase1ExecutionRoadmapService =
         new AgentPhase1ExecutionRoadmapService();
     private final AgentVueReadinessControlPlaneService vueReadinessControlPlaneService =
@@ -202,6 +204,7 @@ class ObservabilityControllerTest {
         officialVersionProtocolWatchVueBindingSpecService,
         topTierVueWorkbenchImplementationPackageService,
         topTierVueWorkbenchAcceptanceContractService,
+        topTierVueWorkbenchMigrationPackageService,
         phase1ExecutionRoadmapService,
         vueReadinessControlPlaneService,
         memoryRagReadinessService,
@@ -1789,6 +1792,90 @@ class ObservabilityControllerTest {
             .containsEntry("phase2NimHpcSlurmBcmTouched", false);
         assertThat(contract.toString())
             .contains("TopTierTechnologyIntroductionPlaybook", "wrapper.find", "response.data")
+            .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret");
+    }
+
+    @Test
+    void topTierVueWorkbenchMigrationPackage_shouldRequireAdminAndReturnDryRunMigrationPackage() {
+        ResponseEntity<ApiResponse<AgentTopTierVueWorkbenchMigrationPackageResponse>> anonymous =
+            controller.topTierVueWorkbenchMigrationPackage();
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentTopTierVueWorkbenchMigrationPackageResponse>> user =
+            controller.topTierVueWorkbenchMigrationPackage();
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        userPermissionContext.unbind();
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentTopTierVueWorkbenchMigrationPackageResponse>> admin =
+            controller.topTierVueWorkbenchMigrationPackage();
+
+        assertThat(admin.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(admin.getBody()).isNotNull();
+        AgentTopTierVueWorkbenchMigrationPackageResponse migrationPackage = admin.getBody().getData();
+        assertThat(migrationPackage.schemaVersion())
+            .isEqualTo("agent-top-tier-vue-workbench-migration-package.v1");
+        assertThat(migrationPackage.migrationStatus())
+            .isEqualTo("MIGRATION_PACKAGE_READY_TO_APPLY_TO_VUE_KUBE_MANAGER");
+        assertThat(migrationPackage.directFrontendWritePerformed()).isFalse();
+        assertThat(migrationPackage.frontendRepositoryWritableInCurrentWorkspace()).isFalse();
+        assertThat(migrationPackage.gitSafeDirectoryRequired()).isTrue();
+        assertThat(migrationPackage.acceptanceContractEmbedded()).isTrue();
+        assertThat(migrationPackage.readOnlyMigrationOnly()).isTrue();
+        assertThat(migrationPackage.runtimeControlAllowed()).isFalse();
+        assertThat(migrationPackage.repositoryFactCount()).isEqualTo(5);
+        assertThat(migrationPackage.routePatchCount()).isEqualTo(5);
+        assertThat(migrationPackage.fileBlueprintCount()).isEqualTo(10);
+        assertThat(migrationPackage.apiExportCount()).isEqualTo(8);
+        assertThat(migrationPackage.testBlueprintCount()).isEqualTo(9);
+        assertThat(migrationPackage.validationCheckCount()).isEqualTo(8);
+        assertThat(migrationPackage.forbiddenRuntimeAssertionCount()).isEqualTo(12);
+        assertThat(migrationPackage.repositoryFacts()).extracting(fact -> fact.get("id"))
+            .contains("frontend-git-safe-directory", "permission-menu-exact-path-match");
+        assertThat(migrationPackage.routePatches()).allSatisfy(route -> assertThat(route)
+            .containsEntry("targetFile", "src/router/index.js")
+            .containsEntry("layout", "BackendLayout")
+            .containsEntry("routeArray", "asyncRoutes")
+            .containsEntry("parentWithPermission", false)
+            .containsEntry("childPathMustBeAbsolute", true)
+            .containsEntry("runtimeControlAllowed", false));
+        assertThat(migrationPackage.fileBlueprints()).extracting(file -> file.get("targetPath"))
+            .contains("src/api/agent-observability.js",
+                "src/views/agent/top-tier/backend-technology-modernization-decision/index.vue",
+                "tests/unit/views/agent/top-tier");
+        assertThat(migrationPackage.apiClientExports()).allSatisfy(export -> assertThat(export)
+            .containsEntry("method", "get")
+            .containsEntry("mutatingMethodAllowed", false)
+            .containsEntry("runtimeBackendCallAllowed", false));
+        assertThat(migrationPackage.forbiddenRuntimeAssertions()).extracting(assertion -> assertion.get("id"))
+            .contains("mcp-tools-call-button", "kube-manager-write-button", "reopen-phase2-button");
+        assertThat(migrationPackage.endpointMap())
+            .containsEntry("topTierVueWorkbenchMigrationPackage",
+                "/api/agent/observability/top-tier/vue-workbench-migration-package")
+            .containsEntry("topTierVueWorkbenchAcceptanceContract",
+                "/api/agent/observability/top-tier/vue-workbench-acceptance-contract");
+        assertThat(migrationPackage.packagePolicy())
+            .containsEntry("migrationPackageOnly", true)
+            .containsEntry("directFrontendWritePerformed", false)
+            .containsEntry("runtimeButtonsAllowed", false)
+            .containsEntry("mutatingApiMethodsAllowed", false);
+        assertThat(migrationPackage.safety())
+            .containsEntry("adminOnly", true)
+            .containsEntry("readOnly", true)
+            .containsEntry("migrationPackageOnly", true)
+            .containsEntry("toolExecution", false)
+            .containsEntry("kubeManagerCalls", false)
+            .containsEntry("mcpToolsCall", false)
+            .containsEntry("phase2NimHpcSlurmBcmTouched", false);
+        assertThat(migrationPackage.toString())
+            .contains("permission-menu-exact-path-match", "source-json-xss", "git diff --check")
             .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret");
     }
 
