@@ -1,0 +1,68 @@
+﻿{
+    "project":  "kube-agent",
+    "wave":  "M5.82-1",
+    "title":  "Top-tier technology introduction playbook post-push recovery checkpoint",
+    "generatedAt":  "2026-06-10T10:18:20.0640444+08:00",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "implementationCommit":  "a63c1d7 feat(M5.82): add top-tier technology introduction playbook",
+    "implementationCommitFull":  "a63c1d72ec492eb11340715abd1c7ad57b6dc5c8",
+    "implementationPushed":  true,
+    "remote":  "origin/codex/m521-29-top-agent-mission",
+    "files":  [
+                  {
+                      "path":  "codex-memory/kube-agent/current/RECOVERY_STATUS.md",
+                      "sha256":  "1AA4E3AF64A1034BB5716454C8CC9B4AB3E7E6EEA55A8C2E6DF569CE2E582B6E",
+                      "bytes":  87718
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/M5_82_1_WORKSPACE_RECOVERY_SHA256.json",
+                      "sha256":  "15688BCE4AA505ECC6749A736A4E4A237F0ACF180E806D7E4E636F0F53E24290",
+                      "bytes":  13577
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_M5_82_TOP_TIER_TECHNOLOGY_INTRODUCTION_PLAYBOOK_20260610.md",
+                      "sha256":  "7887FF0524172DC306E5C100D1CC93CE6E23AB787775D8AAFCA31089C1109978",
+                      "bytes":  7875
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "4F9AA452B8F0517A4CA11BB103B1CA141F0F07BD4412ACB652434178692BAB09",
+                      "bytes":  458587
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "DC680093F7300F3B2B0C93A4AAA31F7E5B2FCD00412CB1D5FB0955238E975F7E",
+                      "bytes":  198809
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_tech-stack_BACKEND_ADVANCED_TECH_STACK_ROADMAP_20260608.md",
+                      "sha256":  "0D1A10C098C2BEAE5FE5D13E35ED0EFCD23C8D7936918950B67AD49B5F6542B9",
+                      "bytes":  115938
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/CHANGELOG.md",
+                      "sha256":  "6FBC680EF01CF39AAA2ED11DF0AFAEF0964DB87F908D3D207C63E45C632053A8",
+                      "bytes":  392151
+                  },
+                  {
+                      "path":  "docs/M5_82_TOP_TIER_TECHNOLOGY_INTRODUCTION_PLAYBOOK_20260610.md",
+                      "sha256":  "7887FF0524172DC306E5C100D1CC93CE6E23AB787775D8AAFCA31089C1109978",
+                      "bytes":  7875
+                  },
+                  {
+                      "path":  "docs/PROJECT_MISSION_AND_MEMORY.md",
+                      "sha256":  "4F9AA452B8F0517A4CA11BB103B1CA141F0F07BD4412ACB652434178692BAB09",
+                      "bytes":  458587
+                  },
+                  {
+                      "path":  "docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md",
+                      "sha256":  "DC680093F7300F3B2B0C93A4AAA31F7E5B2FCD00412CB1D5FB0955238E975F7E",
+                      "bytes":  198809
+                  },
+                  {
+                      "path":  "CHANGELOG.md",
+                      "sha256":  "6FBC680EF01CF39AAA2ED11DF0AFAEF0964DB87F908D3D207C63E45C632053A8",
+                      "bytes":  392151
+                  }
+              ]
+}
