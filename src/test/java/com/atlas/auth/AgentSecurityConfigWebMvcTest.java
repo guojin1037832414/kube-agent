@@ -162,6 +162,10 @@ class AgentSecurityConfigWebMvcTest {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
             .andExpect(status().isForbidden());
 
+        mockMvc.perform(get("/api/agent/observability/top-tier/vue-workbench-acceptance-contract")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
+            .andExpect(status().isForbidden());
+
         mockMvc.perform(get("/api/agent/observability/top-tier/phase1-execution-roadmap")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
             .andExpect(status().isForbidden());
@@ -383,6 +387,10 @@ class AgentSecurityConfigWebMvcTest {
             .andExpect(status().isOk());
 
         mockMvc.perform(get("/api/agent/observability/top-tier/vue-workbench-implementation-package")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token"))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/agent/observability/top-tier/vue-workbench-acceptance-contract")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token"))
             .andExpect(status().isOk());
 
@@ -785,6 +793,11 @@ class AgentSecurityConfigWebMvcTest {
         @GetMapping("/api/agent/observability/top-tier/vue-workbench-implementation-package")
         String observabilityTopTierVueWorkbenchImplementationPackage() {
             return "top-tier-vue-workbench-implementation-package";
+        }
+
+        @GetMapping("/api/agent/observability/top-tier/vue-workbench-acceptance-contract")
+        String observabilityTopTierVueWorkbenchAcceptanceContract() {
+            return "top-tier-vue-workbench-acceptance-contract";
         }
 
         @GetMapping("/api/agent/observability/top-tier/phase1-execution-roadmap")

@@ -9,6 +9,33 @@
 - 供应链、CI、SBOM、质量门禁进入工程默认路径；
 - Java / Spring / Agent 框架升级以兼容性矩阵推进，不用不可构建的版本号伪装先进。
 
+## 2026-06-10 M5.83 Top-Tier-Vue-Workbench-Acceptance-Contract Rule
+
+M5.83 adds the backend-owned acceptance contract for the latest-technology Vue workbench:
+
+```text
+GET /api/agent/observability/top-tier/vue-workbench-acceptance-contract
+```
+
+This is now the Phase 1 frontend handoff rule after M5.82:
+
+- `vue-kube-manager` must implement the five-page Agent technology workbench from backend-owned route, API, fixture, Jest, and forbidden-selector contracts.
+- The contract is locked to the observed frontend baseline: Vue 2.6, vue-router 3, Vuex 3, Element UI 2, axios through `src/utils/request.js`, Vue CLI/Jest, and `tests/unit/**/*.spec.js`.
+- Vue 3, vue-router 4, Element Plus, Vite, Pinia, direct `fetch`, and `axios.create` are not introduced in this slice; they remain future compatibility-lane work if needed.
+- API functions are GET-only, use `@/utils/request`, unwrap `ApiResponse.data`, and distinguish mocked acceptance HTTP from production read-only GET calls.
+- Jest must prove both visible behavior and absent authority: forbidden runtime selectors must not exist and the API module must not export `post`, `put`, `patch`, or `delete`.
+- JSON evidence panels must remain read-only and XSS-safe; `v-html` is forbidden for backend strings.
+- OpenAI Agents, MCP authorization, OTel GenAI, OWASP LLM Top 10, A2A, RAG, and kube-manager write governance remain visible as evidence and learning checks, not runtime authority.
+
+Technology judgment: the best next "advanced technology" move is not a blind frontend framework migration. The top-tier path is to make the existing Vue 2 operator console a precise, tested Agent governance workbench first. Runtime Agent capabilities should expand only after the workbench can teach and verify their evidence gates.
+
+Next order after M5.83:
+
+- Implement the five-page `vue-kube-manager` workbench from the M5.83 contract using mocked fixtures and Jest first.
+- Keep Java 21/25, Spring Boot 4, Spring AI 2.0.0-RC2, MCP runtime, A2A, retrieval, CI blocking, and kube-manager writes in compatibility/evidence lanes.
+- Continue reviewed redacted eval trace evidence and Memory/RAG reviewed fixtures.
+- Keep Phase 2 NIM/HPC/Slurm/BCM paused.
+
 ## 2026-06-10 M5.82 Top-Tier-Technology-Introduction-Playbook Rule
 
 M5.82 adds the backend-owned latest-technology introduction playbook:

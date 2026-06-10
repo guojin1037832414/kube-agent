@@ -10,7 +10,70 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.82-1
+## Latest Phase 1 Core Memory - M5.83-1
+
+M5.83-1 adds the top-tier Vue workbench acceptance contract endpoint. It answers the current frontend handoff problem: before editing `vue-kube-manager`, the backend must publish the exact route, API, fixture, Jest, forbidden-selector, security, and teaching contract that the five-page Agent technology workbench must satisfy.
+
+Endpoint:
+
+```text
+GET /api/agent/observability/top-tier/vue-workbench-acceptance-contract
+```
+
+Delivered:
+
+- Added `AgentTopTierVueWorkbenchAcceptanceContractResponse`.
+- Added `AgentTopTierVueWorkbenchAcceptanceContractService`.
+- Added admin-only Controller method `topTierVueWorkbenchAcceptanceContract()`.
+- Published 6 frontend stack facts, 5 route mount specs, 8 API client specs, 5 page fixture specs, 10 acceptance scenarios, 12 forbidden runtime selectors, 10 implementation files, 3 test commands, and teaching checkpoints.
+- Embedded `AgentTopTierVueWorkbenchImplementationPackageResponse` as the source implementation package.
+- Added fail-closed source-package checks for hidden runtime authority.
+- Integrated the endpoint into advanced technology adoption, Phase 1 roadmap, top-tier readiness overview, Vue readiness control plane, Controller, source-security, and Spring Security contracts.
+- Added the teaching document `docs/M5_83_TOP_TIER_VUE_WORKBENCH_ACCEPTANCE_CONTRACT_20260610.md`.
+
+Current state:
+
+- `schemaVersion=agent-top-tier-vue-workbench-acceptance-contract.v1`.
+- `contractStatus=ACCEPTANCE_CONTRACT_READY_FOR_VUE2_ELEMENT_UI_IMPLEMENTATION`.
+- `frontendTarget=vue-kube-manager Vue 2 / Element UI top-tier Agent technology workbench`.
+- `sourceImplementationPackageEmbedded=true`.
+- `vue2ElementUiProfile=true`.
+- `fixtureOnly=true`.
+- `runtimeControlAllowed=false`.
+- `frontendStackFactCount=6`.
+- `routeMountSpecCount=5`.
+- `apiClientSpecCount=8`.
+- `pageFixtureSpecCount=5`.
+- `acceptanceScenarioCount=10`.
+- `forbiddenRuntimeSelectorCount=12`.
+- `implementationFileCount=10`.
+- `testCommandCount=3`.
+
+Security boundary:
+
+- M5.83 is admin-only, GET-only, read-only, fixture-only, acceptance-contract-only, source-package-composition-only, and external-call-free at request time.
+- It composes only `implementationPackageService.implementationPackage()`.
+- It does not modify `pom.xml`, upgrade dependencies, switch Java/Spring/Spring AI baselines, edit `vue-kube-manager`, call kube-manager including port `8100`, run evals, execute Tools, call `SafeToolExecutor`, invoke HITL, expose MCP runtime `tools/call`, run A2A runtime handoff, execute retrieval/vector/embedding/reranker/GraphRAG, write memory, write audit, issue durable receipts, enable CI blocking, or touch NIM / HPC / Slurm / BCM Phase 2 scope.
+
+Multi-expert memory:
+
+- Hypatia / frontend explorer inspected the real `vue-kube-manager` structure and recommended locking the contract to `asyncRoutes`, `BackendLayout`, menu permission fixtures, `ApiResponse.data`, Element UI selectors, stable route names, and absent DOM/API runtime controls.
+- Planck / architecture-security review recommended fail-closed source-package checks, distinction between mocked acceptance HTTP and production read-only GETs, governance alignment for OpenAI Agents/MCP/OTel/OWASP, and XSS-safe JSON evidence panels.
+
+Learning point: a top-tier Agent workbench is not just a page set. It is a tested authority boundary. The frontend must prove both the visible learning/operator experience and the absence of unreviewed runtime authority.
+
+Latest verified commands for this slice include:
+
+- `mvn -q "-Dtest=AgentTopTierVueWorkbenchAcceptanceContractServiceTest,AgentVueReadinessControlPlaneServiceTest,AgentPhase1ExecutionRoadmapServiceTest,AgentTopTierReadinessOverviewServiceTest,AgentAdvancedTechnologyAdoptionContractServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+
+Next safe development order:
+
+- Implement the five-page `vue-kube-manager` workbench from the M5.83 acceptance contract using mocked fixtures and Jest first.
+- Continue reviewed redacted eval trace evidence curation.
+- Complete Memory/RAG reviewed trace fixtures.
+- Keep Java/Spring/Spring AI major upgrades, MCP runtime, A2A handoff, retrieval runtime, CI blocking, kube-manager writes, and Phase 2 NIM/HPC/Slurm/BCM release-gated.
+
+## Previous Phase 1 Core Memory - M5.82-1
 
 M5.82-1 adds the top-tier technology introduction playbook endpoint. It answers the newest mission wording directly: Phase 1 should introduce all advanced technologies, but it must do so through official-source evidence, compatibility matrices, reviewed traces, Vue visibility, multi-expert review, release gates, and separate runtime binding slices.
 

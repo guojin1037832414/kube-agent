@@ -160,6 +160,7 @@ public record AgentAdvancedTechnologyAdoptionContractResponse(
             "publish-official-version-protocol-watch",
             "add-official-version-and-protocol-watch-to-compatibility-matrix",
             "publish-top-tier-vue-workbench-implementation-package",
+            "publish-top-tier-vue-workbench-acceptance-contract",
             "publish-backend-technology-modernization-decision",
             "bind-memory-rag-eval-suite-before-retrieval-runtime",
             "wire-vue-top-tier-readiness-and-technology-adoption-workbench",
@@ -207,6 +208,8 @@ public record AgentAdvancedTechnologyAdoptionContractResponse(
             AgentOfficialVersionProtocolWatchVueBindingSpecResponse.BINDING_SPEC_ENDPOINT);
         endpoints.put("topTierVueWorkbenchImplementationPackage",
             AgentTopTierVueWorkbenchImplementationPackageResponse.PACKAGE_ENDPOINT);
+        endpoints.put("topTierVueWorkbenchAcceptanceContract",
+            AgentTopTierVueWorkbenchAcceptanceContractResponse.ACCEPTANCE_CONTRACT_ENDPOINT);
         endpoints.put("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap");
         endpoints.put("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane");
         endpoints.put("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview");

@@ -57,9 +57,10 @@ public record AgentPhase1ExecutionRoadmapResponse(
     private static List<Map<String, Object>> buildExecutionSteps() {
         return List.of(
             step(1, "vue-readiness-control-plane",
-                "Wire Vue to render top-tier readiness, technology introduction playbook, technology adoption, official version/protocol watch, kube-manager governance, MCP governance, and Memory/RAG contracts.",
+                "Wire Vue to render top-tier readiness, technology introduction playbook, technology adoption, official version/protocol watch, acceptance fixtures, kube-manager governance, MCP governance, and Memory/RAG contracts.",
                 "PARTIAL_BACKEND_READY",
-                List.of("backend-read-models-exist", "admin-auth-required", "official-source-watch-exists"),
+                List.of("backend-read-models-exist", "vue-workbench-acceptance-contract-exists",
+                    "admin-auth-required", "official-source-watch-exists"),
                 List.of("top-tier-readiness-overview", "advanced-technology-adoption-contract",
                     "technology-introduction-playbook",
                     "advanced-technology-compatibility-matrix",
@@ -69,6 +70,7 @@ public record AgentPhase1ExecutionRoadmapResponse(
                     "official-version-protocol-watch", "official-version-protocol-watch-dashboard",
                     "official-version-protocol-watch-binding-spec",
                     "top-tier-vue-workbench-implementation-package",
+                    "top-tier-vue-workbench-acceptance-contract",
                     "kube-manager-governance-workbench", "memory-rag-readiness",
                     "memory-rag-trace-set-curation-workbench")),
             step(2, "reviewed-eval-trace-evidence",
@@ -150,6 +152,8 @@ public record AgentPhase1ExecutionRoadmapResponse(
                 AgentOfficialVersionProtocolWatchVueBindingSpecResponse.BINDING_SPEC_ENDPOINT),
             vueTarget("top-tier-vue-workbench-implementation-package",
                 AgentTopTierVueWorkbenchImplementationPackageResponse.PACKAGE_ENDPOINT),
+            vueTarget("top-tier-vue-workbench-acceptance-contract",
+                AgentTopTierVueWorkbenchAcceptanceContractResponse.ACCEPTANCE_CONTRACT_ENDPOINT),
             vueTarget("phase1-roadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap"),
             vueTarget("vue-readiness-control-plane", "/api/agent/observability/top-tier/vue-readiness-control-plane"),
             vueTarget("kube-manager-governance", "/api/agent/observability/kube-manager/http-outlet/governance-workbench/overview"),
@@ -198,6 +202,8 @@ public record AgentPhase1ExecutionRoadmapResponse(
             AgentOfficialVersionProtocolWatchVueBindingSpecResponse.BINDING_SPEC_ENDPOINT);
         endpoints.put("topTierVueWorkbenchImplementationPackage",
             AgentTopTierVueWorkbenchImplementationPackageResponse.PACKAGE_ENDPOINT);
+        endpoints.put("topTierVueWorkbenchAcceptanceContract",
+            AgentTopTierVueWorkbenchAcceptanceContractResponse.ACCEPTANCE_CONTRACT_ENDPOINT);
         endpoints.put("kubeManagerGovernanceOverview", "/api/agent/observability/kube-manager/http-outlet/governance-workbench/overview");
         endpoints.put("evalWorkbenchOverview", "/api/agent/observability/eval/workbench/overview");
         endpoints.put("reviewedEvalTraceEvidence", "/api/agent/observability/eval/reviewed-trace-evidence");

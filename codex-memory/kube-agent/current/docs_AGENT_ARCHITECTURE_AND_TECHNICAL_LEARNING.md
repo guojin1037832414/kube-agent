@@ -2,6 +2,71 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-10 M5.83 Top-tier Vue Workbench Acceptance Contract
+
+M5.83 adds the backend-owned acceptance contract for the future `vue-kube-manager` top-tier Agent workbench. It turns the M5.79-M5.82 implementation package into executable frontend expectations: route shape, API client shape, mocked fixtures, Jest scenarios, forbidden runtime selectors, governance alignment, and teaching checkpoints.
+
+Endpoint:
+
+```text
+GET /api/agent/observability/top-tier/vue-workbench-acceptance-contract
+```
+
+Current contract:
+
+- `schemaVersion=agent-top-tier-vue-workbench-acceptance-contract.v1`
+- `contractStatus=ACCEPTANCE_CONTRACT_READY_FOR_VUE2_ELEMENT_UI_IMPLEMENTATION`
+- `frontendStackFactCount=6`
+- `routeMountSpecCount=5`
+- `apiClientSpecCount=8`
+- `pageFixtureSpecCount=5`
+- `acceptanceScenarioCount=10`
+- `forbiddenRuntimeSelectorCount=12`
+- `implementationFileCount=10`
+- `testCommandCount=3`
+- `fixtureOnly=true`
+- `runtimeControlAllowed=false`
+
+Architecture path:
+
+```text
+official source watch
+        |
+        v
+technology playbook and Vue implementation package
+        |
+        v
+M5.83 Vue acceptance contract
+        |
+        +-- asyncRoutes / BackendLayout / menu permission fixture
+        +-- GET-only api client / ApiResponse.data unwrap
+        +-- mocked Jest fixtures / Element UI selectors
+        +-- absent runtime selectors / absent mutation APIs
+        +-- XSS-safe read-only JSON evidence panels
+```
+
+Key design:
+
+- The contract is locked to the observed `vue-kube-manager` stack: Vue 2.6, vue-router 3, Vuex 3, Element UI 2, axios through `src/utils/request.js`, Vue CLI/Jest, and `tests/unit/**/*.spec.js`.
+- It explicitly rejects premature Vue 3, vue-router 4, Element Plus, Vite, Pinia, direct `fetch`, and `axios.create` additions for this workbench slice. These may be future compatibility lanes, not hidden changes inside the Agent workbench.
+- It separates acceptance tests from production read-model calls: mocked HTTP is required for Jest acceptance, production GET read-model calls are allowed, mutating backend calls remain forbidden.
+- It turns forbidden runtime authority into machine-checkable absence: DOM selectors must not exist and API modules must not export `post`, `put`, `patch`, or `delete`.
+- It maps OpenAI Agents primitives, MCP authorization concerns, OTel GenAI semantics, and OWASP LLM Top 10 risks into governance evidence without starting Agent loops, MCP runtime, GenAI spans, retrieval, or Tool calls.
+
+Learning point: top-tier frontend engineering is not just "make pages". The frontend must become an operator workbench and teaching surface whose tests prove both what is visible and what authority is absent. This is especially important for Agent systems because unsafe buttons, unreviewed API methods, and unescaped evidence panels can become production risk.
+
+Safety invariant:
+
+- M5.83 is admin-only, GET-only, read-only, fixture-only, acceptance-contract-only, source-package-composition-only, and external-call-free at request time.
+- It does not modify `pom.xml`, upgrade Java/Spring/Spring AI, edit `vue-kube-manager`, run evals, execute Tools, invoke `SafeToolExecutor`, invoke HITL, call kube-manager or port `8100`, expose MCP runtime `tools/call`, run A2A runtime handoff, execute retrieval/vector/embedding/reranker/GraphRAG, write memory, write audit, issue durable receipts, enable CI blocking, or touch NIM / HPC / Slurm / BCM Phase 2 scope.
+
+Multi-expert review:
+
+- Hypatia / frontend explorer reviewed the real `vue-kube-manager` shape and recommended `asyncRoutes`, `BackendLayout`, menu permission fixtures, `ApiResponse.data`, Element UI selectors, and DOM/API absence checks.
+- Planck / architecture-security reviewer recommended fail-closed source-package checks, separation between mocked acceptance HTTP and production read-model GETs, governance alignment, and XSS-safe evidence rendering rules.
+
+Next work: implement the five-page `vue-kube-manager` workbench from this contract with mocked fixtures and Jest first. Runtime MCP, A2A, retrieval, CI blocking, kube-manager writes, Java/Spring/Spring AI major upgrades, and Phase 2 NIM/HPC/Slurm/BCM remain release-gated.
+
 ## 2026-06-10 M5.82 Top-tier Technology Introduction Playbook
 
 M5.82 adds the Phase 1 "latest technology introduction playbook". It answers the newest mission wording: introduce all advanced technologies and still finish the top-tier Agent goal, without turning that ambition into blind dependency upgrades or unsafe runtime switches.

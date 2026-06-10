@@ -52,6 +52,7 @@ public class ObservabilityController {
     private final AgentOfficialVersionProtocolWatchDashboardService officialVersionProtocolWatchDashboardService;
     private final AgentOfficialVersionProtocolWatchVueBindingSpecService officialVersionProtocolWatchVueBindingSpecService;
     private final AgentTopTierVueWorkbenchImplementationPackageService topTierVueWorkbenchImplementationPackageService;
+    private final AgentTopTierVueWorkbenchAcceptanceContractService topTierVueWorkbenchAcceptanceContractService;
     private final AgentPhase1ExecutionRoadmapService phase1ExecutionRoadmapService;
     private final AgentVueReadinessControlPlaneService vueReadinessControlPlaneService;
     private final AgentMemoryRagReadinessService memoryRagReadinessService;
@@ -100,6 +101,7 @@ public class ObservabilityController {
                                     AgentOfficialVersionProtocolWatchDashboardService officialVersionProtocolWatchDashboardService,
                                     AgentOfficialVersionProtocolWatchVueBindingSpecService officialVersionProtocolWatchVueBindingSpecService,
                                     AgentTopTierVueWorkbenchImplementationPackageService topTierVueWorkbenchImplementationPackageService,
+                                    AgentTopTierVueWorkbenchAcceptanceContractService topTierVueWorkbenchAcceptanceContractService,
                                     AgentPhase1ExecutionRoadmapService phase1ExecutionRoadmapService,
                                    AgentVueReadinessControlPlaneService vueReadinessControlPlaneService,
                                    AgentMemoryRagReadinessService memoryRagReadinessService,
@@ -147,6 +149,7 @@ public class ObservabilityController {
         this.officialVersionProtocolWatchDashboardService = officialVersionProtocolWatchDashboardService;
         this.officialVersionProtocolWatchVueBindingSpecService = officialVersionProtocolWatchVueBindingSpecService;
         this.topTierVueWorkbenchImplementationPackageService = topTierVueWorkbenchImplementationPackageService;
+        this.topTierVueWorkbenchAcceptanceContractService = topTierVueWorkbenchAcceptanceContractService;
         this.phase1ExecutionRoadmapService = phase1ExecutionRoadmapService;
         this.vueReadinessControlPlaneService = vueReadinessControlPlaneService;
         this.memoryRagReadinessService = memoryRagReadinessService;
@@ -296,6 +299,17 @@ public class ObservabilityController {
             return guard;
         }
         return ResponseEntity.ok(ApiResponse.ok(topTierVueWorkbenchImplementationPackageService.implementationPackage()));
+    }
+
+    /** Publish Vue 2 / Element UI acceptance fixtures and absence assertions for the top-tier workbench. */
+    @GetMapping("/top-tier/vue-workbench-acceptance-contract")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentTopTierVueWorkbenchAcceptanceContractResponse>> topTierVueWorkbenchAcceptanceContract() {
+        ResponseEntity<ApiResponse<AgentTopTierVueWorkbenchAcceptanceContractResponse>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return ResponseEntity.ok(ApiResponse.ok(topTierVueWorkbenchAcceptanceContractService.contract()));
     }
 
     /** Publish the Phase 1 execution order as a read-only roadmap contract. */

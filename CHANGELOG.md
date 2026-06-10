@@ -6,6 +6,23 @@
 
 ---
 
+## [M5.83-1] - Top-tier Vue workbench acceptance contract
+
+**Delivery**: Added a backend-owned Vue acceptance contract endpoint that turns the M5.79-M5.82 implementation package into concrete `vue-kube-manager` route, API client, fixture, Jest, security, and teaching requirements.
+**Changes**
+- Added `GET /api/agent/observability/top-tier/vue-workbench-acceptance-contract`.
+- Added `AgentTopTierVueWorkbenchAcceptanceContractResponse` and `AgentTopTierVueWorkbenchAcceptanceContractService`.
+- Published 6 frontend stack facts, 5 `asyncRoutes` mount specs, 8 GET-only API client specs, 5 mocked fixture specs, 10 acceptance scenarios, 12 forbidden runtime selectors, 10 implementation files, and 3 frontend test commands.
+- Embedded the top-tier Vue workbench implementation package as the source package and added fail-closed checks for hidden runtime authority.
+- Locked the frontend contract to the observed `vue-kube-manager` stack: Vue 2.6, vue-router 3, Vuex 3, Element UI 2, axios request wrapper, Vue CLI/Jest, and `tests/unit/**/*.spec.js`.
+- Added explicit acceptance rules for `asyncRoutes`, `BackendLayout`, `/agent` parent routing, menu permission fixtures, `ApiResponse.data` unwrapping, Element UI DOM selectors, XSS-safe JSON panels, and absent mutation APIs.
+- Integrated the endpoint into advanced technology adoption, Phase 1 roadmap, top-tier readiness, Vue readiness control plane, Controller, source-security, and Spring Security tests.
+**Verification**
+- `mvn -q "-Dtest=AgentTopTierVueWorkbenchAcceptanceContractServiceTest,AgentVueReadinessControlPlaneServiceTest,AgentPhase1ExecutionRoadmapServiceTest,AgentTopTierReadinessOverviewServiceTest,AgentAdvancedTechnologyAdoptionContractServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test` passed.
+**Security**
+- The acceptance contract is admin-only, GET-only, read-only, fixture-only, acceptance-contract-only, source-package-composition-only, and external-call-free at request time.
+- It does not modify `pom.xml`, upgrade dependencies, switch Java/Spring/Spring AI baselines, edit `vue-kube-manager`, call kube-manager or port `8100`, run evals, execute Tools, invoke `SafeToolExecutor`, invoke HITL, expose MCP runtime `tools/call`, run A2A runtime handoff, execute retrieval/vector/embedding/reranker/GraphRAG, write memory, write audit, issue durable receipts, enable CI blocking, or touch NIM / HPC / Slurm / BCM Phase 2 work.
+
 ## [M5.82-1] - Top-tier technology introduction playbook
 
 **Delivery**: Added a backend-owned playbook endpoint that turns "introduce all advanced technologies" into an explicit official-source -> compatibility-matrix -> evidence-readiness -> release-review -> runtime-binding path.

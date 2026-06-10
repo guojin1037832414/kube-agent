@@ -175,6 +175,8 @@ class ObservabilityControllerTest {
             officialVersionProtocolWatchVueBindingSpecService,
             advancedTechnologyCompatibilityMatrixVueBindingSpecService
         );
+    private final AgentTopTierVueWorkbenchAcceptanceContractService topTierVueWorkbenchAcceptanceContractService =
+        new AgentTopTierVueWorkbenchAcceptanceContractService(topTierVueWorkbenchImplementationPackageService);
     private final AgentPhase1ExecutionRoadmapService phase1ExecutionRoadmapService =
         new AgentPhase1ExecutionRoadmapService();
     private final AgentVueReadinessControlPlaneService vueReadinessControlPlaneService =
@@ -199,6 +201,7 @@ class ObservabilityControllerTest {
         officialVersionProtocolWatchDashboardService,
         officialVersionProtocolWatchVueBindingSpecService,
         topTierVueWorkbenchImplementationPackageService,
+        topTierVueWorkbenchAcceptanceContractService,
         phase1ExecutionRoadmapService,
         vueReadinessControlPlaneService,
         memoryRagReadinessService,
@@ -1694,6 +1697,98 @@ class ObservabilityControllerTest {
         assertThat(implementationPackage.toString())
             .contains("runtime-buttons-absent-in-all-pages", "DisabledActionList", "EvidenceGapTable",
                 "LearningPathTimeline")
+            .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret");
+    }
+
+    @Test
+    void topTierVueWorkbenchAcceptanceContract_shouldRequireAdminAndReturnFrontendAcceptanceContract() {
+        ResponseEntity<ApiResponse<AgentTopTierVueWorkbenchAcceptanceContractResponse>> anonymous =
+            controller.topTierVueWorkbenchAcceptanceContract();
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentTopTierVueWorkbenchAcceptanceContractResponse>> user =
+            controller.topTierVueWorkbenchAcceptanceContract();
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        userPermissionContext.unbind();
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentTopTierVueWorkbenchAcceptanceContractResponse>> admin =
+            controller.topTierVueWorkbenchAcceptanceContract();
+
+        assertThat(admin.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(admin.getBody()).isNotNull();
+        AgentTopTierVueWorkbenchAcceptanceContractResponse contract = admin.getBody().getData();
+        assertThat(contract.schemaVersion())
+            .isEqualTo("agent-top-tier-vue-workbench-acceptance-contract.v1");
+        assertThat(contract.contractStatus())
+            .isEqualTo("ACCEPTANCE_CONTRACT_READY_FOR_VUE2_ELEMENT_UI_IMPLEMENTATION");
+        assertThat(contract.vue2ElementUiProfile()).isTrue();
+        assertThat(contract.fixtureOnly()).isTrue();
+        assertThat(contract.runtimeControlAllowed()).isFalse();
+        assertThat(contract.frontendStackFactCount()).isEqualTo(6);
+        assertThat(contract.routeMountSpecCount()).isEqualTo(5);
+        assertThat(contract.apiClientSpecCount()).isEqualTo(8);
+        assertThat(contract.pageFixtureSpecCount()).isEqualTo(5);
+        assertThat(contract.forbiddenRuntimeSelectorCount()).isEqualTo(12);
+        assertThat(contract.frontendStackFacts().toString())
+            .contains("^2.6.11", "vue@3", "element-plus", "axios@0.18.1");
+        assertThat(contract.routeMountSpecs()).allSatisfy(route -> assertThat(route)
+            .containsEntry("routeArray", "asyncRoutes")
+            .containsEntry("layout", "BackendLayout")
+            .containsEntry("permissionMenuEndpoint", "/api/{organizationId}/permission/menu/my")
+            .containsEntry("runtimeControlAllowed", false));
+        assertThat(contract.routeMountSpecs()).extracting(route -> route.get("routeName"))
+            .contains("TopTierTechnologyIntroductionPlaybook",
+                "TopTierBackendTechnologyModernizationDecision");
+        assertThat(contract.apiClientSpecs()).extracting(client -> client.get("functionName"))
+            .contains("fetchTopTierVueWorkbenchAcceptanceContract",
+                "fetchTopTierVueWorkbenchImplementationPackage",
+                "fetchVueReadinessControlPlane");
+        assertThat(contract.apiClientSpecs()).allSatisfy(client -> assertThat(client)
+            .containsEntry("method", "get")
+            .containsEntry("importPath", "@/utils/request")
+            .containsEntry("acceptanceRequiresMockedHttp", true)
+            .containsEntry("productionReadModelCallAllowed", true)
+            .containsEntry("mutatingBackendCallAllowed", false));
+        assertThat(contract.forbiddenRuntimeSelectors()).extracting(selector -> selector.get("id"))
+            .contains("mcp-tools-call-button", "a2a-runtime-handoff-button",
+                "enable-rag-runtime-button", "kube-manager-write-button", "reopen-phase2-button");
+        assertThat(contract.forbiddenRuntimeSelectors()).allSatisfy(selector -> assertThat(selector)
+            .containsEntry("mustBeAbsent", true)
+            .containsEntry("clickHandlerAllowed", false)
+            .containsEntry("apiExportAllowed", false));
+        assertThat(contract.endpointMap())
+            .containsEntry("topTierVueWorkbenchAcceptanceContract",
+                "/api/agent/observability/top-tier/vue-workbench-acceptance-contract")
+            .containsEntry("topTierVueWorkbenchImplementationPackage",
+                "/api/agent/observability/top-tier/vue-workbench-implementation-package");
+        assertThat(contract.contractPolicy())
+            .containsEntry("acceptanceContractOnly", true)
+            .containsEntry("frontendStackLockedToObservedLegacyRuntime", true)
+            .containsEntry("runtimeButtonsAllowed", false)
+            .containsEntry("dependencyUpgradeButtonsAllowed", false);
+        assertThat(contract.contractPolicy().toString())
+            .contains("governanceAlignment", "mcpAuthorizationTokenFlowNotStarted",
+                "xssAndEvidenceRenderingRules", "vHtmlAllowed=false", "expectedElementUiSelectors");
+        assertThat(contract.safety())
+            .containsEntry("adminOnly", true)
+            .containsEntry("readOnly", true)
+            .containsEntry("acceptanceContractOnly", true)
+            .containsEntry("runtimeControlAllowed", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("kubeManagerCalls", false)
+            .containsEntry("mcpToolsCall", false)
+            .containsEntry("retrievalExecuted", false)
+            .containsEntry("phase2NimHpcSlurmBcmTouched", false);
+        assertThat(contract.toString())
+            .contains("TopTierTechnologyIntroductionPlaybook", "wrapper.find", "response.data")
             .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret");
     }
 

@@ -222,11 +222,16 @@ public record AgentTopTierReadinessOverviewResponse(
             "vue-operator-workbench",
             "Vue operator workbench integration",
             "PARTIAL",
-            "Backend page contracts exist for eval and kube-manager governance; frontend implementation still needs to consume the full readiness/control-plane map.",
+            "Backend page contracts, implementation package, and Vue 2 acceptance contract exist; frontend implementation still needs to consume and verify the full readiness/control-plane map.",
             "/api/agent/observability/top-tier/readiness-overview",
-            List.of("eval workbench contracts", "kube-manager governance workbench", "top-tier readiness overview"),
+            List.of("eval workbench contracts", "kube-manager governance workbench", "top-tier readiness overview",
+                "top-tier Vue workbench acceptance contract"),
             Map.of(
                 "backendContractsExist", true,
+                "vueWorkbenchImplementationPackageEndpoint",
+                AgentTopTierVueWorkbenchImplementationPackageResponse.PACKAGE_ENDPOINT,
+                "vueWorkbenchAcceptanceContractEndpoint",
+                AgentTopTierVueWorkbenchAcceptanceContractResponse.ACCEPTANCE_CONTRACT_ENDPOINT,
                 "frontendConsumptionVerified", false,
                 "runtimeControlButtonsAllowed", false
             )
@@ -337,6 +342,7 @@ public record AgentTopTierReadinessOverviewResponse(
             "wire-vue-official-version-protocol-watch-dashboard",
             "wire-vue-official-version-protocol-watch-binding-spec",
             "wire-vue-top-tier-workbench-implementation-package",
+            "wire-vue-top-tier-workbench-acceptance-contract",
             "wire-vue-phase1-execution-roadmap",
             "wire-vue-readiness-control-plane",
             "populate-reviewed-redacted-eval-trace-evidence",
@@ -380,6 +386,8 @@ public record AgentTopTierReadinessOverviewResponse(
             AgentOfficialVersionProtocolWatchVueBindingSpecResponse.BINDING_SPEC_ENDPOINT);
         endpoints.put("topTierVueWorkbenchImplementationPackage",
             AgentTopTierVueWorkbenchImplementationPackageResponse.PACKAGE_ENDPOINT);
+        endpoints.put("topTierVueWorkbenchAcceptanceContract",
+            AgentTopTierVueWorkbenchAcceptanceContractResponse.ACCEPTANCE_CONTRACT_ENDPOINT);
         endpoints.put("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap");
         endpoints.put("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane");
         endpoints.put("kubeManagerGovernanceOverview", "/api/agent/observability/kube-manager/http-outlet/governance-workbench/overview");

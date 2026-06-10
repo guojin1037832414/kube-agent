@@ -53,6 +53,7 @@ class ObservabilityControllerSecurityContractTest {
         assertThat(source).contains("@GetMapping(\"/top-tier/official-version-protocol-watch/dashboard\")");
         assertThat(source).contains("@GetMapping(\"/top-tier/official-version-protocol-watch/vue-binding-spec\")");
         assertThat(source).contains("@GetMapping(\"/top-tier/vue-workbench-implementation-package\")");
+        assertThat(source).contains("@GetMapping(\"/top-tier/vue-workbench-acceptance-contract\")");
         assertThat(source).contains("@GetMapping(\"/top-tier/phase1-execution-roadmap\")");
         assertThat(source).contains("@GetMapping(\"/top-tier/vue-readiness-control-plane\")");
         assertThat(source).contains("@GetMapping(\"/memory-rag/readiness\")");
@@ -106,6 +107,7 @@ class ObservabilityControllerSecurityContractTest {
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentOfficialVersionProtocolWatchDashboardResponse>> officialVersionProtocolWatchDashboard()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentOfficialVersionProtocolWatchVueBindingSpecResponse>> officialVersionProtocolWatchVueBindingSpec()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentTopTierVueWorkbenchImplementationPackageResponse>> topTierVueWorkbenchImplementationPackage()");
+        assertThat(source).contains("public ResponseEntity<ApiResponse<AgentTopTierVueWorkbenchAcceptanceContractResponse>> topTierVueWorkbenchAcceptanceContract()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentPhase1ExecutionRoadmapResponse>> phase1ExecutionRoadmap()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentVueReadinessControlPlaneResponse>> vueReadinessControlPlane()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentMemoryRagReadinessResponse>> memoryRagReadiness()");
