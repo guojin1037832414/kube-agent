@@ -106,6 +106,15 @@ public record AgentTopTierVueWorkbenchImplementationPackageResponse(
     private static List<Map<String, Object>> buildRouteSpecs() {
         return List.of(
             routeSpec(
+                "top-tier-technology-introduction-playbook",
+                "/agent/top-tier/technology-introduction-playbook",
+                "Top-tier technology introduction playbook",
+                AgentTopTierTechnologyIntroductionPlaybookResponse.PLAYBOOK_ENDPOINT,
+                List.of("TechnologyPlaybookSummaryStrip", "TechnologyIntroductionStageTimeline",
+                    "TechnologyLanePlaybookTable", "ReleaseGateChecklist",
+                    "ExpertReviewRoundPanel", "TechnologyPlaybookSourceJsonPanel")
+            ),
+            routeSpec(
                 "top-tier-official-version-protocol-watch",
                 "/agent/top-tier/official-version-protocol-watch",
                 "Official Agent technology watch",
@@ -168,6 +177,9 @@ public record AgentTopTierVueWorkbenchImplementationPackageResponse(
             apiClient("fetchOfficialWatchBindingSpec", "GET",
                 AgentOfficialVersionProtocolWatchVueBindingSpecResponse.BINDING_SPEC_ENDPOINT,
                 "officialWatchBindingSpec"),
+            apiClient("fetchTechnologyIntroductionPlaybook", "GET",
+                AgentTopTierTechnologyIntroductionPlaybookResponse.PLAYBOOK_ENDPOINT,
+                "technologyIntroductionPlaybook"),
             apiClient("fetchCompatibilityMatrix", "GET",
                 AgentAdvancedTechnologyCompatibilityMatrixResponse.MATRIX_ENDPOINT,
                 "sourceMatrix"),
@@ -205,6 +217,11 @@ public record AgentTopTierVueWorkbenchImplementationPackageResponse(
                 AgentOfficialVersionProtocolWatchVueBindingSpecResponse.BINDING_SPEC_ENDPOINT,
                 List.of("load-binding-spec", "render-source-dashboard", "render-disabled-actions",
                     "assert-no-runtime-buttons")),
+            pageAssembly("technology-introduction-playbook-page",
+                AgentTopTierTechnologyIntroductionPlaybookResponse.PLAYBOOK_ENDPOINT,
+                List.of("load-technology-introduction-playbook", "render-playbook-stages",
+                    "render-lane-playbook-rows", "render-release-gates", "render-expert-review-rounds",
+                    "assert-no-upgrade-buttons")),
             pageAssembly("compatibility-matrix-page",
                 AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecResponse.BINDING_SPEC_ENDPOINT,
                 List.of("load-binding-spec", "render-source-matrix", "render-candidate-lanes",
@@ -244,6 +261,7 @@ public record AgentTopTierVueWorkbenchImplementationPackageResponse(
             sharedComponent("ExternalOfficialLink", "Open official URLs as navigation evidence only."),
             sharedComponent("ReadonlyJsonPanel", "Render embedded source read models without inline editing."),
             sharedComponent("EvidenceGapTable", "Render lane-to-evidence gaps without computing release authority."),
+            sharedComponent("ExpertReviewRoundPanel", "Render required expert review rounds without workflow execution."),
             sharedComponent("LearningPathTimeline",
                 "Render teaching steps without turning them into runtime workflow actions.")
         );
@@ -263,6 +281,8 @@ public record AgentTopTierVueWorkbenchImplementationPackageResponse(
         return List.of(
             fixture("official-watch-page-renders-with-mocked-binding-spec",
                 "Render official sources, tracks, gates, disabled actions, and source JSON from mocked HTTP."),
+            fixture("technology-playbook-page-renders-with-mocked-playbook",
+                "Render introduction stages, lane playbook rows, release gates, expert reviews, and learning modules from mocked HTTP."),
             fixture("compatibility-matrix-page-renders-with-mocked-binding-spec",
                 "Render baselines, candidate lanes, migration gates, blocked shortcuts, and test lanes from mocked HTTP."),
             fixture("evidence-readiness-page-renders-with-mocked-readiness",
@@ -335,7 +355,8 @@ public record AgentTopTierVueWorkbenchImplementationPackageResponse(
     private static List<String> buildImplementationOrder() {
         return List.of(
             "create-top-tier-agent-workbench-navigation",
-            "add-api-client-methods-for-six-read-only-endpoints",
+            "add-api-client-methods-for-seven-read-only-endpoints",
+            "implement-technology-introduction-playbook-page-from-read-model",
             "implement-shared-read-only-renderers",
             "implement-official-watch-page-from-binding-spec",
             "implement-compatibility-matrix-page-from-binding-spec",
@@ -353,6 +374,8 @@ public record AgentTopTierVueWorkbenchImplementationPackageResponse(
             AgentOfficialVersionProtocolWatchVueBindingSpecResponse.BINDING_SPEC_ENDPOINT);
         endpoints.put("officialVersionProtocolWatchDashboard",
             AgentOfficialVersionProtocolWatchDashboardResponse.DASHBOARD_ENDPOINT);
+        endpoints.put("topTierTechnologyIntroductionPlaybook",
+            AgentTopTierTechnologyIntroductionPlaybookResponse.PLAYBOOK_ENDPOINT);
         endpoints.put("advancedTechnologyCompatibilityMatrixVueBindingSpec",
             AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecResponse.BINDING_SPEC_ENDPOINT);
         endpoints.put("advancedTechnologyCompatibilityMatrix",

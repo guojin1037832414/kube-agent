@@ -2,6 +2,82 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-10 M5.82 Top-tier Technology Introduction Playbook
+
+M5.82 adds the Phase 1 "latest technology introduction playbook". It answers the newest mission wording: introduce all advanced technologies and still finish the top-tier Agent goal, without turning that ambition into blind dependency upgrades or unsafe runtime switches.
+
+Endpoint:
+
+```text
+GET /api/agent/observability/top-tier/technology-introduction-playbook
+```
+
+Current contract:
+
+- `schemaVersion=agent-top-tier-technology-introduction-playbook.v1`
+- `playbookStatus=PLAYBOOK_READY_EVIDENCE_GAPS_BLOCK_RUNTIME`
+- `officialSourceCount=8`
+- `technologyLaneCount=10`
+- `playbookStageCount=8`
+- `releaseGateCount=10`
+- `expertReviewRoundCount=6`
+- `learningModuleCount=8`
+- `forbiddenShortcutCount=10`
+- `vueRouteCount=5`
+- `phase1TopTierGoalPreserved=true`
+- `javaSpringControlPlanePreserved=true`
+- `phase2NimHpcSlurmBcmPaused=true`
+- `runtimeControlAllowed=false`
+- `runtimeUpgradeAllowedNow=false`
+- `dependencyUpgradeAllowedNow=false`
+- `ciBlockingAllowedNow=false`
+
+Architecture path:
+
+```text
+official source watch
+        |
+        v
+advanced technology compatibility matrix
+        |
+        v
+evidence readiness
+        |
+        v
+backend modernization decision
+        |
+        v
+M5.82 technology introduction playbook
+        |
+        +-- compatibility branch
+        +-- focused regression tests
+        +-- Vue read-only workbench
+        +-- multi-expert release review
+        +-- separate runtime binding slice
+```
+
+Key design:
+
+- The playbook composes only four existing read models: official source watch, compatibility matrix, evidence readiness, and backend modernization decision.
+- It turns 10 advanced technology lanes into learnable rows: Java 21/25, Spring Boot 4, Spring AI 2.0.0-RC2, OpenAI Responses/Agents patterns, MCP runtime, A2A provenance, OTel GenAI adapter, Memory/RAG/GraphRAG/reranker/vector store, kube-manager writes, and supply-chain/CI quality gates.
+- It makes multi-expert review a backend contract with six required review rounds: architecture, security, frontend Vue, eval quality, Memory/RAG, and release management.
+- It publishes eight learning modules so this project remains a teaching project, not just a feature delivery project.
+- It expands the Vue latest-technology workbench from four pages to five pages by adding the playbook page.
+
+Learning point: 顶级 Agent 的先进性不是把所有新框架直接接到 runtime，而是把每个先进能力先变成官方来源、兼容矩阵、证据缺口、可见工作台、评审角色、测试门禁和发布路径。这样学习者能看到“为什么还不能打开某个按钮”，也能学会怎样把一个前沿技术安全地推进到生产边界。
+
+Safety invariant:
+
+- M5.82 is admin-only, read-only, playbook-only, source-read-model-composition-only, and external-call-free at request time.
+- It does not modify `pom.xml`, upgrade Java/Spring/Spring AI, create compatibility branches, run evals, discover candidates, run curation review, mutate trace-set catalogs, enable CI blocking, run LLMs, execute Tools, call `SafeToolExecutor`, invoke HITL, call kube-manager or port `8100`, expose MCP runtime `tools/call`, run A2A runtime handoff, execute retrieval/vector/embedding/reranker/GraphRAG, write memory, write audit, issue durable receipts, or touch NIM / HPC / Slurm / BCM Phase 2 scope.
+
+Multi-expert review:
+
+- Confucius / security-architecture review confirmed the M5.82 risk focus: keep the endpoint GET/admin-only/read-only and prevent hidden LLM, Tool, MCP `tools/call`, A2A, RAG, kube-manager, audit, memory, dependency, CI, and Phase 2 authority.
+- Erdos / docs-recovery review confirmed the M5.82 recovery checklist: update `CHANGELOG.md`, architecture learning map, project mission memory, backend tech roadmap, workspace-local recovery memory, SHA manifests, and post-push checkpoint.
+
+Next work: wire `vue-kube-manager` to the five-page latest-technology workbench, then populate real reviewed redacted eval traces and Memory/RAG fixtures. Java 21/25, Boot 4, Spring AI 2.0.0-RC2, MCP runtime, A2A, retrieval, CI blocking, and kube-manager writes remain evidence-gated. NIM / HPC / Slurm / BCM remain Phase 2.
+
 ## 2026-06-10 M5.81 Backend Technology Modernization Decision
 
 M5.81 adds the backend technology modernization decision layer. It answers the user's latest strategic question: if Phase 1 must become a top-tier Agent and must track the newest Agent technologies, should the backend stay Java/Spring, or should it jump directly to newer runtimes and frameworks?

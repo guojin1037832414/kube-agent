@@ -133,6 +133,8 @@ class AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessServiceTest {
                 "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix")
             .containsEntry("reviewedEvalTraceEvidence",
                 "/api/agent/observability/eval/reviewed-trace-evidence")
+            .containsEntry("topTierTechnologyIntroductionPlaybook",
+                "/api/agent/observability/top-tier/technology-introduction-playbook")
             .containsEntry("memoryRagReviewedTraceEvidenceManifest",
                 "/api/agent/observability/memory-rag/workbench/trace-set-curation/review-manifest");
         assertThat(readiness.readinessPolicy())

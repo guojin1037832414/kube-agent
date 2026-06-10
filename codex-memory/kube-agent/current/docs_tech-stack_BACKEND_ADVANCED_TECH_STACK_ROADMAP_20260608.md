@@ -9,6 +9,36 @@
 - 供应链、CI、SBOM、质量门禁进入工程默认路径；
 - Java / Spring / Agent 框架升级以兼容性矩阵推进，不用不可构建的版本号伪装先进。
 
+## 2026-06-10 M5.82 Top-Tier-Technology-Introduction-Playbook Rule
+
+M5.82 adds the backend-owned latest-technology introduction playbook:
+
+```text
+GET /api/agent/observability/top-tier/technology-introduction-playbook
+```
+
+This is now the Phase 1 rule after M5.81:
+
+- "Introduce all advanced technologies" means publish a governed path for every advanced technology lane before runtime authority expands.
+- The playbook composes official watch, compatibility matrix, evidence readiness, and backend modernization decision read models.
+- It keeps 10 lanes in scope: Java 21/25, Spring Boot 4, Spring AI 2.0.0-RC2, OpenAI Responses/Agents patterns, MCP runtime, A2A provenance, OTel GenAI adapter, Memory/RAG/GraphRAG/reranker/vector store, kube-manager writes, and supply-chain/CI quality.
+- It requires eight stages before runtime binding: official source, compatibility matrix, evidence readiness, compatibility branch, focused regression tests, Vue read-only workbench, multi-expert release review, and separate runtime binding slice.
+- It makes multi-expert review explicit: architecture, security, frontend Vue, eval quality, Memory/RAG, and release manager reviews.
+- The top-tier Vue workbench package now contains five routes: technology introduction playbook, official watch, compatibility matrix, evidence readiness, and backend modernization decision.
+- Vue readiness control plane now tracks 18 dashboard/workbench targets.
+- Runtime MCP, A2A, retrieval, CI blocking, kube-manager writes, dependency upgrades, and Phase 2 NIM/HPC/Slurm/BCM remain closed until their evidence gates pass.
+
+Technology judgment: the most advanced Phase 1 architecture is evidence-first adoption. A top-tier Agent is not made perfect by blindly installing every newest runtime; it becomes trustworthy when every advanced technology has official sources, compatibility tests, reviewed evidence, Vue visibility, release review, rollback memory, and a separate runtime binding decision.
+
+Next order after M5.82:
+
+- Wire `vue-kube-manager` to consume the five-page latest-technology workbench when the frontend repo is writable.
+- Capture real reviewed redacted eval trace evidence.
+- Complete Memory/RAG reviewed trace fixtures.
+- Add Java 21/25, Spring Boot 4, and Spring AI 2.0.0-RC2 compatibility branches only after the current mainline stays green.
+- Prototype MCP/A2A/RAG behind SafeToolExecutor, release gates, reviewed evidence, Vue visibility, and recovery memory.
+- Keep kube-manager writes, CI blocking, MCP runtime, A2A runtime handoff, retrieval prompt influence, and Phase 2 NIM/HPC/Slurm/BCM release-gated.
+
 ## 2026-06-10 M5.81 Backend-Technology-Modernization-Decision Rule
 
 M5.81 adds the backend-owned modernization decision endpoint:

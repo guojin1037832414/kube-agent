@@ -98,7 +98,9 @@ class AgentAdvancedTechnologyCompatibilityMatrixServiceTest {
             .containsEntry("advancedTechnologyCompatibilityMatrixEvidenceReadiness",
                 "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/evidence-readiness")
             .containsEntry("officialVersionProtocolWatch",
-                "/api/agent/observability/top-tier/official-version-protocol-watch");
+                "/api/agent/observability/top-tier/official-version-protocol-watch")
+            .containsEntry("topTierTechnologyIntroductionPlaybook",
+                "/api/agent/observability/top-tier/technology-introduction-playbook");
         assertThat(matrix.safety())
             .containsEntry("adminOnly", true)
             .containsEntry("readOnly", true)

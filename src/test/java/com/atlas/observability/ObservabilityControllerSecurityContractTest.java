@@ -48,6 +48,7 @@ class ObservabilityControllerSecurityContractTest {
         assertThat(source).contains("@GetMapping(\"/top-tier/advanced-technology-compatibility-matrix/vue-binding-spec\")");
         assertThat(source).contains("@GetMapping(\"/top-tier/advanced-technology-compatibility-matrix/evidence-readiness\")");
         assertThat(source).contains("@GetMapping(\"/top-tier/backend-technology-modernization-decision\")");
+        assertThat(source).contains("@GetMapping(\"/top-tier/technology-introduction-playbook\")");
         assertThat(source).contains("@GetMapping(\"/top-tier/official-version-protocol-watch\")");
         assertThat(source).contains("@GetMapping(\"/top-tier/official-version-protocol-watch/dashboard\")");
         assertThat(source).contains("@GetMapping(\"/top-tier/official-version-protocol-watch/vue-binding-spec\")");
@@ -100,6 +101,7 @@ class ObservabilityControllerSecurityContractTest {
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecResponse>> advancedTechnologyCompatibilityMatrixVueBindingSpec()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessResponse>> advancedTechnologyCompatibilityMatrixEvidenceReadiness()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentBackendTechnologyModernizationDecisionResponse>> backendTechnologyModernizationDecision()");
+        assertThat(source).contains("public ResponseEntity<ApiResponse<AgentTopTierTechnologyIntroductionPlaybookResponse>> topTierTechnologyIntroductionPlaybook()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentOfficialVersionProtocolWatchResponse>> officialVersionProtocolWatch()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentOfficialVersionProtocolWatchDashboardResponse>> officialVersionProtocolWatchDashboard()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentOfficialVersionProtocolWatchVueBindingSpecResponse>> officialVersionProtocolWatchVueBindingSpec()");

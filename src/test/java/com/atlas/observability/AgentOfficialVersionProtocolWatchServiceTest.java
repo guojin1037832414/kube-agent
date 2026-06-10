@@ -116,6 +116,8 @@ class AgentOfficialVersionProtocolWatchServiceTest {
                 "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/evidence-readiness")
             .containsEntry("advancedTechnologyAdoptionContract",
                 "/api/agent/observability/top-tier/advanced-technology-adoption-contract")
+            .containsEntry("topTierTechnologyIntroductionPlaybook",
+                "/api/agent/observability/top-tier/technology-introduction-playbook")
             .containsEntry("memoryRagReviewedTraceEvidenceManifest",
                 "/api/agent/observability/memory-rag/workbench/trace-set-curation/review-manifest");
         assertThat(watch.safety())

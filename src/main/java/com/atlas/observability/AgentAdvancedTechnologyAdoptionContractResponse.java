@@ -198,6 +198,8 @@ public record AgentAdvancedTechnologyAdoptionContractResponse(
             AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessResponse.EVIDENCE_READINESS_ENDPOINT);
         endpoints.put("backendTechnologyModernizationDecision",
             AgentBackendTechnologyModernizationDecisionResponse.DECISION_ENDPOINT);
+        endpoints.put("topTierTechnologyIntroductionPlaybook",
+            AgentTopTierTechnologyIntroductionPlaybookResponse.PLAYBOOK_ENDPOINT);
         endpoints.put("officialVersionProtocolWatch", AgentOfficialVersionProtocolWatchResponse.WATCH_ENDPOINT);
         endpoints.put("officialVersionProtocolWatchDashboard",
             AgentOfficialVersionProtocolWatchDashboardResponse.DASHBOARD_ENDPOINT);

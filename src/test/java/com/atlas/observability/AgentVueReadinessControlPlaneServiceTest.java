@@ -37,11 +37,12 @@ class AgentVueReadinessControlPlaneServiceTest {
         assertThat(controlPlane.phase2NimHpcSlurmBcmPaused()).isTrue();
         assertThat(controlPlane.vueBindingReady()).isTrue();
         assertThat(controlPlane.runtimeControlAllowed()).isFalse();
-        assertThat(controlPlane.dashboardCount()).isEqualTo(17);
+        assertThat(controlPlane.dashboardCount()).isEqualTo(18);
         assertThat(controlPlane.dashboards()).extracting(dashboard -> dashboard.get("id"))
             .containsExactly(
                 "top-tier-command-center",
                 "advanced-technology-adoption",
+                "technology-introduction-playbook",
                 "advanced-technology-compatibility-matrix",
                 "advanced-technology-compatibility-matrix-binding-spec",
                 "advanced-technology-compatibility-matrix-evidence-readiness",
@@ -62,6 +63,7 @@ class AgentVueReadinessControlPlaneServiceTest {
             .contains(
                 "readiness-overview",
                 "advanced-technology-adoption",
+                "technology-introduction-playbook",
                 "advanced-technology-compatibility-matrix",
                 "advanced-technology-compatibility-matrix-binding-spec",
                 "advanced-technology-compatibility-matrix-evidence-readiness",
@@ -96,6 +98,7 @@ class AgentVueReadinessControlPlaneServiceTest {
             "create-vue-top-tier-agent-navigation",
             "bind-readiness-overview-card-grid",
             "bind-advanced-technology-adoption-matrix",
+            "bind-technology-introduction-playbook",
             "bind-advanced-technology-compatibility-matrix",
             "bind-advanced-technology-compatibility-matrix-binding-spec",
             "bind-advanced-technology-compatibility-matrix-evidence-readiness",
@@ -121,6 +124,8 @@ class AgentVueReadinessControlPlaneServiceTest {
                 "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/vue-binding-spec")
             .containsEntry("advancedTechnologyCompatibilityMatrixEvidenceReadiness",
                 "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/evidence-readiness")
+            .containsEntry("topTierTechnologyIntroductionPlaybook",
+                "/api/agent/observability/top-tier/technology-introduction-playbook")
             .containsEntry("backendTechnologyModernizationDecision",
                 "/api/agent/observability/top-tier/backend-technology-modernization-decision")
             .containsEntry("officialVersionProtocolWatch", "/api/agent/observability/top-tier/official-version-protocol-watch")

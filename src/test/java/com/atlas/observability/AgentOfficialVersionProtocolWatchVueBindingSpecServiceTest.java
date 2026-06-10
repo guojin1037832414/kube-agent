@@ -126,7 +126,9 @@ class AgentOfficialVersionProtocolWatchVueBindingSpecServiceTest {
             .containsEntry("advancedTechnologyCompatibilityMatrixEvidenceReadiness",
                 "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/evidence-readiness")
             .containsEntry("officialVersionProtocolWatchDashboard",
-                "/api/agent/observability/top-tier/official-version-protocol-watch/dashboard");
+                "/api/agent/observability/top-tier/official-version-protocol-watch/dashboard")
+            .containsEntry("topTierTechnologyIntroductionPlaybook",
+                "/api/agent/observability/top-tier/technology-introduction-playbook");
         assertThat(spec.bindingPolicy())
             .containsEntry("adminOnly", true)
             .containsEntry("readOnly", true)

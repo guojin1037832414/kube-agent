@@ -322,6 +322,8 @@ public record AgentOfficialVersionProtocolWatchDashboardResponse(
             AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessResponse.EVIDENCE_READINESS_ENDPOINT);
         endpoints.put("backendTechnologyModernizationDecision",
             AgentBackendTechnologyModernizationDecisionResponse.DECISION_ENDPOINT);
+        endpoints.put("topTierTechnologyIntroductionPlaybook",
+            AgentTopTierTechnologyIntroductionPlaybookResponse.PLAYBOOK_ENDPOINT);
         endpoints.put("topTierVueWorkbenchImplementationPackage",
             AgentTopTierVueWorkbenchImplementationPackageResponse.PACKAGE_ENDPOINT);
         endpoints.put("phase1ExecutionRoadmap", "/api/agent/observability/top-tier/phase1-execution-roadmap");

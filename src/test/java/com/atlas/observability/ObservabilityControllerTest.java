@@ -159,6 +159,13 @@ class ObservabilityControllerTest {
             officialVersionProtocolWatchService,
             advancedTechnologyCompatibilityMatrixEvidenceReadinessService
         );
+    private final AgentTopTierTechnologyIntroductionPlaybookService topTierTechnologyIntroductionPlaybookService =
+        new AgentTopTierTechnologyIntroductionPlaybookService(
+            officialVersionProtocolWatchService,
+            advancedTechnologyCompatibilityMatrixService,
+            advancedTechnologyCompatibilityMatrixEvidenceReadinessService,
+            backendTechnologyModernizationDecisionService
+        );
     private final AgentOfficialVersionProtocolWatchDashboardService officialVersionProtocolWatchDashboardService =
         new AgentOfficialVersionProtocolWatchDashboardService(officialVersionProtocolWatchService);
     private final AgentOfficialVersionProtocolWatchVueBindingSpecService officialVersionProtocolWatchVueBindingSpecService =
@@ -187,6 +194,7 @@ class ObservabilityControllerTest {
         advancedTechnologyCompatibilityMatrixVueBindingSpecService,
         advancedTechnologyCompatibilityMatrixEvidenceReadinessService,
         backendTechnologyModernizationDecisionService,
+        topTierTechnologyIntroductionPlaybookService,
         officialVersionProtocolWatchService,
         officialVersionProtocolWatchDashboardService,
         officialVersionProtocolWatchVueBindingSpecService,
@@ -1332,6 +1340,85 @@ class ObservabilityControllerTest {
     }
 
     @Test
+    void topTierTechnologyIntroductionPlaybook_shouldRequireAdminAndReturnPlaybook() {
+        ResponseEntity<ApiResponse<AgentTopTierTechnologyIntroductionPlaybookResponse>> anonymous =
+            controller.topTierTechnologyIntroductionPlaybook();
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentTopTierTechnologyIntroductionPlaybookResponse>> user =
+            controller.topTierTechnologyIntroductionPlaybook();
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        userPermissionContext.unbind();
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentTopTierTechnologyIntroductionPlaybookResponse>> admin =
+            controller.topTierTechnologyIntroductionPlaybook();
+
+        assertThat(admin.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(admin.getBody()).isNotNull();
+        AgentTopTierTechnologyIntroductionPlaybookResponse playbook = admin.getBody().getData();
+        assertThat(playbook.schemaVersion())
+            .isEqualTo("agent-top-tier-technology-introduction-playbook.v1");
+        assertThat(playbook.playbookStatus()).isEqualTo("PLAYBOOK_READY_EVIDENCE_GAPS_BLOCK_RUNTIME");
+        assertThat(playbook.phase1TopTierGoalPreserved()).isTrue();
+        assertThat(playbook.javaSpringControlPlanePreserved()).isTrue();
+        assertThat(playbook.phase2NimHpcSlurmBcmPaused()).isTrue();
+        assertThat(playbook.runtimeControlAllowed()).isFalse();
+        assertThat(playbook.runtimeUpgradeAllowedNow()).isFalse();
+        assertThat(playbook.dependencyUpgradeAllowedNow()).isFalse();
+        assertThat(playbook.ciBlockingAllowedNow()).isFalse();
+        assertThat(playbook.technologyLaneCount()).isEqualTo(10);
+        assertThat(playbook.playbookStageCount()).isEqualTo(8);
+        assertThat(playbook.releaseGateCount()).isEqualTo(10);
+        assertThat(playbook.expertReviewRoundCount()).isEqualTo(6);
+        assertThat(playbook.learningModuleCount()).isEqualTo(8);
+        assertThat(playbook.forbiddenShortcutCount()).isEqualTo(10);
+        assertThat(playbook.technologyLanePlaybookRows()).extracting(row -> row.get("laneId"))
+            .contains("java-runtime-toolchains", "spring-boot-framework", "spring-ai-access-layer",
+                "mcp-runtime-call-plane", "a2a-multi-agent-provenance",
+                "memory-rag-graphrag-reranker-vectorstore", "supply-chain-ci-quality");
+        assertThat(playbook.technologyLanePlaybookRows()).allSatisfy(row -> assertThat(row)
+            .containsEntry("mainlineUpgradeAllowedNow", false)
+            .containsEntry("dependencyUpgradeAllowedNow", false)
+            .containsEntry("runtimeControlAllowed", false)
+            .containsEntry("ciBlockingAllowedNow", false));
+        assertThat(playbook.playbookPolicy())
+            .containsEntry("readOnly", true)
+            .containsEntry("playbookOnly", true)
+            .containsEntry("officialSourceWinsOverConversationMemory", true)
+            .containsEntry("compatibilityBranchRequiredBeforeMajorUpgrade", true)
+            .containsEntry("requiresHumanGitReview", true)
+            .containsEntry("runtimeControlAllowed", false)
+            .containsEntry("phase2NimHpcSlurmBcmTouched", false);
+        assertThat(playbook.safety())
+            .containsEntry("toolExecution", false)
+            .containsEntry("kubeManagerCalls", false)
+            .containsEntry("mcpToolsCall", false)
+            .containsEntry("a2aRuntimeHandoff", false)
+            .containsEntry("llmUsed", false)
+            .containsEntry("externalCalls", false)
+            .containsEntry("auditWrite", false)
+            .containsEntry("memoryWrite", false)
+            .containsEntry("retrievalExecuted", false)
+            .containsEntry("phase2NimHpcSlurmBcmTouched", false);
+        assertThat(playbook.endpointMap())
+            .containsEntry("topTierTechnologyIntroductionPlaybook",
+                "/api/agent/observability/top-tier/technology-introduction-playbook")
+            .containsEntry("backendTechnologyModernizationDecision",
+                "/api/agent/observability/top-tier/backend-technology-modernization-decision");
+        assertThat(playbook.toString())
+            .contains("technology-introduction-playbook", "officialSourceWinsOverConversationMemory")
+            .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret");
+    }
+
+    @Test
     void officialVersionProtocolWatch_shouldRequireAdminAndReturnOfficialSourceWatch() {
         ResponseEntity<ApiResponse<AgentOfficialVersionProtocolWatchResponse>> anonymous =
             controller.officialVersionProtocolWatch();
@@ -1557,19 +1644,21 @@ class ObservabilityControllerTest {
         assertThat(implementationPackage.schemaVersion())
             .isEqualTo("agent-top-tier-vue-workbench-implementation-package.v1");
         assertThat(implementationPackage.packageStatus()).isEqualTo("IMPLEMENTATION_PACKAGE_READY");
-        assertThat(implementationPackage.routeSpecCount()).isEqualTo(4);
-        assertThat(implementationPackage.apiClientBindingCount()).isEqualTo(6);
-        assertThat(implementationPackage.pageAssemblyCount()).isEqualTo(4);
-        assertThat(implementationPackage.sharedComponentCount()).isEqualTo(9);
-        assertThat(implementationPackage.acceptanceFixtureCount()).isEqualTo(8);
+        assertThat(implementationPackage.routeSpecCount()).isEqualTo(5);
+        assertThat(implementationPackage.apiClientBindingCount()).isEqualTo(7);
+        assertThat(implementationPackage.pageAssemblyCount()).isEqualTo(5);
+        assertThat(implementationPackage.sharedComponentCount()).isEqualTo(10);
+        assertThat(implementationPackage.acceptanceFixtureCount()).isEqualTo(9);
         assertThat(implementationPackage.runtimeControlAllowed()).isFalse();
         assertThat(implementationPackage.routeSpecs()).extracting(route -> route.get("id"))
-            .contains("top-tier-official-version-protocol-watch",
+            .contains("top-tier-technology-introduction-playbook",
+                "top-tier-official-version-protocol-watch",
                 "top-tier-advanced-technology-compatibility-matrix",
                 "top-tier-advanced-technology-evidence-readiness",
                 "top-tier-backend-technology-modernization-decision");
         assertThat(implementationPackage.apiClientBindings()).extracting(client -> client.get("name"))
-            .contains("fetchOfficialWatchBindingSpec", "fetchCompatibilityMatrixBindingSpec",
+            .contains("fetchOfficialWatchBindingSpec", "fetchTechnologyIntroductionPlaybook",
+                "fetchCompatibilityMatrixBindingSpec",
                 "fetchCompatibilityMatrixEvidenceReadiness", "fetchBackendTechnologyModernizationDecision");
         assertThat(implementationPackage.forbiddenRuntimeControls()).allSatisfy(control -> assertThat(control)
             .containsEntry("buttonVisible", false)
@@ -1588,6 +1677,8 @@ class ObservabilityControllerTest {
         assertThat(implementationPackage.endpointMap())
             .containsEntry("topTierVueWorkbenchImplementationPackage",
                 "/api/agent/observability/top-tier/vue-workbench-implementation-package")
+            .containsEntry("topTierTechnologyIntroductionPlaybook",
+                "/api/agent/observability/top-tier/technology-introduction-playbook")
             .containsEntry("officialVersionProtocolWatchVueBindingSpec",
                 "/api/agent/observability/top-tier/official-version-protocol-watch/vue-binding-spec")
             .containsEntry("advancedTechnologyCompatibilityMatrixVueBindingSpec",

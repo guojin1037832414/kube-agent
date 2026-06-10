@@ -304,6 +304,8 @@ public record AgentOfficialVersionProtocolWatchVueBindingSpecResponse(
             AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessResponse.EVIDENCE_READINESS_ENDPOINT);
         endpoints.put("backendTechnologyModernizationDecision",
             AgentBackendTechnologyModernizationDecisionResponse.DECISION_ENDPOINT);
+        endpoints.put("topTierTechnologyIntroductionPlaybook",
+            AgentTopTierTechnologyIntroductionPlaybookResponse.PLAYBOOK_ENDPOINT);
         endpoints.put("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane");
         endpoints.put("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview");
         return Map.copyOf(endpoints);

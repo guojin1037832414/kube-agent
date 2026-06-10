@@ -350,6 +350,8 @@ public record AgentBackendTechnologyModernizationDecisionResponse(
         Map<String, Object> endpoints = new LinkedHashMap<>();
         endpoints.put("backendTechnologyModernizationDecision", DECISION_ENDPOINT);
         endpoints.put("officialVersionProtocolWatch", AgentOfficialVersionProtocolWatchResponse.WATCH_ENDPOINT);
+        endpoints.put("topTierTechnologyIntroductionPlaybook",
+            AgentTopTierTechnologyIntroductionPlaybookResponse.PLAYBOOK_ENDPOINT);
         endpoints.put("advancedTechnologyCompatibilityMatrix",
             AgentAdvancedTechnologyCompatibilityMatrixResponse.MATRIX_ENDPOINT);
         endpoints.put("advancedTechnologyCompatibilityMatrixEvidenceReadiness",

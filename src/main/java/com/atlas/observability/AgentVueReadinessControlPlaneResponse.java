@@ -66,6 +66,11 @@ public record AgentVueReadinessControlPlaneResponse(
                 "Show stable mainline technologies, compatibility matrix, gates, and rejected shortcuts.",
                 "/api/agent/observability/top-tier/advanced-technology-adoption-contract",
                 List.of("mainlineTechnologies", "compatibilityMatrix", "adoptionGates", "rejectedShortcuts")),
+            dashboard("technology-introduction-playbook", "READY_TO_BIND",
+                "Show the official-source -> compatibility matrix -> evidence readiness -> release review -> runtime binding playbook for every advanced Agent technology lane.",
+                AgentTopTierTechnologyIntroductionPlaybookResponse.PLAYBOOK_ENDPOINT,
+                List.of("technologyIntroductionStages", "technologyLanePlaybookRows", "releaseGateRows",
+                    "expertReviewRounds", "learningModules", "forbiddenShortcuts")),
             dashboard("advanced-technology-compatibility-matrix", "READY_TO_BIND",
                 "Show official-source baselines, candidate upgrade lanes, migration gates, blocked shortcuts, and test lanes.",
                 AgentAdvancedTechnologyCompatibilityMatrixResponse.MATRIX_ENDPOINT,
@@ -141,6 +146,8 @@ public record AgentVueReadinessControlPlaneResponse(
         return List.of(
             apiBinding("readiness-overview", "/api/agent/observability/top-tier/readiness-overview", "GET", true),
             apiBinding("advanced-technology-adoption", "/api/agent/observability/top-tier/advanced-technology-adoption-contract", "GET", true),
+            apiBinding("technology-introduction-playbook",
+                AgentTopTierTechnologyIntroductionPlaybookResponse.PLAYBOOK_ENDPOINT, "GET", true),
             apiBinding("advanced-technology-compatibility-matrix",
                 AgentAdvancedTechnologyCompatibilityMatrixResponse.MATRIX_ENDPOINT, "GET", true),
             apiBinding("advanced-technology-compatibility-matrix-binding-spec",
@@ -208,6 +215,7 @@ public record AgentVueReadinessControlPlaneResponse(
             "create-vue-top-tier-agent-navigation",
             "bind-readiness-overview-card-grid",
             "bind-advanced-technology-adoption-matrix",
+            "bind-technology-introduction-playbook",
             "bind-advanced-technology-compatibility-matrix",
             "bind-advanced-technology-compatibility-matrix-binding-spec",
             "bind-advanced-technology-compatibility-matrix-evidence-readiness",
@@ -232,6 +240,8 @@ public record AgentVueReadinessControlPlaneResponse(
         endpoints.put("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane");
         endpoints.put("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview");
         endpoints.put("advancedTechnologyAdoptionContract", "/api/agent/observability/top-tier/advanced-technology-adoption-contract");
+        endpoints.put("topTierTechnologyIntroductionPlaybook",
+            AgentTopTierTechnologyIntroductionPlaybookResponse.PLAYBOOK_ENDPOINT);
         endpoints.put("advancedTechnologyCompatibilityMatrix",
             AgentAdvancedTechnologyCompatibilityMatrixResponse.MATRIX_ENDPOINT);
         endpoints.put("advancedTechnologyCompatibilityMatrixVueBindingSpec",

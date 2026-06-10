@@ -91,6 +91,7 @@ class AgentTopTierReadinessOverviewServiceTest {
         assertThat(overview.recommendedBuildOrder()).containsExactly(
             "wire-vue-top-tier-readiness-overview",
             "wire-vue-advanced-technology-adoption-contract",
+            "wire-vue-technology-introduction-playbook",
             "wire-vue-advanced-technology-compatibility-matrix",
             "wire-vue-advanced-technology-compatibility-matrix-binding-spec",
             "wire-vue-advanced-technology-compatibility-matrix-evidence-readiness",
@@ -119,6 +120,8 @@ class AgentTopTierReadinessOverviewServiceTest {
                 "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/evidence-readiness")
             .containsEntry("backendTechnologyModernizationDecision",
                 "/api/agent/observability/top-tier/backend-technology-modernization-decision")
+            .containsEntry("topTierTechnologyIntroductionPlaybook",
+                "/api/agent/observability/top-tier/technology-introduction-playbook")
             .containsEntry("officialVersionProtocolWatch", "/api/agent/observability/top-tier/official-version-protocol-watch")
             .containsEntry("officialVersionProtocolWatchDashboard",
                 "/api/agent/observability/top-tier/official-version-protocol-watch/dashboard")
@@ -174,6 +177,8 @@ class AgentTopTierReadinessOverviewServiceTest {
                 "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/evidence-readiness")
             .containsEntry("backendTechnologyModernizationDecisionEndpoint",
                 "/api/agent/observability/top-tier/backend-technology-modernization-decision")
+            .containsEntry("topTierTechnologyIntroductionPlaybookEndpoint",
+                "/api/agent/observability/top-tier/technology-introduction-playbook")
             .containsEntry("officialVersionProtocolWatchDashboardEndpoint",
                 "/api/agent/observability/top-tier/official-version-protocol-watch/dashboard")
             .containsEntry("officialVersionProtocolWatchVueBindingSpecEndpoint",

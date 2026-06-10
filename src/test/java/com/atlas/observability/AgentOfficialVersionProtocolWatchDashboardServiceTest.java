@@ -178,7 +178,9 @@ class AgentOfficialVersionProtocolWatchDashboardServiceTest {
             .containsEntry("advancedTechnologyCompatibilityMatrixEvidenceReadiness",
                 "/api/agent/observability/top-tier/advanced-technology-compatibility-matrix/evidence-readiness")
             .containsEntry("advancedTechnologyAdoptionContract",
-                "/api/agent/observability/top-tier/advanced-technology-adoption-contract");
+                "/api/agent/observability/top-tier/advanced-technology-adoption-contract")
+            .containsEntry("topTierTechnologyIntroductionPlaybook",
+                "/api/agent/observability/top-tier/technology-introduction-playbook");
         assertThat(dashboard.dashboardPolicy())
             .containsEntry("adminOnly", true)
             .containsEntry("dashboardOnly", true)

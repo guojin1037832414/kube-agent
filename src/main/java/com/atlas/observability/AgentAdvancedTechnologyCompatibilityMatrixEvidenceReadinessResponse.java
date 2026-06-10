@@ -402,6 +402,8 @@ public record AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessRespons
         endpoints.put("advancedTechnologyCompatibilityMatrixEvidenceReadiness", EVIDENCE_READINESS_ENDPOINT);
         endpoints.put("backendTechnologyModernizationDecision",
             AgentBackendTechnologyModernizationDecisionResponse.DECISION_ENDPOINT);
+        endpoints.put("topTierTechnologyIntroductionPlaybook",
+            AgentTopTierTechnologyIntroductionPlaybookResponse.PLAYBOOK_ENDPOINT);
         endpoints.put("advancedTechnologyCompatibilityMatrix",
             AgentAdvancedTechnologyCompatibilityMatrixResponse.MATRIX_ENDPOINT);
         endpoints.put("advancedTechnologyCompatibilityMatrixVueBindingSpec",

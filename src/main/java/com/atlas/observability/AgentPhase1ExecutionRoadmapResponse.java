@@ -57,10 +57,11 @@ public record AgentPhase1ExecutionRoadmapResponse(
     private static List<Map<String, Object>> buildExecutionSteps() {
         return List.of(
             step(1, "vue-readiness-control-plane",
-                "Wire Vue to render top-tier readiness, technology adoption, official version/protocol watch, kube-manager governance, MCP governance, and Memory/RAG contracts.",
+                "Wire Vue to render top-tier readiness, technology introduction playbook, technology adoption, official version/protocol watch, kube-manager governance, MCP governance, and Memory/RAG contracts.",
                 "PARTIAL_BACKEND_READY",
                 List.of("backend-read-models-exist", "admin-auth-required", "official-source-watch-exists"),
                 List.of("top-tier-readiness-overview", "advanced-technology-adoption-contract",
+                    "technology-introduction-playbook",
                     "advanced-technology-compatibility-matrix",
                     "advanced-technology-compatibility-matrix-binding-spec",
                     "advanced-technology-compatibility-matrix-evidence-readiness",
@@ -132,6 +133,8 @@ public record AgentPhase1ExecutionRoadmapResponse(
         return List.of(
             vueTarget("top-tier-overview", "/api/agent/observability/top-tier/readiness-overview"),
             vueTarget("technology-adoption", "/api/agent/observability/top-tier/advanced-technology-adoption-contract"),
+            vueTarget("technology-introduction-playbook",
+                AgentTopTierTechnologyIntroductionPlaybookResponse.PLAYBOOK_ENDPOINT),
             vueTarget("advanced-technology-compatibility-matrix",
                 AgentAdvancedTechnologyCompatibilityMatrixResponse.MATRIX_ENDPOINT),
             vueTarget("advanced-technology-compatibility-matrix-binding-spec",
@@ -178,6 +181,8 @@ public record AgentPhase1ExecutionRoadmapResponse(
         endpoints.put("vueReadinessControlPlane", "/api/agent/observability/top-tier/vue-readiness-control-plane");
         endpoints.put("topTierReadinessOverview", "/api/agent/observability/top-tier/readiness-overview");
         endpoints.put("advancedTechnologyAdoptionContract", "/api/agent/observability/top-tier/advanced-technology-adoption-contract");
+        endpoints.put("topTierTechnologyIntroductionPlaybook",
+            AgentTopTierTechnologyIntroductionPlaybookResponse.PLAYBOOK_ENDPOINT);
         endpoints.put("advancedTechnologyCompatibilityMatrix",
             AgentAdvancedTechnologyCompatibilityMatrixResponse.MATRIX_ENDPOINT);
         endpoints.put("advancedTechnologyCompatibilityMatrixVueBindingSpec",

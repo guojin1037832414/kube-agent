@@ -10,7 +10,77 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
-## Latest Phase 1 Core Memory - M5.81-1
+## Latest Phase 1 Core Memory - M5.82-1
+
+M5.82-1 adds the top-tier technology introduction playbook endpoint. It answers the newest mission wording directly: Phase 1 should introduce all advanced technologies, but it must do so through official-source evidence, compatibility matrices, reviewed traces, Vue visibility, multi-expert review, release gates, and separate runtime binding slices.
+
+Endpoint:
+
+```text
+GET /api/agent/observability/top-tier/technology-introduction-playbook
+```
+
+Delivered:
+
+- Added `AgentTopTierTechnologyIntroductionPlaybookResponse`.
+- Added `AgentTopTierTechnologyIntroductionPlaybookService`.
+- Added admin-only Controller method `topTierTechnologyIntroductionPlaybook()`.
+- Published 8 playbook stages, 10 technology-lane playbook rows, 10 release gates, 6 expert review rounds, 8 learning modules, 10 forbidden shortcuts, and 5 Vue workbench route requirements.
+- Embedded source read models from official version/protocol watch, advanced technology compatibility matrix, evidence readiness, and backend modernization decision.
+- Integrated the endpoint into advanced technology adoption, official watch, official watch dashboard, official watch binding spec, compatibility matrix, compatibility matrix binding spec, evidence readiness, backend modernization decision, top-tier readiness overview, Phase 1 roadmap, Vue readiness control plane, top-tier Vue workbench implementation package, Controller, and security contracts.
+- Extended the Vue readiness dashboard count to `18`.
+- Extended the top-tier Vue workbench implementation package to 5 routes, 7 API client bindings, 5 page assemblies, 10 shared components, and 9 acceptance fixtures.
+- Added the teaching document `docs/M5_82_TOP_TIER_TECHNOLOGY_INTRODUCTION_PLAYBOOK_20260610.md`.
+
+Current state:
+
+- `schemaVersion=agent-top-tier-technology-introduction-playbook.v1`.
+- `playbookStatus=PLAYBOOK_READY_EVIDENCE_GAPS_BLOCK_RUNTIME`.
+- `officialSourceCount=8`.
+- `technologyLaneCount=10`.
+- `playbookStageCount=8`.
+- `releaseGateCount=10`.
+- `expertReviewRoundCount=6`.
+- `learningModuleCount=8`.
+- `forbiddenShortcutCount=10`.
+- `vueRouteCount=5`.
+- `phase1TopTierGoalPreserved=true`.
+- `javaSpringControlPlanePreserved=true`.
+- `phase2NimHpcSlurmBcmPaused=true`.
+- `runtimeControlAllowed=false`.
+- `runtimeUpgradeAllowedNow=false`.
+- `dependencyUpgradeAllowedNow=false`.
+- `ciBlockingAllowedNow=false`.
+
+Security boundary:
+
+- M5.82 is admin-only, read-only, playbook-only, source-read-model-composition-only, and external-call-free at request time.
+- It composes only `officialVersionProtocolWatchService.watch()`, `compatibilityMatrixService.matrix()`, `evidenceReadinessService.readiness()`, and `backendTechnologyModernizationDecisionService.decision()`.
+- It does not modify `pom.xml`, upgrade dependencies, switch Java/Spring/Spring AI baselines, create compatibility branches, run evals, discover candidates, run curation review, mutate trace-set catalogs, enable CI blocking, run LLMs, execute Tools, call `SafeToolExecutor`, invoke HITL, call kube-manager including port `8100`, expose MCP runtime `tools/call`, run A2A runtime handoff, execute retrieval/vector/embedding/reranker/GraphRAG, write memory, write audit, issue durable receipts, or touch NIM / HPC / Slurm / BCM Phase 2 scope.
+
+Multi-expert memory:
+
+- Confucius / security-architecture review confirmed the P0/P1/P2 review focus and found no reason to change the M5.82 direction: keep GET/admin-only/read-only and keep all runtime authority closed.
+- Erdos / docs-recovery review confirmed the M5.82 documentation and recovery-memory checklist, including workspace-local memory under `F:\gitProject\kube-agent\codex-memory\kube-agent\current`.
+
+Learning point: a top-tier Agent introduces advanced technology as a disciplined pathway, not as a version bump. The pathway is official source -> compatibility matrix -> evidence readiness -> backend decision -> playbook -> compatibility branch -> focused tests -> Vue read-only workbench -> multi-expert release review -> separate runtime binding.
+
+Latest verified commands for this slice must include:
+
+- `mvn -q "-DskipTests" validate`
+- `mvn -q "-Dtest=AgentTopTierTechnologyIntroductionPlaybookServiceTest,AgentOfficialVersionProtocolWatchServiceTest,AgentOfficialVersionProtocolWatchDashboardServiceTest,AgentOfficialVersionProtocolWatchVueBindingSpecServiceTest,AgentAdvancedTechnologyCompatibilityMatrixServiceTest,AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecServiceTest,AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessServiceTest,AgentBackendTechnologyModernizationDecisionServiceTest,AgentTopTierVueWorkbenchImplementationPackageServiceTest,AgentVueReadinessControlPlaneServiceTest,AgentPhase1ExecutionRoadmapServiceTest,AgentTopTierReadinessOverviewServiceTest,AgentAdvancedTechnologyAdoptionContractServiceTest,ObservabilityControllerTest,ObservabilityControllerSecurityContractTest,AgentSecurityConfigWebMvcTest" test`
+- `git diff --check`
+
+Next safe development order:
+
+- Wire `vue-kube-manager` to consume the five-page latest-technology workbench: technology introduction playbook, official watch, compatibility matrix, evidence readiness, and backend modernization decision.
+- Continue reviewed redacted eval trace evidence curation.
+- Complete Memory/RAG reviewed trace fixtures.
+- Create separate compatibility branches for Java 21/25, Spring Boot 4, and Spring AI 2.0.0-RC2 only after current mainline remains green.
+- Prototype MCP/A2A/RAG only behind SafeToolExecutor, release gates, reviewed evidence, Vue visibility, and recovery memory.
+- Keep kube-manager writes, CI blocking, MCP runtime, A2A runtime handoff, retrieval prompt influence, and Phase 2 NIM/HPC/Slurm/BCM release-gated.
+
+## Previous Phase 1 Core Memory - M5.81-1
 
 M5.81-1 adds the backend technology modernization decision endpoint. It answers the latest strategic backend choice: Java/Spring remains the preferred Phase 1 top-tier Agent control plane, while Java 21/25, Spring Boot 4, Spring AI 2.0.0-RC2, MCP runtime, A2A, OpenAI Responses/Agents runtime patterns, OTel GenAI, GraphRAG/reranker/vector store, kube-manager writes, SBOM/dependency audit, and CI blocking stay in evidence-gated compatibility lanes.
 

@@ -47,6 +47,7 @@ public class ObservabilityController {
     private final AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecService advancedTechnologyCompatibilityMatrixVueBindingSpecService;
     private final AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessService advancedTechnologyCompatibilityMatrixEvidenceReadinessService;
     private final AgentBackendTechnologyModernizationDecisionService backendTechnologyModernizationDecisionService;
+    private final AgentTopTierTechnologyIntroductionPlaybookService topTierTechnologyIntroductionPlaybookService;
     private final AgentOfficialVersionProtocolWatchService officialVersionProtocolWatchService;
     private final AgentOfficialVersionProtocolWatchDashboardService officialVersionProtocolWatchDashboardService;
     private final AgentOfficialVersionProtocolWatchVueBindingSpecService officialVersionProtocolWatchVueBindingSpecService;
@@ -94,6 +95,7 @@ public class ObservabilityController {
                                    AgentAdvancedTechnologyCompatibilityMatrixVueBindingSpecService advancedTechnologyCompatibilityMatrixVueBindingSpecService,
                                    AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessService advancedTechnologyCompatibilityMatrixEvidenceReadinessService,
                                    AgentBackendTechnologyModernizationDecisionService backendTechnologyModernizationDecisionService,
+                                   AgentTopTierTechnologyIntroductionPlaybookService topTierTechnologyIntroductionPlaybookService,
                                     AgentOfficialVersionProtocolWatchService officialVersionProtocolWatchService,
                                     AgentOfficialVersionProtocolWatchDashboardService officialVersionProtocolWatchDashboardService,
                                     AgentOfficialVersionProtocolWatchVueBindingSpecService officialVersionProtocolWatchVueBindingSpecService,
@@ -140,6 +142,7 @@ public class ObservabilityController {
         this.advancedTechnologyCompatibilityMatrixVueBindingSpecService = advancedTechnologyCompatibilityMatrixVueBindingSpecService;
         this.advancedTechnologyCompatibilityMatrixEvidenceReadinessService = advancedTechnologyCompatibilityMatrixEvidenceReadinessService;
         this.backendTechnologyModernizationDecisionService = backendTechnologyModernizationDecisionService;
+        this.topTierTechnologyIntroductionPlaybookService = topTierTechnologyIntroductionPlaybookService;
         this.officialVersionProtocolWatchService = officialVersionProtocolWatchService;
         this.officialVersionProtocolWatchDashboardService = officialVersionProtocolWatchDashboardService;
         this.officialVersionProtocolWatchVueBindingSpecService = officialVersionProtocolWatchVueBindingSpecService;
@@ -238,6 +241,17 @@ public class ObservabilityController {
             return guard;
         }
         return ResponseEntity.ok(ApiResponse.ok(backendTechnologyModernizationDecisionService.decision()));
+    }
+
+    /** Publish the top-tier latest-technology introduction playbook without runtime controls. */
+    @GetMapping("/top-tier/technology-introduction-playbook")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentTopTierTechnologyIntroductionPlaybookResponse>> topTierTechnologyIntroductionPlaybook() {
+        ResponseEntity<ApiResponse<AgentTopTierTechnologyIntroductionPlaybookResponse>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return ResponseEntity.ok(ApiResponse.ok(topTierTechnologyIntroductionPlaybookService.playbook()));
     }
 
     /** Publish the official version/protocol watch without external calls or runtime upgrades. */

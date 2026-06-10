@@ -143,7 +143,8 @@ public record AgentTopTierReadinessOverviewResponse(
             "Phase 1 keeps the Java/Spring control plane stable while tracking official Responses/Agents, Spring AI, MCP, OTel GenAI, A2A, OWASP LLM, and advanced RAG sources in a compatibility matrix.",
             "/api/agent/observability/top-tier/advanced-technology-adoption-contract",
             List.of("Java/Spring control plane", "official source watch", "compatibility matrix",
-                "Responses/Agents mapping", "MCP runtime matrix", "OTel GenAI adapter", "A2A artifacts"),
+                "technology introduction playbook", "Responses/Agents mapping",
+                "MCP runtime matrix", "OTel GenAI adapter", "A2A artifacts"),
             buildAdvancedTechnologyEvidence()
         ));
         cards.add(card(
@@ -279,6 +280,8 @@ public record AgentTopTierReadinessOverviewResponse(
             AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessResponse.EVIDENCE_READINESS_ENDPOINT);
         evidence.put("backendTechnologyModernizationDecisionEndpoint",
             AgentBackendTechnologyModernizationDecisionResponse.DECISION_ENDPOINT);
+        evidence.put("topTierTechnologyIntroductionPlaybookEndpoint",
+            AgentTopTierTechnologyIntroductionPlaybookResponse.PLAYBOOK_ENDPOINT);
         evidence.put("officialVersionProtocolWatchExists", true);
         evidence.put("officialVersionProtocolWatchEndpoint", AgentOfficialVersionProtocolWatchResponse.WATCH_ENDPOINT);
         evidence.put("officialVersionProtocolWatchDashboardEndpoint",
@@ -325,6 +328,7 @@ public record AgentTopTierReadinessOverviewResponse(
         return List.of(
             "wire-vue-top-tier-readiness-overview",
             "wire-vue-advanced-technology-adoption-contract",
+            "wire-vue-technology-introduction-playbook",
             "wire-vue-advanced-technology-compatibility-matrix",
             "wire-vue-advanced-technology-compatibility-matrix-binding-spec",
             "wire-vue-advanced-technology-compatibility-matrix-evidence-readiness",
@@ -367,6 +371,8 @@ public record AgentTopTierReadinessOverviewResponse(
             AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessResponse.EVIDENCE_READINESS_ENDPOINT);
         endpoints.put("backendTechnologyModernizationDecision",
             AgentBackendTechnologyModernizationDecisionResponse.DECISION_ENDPOINT);
+        endpoints.put("topTierTechnologyIntroductionPlaybook",
+            AgentTopTierTechnologyIntroductionPlaybookResponse.PLAYBOOK_ENDPOINT);
         endpoints.put("officialVersionProtocolWatch", AgentOfficialVersionProtocolWatchResponse.WATCH_ENDPOINT);
         endpoints.put("officialVersionProtocolWatchDashboard",
             AgentOfficialVersionProtocolWatchDashboardResponse.DASHBOARD_ENDPOINT);
