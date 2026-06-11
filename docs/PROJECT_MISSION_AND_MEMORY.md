@@ -10,6 +10,23 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
+## Latest Frontend Memory - 2026-06-11
+
+`kube-agent-vue` now has a dedicated `/agent/memory` Memory/RAG Workbench and a `/agent/top-tier` Governance Evidence Matrix.
+
+Current frontend evidence:
+
+- `/agent/memory` consumes nine existing backend GET read models under `/api/agent/observability/memory-rag/**`.
+- It renders Memory/RAG readiness, citation/source custody, source digest, durable lifecycle, eval gates, suite binding, trace-set curation, curation overview, reviewed trace manifest, and raw JSON evidence.
+- `/agent/top-tier` now labels backend, local, derived, and unknown evidence separately. It explicitly says that health UP, auth, and SSE completion do not prove readiness, policy, permission, HITL, eval, SLO, cost, release authority, or task success.
+- `ChatConsole` quick prompts fill the draft only through `selectQuickPrompt(...)`; they do not auto-send.
+- Frontend verification passed with `npm run verify`, `npm run verify:governance`, HTTP health checks for ports `8500` and `5173`, and browser checks for `/agent/memory`, `/agent/top-tier`, and `/agent/workbench`.
+
+Still not complete:
+
+- Reviewed Memory/RAG trace fixtures are still missing for `memory-rag-citation-fidelity`, `memory-rag-privacy-tenant`, and `memory-rag-lifecycle-policy`.
+- Retrieval runtime, vector stores, embeddings, rerankers, GraphRAG, durable memory writes, eval runtime, CI blocking, MCP runtime `tools/call`, kube-manager write authority, and Phase 2 NIM/HPC/Slurm/BCM remain closed.
+
 ## Latest Phase 1 Core Memory - M5.84-1
 
 M5.84-1 adds the top-tier Vue workbench migration package endpoint. It answers the immediate handoff constraint: the backend can read `F:/gitProject/vue-kube-manager`, but the current writable workspace is `F:/gitProject/kube-agent`, and the frontend repo also needs an explicit Git safe-directory decision before edits. Therefore this slice publishes a dry-run migration package instead of pretending the frontend repository was modified.

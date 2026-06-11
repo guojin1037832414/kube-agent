@@ -2,6 +2,32 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-11 Frontend Memory/RAG Workbench
+
+This slice is a frontend consumption slice for the existing backend Memory/RAG contracts, not a new Memory/RAG runtime opening.
+
+`kube-agent-vue` now renders `/agent/memory` as a dedicated read-only Memory/RAG Workbench. The page consumes nine backend-owned GET contracts under `/api/agent/observability/memory-rag/**`:
+
+- readiness
+- citation and source custody
+- source evidence digest
+- durable memory lifecycle
+- Memory/RAG eval gate
+- eval-suite binding
+- trace-set curation contract
+- trace-set curation workbench overview
+- reviewed trace-evidence manifest
+
+Architecture lesson: top-tier Agent memory is not "the system can retrieve text." Memory becomes trustworthy only when the control plane can explain source custody, citation fidelity, tenant isolation, retention/deletion/export policy, reviewed redacted trace fixtures, and deterministic eval gates before retrieved content influences prompts.
+
+The frontend workbench therefore shows evidence and blockers, not authority. It renders summary metrics, readiness cards, trace-set curation state, reviewed manifest rows, eval gate/suite binding, citation/source JSON, lifecycle/privacy/safety JSON, and raw read models. Missing backend evidence remains `Unknown`, `Unavailable`, or `Not evaluated`.
+
+Safety invariant: the page does not run retrieval, call vector stores, call embeddings, invoke rerankers, execute GraphRAG, mutate prompts, write durable memory, mutate trace-set catalogs, run eval suites, enable CI blocking, call MCP `tools/call`, execute Tools, call kube-manager state-changing APIs, or reopen NIM/HPC/Slurm/BCM Phase 2 scope.
+
+The same frontend slice adds a `Governance Evidence Matrix` to `/agent/top-tier`. That matrix is deliberately conservative: backend health, local session state, and SSE completion are displayed as evidence context only. They do not prove readiness, permission, policy, HITL, audit, eval, SLO, cost, release authority, or task success.
+
+Teaching conclusion: a top-tier Agent learning project should make negative space visible. Closed buttons, missing evidence, unknown states, and blocked runtime shortcuts are not UI weakness; they are the learning surface that prevents "new technology" from quietly becoming unreviewed production authority.
+
 ## 2026-06-11 Frontend Settings Contract Evidence
 
 `kube-agent-vue` now exposes `/agent/settings` as a read-only Settings Contract page. This page intentionally closes the last AgentOps placeholder route while avoiding the common mistake of turning frontend runtime values into configuration authority.
