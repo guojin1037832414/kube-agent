@@ -10,6 +10,26 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
+## Latest Frontend Memory - 2026-06-11
+
+`kube-agent-vue` now has a dedicated `/agent/top-tier` Latest Technology Workbench. This is the current frontend bridge between the backend top-tier contracts and the Phase 1 learning/operation console.
+
+Current Top-tier frontend evidence:
+
+- `/agent/top-tier` consumes 15 existing backend GET read models under `/api/agent/observability/top-tier/**`.
+- The bound read models are readiness overview, advanced technology adoption contract, technology introduction playbook, compatibility matrix, compatibility matrix Vue binding spec, compatibility evidence readiness, backend modernization decision, official version/protocol watch, official watch dashboard, official watch Vue binding spec, Vue workbench implementation package, Vue workbench acceptance contract, Vue workbench migration package, Phase 1 execution roadmap, and Vue readiness control plane.
+- It renders readiness, latest-technology lanes, official source watch, compatibility/evidence readiness, backend modernization, Phase 1 roadmap, Vue readiness, disabled runtime actions, blocked runtime shortcuts, review gates, build order, and raw JSON evidence.
+- It explicitly says `Latest Technology Workbench`, `GET-only read models`, `Runtime controls absent`, `No MCP tools/call endpoint`, `No dependency upgrade`, `No kube-manager state changing action`, `No enable ci blocking control`, `No trace set catalog mutation`, and `NIM/HPC/Slurm/BCM`.
+- Browser audit for `/agent/top-tier` found only read/session controls: `Refresh`, `Operator unknown`, `Clear session`, and `Load Top-tier evidence`; no Approve, Execute, Retry, Save, Resume, Override, Run Eval, Enable CI, Promote, Apply Patch, Enable, or Upgrade controls exist.
+- The governance scan now requires all 15 top-tier endpoint strings and forbidden runtime markers, and the page loads only through the shared GET-only `loadObservabilityDocument(...)` path.
+- Element Plus is now registered by explicit component use in `src/main.ts`, and the old dedicated manual `element` chunk was removed from `vite.config.ts`. This is build-health work only; it does not change Agent authority.
+
+Safety boundary:
+
+- The page does not upgrade Java, Spring Boot, Spring AI, OpenAI integration, MCP, A2A, OTel, RAG, or dependency versions.
+- It does not create compatibility branches, run eval suites, replay traces, mutate trace-set catalogs, enable CI blocking, call MCP `tools/call`, execute Tools, open retrieval/vector/reranker/GraphRAG runtime, mutate prompts or memory, call kube-manager state-changing APIs, enable write retry, approve releases, issue durable receipts, or reopen Phase 2 NIM/HPC/Slurm/BCM.
+- Missing evidence remains `Unknown`, `Unavailable`, or `Not evaluated`; health UP, auth, SSE done, and tool_done remain evidence context only.
+
 ## Latest Phase 1 Core Memory - M5.84-1
 
 M5.84-1 adds the top-tier Vue workbench migration package endpoint. It answers the immediate handoff constraint: the backend can read `F:/gitProject/vue-kube-manager`, but the current writable workspace is `F:/gitProject/kube-agent`, and the frontend repo also needs an explicit Git safe-directory decision before edits. Therefore this slice publishes a dry-run migration package instead of pretending the frontend repository was modified.

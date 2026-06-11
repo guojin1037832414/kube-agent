@@ -2,6 +2,38 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-11 Frontend Top-tier Latest Technology Workbench
+
+This slice is a frontend consumption slice for the existing backend top-tier contracts. It does not open a new runtime, dependency upgrade path, MCP runtime, retrieval runtime, eval runtime, or kube-manager write path.
+
+`kube-agent-vue` now renders `/agent/top-tier` as a dedicated `Latest Technology Workbench`. The page consumes 15 backend-owned GET contracts:
+
+- `GET /api/agent/observability/top-tier/readiness-overview`
+- `GET /api/agent/observability/top-tier/advanced-technology-adoption-contract`
+- `GET /api/agent/observability/top-tier/technology-introduction-playbook`
+- `GET /api/agent/observability/top-tier/advanced-technology-compatibility-matrix`
+- `GET /api/agent/observability/top-tier/advanced-technology-compatibility-matrix/vue-binding-spec`
+- `GET /api/agent/observability/top-tier/advanced-technology-compatibility-matrix/evidence-readiness`
+- `GET /api/agent/observability/top-tier/backend-technology-modernization-decision`
+- `GET /api/agent/observability/top-tier/official-version-protocol-watch`
+- `GET /api/agent/observability/top-tier/official-version-protocol-watch/dashboard`
+- `GET /api/agent/observability/top-tier/official-version-protocol-watch/vue-binding-spec`
+- `GET /api/agent/observability/top-tier/vue-workbench-implementation-package`
+- `GET /api/agent/observability/top-tier/vue-workbench-acceptance-contract`
+- `GET /api/agent/observability/top-tier/vue-workbench-migration-package`
+- `GET /api/agent/observability/top-tier/phase1-execution-roadmap`
+- `GET /api/agent/observability/top-tier/vue-readiness-control-plane`
+
+Architecture lesson: top-tier does not mean "install every new framework immediately." A top-tier Agent introduces advanced technology through official-source watch, compatibility matrix, evidence readiness, backend modernization decisions, playbooks, Vue visibility, multi-expert review, deterministic tests, reviewed trace evidence, and release gates before runtime authority changes.
+
+The workbench renders readiness, latest-technology lanes, official source watch, compatibility and evidence readiness, backend modernization, Phase 1 roadmap, Vue readiness, disabled runtime actions, blocked runtime shortcuts, review gates, build order, and raw JSON. This gives the learner one place to see how Java/Spring control-plane stability, OpenAI Responses/Agents patterns, MCP, A2A, OTel GenAI, Spring AI, GraphRAG/rerankers/vector stores, CI hard gates, and kube-manager write governance relate to each other.
+
+Safety invariant: the page does not perform dependency upgrades, create compatibility branches, call MCP `tools/call`, execute A2A handoff, run retrieval/vector/reranker/GraphRAG, mutate prompts or memory, run evals, replay traces, mutate trace-set catalogs, enable CI blocking, call kube-manager state-changing APIs, enable write retry, approve releases, issue durable receipts, or reopen NIM/HPC/Slurm/BCM Phase 2 scope.
+
+The frontend governance scan now treats `/agent/top-tier` as a protected latest-technology workbench. It requires the 15 endpoint bindings, the shared GET-only `loadObservabilityDocument(...)` workflow, disabled runtime markers, blocked shortcut markers, forbidden runtime-control markers, and neutral evidence semantics.
+
+Teaching conclusion: the user's Phase 1 target remains a top-tier Agent, not a reduced MVP. The right frontend lesson is to make advanced technology visible as a governed adoption system: what exists, what is officially sourced, what is compatible, what evidence is missing, which experts must review it, and exactly which runtime shortcuts remain closed.
+
 ## 2026-06-10 M5.84 Top-tier Vue Workbench Migration Package
 
 M5.84 adds a backend-owned dry-run migration package for applying the top-tier Agent technology workbench to `vue-kube-manager`. It is the bridge between the M5.83 acceptance contract and a future real frontend patch.
