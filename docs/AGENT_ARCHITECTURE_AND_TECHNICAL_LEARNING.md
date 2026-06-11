@@ -2,6 +2,33 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-11 Frontend Tools Governance And MCP Manifest
+
+`kube-agent-vue` now exposes `/agent/tools` as a real read-only Tools Governance page. This turns the backend MCP manifest and MCP governance overview into a learning surface for Agent tool safety.
+
+Backend contracts consumed:
+
+- `GET /api/agent/mcp/manifest`
+- `GET /api/agent/mcp/governance/overview`
+
+Frontend behavior:
+
+- The page loads both contracts through the shared read-only observability loader.
+- It renders total/exported/blocked tool counts, safe manifest policy, exported read-only tool metadata, governance cards, blocked capabilities, future enablement protocol, and raw JSON.
+- Tool names, intent ids, HTTP methods, and agent names are displayed as review evidence only. They are not executable handles.
+
+Architecture learning point:
+
+- 顶级 Agent 的工具治理不是“先给前端一个调用按钮”。正确顺序是先让 manifest、export policy、blocked capabilities、future enablement protocol 和 raw evidence 可见。
+- MCP manifest metadata, governance evidence, and runtime `tools/call` authority are separate layers. Mixing them in the UI would teach the wrong mental model and create production risk.
+- A tool can be visible in a safe manifest while still not callable by the frontend. Visibility is evidence; it is not permission.
+
+Safety invariant:
+
+- No backend code changed in this slice. The frontend consumed existing MCP read models.
+- The page does not call MCP `tools/call`, execute Tools, mutate ToolRegistry state, accept caller-provided tool arguments, export write tools, approve runtime MCP, or issue release decisions.
+- `kube-agent-vue` governance scanning now treats `/agent/tools` as a required read-only route and checks the MCP manifest/governance endpoint prefixes.
+
 ## 2026-06-11 Frontend Trace Explorer And Evidence Read Models
 
 `kube-agent-vue` now exposes `/agent/trace` as a real read-only Trace Explorer. This is the first frontend page that directly drills into the backend replay/eval evidence chain by trace id instead of only showing current session events.
