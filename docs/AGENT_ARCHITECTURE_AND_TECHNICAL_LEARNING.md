@@ -2,6 +2,38 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-11 Frontend Runs, HITL, And Observability Evidence
+
+`kube-agent-vue` now exposes three more AgentOps surfaces: `/agent/runs`, `/agent/hitl`, and `/agent/observability`. They intentionally teach different evidence layers of a top-tier Agent console.
+
+Backend contracts consumed by `/agent/observability`:
+
+- `GET /api/agent/observability/snapshot`
+- `GET /api/agent/observability/audit/index`
+- `GET /api/agent/observability/audit/trace/{traceId}?limit=...`
+- `GET /api/agent/observability/audit/id/{auditId}`
+
+Frontend behavior:
+
+- `/agent/runs` is a local session ledger derived from the current browser session, conversation, messages, and SSE events. It is useful for operator orientation, but it is not backend run history, audit truth, or eval evidence.
+- `/agent/hitl` is a local HITL signal viewer. It derives clarify/HITL/approval-like/human-review evidence from current frontend events and messages only. It is not a backend approval queue, confirmation workflow, policy override, or checkpoint resume surface.
+- `/agent/observability` reads backend metrics/audit read models through the shared read-only observability loader. It renders ReAct/tool/HITL counters, durable audit readiness, audit index redaction metadata, trace audit events, auditId lookup, local context, and raw JSON.
+- All three pages render missing backend evidence as `Unknown`, `Unavailable`, or `Not evaluated`. The frontend does not convert missing events into success, policy approval, HITL completion, eval pass, or release authority.
+
+Architecture learning point:
+
+- A mature Agent console separates current UI session state from backend-owned audit truth. The current browser can explain what the operator just saw, but durable audit, backend HITL queue state, and replay/eval evidence must come from server-owned read models.
+- Clarification is not approval. A `clarify` event can ask the user for information, but it cannot become a Tool execution decision unless a later backend-owned HITL contract records that authority.
+- `traceId` and `auditId` are lookup anchors, not authorization facts. Authorization remains server-side through Spring Security and `AgentPrincipalResolver`; the frontend only asks for redacted evidence.
+- Observability must start as GET/admin-only/read-only evidence. Replay execution, retry, eval-suite runs, trace-set curation, MCP `tools/call`, kube-manager writes, and release switches are separate authority planes and stay closed until reviewed backend contracts and tests explicitly open them.
+
+Safety invariant:
+
+- No backend code changed in this slice. The frontend consumed existing read models and the governance scanner now requires the snapshot/audit endpoint prefixes.
+- `/agent/runs` exposes no backend run retrieval, persistence, rerun, retry, approval, or mutation control.
+- `/agent/hitl` exposes no backend HITL queue call, confirm/clarify invocation, policy override, approval decision, checkpoint resume, or Tool execution.
+- `/agent/observability` exposes no replay execution, Tool execution, eval-suite run, trace-set mutation, MCP runtime call, kube-manager state-changing action, runtime mutation, CI blocking switch, or Phase 2 NIM / HPC / Slurm / BCM reopening control.
+
 ## 2026-06-11 Frontend Tools Governance And MCP Manifest
 
 `kube-agent-vue` now exposes `/agent/tools` as a real read-only Tools Governance page. This turns the backend MCP manifest and MCP governance overview into a learning surface for Agent tool safety.
