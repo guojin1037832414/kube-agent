@@ -48,6 +48,12 @@ Architecture rule:
 
 Learning point: top-tier Agent frontend work is not only chat UX. A serious Agent needs pages that teach why a capability is ready, blocked, reviewed, or forbidden before the runtime is allowed to act.
 
+Quality gate:
+
+- `kube-agent-vue` now provides `npm run verify:governance`.
+- The scan verifies required governance routes, observability endpoint prefixes, and a unified read-only loader.
+- It fails if governance pages introduce mutating HTTP methods, MCP `tools/call`, CI blocking enablement, write retry enablement, kube-manager state-changing actions, retrieval runtime execution, or Phase 2 domain reopening controls.
+
 ## 2026-06-10 M5.84 Top-tier Vue Workbench Migration Package
 
 M5.84 adds a backend-owned dry-run migration package for applying the top-tier Agent technology workbench to `vue-kube-manager`. It is the bridge between the M5.83 acceptance contract and a future real frontend patch.
