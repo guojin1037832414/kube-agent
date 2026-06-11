@@ -263,7 +263,12 @@ public class ObservabilityController {
         return ResponseEntity.ok(ApiResponse.ok(topTierTechnologyIntroductionPlaybookService.playbook()));
     }
 
-    /** Publish the multi-agent expert review aggregate without runtime handoff authority. */
+    /**
+     * 发布 Multi-Agent / Expert Review 聚合读模型。
+     *
+     * <p>中文说明：这个接口只给前端展示“多专家审阅证据”和“A2A/handoff 仍然关闭的原因”。
+     * 它不提供执行按钮，不打开 A2A runtime handoff，不调用 MCP tools/call，也不触发 kube-manager 写操作。</p>
+     */
     @GetMapping("/top-tier/multi-agent-review")
     @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
     public ResponseEntity<ApiResponse<AgentMultiAgentReviewResponse>> multiAgentReview() {

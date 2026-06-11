@@ -10,6 +10,36 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
+## Latest Engineering Rule - M5.85-2
+
+M5.85-2 adds a durable Chinese code-comment policy for the whole kube-agent learning project.
+
+Delivered:
+
+- Added repo-level `AGENTS.md` in `F:\gitProject\kube-agent`.
+- Added global Codex rule file at `C:\Users\guojin\.codex\AGENTS.md` so future Codex sessions remember the Chinese comment policy even outside this repository.
+- Expanded Chinese comments in the M5.85 backend read-model slice: `AgentMultiAgentReviewService`, `AgentMultiAgentReviewResponse`, `ObservabilityController`, and `AgentMultiAgentReviewServiceTest`.
+- Added source-contract assertions in `AgentMultiAgentReviewServiceTest` so the M5.85 files keep important Chinese teaching markers and security-boundary explanations.
+
+Standing rule:
+
+- All newly added or modified code should include Chinese comments where they help learning, review, safety, or future maintenance.
+- Classes, interfaces, records, Controller endpoints, Service orchestration entry points, complex private methods, tests, and security boundaries should explain in Chinese why they exist, where inputs come from, who consumes outputs, and what they must not do.
+- Agent-specific comments should clearly state whether code is read-only, admin-only, external-call-free, Tool/MCP/A2A/RAG/kube-manager/LLM-free, audit/memory-writing, or runtime-authority-bearing.
+- Touch old code only in the edited area; do not perform broad comment-only rewrites across unrelated historical modules.
+- Comments must teach design intent and risk boundary, not mechanically translate each line.
+
+Batch rollout plan:
+
+- Batch 1: Controller / Security / Principal / HITL entry points and authorization boundaries.
+- Batch 2: Tool / MCP / SafeToolExecutor / kube-manager HTTP outlet execution boundaries.
+- Batch 3: Orchestrator / Graph / ReAct / Plan reasoning and state-machine chain.
+- Batch 4: Memory / RAG / Eval / Observability / Audit evidence and governance chain.
+- Batch 5: DTO / support / config / store and remaining lower-risk support code.
+- Each batch must update recovery memory, run focused verification, commit, and push before moving to the next meaningful batch.
+
+Learning point: in this project, comments are part of the teaching system. A top-tier Agent should make its safety model, evidence provenance, and forbidden shortcuts visible in code, tests, docs, and recovery memory.
+
 ## Latest Frontend Memory - 2026-06-11
 
 `kube-agent-vue` now has a Backend Flag Semantics slice. This protects the learning console from a subtle but important Agent UX bug: treating backend boolean facts as UI authority.

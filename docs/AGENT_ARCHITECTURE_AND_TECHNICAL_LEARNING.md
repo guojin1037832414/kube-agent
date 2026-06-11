@@ -2,6 +2,40 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-11 Backend Chinese Comment Policy And Teaching Contract
+
+This slice turns Chinese code comments from a preference into an explicit project contract.
+
+Delivered:
+
+- Added repo-level `AGENTS.md` for `kube-agent`.
+- Added global Codex rule file at `C:\Users\guojin\.codex\AGENTS.md`.
+- Expanded M5.85 backend code comments in `AgentMultiAgentReviewService`, `AgentMultiAgentReviewResponse`, `ObservabilityController`, and `AgentMultiAgentReviewServiceTest`.
+- Added source-contract assertions that protect key Chinese teaching markers such as `中文说明`, `安全边界`, `只读读模型服务依赖`, `fail-closed`, `A2A provenance`, and `隐私边界`.
+
+Architecture lesson: this project is both a top-tier Agent product and an Agent engineering curriculum. Comments are therefore part of the architecture surface, not decoration. A good Chinese comment should explain why a boundary exists, where inputs come from, who consumes the output, which runtime powers are intentionally closed, and what future developer mistake the code is trying to prevent.
+
+Commenting rule:
+
+- New or modified classes, interfaces, records, Controller endpoints, Service orchestration entry points, complex private methods, tests, and security boundaries should include Chinese comments.
+- Comments should explain design intent, business meaning, risk boundary, safety invariant, evidence provenance, and forbidden actions.
+- Avoid line-by-line mechanical translation such as "assign value to variable"; prefer teaching comments such as "这里把多个只读证据源合并成前端可渲染的审阅视图，不触发运行时动作".
+- When touching old code, fill Chinese comments in the touched area only. Do not mass-rewrite unrelated historical code just to add comments.
+- Tests should also contain Chinese comments when they protect security contracts, source contracts, privacy boundaries, fail-closed behavior, or learning value.
+
+Batch rollout plan:
+
+- Batch 1 comments the highest-risk learning surfaces first: Controller entry points, Spring Security configuration, principal resolution, and HITL boundaries.
+- Batch 2 comments execution boundaries: Tool registry, SafeToolExecutor, MCP manifest/governance, and kube-manager HTTP outlet code.
+- Batch 3 comments reasoning orchestration: Orchestrator, Graph, ReAct, planning, and state propagation.
+- Batch 4 comments evidence systems: Memory/RAG, Eval, Observability, Audit, replay, trace, and release gates.
+- Batch 5 comments remaining DTO/support/config/store code, using shorter comments when the code is structural and lower risk.
+- Each batch should remain small enough to review, run targeted tests or compile validation, update `codex-memory`, commit, and push.
+
+Safety invariant: the rule does not open runtime authority. It does not execute Tools, call MCP `tools/call`, run A2A handoff, call kube-manager, run retrieval/RAG/eval, write audit or memory, upgrade dependencies, or reopen NIM/HPC/Slurm/BCM. It only makes intent and boundaries durable for future development and recovery.
+
+Teaching conclusion: for this learning project, code without boundary explanations is incomplete. The top-tier Agent goal requires implementation, tests, docs, recovery memory, and Chinese comments to evolve together.
+
 ## 2026-06-11 Backend Multi-Agent Review Read Model
 
 This backend slice adds the Phase 1 Multi-Agent / Expert Review aggregate read model:
