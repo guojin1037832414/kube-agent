@@ -69,7 +69,71 @@ Still not complete:
 - Reviewed Memory/RAG trace fixtures are still missing for `memory-rag-citation-fidelity`, `memory-rag-privacy-tenant`, and `memory-rag-lifecycle-policy`.
 - Retrieval runtime, vector stores, embeddings, rerankers, GraphRAG, durable memory writes, eval runtime, CI blocking, MCP runtime `tools/call`, kube-manager write authority, and Phase 2 NIM/HPC/Slurm/BCM remain closed.
 
-## Latest Phase 1 Core Memory - M5.84-1
+## Latest Phase 1 Core Memory - M5.85-1
+
+M5.85-1 adds the backend Multi-Agent / Expert Review aggregate read model for Phase 1 top-tier Agent work.
+
+Endpoint:
+
+```text
+GET /api/agent/observability/top-tier/multi-agent-review
+```
+
+Delivered:
+
+- Added `AgentMultiAgentReviewResponse`.
+- Added `AgentMultiAgentReviewService`.
+- Added admin-only Controller method `multiAgentReview()`.
+- Added `AgentMultiAgentReviewServiceTest`.
+- Updated Controller security/source contract tests and Controller admin/anonymous/non-admin tests.
+- Added teaching docs at `docs/M5_85_MULTI_AGENT_REVIEW_READ_MODEL_20260611.md`.
+
+Current state:
+
+- `schemaVersion=agent-multi-agent-review.v1`.
+- `reviewStatus=MULTI_AGENT_REVIEW_READY_RUNTIME_HANDOFF_CLOSED`.
+- `frontendTarget=vue-kube-manager multi-agent expert review board`.
+- `phase1TopTierGoalPreserved=true`.
+- `phase2NimHpcSlurmBcmPaused=true`.
+- `playbookEmbedded=true`.
+- `phase1RoadmapEmbedded=true`.
+- `compatibilityEvidenceEmbedded=true`.
+- `officialWatchDashboardEmbedded=true`.
+- `backendDecisionEmbedded=true`.
+- `runtimeControlAllowed=false`.
+- `a2aRuntimeHandoffAllowed=false`.
+- `mcpToolsCallAllowed=false`.
+- `toolExecutionAllowed=false`.
+- `expertReviewRoundCount=6`.
+- `roadmapStepCount=8`.
+- `a2aEvidenceRowCount=5`.
+- `reviewGateCount=40`.
+- `blockedRuntimeShortcutCount=25`.
+- `disabledRuntimeActionCount=30`.
+
+Security boundary:
+
+- M5.85 is admin-only, GET-only, read-only, aggregate-read-model-only, and source-read-model-composition-only.
+- It composes only the top-tier playbook, Phase 1 roadmap, compatibility evidence readiness, official watch dashboard, and backend modernization decision.
+- It does not perform A2A runtime handoff, MCP `tools/call`, Tool execution, retrieval/vector/embedding/reranker/GraphRAG runtime, eval execution, kube-manager mutation, dependency upgrade, compatibility branch creation, HITL invocation, audit write, memory write, durable receipt issuance, CI blocking change, external call, LLM call, or Phase 2 NIM/HPC/Slurm/BCM reopening.
+
+Learning point:
+
+- Multi-Agent review is evidence before orchestration, and provenance before runtime handoff. Phase 1 remains top-tier by making expert review roles, review gates, A2A provenance evidence, blocked shortcuts, and disabled runtime actions visible before opening runtime authority.
+
+Latest verified commands for this slice include:
+
+- `mvn -q "-Dtest=AgentMultiAgentReviewServiceTest,ObservabilityControllerSecurityContractTest,ObservabilityControllerTest" test`
+- `mvn -q "-DskipTests" validate`
+- `git diff --check`
+
+Next safe development order:
+
+- Frontend thread `019eb5c8-697a-77e2-8e30-89a2c9224fa6` can bind this endpoint as a read-only Multi-Agent Review page.
+- Backend should continue reviewed redacted eval trace evidence curation and Memory/RAG reviewed trace fixtures.
+- A2A provenance can receive a deeper typed contract later, but runtime handoff remains closed until reviewed traces, audit/replay, eval gates, source custody, human Git review, and release evidence exist.
+
+## Previous Phase 1 Core Memory - M5.84-1
 
 M5.84-1 adds the top-tier Vue workbench migration package endpoint. It answers the immediate handoff constraint: the backend can read `F:/gitProject/vue-kube-manager`, but the current writable workspace is `F:/gitProject/kube-agent`, and the frontend repo also needs an explicit Git safe-directory decision before edits. Therefore this slice publishes a dry-run migration package instead of pretending the frontend repository was modified.
 

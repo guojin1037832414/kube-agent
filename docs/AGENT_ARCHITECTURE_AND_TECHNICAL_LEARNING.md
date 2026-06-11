@@ -2,6 +2,25 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-11 Backend Multi-Agent Review Read Model
+
+This backend slice adds the Phase 1 Multi-Agent / Expert Review aggregate read model:
+
+- `GET /api/agent/observability/top-tier/multi-agent-review`
+- `AgentMultiAgentReviewService`
+- `AgentMultiAgentReviewResponse`
+- `AgentMultiAgentReviewServiceTest`
+
+It composes existing top-tier read models only: technology introduction playbook, Phase 1 execution roadmap, advanced technology evidence readiness, official watch dashboard, and backend modernization decision.
+
+Architecture lesson: Multi-Agent is not only a runtime orchestration technique. In a top-tier production Agent, multi-agent thinking first appears as explicit expert roles, review rounds, evidence rows, provenance rows, blocked shortcuts, disabled runtime actions, and release gates. This lets learners see why architecture, security, frontend, eval, memory/RAG, and release-manager reviews can run in parallel while runtime authority still stays closed.
+
+The new response exposes 6 expert review rounds, 8 roadmap orchestration rows, 5 A2A/handoff provenance evidence rows, 40 review gates, 25 blocked runtime shortcuts, and 30 disabled runtime actions. It also embeds the source read models so the frontend can render one coherent review board without inventing policy.
+
+Safety invariant: this endpoint is admin-only, GET-only, read-only, aggregate-read-model-only. It does not perform A2A runtime handoff, MCP `tools/call`, Tool execution, retrieval/vector/embedding/reranker/GraphRAG runtime, eval execution, kube-manager mutation, dependency upgrade, compatibility branch creation, HITL invocation, audit/memory write, durable receipt issuance, CI blocking change, external call, LLM call, or Phase 2 NIM/HPC/Slurm/BCM reopening.
+
+Teaching conclusion: Multi-Agent review is evidence before orchestration, and provenance before runtime handoff. The next safe frontend step is to bind this endpoint as a read-only page that shows expert review state and blocked authority, with no execute/upgrade/handoff buttons.
+
 ## 2026-06-11 Frontend Backend Flag Semantics
 
 This slice tightens frontend evidence language for backend boolean and diagnostic fields. It is a UI semantics and governance-scan slice, not a backend runtime change.

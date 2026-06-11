@@ -181,6 +181,14 @@ class ObservabilityControllerTest {
         new AgentTopTierVueWorkbenchMigrationPackageService(topTierVueWorkbenchAcceptanceContractService);
     private final AgentPhase1ExecutionRoadmapService phase1ExecutionRoadmapService =
         new AgentPhase1ExecutionRoadmapService();
+    private final AgentMultiAgentReviewService multiAgentReviewService =
+        new AgentMultiAgentReviewService(
+            topTierTechnologyIntroductionPlaybookService,
+            phase1ExecutionRoadmapService,
+            advancedTechnologyCompatibilityMatrixEvidenceReadinessService,
+            officialVersionProtocolWatchDashboardService,
+            backendTechnologyModernizationDecisionService
+        );
     private final AgentVueReadinessControlPlaneService vueReadinessControlPlaneService =
         new AgentVueReadinessControlPlaneService();
     private final ObservabilityController controller = new ObservabilityController(
@@ -199,6 +207,7 @@ class ObservabilityControllerTest {
         advancedTechnologyCompatibilityMatrixEvidenceReadinessService,
         backendTechnologyModernizationDecisionService,
         topTierTechnologyIntroductionPlaybookService,
+        multiAgentReviewService,
         officialVersionProtocolWatchService,
         officialVersionProtocolWatchDashboardService,
         officialVersionProtocolWatchVueBindingSpecService,
@@ -1421,6 +1430,118 @@ class ObservabilityControllerTest {
                 "/api/agent/observability/top-tier/backend-technology-modernization-decision");
         assertThat(playbook.toString())
             .contains("technology-introduction-playbook", "officialSourceWinsOverConversationMemory")
+            .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret");
+    }
+
+    @Test
+    void multiAgentReview_shouldRequireAdminAndReturnReadOnlyAggregate() {
+        ResponseEntity<ApiResponse<AgentMultiAgentReviewResponse>> anonymous =
+            controller.multiAgentReview();
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentMultiAgentReviewResponse>> user =
+            controller.multiAgentReview();
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        userPermissionContext.unbind();
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentMultiAgentReviewResponse>> admin =
+            controller.multiAgentReview();
+
+        assertThat(admin.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(admin.getBody()).isNotNull();
+        AgentMultiAgentReviewResponse review = admin.getBody().getData();
+        assertThat(review.schemaVersion()).isEqualTo("agent-multi-agent-review.v1");
+        assertThat(review.reviewStatus()).isEqualTo("MULTI_AGENT_REVIEW_READY_RUNTIME_HANDOFF_CLOSED");
+        assertThat(review.phase1TopTierGoalPreserved()).isTrue();
+        assertThat(review.phase2NimHpcSlurmBcmPaused()).isTrue();
+        assertThat(review.playbookEmbedded()).isTrue();
+        assertThat(review.phase1RoadmapEmbedded()).isTrue();
+        assertThat(review.compatibilityEvidenceEmbedded()).isTrue();
+        assertThat(review.officialWatchDashboardEmbedded()).isTrue();
+        assertThat(review.backendDecisionEmbedded()).isTrue();
+        assertThat(review.runtimeControlAllowed()).isFalse();
+        assertThat(review.a2aRuntimeHandoffAllowed()).isFalse();
+        assertThat(review.mcpToolsCallAllowed()).isFalse();
+        assertThat(review.toolExecutionAllowed()).isFalse();
+        assertThat(review.expertReviewRoundCount()).isEqualTo(6);
+        assertThat(review.roadmapStepCount()).isEqualTo(8);
+        assertThat(review.a2aEvidenceRowCount()).isEqualTo(5);
+        assertThat(review.reviewGateCount()).isGreaterThanOrEqualTo(35);
+        assertThat(review.blockedRuntimeShortcutCount()).isGreaterThanOrEqualTo(20);
+        assertThat(review.disabledRuntimeActionCount()).isGreaterThanOrEqualTo(25);
+        assertThat(review.expertReviewRounds()).extracting(row -> row.get("id"))
+            .containsExactly("architecture-review", "security-review", "frontend-vue-review",
+                "eval-quality-review", "memory-rag-review", "release-manager-review");
+        assertThat(review.a2aProvenanceRows()).extracting(row -> row.get("sourceId"))
+            .contains("a2a-multi-agent-provenance", "agent-handoff-and-a2a-provenance",
+                "a2a-handoff-provenance");
+        assertThat(review.blockedActions())
+            .contains("run-a2a-runtime-handoff", "call-mcp-tools", "run-retrieval-runtime",
+                "mutate-kube-manager", "reopen-phase2-domain-plugins");
+        assertThat(review.endpointMap())
+            .containsEntry("multiAgentReview", "/api/agent/observability/top-tier/multi-agent-review")
+            .containsEntry("topTierTechnologyIntroductionPlaybook",
+                "/api/agent/observability/top-tier/technology-introduction-playbook")
+            .containsEntry("backendTechnologyModernizationDecision",
+                "/api/agent/observability/top-tier/backend-technology-modernization-decision");
+        assertThat(review.reviewPolicy())
+            .containsEntry("adminOnly", true)
+            .containsEntry("readOnly", true)
+            .containsEntry("aggregateReadModelOnly", true)
+            .containsEntry("multiExpertReviewVisible", true)
+            .containsEntry("runtimeControlAllowed", false)
+            .containsEntry("a2aRuntimeHandoffAllowed", false)
+            .containsEntry("mcpToolsCallAllowed", false)
+            .containsEntry("toolExecutionAllowed", false)
+            .containsEntry("phase2NimHpcSlurmBcmTouched", false);
+        assertThat(review.safety())
+            .containsEntry("runtimeMutationAllowed", false)
+            .containsEntry("compatibilityBranchCreationTriggered", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("safeToolExecutorInvocation", false)
+            .containsEntry("hitlInvocation", false)
+            .containsEntry("kubeManagerCalls", false)
+            .containsEntry("mcpToolsCall", false)
+            .containsEntry("a2aRuntimeHandoff", false)
+            .containsEntry("llmUsed", false)
+            .containsEntry("externalCalls", false)
+            .containsEntry("auditWrite", false)
+            .containsEntry("durableReceiptIssued", false)
+            .containsEntry("memoryWrite", false)
+            .containsEntry("retrievalExecuted", false)
+            .containsEntry("vectorStoreCalls", false)
+            .containsEntry("embeddingModelCalls", false)
+            .containsEntry("rerankerCalls", false)
+            .containsEntry("evalRuntimeExecuted", false)
+            .containsEntry("ciBlockingChanged", false)
+            .containsEntry("phase2NimHpcSlurmBcmTouched", false);
+        assertThat(review.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("containsRawPrincipal", false)
+            .containsEntry("containsRawPrompt", false)
+            .containsEntry("containsRawDocument", false)
+            .containsEntry("containsAuthorizationHeader", false)
+            .containsEntry("containsToken", false)
+            .containsEntry("containsPassword", false);
+        assertThat(review.playbook().schemaVersion())
+            .isEqualTo("agent-top-tier-technology-introduction-playbook.v1");
+        assertThat(review.phase1Roadmap().schemaVersion()).isEqualTo("agent-phase1-execution-roadmap.v1");
+        assertThat(review.compatibilityEvidence().schemaVersion())
+            .isEqualTo("agent-advanced-technology-compatibility-matrix-evidence-readiness.v1");
+        assertThat(review.officialWatchDashboard().schemaVersion())
+            .isEqualTo("agent-official-version-protocol-watch-dashboard.v1");
+        assertThat(review.backendDecision().schemaVersion())
+            .isEqualTo("agent-backend-technology-modernization-decision.v1");
+        assertThat(review.toString())
+            .contains("multi-agent-review", "A2A", "architecture-review", "run-a2a-runtime-handoff")
             .doesNotContain("secret-value", "Bearer abc", "password:abc", "token=secret");
     }
 
