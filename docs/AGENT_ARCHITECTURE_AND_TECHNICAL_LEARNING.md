@@ -2,6 +2,28 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-11 Frontend Backend Flag Semantics
+
+This slice tightens frontend evidence language for backend boolean and diagnostic fields. It is a UI semantics and governance-scan slice, not a backend runtime change.
+
+`kube-agent-vue` now uses shared helpers for backend flags:
+
+- `backendFlagStatus(...)`
+- `backendFlagLabel(...)`
+
+The rule is simple: a backend `true` / `false` diagnostic can be shown as evidence, but the UI must not translate it into `Enabled`, `Ready`, `success`, or `warning` unless the backend read model explicitly defines that exact domain verdict.
+
+Changed surfaces:
+
+- `RuntimeSidebar` now renders `healthSnapshot.graphEnabled` as `Backend flag true/false`, not as a UI-enabled Graph permission.
+- `EvalGateView` now renders `ciBlockingEnabled` as backend flag evidence. A true CI blocking flag does not imply release authority, eval pass, CI enforcement, or permission to promote.
+- `ObservabilityOverviewView` now renders durable audit `ready` / `enabled` diagnostics as backend ready/enabled flags, not as audit completeness.
+- `scripts/verify-governance-readonly.mjs` now guards these semantics so Graph, CI blocking, and durable audit flags cannot regress to naked `Enabled`, `Ready`, `success`, or `warning` labels.
+
+Architecture lesson: top-tier Agent consoles must separate raw backend facts from interpreted authority. A flag can be useful evidence, but authority requires a stronger contract: source-owned semantics, permission boundary, audit evidence, reviewed eval traces, release decision, and recovery memory. Without this separation, a UI can accidentally teach that "backend says true" means "operator can act."
+
+Safety invariant: this slice does not add API calls, write methods, MCP `tools/call`, retrieval/vector runtime, eval execution, CI blocking enablement, kube-manager mutation, release approval, durable receipt issuance, or Phase 2 NIM/HPC/Slurm/BCM reopening.
+
 ## 2026-06-11 Frontend Top-tier Latest Technology Workbench
 
 This slice is a frontend consumption slice for the existing backend top-tier contracts. It does not open a new runtime, dependency upgrade path, MCP runtime, retrieval runtime, eval runtime, or kube-manager write path.

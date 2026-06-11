@@ -12,6 +12,19 @@ The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the t
 
 ## Latest Frontend Memory - 2026-06-11
 
+`kube-agent-vue` now has a Backend Flag Semantics slice. This protects the learning console from a subtle but important Agent UX bug: treating backend boolean facts as UI authority.
+
+Current backend-flag frontend evidence:
+
+- Added `backendFlagStatus(...)` and `backendFlagLabel(...)` in `src/shared/utils/status.ts`.
+- `RuntimeSidebar` now renders `healthSnapshot.graphEnabled` as `Backend flag true/false`, not as a Graph capability permission or execution switch.
+- `EvalGateView` now renders `ciBlockingEnabled` as backend flag evidence. It states that CI blocking flag true does not imply release authority or eval pass.
+- `ObservabilityOverviewView` now renders durable audit `ready` / `enabled` diagnostics as backend ready/enabled flags, while stating that durable audit flags do not prove audit completeness by themselves.
+- Governance scanning now prevents these backend flags from regressing to naked `Enabled`, `Ready`, `success`, or `warning` frontend inferences.
+- Verification passed with `npm run verify`, `git diff --check`, and browser smoke checks for `/agent/workbench`, `/agent/eval`, and `/agent/observability`.
+
+Teaching point: a top-tier Agent UI must distinguish backend facts from authority. A true flag is evidence, not permission, approval, release readiness, audit completeness, or task success.
+
 `kube-agent-vue` now has a dedicated `/agent/top-tier` Latest Technology Workbench. This is the current frontend bridge between the backend top-tier contracts and the Phase 1 learning/operation console.
 
 Current Top-tier frontend evidence:
