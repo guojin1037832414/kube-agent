@@ -55,6 +55,34 @@ Quality gate:
 - It fails if governance pages introduce mutating HTTP methods, MCP `tools/call`, CI blocking enablement, write retry enablement, kube-manager state-changing actions, retrieval runtime execution, or Phase 2 domain reopening controls.
 - `npm run verify` is the preferred frontend slice acceptance entry point. It runs the governance scan, TypeScript checking, and production build in one sequence.
 
+## 2026-06-11 Governance Teaching Panels And Scan Hardening
+
+The four `kube-agent-vue` governance pages now teach the domain boundary directly in the UI:
+
+- Each page passes `learningNotes` and `blockedActions` into `GovernanceReadModelView`.
+- The shared component renders two compact panels: `学习要点` and `当前关闭的权力`.
+- The pages still only call GET read models through `loadObservabilityDocument(endpoint.path)`.
+- Browser verification on `/agent/top-tier` confirmed visible `MCP tools/call`, `NIM/HPC/Slurm/BCM`, `刷新全部`, and no console errors.
+
+Why this matters:
+
+- A top-tier Agent workbench must teach the operator why a capability is blocked, not merely hide the button.
+- Governance pages are a controlled learning surface for advanced Agent engineering: technical adoption, Memory/RAG, Eval Gate, and kube-manager outlet safety are visible before runtime authority is granted.
+- Teaching text is allowed to mention dangerous concepts, but executable endpoints and handlers remain forbidden.
+
+Quality gate hardening:
+
+- `verify-governance-readonly.mjs` now requires every governance page to declare and render `learningNotes` and `blockedActions`.
+- It preserves boundary markers such as MCP `tools/call`, `run retrieval`, `enable ci blocking`, `enable write retry`, `kube-manager state changing action`, and `NIM/HPC/Slurm/BCM`.
+- It also scans AgentOps placeholder routes and rejects runtime-authority shortcuts under `path`, `url`, `endpoint`, `href`, or `to`.
+- Handler detection now covers camelCase, snake_case, and kebab-case names, so future frontend code cannot quietly add runtime controls by renaming them.
+
+Recovery note:
+
+- `kube-agent-vue` is the current Vue 3 / Element Plus temporary workbench used for fast learning and integration tests.
+- Formal `vue-kube-manager` integration remains a future reviewed migration target through the M5.84 package.
+- Quick restore path: backend `http://localhost:8500`, frontend `http://localhost:5173/agent/workbench`, then run `npm run verify` in `F:\gitProject\kube-agent-vue`.
+
 ## 2026-06-10 M5.84 Top-tier Vue Workbench Migration Package
 
 M5.84 adds a backend-owned dry-run migration package for applying the top-tier Agent technology workbench to `vue-kube-manager`. It is the bridge between the M5.83 acceptance contract and a future real frontend patch.
