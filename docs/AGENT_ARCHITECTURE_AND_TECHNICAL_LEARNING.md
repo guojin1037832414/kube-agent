@@ -2,6 +2,29 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-11 Frontend Settings Contract Evidence
+
+`kube-agent-vue` now exposes `/agent/settings` as a read-only Settings Contract page. This page intentionally closes the last AgentOps placeholder route while avoiding the common mistake of turning frontend runtime values into configuration authority.
+
+Frontend behavior:
+
+- The page displays current frontend/runtime evidence: API base, Workbench mode, operator session, conversation anchor, backend health, readiness facts already present in the store, runtime status text, and local error text.
+- It does not call backend settings write APIs, `fetch`, `postJson`, `loadObservabilityDocument(...)`, MCP endpoints, HITL endpoints, eval endpoints, or kube-manager state-changing endpoints.
+- It renders explicit closed contracts: settings save is `Unavailable`; policy/model config, tool enablement, and HITL/Eval/Memory/Kube Outlet settings are `Unknown` until backend-owned contracts exist.
+- It links only to Workbench and Readiness, and those links are navigation evidence, not configuration or runtime authority.
+
+Architecture learning point:
+
+- A top-tier Agent console must separate configuration evidence from configuration authority. A visible API base or `Health UP` state can help the operator understand the current browser context, but it cannot prove that model providers, policy rules, tool exports, HITL queues, eval gates, memory stores, or kube-manager outlets are correctly configured.
+- Frontend settings pages are especially dangerous because they look harmless. If they quietly save flags, bypass backend contracts, or infer readiness from local state, they can teach the wrong mental model and open runtime authority before audit, permission, and release gates exist.
+- The safe order is: display local/static/backend evidence first, mark missing contracts as `Unknown` or `Unavailable`, then later add backend-owned read/write contracts with permissions, audit records, deterministic tests, and recovery memory.
+
+Safety invariant:
+
+- No backend code changed in this slice. The frontend only consumed existing Pinia state.
+- `/agent/settings` exposes no save, no config mutation, no runtime switch, no MCP `tools/call`, no Tool execution, no eval run, no HITL confirmation, no kube-manager write action, no CI blocking switch, and no Phase 2 NIM / HPC / Slurm / BCM reopening control.
+- The governance scanner now requires `/agent/settings` to mount `SettingsContractView`, so all AgentOps navigation routes are real read-only pages rather than placeholders.
+
 ## 2026-06-11 Frontend Runs, HITL, And Observability Evidence
 
 `kube-agent-vue` now exposes three more AgentOps surfaces: `/agent/runs`, `/agent/hitl`, and `/agent/observability`. They intentionally teach different evidence layers of a top-tier Agent console.
