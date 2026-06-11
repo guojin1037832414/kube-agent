@@ -2,6 +2,33 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-11 Frontend Trace Explorer And Evidence Read Models
+
+`kube-agent-vue` now exposes `/agent/trace` as a real read-only Trace Explorer. This is the first frontend page that directly drills into the backend replay/eval evidence chain by trace id instead of only showing current session events.
+
+Backend contracts consumed:
+
+- `GET /api/agent/observability/replay/trace/{traceId}?limit=...`
+- `GET /api/agent/observability/eval/trace/{traceId}?limit=...`
+
+Frontend behavior:
+
+- The page validates trace anchors locally and bounds `limit`, then calls only the shared `loadObservabilityDocument(...)` read-only loader.
+- It renders summary tiles, a redacted replay timeline, deterministic eval checks, Replay Read Model JSON, and Eval Read Model JSON.
+- Missing evidence stays Unknown or unavailable. The UI does not turn missing fields into policy, permission, risk, approval, score, pass/fail, or release authority.
+
+Architecture learning point:
+
+- Workbench Evidence Tabs and Trace Explorer serve different layers. Evidence Tabs are current-session event projections; Trace Explorer is backend-owned redacted audit/eval read-model replay by trace id.
+- A top-tier Agent workbench should let learners inspect how runtime decisions become durable audit records, replay timeline steps, and deterministic eval evidence without giving the frontend runtime authority.
+- The correct first frontend binding for observability is GET/admin-only/read-only, not a replay button. Replay, retry, approve, execute, publish, eval-suite run, and trace-set mutation stay closed until separate backend contracts, tests, and release evidence exist.
+
+Safety invariant:
+
+- No backend code changed in this slice. The frontend only consumed existing M5.32/M5.33 read models.
+- The page does not call MCP `tools/call`, execute Tools, run eval suites, mutate trace-set catalogs, call kube-manager state-changing APIs, enable CI blocking, or reopen NIM / HPC / Slurm / BCM.
+- `kube-agent-vue` governance scanning now covers Trace Explorer and the shared UI primitives used by governance/evidence pages, so security wording and empty-state semantics remain machine-checked.
+
 ## 2026-06-11 Frontend Admin Console And Backend Boot Reliability
 
 This slice turns the temporary `kube-agent-vue` chat page into a vue-kube-manager-style admin console and restores a verified local backend runtime for frontend testing.
