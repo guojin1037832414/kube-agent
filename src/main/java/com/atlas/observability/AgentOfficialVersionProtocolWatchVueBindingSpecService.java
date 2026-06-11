@@ -1,5 +1,6 @@
 package com.atlas.observability;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.Clock;
@@ -17,6 +18,7 @@ public class AgentOfficialVersionProtocolWatchVueBindingSpecService {
     private final AgentOfficialVersionProtocolWatchDashboardService dashboardService;
     private final Clock clock;
 
+    @Autowired
     public AgentOfficialVersionProtocolWatchVueBindingSpecService(
         AgentOfficialVersionProtocolWatchDashboardService dashboardService
     ) {

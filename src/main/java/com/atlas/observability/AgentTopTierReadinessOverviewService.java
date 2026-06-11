@@ -2,6 +2,7 @@ package com.atlas.observability;
 
 import com.atlas.mcp.McpGovernanceOverviewResponse;
 import com.atlas.mcp.McpGovernanceOverviewService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.Clock;
@@ -21,6 +22,7 @@ public class AgentTopTierReadinessOverviewService {
     private final McpGovernanceOverviewService mcpGovernanceOverviewService;
     private final Clock clock;
 
+    @Autowired
     public AgentTopTierReadinessOverviewService(
         AgentKubeManagerHttpOutletGovernanceWorkbenchOverviewService kubeManagerGovernanceService,
         AgentEvalWorkbenchCapabilitiesService evalWorkbenchCapabilitiesService,

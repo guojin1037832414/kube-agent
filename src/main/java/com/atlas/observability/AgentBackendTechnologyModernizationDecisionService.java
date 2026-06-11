@@ -1,5 +1,6 @@
 package com.atlas.observability;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.Clock;
@@ -15,6 +16,7 @@ public class AgentBackendTechnologyModernizationDecisionService {
     private final AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessService evidenceReadinessService;
     private final Clock clock;
 
+    @Autowired
     public AgentBackendTechnologyModernizationDecisionService(
         AgentOfficialVersionProtocolWatchService officialVersionProtocolWatchService,
         AgentAdvancedTechnologyCompatibilityMatrixEvidenceReadinessService evidenceReadinessService

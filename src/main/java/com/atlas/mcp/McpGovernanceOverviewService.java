@@ -1,6 +1,7 @@
 package com.atlas.mcp;
 
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -22,6 +23,7 @@ public class McpGovernanceOverviewService {
     private final McpToolManifestService manifestService;
     private final Clock clock;
 
+    @Autowired
     public McpGovernanceOverviewService(McpToolManifestService manifestService) {
         this(manifestService, Clock.systemUTC());
     }

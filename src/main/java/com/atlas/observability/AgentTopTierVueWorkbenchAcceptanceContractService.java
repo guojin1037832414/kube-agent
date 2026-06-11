@@ -1,5 +1,6 @@
 package com.atlas.observability;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.Clock;
@@ -14,6 +15,7 @@ public class AgentTopTierVueWorkbenchAcceptanceContractService {
     private final AgentTopTierVueWorkbenchImplementationPackageService implementationPackageService;
     private final Clock clock;
 
+    @Autowired
     public AgentTopTierVueWorkbenchAcceptanceContractService(
         AgentTopTierVueWorkbenchImplementationPackageService implementationPackageService
     ) {

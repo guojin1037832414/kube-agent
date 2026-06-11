@@ -2,6 +2,35 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-11 Frontend Admin Console And Backend Boot Reliability
+
+This slice turns the temporary `kube-agent-vue` chat page into a vue-kube-manager-style admin console and restores a verified local backend runtime for frontend testing.
+
+Runtime verification:
+
+- Backend jar starts on `http://localhost:8500` with `--atlas.backend.base-url=http://localhost:8100`, local placeholder OpenAI keys, and `atlas.embedding.enabled=false`.
+- `GET /api/agent/health` returns `status=UP`, `totalTools=183`, `supervisorGraphEnabled=true`, and `graphEnabled=true`.
+- Frontend dev server runs on `http://localhost:5173`, and Vite `/api` proxy reaches the backend health endpoint.
+- Browser verification confirms visible `Kube Agent`, `Agent Workbench`, backend `UP`, runtime panel, login form, and no console errors.
+
+Backend learning point:
+
+- Several read-only governance services use two constructors: a production constructor with Spring dependencies and a package-private constructor that accepts `Clock` for deterministic tests.
+- Spring Boot runtime can fail constructor selection when more than one constructor exists and no explicit injection constructor is marked.
+- The fix is intentionally small: add `@Autowired` to the production constructor while keeping the test constructor package-private. This preserves deterministic tests and removes startup ambiguity.
+
+Frontend learning point:
+
+- The first usable Agent UI should already teach the operator how the Agent is wired: backend health, session state, stream/graph mode, SSE events, capability blocks, and top-tier readiness are visible on one work surface.
+- The visual language follows `vue-kube-manager`: fixed dark sidebar, compact white navbar, grey workspace background, white admin panels, and Element-family form controls.
+- Phase 1 remains top-tier even while NIM / HPC / Slurm / BCM are paused: the frontend keeps those domains out of the primary workflow and focuses on Agent orchestration, Memory/RAG, Eval Gate, kube-manager outlet governance, and safe operator visibility.
+
+Current limitations:
+
+- Local backend uses a placeholder OpenAI key, so real LLM chat still needs a valid key.
+- Real login/chat requires kube-manager on port `8100` and valid credentials.
+- Frontend production build passes, but Vite/Rolldown reports third-party `@vueuse/core` pure-annotation warnings and a large chunk warning; these are not current blockers but should be revisited when code-splitting the workbench.
+
 ## 2026-06-10 M5.84 Top-tier Vue Workbench Migration Package
 
 M5.84 adds a backend-owned dry-run migration package for applying the top-tier Agent technology workbench to `vue-kube-manager`. It is the bridge between the M5.83 acceptance contract and a future real frontend patch.

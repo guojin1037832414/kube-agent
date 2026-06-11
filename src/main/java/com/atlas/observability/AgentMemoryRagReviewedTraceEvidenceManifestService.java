@@ -1,5 +1,6 @@
 package com.atlas.observability;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.Clock;
@@ -23,6 +24,7 @@ public class AgentMemoryRagReviewedTraceEvidenceManifestService {
     private final AgentMemoryRagReadinessService memoryRagReadinessService;
     private final Clock clock;
 
+    @Autowired
     public AgentMemoryRagReviewedTraceEvidenceManifestService(
         AgentMemoryRagTraceSetCurationContractService curationContractService,
         AgentMemoryRagSourceEvidenceDigestContractService sourceEvidenceDigestContractService,

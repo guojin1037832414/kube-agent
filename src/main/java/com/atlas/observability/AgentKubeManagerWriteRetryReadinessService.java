@@ -2,6 +2,7 @@ package com.atlas.observability;
 
 import io.github.resilience4j.retry.Retry;
 import io.github.resilience4j.retry.RetryRegistry;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.Clock;
@@ -28,6 +29,7 @@ public class AgentKubeManagerWriteRetryReadinessService {
     private final RetryRegistry retryRegistry;
     private final Clock clock;
 
+    @Autowired
     public AgentKubeManagerWriteRetryReadinessService(RetryRegistry retryRegistry) {
         this(retryRegistry, Clock.systemUTC());
     }

@@ -1,5 +1,6 @@
 package com.atlas.observability;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.Clock;
@@ -17,6 +18,7 @@ public class AgentAdvancedTechnologyCompatibilityMatrixService {
     private final AgentOfficialVersionProtocolWatchService officialVersionProtocolWatchService;
     private final Clock clock;
 
+    @Autowired
     public AgentAdvancedTechnologyCompatibilityMatrixService(
         AgentOfficialVersionProtocolWatchService officialVersionProtocolWatchService
     ) {

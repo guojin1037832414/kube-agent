@@ -1,5 +1,6 @@
 package com.atlas.observability;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.Clock;
@@ -18,6 +19,7 @@ public class AgentMemoryRagTraceSetCurationContractService {
     private final AgentEvalSuiteCatalogService evalSuiteCatalogService;
     private final Clock clock;
 
+    @Autowired
     public AgentMemoryRagTraceSetCurationContractService(
         AgentEvalTraceSetCatalogService evalTraceSetCatalogService,
         AgentEvalSuiteCatalogService evalSuiteCatalogService

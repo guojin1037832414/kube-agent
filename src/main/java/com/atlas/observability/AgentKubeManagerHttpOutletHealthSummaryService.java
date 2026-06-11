@@ -10,6 +10,7 @@ import io.github.resilience4j.retry.Retry;
 import io.github.resilience4j.retry.RetryConfig;
 import io.github.resilience4j.retry.RetryRegistry;
 import org.springframework.core.env.Environment;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.net.URI;
@@ -42,6 +43,7 @@ public class AgentKubeManagerHttpOutletHealthSummaryService {
     private final Environment environment;
     private final Clock clock;
 
+    @Autowired
     public AgentKubeManagerHttpOutletHealthSummaryService(RetryRegistry retryRegistry,
                                                           CircuitBreakerRegistry circuitBreakerRegistry,
                                                           BulkheadRegistry bulkheadRegistry,

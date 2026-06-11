@@ -1,6 +1,7 @@
 package com.atlas.observability;
 
 import com.atlas.memory.ConversationSummaryMemoryStore;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.Clock;
@@ -18,6 +19,7 @@ public class AgentMemoryRagReadinessService {
     private final ConversationSummaryMemoryStore memoryStore;
     private final Clock clock;
 
+    @Autowired
     public AgentMemoryRagReadinessService(ConversationSummaryMemoryStore memoryStore) {
         this(memoryStore, Clock.systemUTC());
     }
