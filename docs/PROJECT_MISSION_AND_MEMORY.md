@@ -12,6 +12,17 @@ The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the t
 
 ## Latest Frontend Memory - 2026-06-11
 
+`kube-agent-vue` now has a dedicated `/agent/eval` Eval Workbench in addition to the `/agent/memory` Memory/RAG Workbench and `/agent/top-tier` Governance Evidence Matrix.
+
+Current Eval frontend evidence:
+
+- `/agent/eval` consumes six existing backend GET read models under `/api/agent/observability/eval/**`: workbench capabilities, workbench overview, reviewed trace evidence, release-blocking gate contract, gate-bundle summary, and trace-set catalog.
+- It renders release eligibility, reviewed trace progress, CI blocking state, trace-set gate rows, reviewed trace rows, release checks, review workflow, next actions, gate bundle/catalog JSON, quality/safety/privacy JSON, and raw read models.
+- It explicitly says `Eval evidence is not release authority`, `GET-only read models`, `CI blocking disabled`, `reviewed trace required`, `no eval run`, `no trace set catalog mutation`, and `no enable ci blocking`.
+- Browser audit for `/agent/eval` found only `Refresh`, `Operator unknown`, `Clear session`, and `Load Eval evidence`; no Approve, Execute, Retry, Save, Resume, Override, Run Eval, Enable CI, Promote, or Apply Patch controls exist.
+- Neutral status semantics were tightened: local `done/completed/tool_done` events are `readonly/Observed`, and metric cards use shared `StatusKind`, `statusLabel`, and evidence source instead of legacy success/danger/info state mapping.
+- Frontend verification passed with `npm run verify:governance`, `npm run typecheck`, `npm run verify`, `git diff --check`, and browser checks for `/agent/eval`.
+
 `kube-agent-vue` now has a dedicated `/agent/memory` Memory/RAG Workbench and a `/agent/top-tier` Governance Evidence Matrix.
 
 Current frontend evidence:

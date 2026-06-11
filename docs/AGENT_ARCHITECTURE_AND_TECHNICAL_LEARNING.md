@@ -2,6 +2,29 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-11 Frontend Eval Workbench
+
+This slice is a frontend consumption slice for the existing backend Eval Workbench contracts, not a new eval runtime or release gate opening.
+
+`kube-agent-vue` now renders `/agent/eval` as a dedicated read-only Eval Workbench. The page consumes six backend-owned GET contracts:
+
+- `GET /api/agent/observability/eval/workbench/capabilities`
+- `GET /api/agent/observability/eval/workbench/overview`
+- `GET /api/agent/observability/eval/reviewed-trace-evidence`
+- `GET /api/agent/observability/eval/release-blocking-gate-contract`
+- `GET /api/agent/observability/eval/workbench/gate-bundle-summary`
+- `GET /api/agent/observability/eval/trace-sets`
+
+Architecture lesson: top-tier Agent eval is a chain of evidence, not a button. The backend has already separated capability discovery, workbench overview, reviewed trace evidence, release-blocking contract, gate-bundle summary, and trace-set catalog. The frontend should preserve that separation so a learner can see why "a test exists" is different from "reviewed trace evidence exists", "gate bundle is release eligible", "CI blocking is enabled", and "a human release decision happened".
+
+The frontend workbench renders release eligibility, reviewed trace progress, CI blocking state, trace-set gate rows, reviewed trace rows, release checks, review workflow, next actions, gate bundle/catalog JSON, quality/safety/privacy JSON, and raw read models. Missing backend evidence remains `Unknown`, `Unavailable`, or `Not evaluated`.
+
+Safety invariant: the page does not run eval suites, replay traces, execute candidate discovery, execute curation review, execute promotion workflow, execute catalog patch review, mutate trace-set catalogs, POST raw gate bundles, enable CI blocking, approve releases, call MCP `tools/call`, execute Tools, call kube-manager state-changing APIs, run retrieval/vector/memory runtime, or reopen NIM/HPC/Slurm/BCM Phase 2 scope.
+
+The same frontend slice tightens neutral evidence semantics across the console. Local `done`, `completed`, and `tool_done` events now map to `readonly/Observed`, not `success/Completed`; metric cards render shared `StatusKind` plus evidence source directly. This prevents frontend UI language from teaching that stream completion, tool completion, health UP, or authenticated session equals task success, policy approval, permission approval, eval pass, or release readiness.
+
+Teaching conclusion: Eval is one of the places where a top-tier Agent project can quietly become unsafe if UI vocabulary is sloppy. The UI must make evidence provenance visible and keep release authority backend-owned until reviewed trace fixtures, deterministic gates, human review, CI wiring, audit evidence, and recovery memory all line up.
+
 ## 2026-06-11 Frontend Memory/RAG Workbench
 
 This slice is a frontend consumption slice for the existing backend Memory/RAG contracts, not a new Memory/RAG runtime opening.
