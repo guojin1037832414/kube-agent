@@ -53,6 +53,7 @@ Quality gate:
 - `kube-agent-vue` now provides `npm run verify:governance`.
 - The scan verifies required governance routes, observability endpoint prefixes, and a unified read-only loader.
 - It fails if governance pages introduce mutating HTTP methods, MCP `tools/call`, CI blocking enablement, write retry enablement, kube-manager state-changing actions, retrieval runtime execution, or Phase 2 domain reopening controls.
+- `npm run verify` is the preferred frontend slice acceptance entry point. It runs the governance scan, TypeScript checking, and production build in one sequence.
 
 ## 2026-06-10 M5.84 Top-tier Vue Workbench Migration Package
 
