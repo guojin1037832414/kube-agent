@@ -18,6 +18,13 @@ import java.util.Optional;
  *
  * <p>守卫只信任 {@link HitlConfirmation} 这种后端 marker，不读取 LLM/前端参数中的
  * confirmed/hitlConfirmed 字段，防止自然语言或 JSON 参数伪造确认。</p>
+ *
+ * <p>中文说明：HitlGuard 是执行前最后一道人工确认闸门。
+ * 它不负责展示弹窗，也不负责保存确认 token；它只回答一个问题：
+ * “当前 Tool 风险元数据 + 服务端确认 marker 是否允许继续进入 BaseTool.execute”。</p>
+ *
+ * <p>安全边界：这里必须 fail-closed。新增 Tool 类型、缺失 Tool 元数据、UNKNOWN/PLACEHOLDER
+ * 或任何非普通 READ 操作，都应该先要求人工确认，而不是默认放行。</p>
  */
 @Component
 public class HitlGuard {
@@ -64,6 +71,9 @@ public class HitlGuard {
 
     /**
      * 根据 Tool 名称从注册表解析元数据并校验。
+     *
+     * <p>中文说明：解析失败不能放行。ToolRegistry 查不到元数据时，verify 会把 metadata=null
+     * 当成高风险处理，这样新入口或注册缺陷不会绕过 HITL。</p>
      */
     public Decision verifyByToolName(ToolRegistry toolRegistry,
                                      String toolName,
@@ -79,6 +89,8 @@ public class HitlGuard {
 
     /**
      * 根据 intentId 从注册表解析元数据并校验。
+     *
+     * <p>中文说明：Graph/ReAct 更多使用 intentId，因此这里保持与 Tool 名称路径同样的安全语义。</p>
      */
     public Decision verifyByIntentId(ToolRegistry toolRegistry,
                                      String intentId,
@@ -89,6 +101,9 @@ public class HitlGuard {
 
     /**
      * 构造结构化 Tool 失败结果，供 ReAct/ToolCallback 这类 Map/JSON 路径复用。
+     *
+     * <p>中文说明：返回结构化错误而不是抛异常，是为了让前端能展示 HITL 所需信息，
+     * 同时让审计/观测系统看到“被拦截”而不是“系统崩溃”。</p>
      */
     public Map<String, Object> toBlockedToolResult(Decision decision) {
         return AtlasToolResult.fail(
@@ -100,6 +115,9 @@ public class HitlGuard {
 
     /**
      * 格式化 Tool 风险信息，供拦截提示和审计日志阅读。
+     *
+     * <p>中文说明：这里输出的是风险解释，不是权限证明。
+     * 前端不能因为看到 operationType=READ 就自行决定执行；最终仍以 Decision.allowed 为准。</p>
      */
     public String formatToolRisk(ToolRegistry.ToolMetadata metadata) {
         if (metadata == null) {
@@ -114,6 +132,9 @@ public class HitlGuard {
 
     /**
      * HITL 守卫判定结果。
+     *
+     * <p>中文说明：allowed=true 只表示 HITL 这一道门通过了；
+     * 它不代表权限、租户、审计、参数保护、kube-manager 写安全都已经通过。</p>
      */
     public record Decision(boolean allowed, String message) {
         public static Decision permit() {

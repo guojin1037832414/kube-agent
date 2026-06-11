@@ -34,6 +34,13 @@ import java.util.*;
  *   <li>最大条目=10000（避免内存溢出）</li>
  * </ul>
  *
+ * <p>中文说明：这是历史兼容层，也是当前 Tool / HTTP 出口仍然依赖的请求上下文。
+ * 它保存的是“登录成功后服务端缓存的权限快照”，不是前端声明的权限。
+ * 新代码应优先通过 {@link AgentPrincipalResolver} 读取当前主体，只有需要透传会话令牌或组织上下文时才直接使用这里。</p>
+ *
+ * <p>安全边界：ThreadLocal 必须成对 bind/unbind；任何异步执行都必须显式复制并恢复上下文。
+ * 不能把 LLM 参数、请求体里的 userId/orgId/role 写入这里当成可信身份。</p>
+ *
  * @version 3.1.0-P1.4
  */
 @Component
@@ -73,6 +80,9 @@ public class UserPermissionContext {
     /**
      * 用户登录成功后调用 — 缓存权限。
      *
+     * <p>中文说明：只有 AuthController 在 kube-manager 登录成功并完成组织上下文确认后才应该调用。
+     * 这里不再次调用外部系统，也不扩大权限；它只是把服务端已经确认的登录结果放入短期缓存。</p>
+     *
      * @param token      会话 Token（Bearer 或 JWT）
      * @param username   用户名
      * @param role       角色标识（如 sys_admin / user / viewer）
@@ -86,6 +96,9 @@ public class UserPermissionContext {
 
     /**
      * 用户登出时调用 — 清除缓存。
+     *
+     * <p>中文说明：登出清理必须幂等，未知 token 不报错。
+     * 这样前端重复点击退出或会话已经过期时，不会把安全清理流程变成异常流程。</p>
      */
     public void onLogout(String token) {
         UserPermission removed = cache.getIfPresent(token);
@@ -101,6 +114,9 @@ public class UserPermissionContext {
 
     /**
      * WebFilter 调用 — 将 token 绑定到当前线程。
+     *
+     * <p>中文说明：这个方法只绑定当前请求线程，不证明 token 有效。
+     * 是否有效仍由 {@link #current()} 能否从缓存读到 UserPermission 决定。</p>
      */
     public void bind(String token) {
         CURRENT_TOKEN.set(token);
@@ -109,6 +125,9 @@ public class UserPermissionContext {
     /**
      * 同时绑定 token 和 orgId 到当前线程（P3.1 orgId 链路修复新增）。
      * <p>用于 AtlasOrchestrator.streamChat() 在认证成功后手动绑定上下文。</p>
+     *
+     * <p>中文说明：token 与 orgId 必须作为一组服务端可信上下文一起传播。
+     * 只传播 token 会让 kube-manager 调用缺少组织边界；只传播 orgId 又无法代表真实登录会话。</p>
      *
      * @param token  JWT Token
      * @param orgId  组织 ID
@@ -123,6 +142,9 @@ public class UserPermissionContext {
     /**
      * 请求结束后清除 ThreadLocal（防止线程池复用导致信息泄漏）。
      * <p>P3.1：同时清除 CURRENT_ORG_ID。</p>
+     *
+     * <p>中文说明：这是这个类最重要的安全动作之一。
+     * 如果忘记 unbind，后续复用同一线程的请求可能继承上一个用户的身份和组织上下文。</p>
      */
     public void unbind() {
         CURRENT_TOKEN.remove();
@@ -162,6 +184,9 @@ public class UserPermissionContext {
 
     /**
      * 获取当前请求用户权限。
+     *
+     * <p>中文说明：返回 empty 是安全结果，不是错误。
+     * 它表示当前线程没有绑定有效登录快照，上层应该按匿名或未授权处理。</p>
      */
     public Optional<UserPermission> current() {
         String token = CURRENT_TOKEN.get();
@@ -171,6 +196,8 @@ public class UserPermissionContext {
 
     /**
      * 判断当前用户是否为管理员。
+     *
+     * <p>中文说明：缺失登录快照时必须返回 false，不能为了兼容旧链路而乐观放行。</p>
      */
     public boolean isAdmin() {
         return current()
@@ -180,6 +207,8 @@ public class UserPermissionContext {
 
     /**
      * 判断当前用户是否已认证。
+     *
+     * <p>中文说明：只有 token 已绑定并且缓存中仍有权限快照，才算已认证。</p>
      */
     public boolean isAuthenticated() {
         return current().isPresent();
@@ -191,6 +220,8 @@ public class UserPermissionContext {
 
     /**
      * 用户权限快照（不可变）。
+     *
+     * <p>中文说明：record 内部复制权限集合，避免调用方保存 Set 引用后继续修改权限。</p>
      */
     public record UserPermission(
         String token,

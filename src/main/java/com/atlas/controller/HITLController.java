@@ -51,6 +51,14 @@ import java.util.concurrent.Executor;
  *   <li>AtlasBrain resume 检测复用新决策 → 继续执行</li>
  * </ol>
  *
+ * <p>中文说明：HITLController 是“暂停后的人工确认/澄清恢复入口”，不是普通 Tool 执行入口。
+ * 它只在服务端确认 token、会话 checkpoint 和当前操作者一致后，才把确认 marker 注入 Graph。
+ * 这样可以防止用户自然语言里的“我确认”、LLM 参数里的 confirmed=true 或前端伪造字段绕过执行层。</p>
+ *
+ * <p>安全边界：confirm 只创建 {@link HitlConfirmation} marker 并恢复 Graph；
+ * 真正调用 Tool 仍必须在 SafeToolExecutor 中再次经过 HitlGuard、权限、审计和参数保护。
+ * clarify 只是补充信息，必须显式清空旧确认 marker。</p>
+ *
  * @author Atlas Team
  * @since 3.1.0-M1.5
  */
@@ -97,6 +105,7 @@ public class HITLController {
         SseEmitter emitter = streamingEmitter.createEmitter("hitl-" + threadId);
 
         // 安全校验：Token 匹配 + 幂等性检查
+        // remove 成功才代表本次 confirmToken 尚未过期且未被使用；重复提交会被 fail-closed。
         BrainDecision original = decisionCache.remove(threadId, confirmToken);
         if (original == null) {
             CompletableFuture.runAsync(
@@ -108,6 +117,7 @@ public class HITLController {
         }
 
         // 构建新的决策：HITL_CONFIRM → CALL_TOOL（用户已确认执行）
+        // 注意：这里不信任 request 中的目标 Tool 或参数，只复用 decisionCache 里服务端保存的原始决策。
         BrainDecision confirmed = new BrainDecision(
             BrainDecision.ActionType.CALL_TOOL,
             original.target(),
@@ -117,6 +127,7 @@ public class HITLController {
             original.requiredContext()
         );
 
+        // 服务端 marker 是后续执行层唯一可信的人工确认凭证。
         HitlConfirmation confirmation = HitlConfirmation.human(threadId, original.target());
         log.info("[HITL] 用户确认执行: threadId={}, target={}", threadId, original.target());
         runResumeWithCheckpointContext(threadId, confirmed, confirmation, emitter);
@@ -138,6 +149,7 @@ public class HITLController {
         SseEmitter emitter = streamingEmitter.createEmitter("clarify-" + threadId);
 
         // 清理旧决策（无需 Token 校验，因为是用户主动补充）
+        // clarify 不代表“同意执行”，只代表“提供更多上下文”；后续仍需要重新决策和必要的 HITL。
         decisionCache.removeForClarify(threadId);
 
         // 构建新决策：携带用户补充信息
@@ -169,6 +181,7 @@ public class HITLController {
         CheckpointContext context = loadCheckpointContext(threadId);
         Optional<AgentPrincipal> principal = principalResolver.current()
             .filter(AgentPrincipal::isAuthenticated);
+        // 当前登录用户必须与 checkpoint 中的 user_id 一致，避免 A 用户恢复 B 用户暂停的 Graph。
         if (principal.isEmpty()
             || context.userId().isBlank()
             || !context.userId().equals(principal.get().username())) {
@@ -178,6 +191,7 @@ public class HITLController {
             );
             return;
         }
+        // orgId 缺失时不继续恢复；否则后续 kube-manager 出口无法确认租户边界。
         if (context.orgId().isBlank()) {
             CompletableFuture.runAsync(
                 () -> streamingEmitter.error(emitter, "安全上下文缺失：无法确定当前用户所属组织，请重新登录后再试。"),
@@ -186,6 +200,7 @@ public class HITLController {
             return;
         }
         CompletableFuture.runAsync(
+            // 异步恢复必须复制 token/orgId，否则线程切换后 Tool 出口会丢失请求安全上下文。
             AsyncContextHolder.wrap(() -> {
                 try (AgentTraceContext.Scope ignored = AgentTraceContext.bind(context.traceId())) {
                     resumeGraph(threadId, decision, confirmation, emitter, context.traceId());
@@ -202,6 +217,7 @@ public class HITLController {
             Optional<StateSnapshot> snapshotOpt = compiledGraph.stateOf(config);
             if (snapshotOpt.isPresent() && snapshotOpt.get().state() != null) {
                 OverAllState oldState = snapshotOpt.get().state();
+                // checkpoint 是暂停前 Graph 保存的服务端状态；恢复时只从这里拿 token/user/org/trace。
                 String token = oldState.value("token").map(Object::toString).orElse("");
                 String userId = oldState.value("user_id").map(Object::toString).orElse("");
                 String orgId = oldState.value("orgId")
@@ -225,6 +241,10 @@ public class HITLController {
      * 核心恢复逻辑：从 checkpoint 读取状态，注入新决策，流式执行 Graph。
      *
      * <p>关键：resume 时必须复用原会话的 Token/上下文，否则后端 Tool 无权限执行。</p>
+     *
+     * <p>中文说明：本方法仍然不直接执行 Tool。
+     * 它只是把确认或澄清后的状态交回 compiledGraph；后续如果到达 tool_call 节点，
+     * 仍由 SafeToolExecutor 负责最终执行前检查。</p>
      */
     private void resumeGraph(String threadId,
                              BrainDecision newDecision,
@@ -240,6 +260,7 @@ public class HITLController {
             inputs.put("traceId", AgentTraceContext.currentOrNew(traceId));
             emitSse(emitter, "trace", Map.of("traceId", inputs.get("traceId")));
             if (confirmation != null) {
+                // 只有 confirm 路径会注入 confirmation；这个对象来自服务端，不来自请求参数。
                 inputs.put("hitl_confirmation", confirmation);
             } else {
                 // M5.13 fail-closed 修复：clarify/resume 不是人工确认，必须显式清空旧确认 marker，
@@ -275,6 +296,7 @@ public class HITLController {
             log.info("[HITL] 恢复会话 {}, actionType={}", threadId, newDecision.actionType());
 
             // 3. 流式执行 Graph — SSE 事件格式与主流程完全一致
+            // 恢复流要继续向前端输出 thinking/content/clarify，保证用户能看到恢复后的证据链。
             Set<String> emittedStructuredClarifications = java.util.concurrent.ConcurrentHashMap.newKeySet();
             compiledGraph.stream(inputs, config)
                 .subscribe(
@@ -386,6 +408,7 @@ public class HITLController {
         return value != null && "true".equalsIgnoreCase(value.toString());
     }
 
+    /** 构造给前端展示的补参提示；这只是澄清请求，不是执行授权。 */
     private String buildClarificationContent(Object errorCode, Object suggestions) {
         String codeText = errorCode != null ? errorCode.toString() : "TOOL_REQUIRES_CLARIFICATION";
         return "需要补充信息后才能继续执行（" + codeText + "）"

@@ -2,6 +2,30 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-11 Batch 1 Chinese Comments - Security Entry And HITL Boundary
+
+This slice completes the first Chinese-comment rollout batch for the highest-risk learning surfaces: HTTP security entry, identity bridging, principal resolution, login/session creation, and HITL fail-closed execution gating.
+
+Files annotated:
+
+- `src/main/java/com/atlas/auth/AgentSecurityConfig.java`
+- `src/main/java/com/atlas/auth/AuthTokenFilter.java`
+- `src/main/java/com/atlas/auth/AgentPrincipal.java`
+- `src/main/java/com/atlas/auth/AgentPrincipalResolver.java`
+- `src/main/java/com/atlas/auth/UserPermissionContext.java`
+- `src/main/java/com/atlas/controller/AuthController.java`
+- `src/main/java/com/atlas/controller/HITLController.java`
+- `src/main/java/com/atlas/hitl/HitlGuard.java`
+- `src/test/java/com/atlas/auth/Batch1ChineseCommentContractTest.java`
+
+Architecture lesson: an Agent's first safety lesson is identity flow. A request enters through `AgentSecurityConfig`, is bridged by `AuthTokenFilter`, becomes a server-owned `AgentPrincipal`, may fall back to `UserPermissionContext` for legacy Tool/HTTP paths, and must preserve token/orgId when HITL resumes asynchronous Graph execution. The comments now explain each boundary in Chinese so the code itself teaches why frontend claims, request-body roles, LLM parameters, and stale ThreadLocal state cannot become authority.
+
+HITL lesson: `HITLController.confirm` creates a server-side `HitlConfirmation` marker after token/checkpoint/user checks; `clarify` only adds context and must clear old confirmation markers. `HitlGuard` is fail-closed for missing metadata and non-READ operations, but it is only one gate; Tool execution still also needs permission, tenant context, audit, protected params, and SafeToolExecutor.
+
+Test pattern: `Batch1ChineseCommentContractTest` is a source-contract test for learning comments. It protects semantic markers such as `中文说明`, `安全边界`, `只读快照`, `服务端缓存的权限快照`, `确认 marker`, `服务端 marker`, and `fail-closed`. This is intentionally about preserving teaching value, not counting every comment line.
+
+Safety invariant: Batch 1 changes comments and one test only. It does not change HTTP route policy, login behavior, session semantics, principal parsing, HITL confirmation logic, Tool execution, MCP runtime, kube-manager calls, eval/retrieval runtime, audit/memory writes, dependency versions, or Phase 2 NIM/HPC/Slurm/BCM scope.
+
 ## 2026-06-11 Backend Chinese Comment Policy And Teaching Contract
 
 This slice turns Chinese code comments from a preference into an explicit project contract.

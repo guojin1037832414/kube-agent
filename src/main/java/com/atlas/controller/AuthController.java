@@ -35,6 +35,13 @@ import java.util.*;
  *   <li>JWT Token 仅存于 Caffeine 内存缓存，TTL=30min</li>
  * </ul>
  *
+ * <p>中文说明：AuthController 是 kube-agent 与成熟 kube-manager 账号体系之间的桥。
+ * 它不保存密码、不自建用户表、不绕过 kube-manager 登录结果；它只把前端登录请求代理出去，
+ * 再把服务端确认过的 token、用户名、角色和组织上下文写入本地会话缓存。</p>
+ *
+ * <p>安全边界：登录成功但无法确认组织上下文时必须 fail-safe，不创建 Session。
+ * 因为后续 Tool、Graph、kube-manager HTTP 出口都会把 SessionStore 里的 organizationId 当成租户边界。</p>
+ *
  * @author Atlas Team
  * @since 3.1.0-M2.5
  */
@@ -48,7 +55,8 @@ public class AuthController {
     private final UserPermissionContext userPermissionContext;
     private final SessionStore sessionStore;
     private final ObjectMapper objectMapper;
-    private final KubeManagerHttpClient kubeManagerClient;  // ← P3.1: 用于登录后反查 orgId
+    // 用于登录后反查组织上下文；这个依赖只在登录边界使用，不允许变成通用 Tool 执行入口。
+    private final KubeManagerHttpClient kubeManagerClient;
 
     public AuthController(
             @Value("${kube.manager.base-url:http://localhost:8100}") String baseUrl,
@@ -80,6 +88,9 @@ public class AuthController {
      *   <li>生成 Session ID 并缓存</li>
      *   <li>扁平结构返回</li>
      * </ol>
+     *
+     * <p>中文说明：这个接口是认证入口，不是 Agent 推理入口。
+     * 它不会调用 LLM、不会执行 Tool、不会触发 HITL，也不会写业务资源；它只创建后续请求需要的服务端会话。</p>
      */
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
@@ -97,12 +108,14 @@ public class AuthController {
 
         try {
             // ── 转 form-urlencoded ──
+            // kube-manager 登录接口使用 form-urlencoded；前端仍可向 kube-agent 发送 JSON，由这里做协议转换。
             String formBody = "username=" + URLEncoder.encode(request.getUsername(), StandardCharsets.UTF_8)
                     + "&password=" + URLEncoder.encode(request.getPassword(), StandardCharsets.UTF_8)
                     + "&organizationId=" + URLEncoder.encode(orgId, StandardCharsets.UTF_8)
                     + "&loginType=local_login";
 
             // ── 代理到 kube-manager ──
+            // 密码只进入本次 HTTP 请求体，不写入 SessionStore，不写入 UserPermissionContext，也不进入返回体。
             String responseBody = restClient.post()
                     .uri("/api/login")
                     .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
@@ -126,6 +139,7 @@ public class AuthController {
             }
 
             // 提取 token — 兼容多种字段名（result/token/data）
+            // token 缺失时不能继续创建本地 Session，否则后续请求无法代表真实 kube-manager 登录态。
             String token = extractToken(root);
             if (token == null || token.isBlank()) {
                 log.error("[Auth] kube-manager 响应中未找到 token: keys={}", root.fieldNames());
@@ -142,6 +156,7 @@ public class AuthController {
             Set<String> permissions = Set.of();
 
             // 1. 尝试 result 对象（kube-manager /api/login 的实际格式）
+            // 这里读取的是 kube-manager 返回的服务端事实，不读取前端请求体里的角色或权限声明。
             JsonNode resultNode = root.path("result");
             if (resultNode.isObject()) {
                 resolvedOrgId = resultNode.path("orgId").asText(resolvedOrgId);
@@ -157,6 +172,7 @@ public class AuthController {
             resolvedOrgId = root.path("organizationId").asText(resolvedOrgId);
 
             // M5.7: 如果响应未包含可信 orgId，用本次登录 token 反查；反查失败必须 fail-safe，不创建 Session。
+            // 组织上下文是后续所有 kube-manager 调用的边界；不能仅凭登录请求里的 organizationId 当作可信结果。
             if (isUntrustedOrgId(resolvedOrgId)) {
                 try {
                     String fetchedOrgId = kubeManagerClient.resolveOrgId(username, token);
@@ -187,9 +203,11 @@ public class AuthController {
             }
 
             // ── 缓存到 UserPermissionContext ──
+            // 只有 token 与组织上下文都通过服务端确认后，才把登录事实写入本地权限缓存。
             userPermissionContext.onLogin(token, username, role, permissions);
 
             // ── 生成 Session ID 并缓存到 SessionStore ──
+            // 前端后续使用 Session ID；真实 kube-manager token 保留在服务端，减少浏览器侧敏感信息暴露面。
             String sessionId = sessionStore.createSession(token, username, resolvedOrgId, role, permissions);
 
             // ── 返回扁平结构 ──
@@ -209,6 +227,9 @@ public class AuthController {
 
     /**
      * 用户登出 — 幂等设计，即使 sessionId 已失效也返回成功。
+     *
+     * <p>中文说明：登出接口只做本地会话和权限缓存清理，不假装已经撤销 kube-manager 侧 token。
+     * 后续如需远端 token revoke，应作为单独的受控集成切片实现。</p>
      */
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse<Void>> logout(
@@ -230,6 +251,9 @@ public class AuthController {
 
     /**
      * 获取当前登录用户信息。
+     *
+     * <p>中文说明：这个接口只返回 SessionStore 中的非敏感用户摘要。
+     * 不返回真实 token，不返回密码，也不把该响应当成 Tool 执行授权。</p>
      */
     @GetMapping("/me")
     public ResponseEntity<?> me(
@@ -261,6 +285,9 @@ public class AuthController {
     /**
      * 从 kube-manager 响应中递归提取 token。
      * <p>兼容字段名：result → token → data.token</p>
+     *
+     * <p>中文说明：兼容多种响应形状是为了适配成熟基座项目的历史格式；
+     * 兼容只限 token 所在位置，不代表接受任意登录成功语义。</p>
      */
     private String extractToken(JsonNode root) {
         // 1. 直接字段
@@ -283,6 +310,8 @@ public class AuthController {
      * <p>M5.7：普通用户的组织 ID 不允许为空或 kube-manager 登录占位值 {@code "1"}。
      * 真实组织即使等于某个历史默认配置值，也必须来自 kube-manager 响应或本次 token 反查成功，
      * 不能由本服务配置 fallback 生成。</p>
+     *
+     * <p>中文说明：返回 true 时上层必须继续反查或拒绝创建 Session，不能静默继续。</p>
      */
     private boolean isUntrustedOrgId(String orgId) {
         return orgId == null || orgId.isBlank() || "1".equals(orgId);

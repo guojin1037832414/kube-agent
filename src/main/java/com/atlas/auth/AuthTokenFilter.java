@@ -24,6 +24,13 @@ import java.util.Set;
  * {@link Authentication}，让后续端点保护、方法级授权、审计 actor 提取都能逐步转向
  * 标准 `SecurityContext`。ThreadLocal 仍保留为 legacy Tool/HTTP 兼容层。</p>
  *
+ * <p>中文说明：这个过滤器是“会话事实进入 Spring Security”的桥。
+ * 它只做身份绑定和上下文清理，不决定具体业务能不能执行，也不调用 Tool / MCP / LLM / kube-manager。
+ * 业务执行权限必须继续由端点授权、SafeToolExecutor、HITL 和审计链路共同决定。</p>
+ *
+ * <p>安全边界：请求开始和结束都必须清理 SecurityContext 与 ThreadLocal。
+ * 这是因为 Servlet 线程会复用，如果不清理，前一个用户的身份可能污染下一个请求。</p>
+ *
  * @version 3.1.0
  */
 public class AuthTokenFilter extends OncePerRequestFilter {
@@ -35,6 +42,12 @@ public class AuthTokenFilter extends OncePerRequestFilter {
         this(userPermissionContext, null);
     }
 
+    /**
+     * 创建过滤器。
+     *
+     * <p>中文说明：SessionStore 可以为空，是为了支持旧测试和只携带 Authorization 头的路径；
+     * 生产链路中它用于把 X-Session-Id 转成服务端保存的 token/orgId 快照。</p>
+     */
     public AuthTokenFilter(UserPermissionContext userPermissionContext, SessionStore sessionStore) {
         this.userPermissionContext = userPermissionContext;
         this.sessionStore = sessionStore;
@@ -52,6 +65,7 @@ public class AuthTokenFilter extends OncePerRequestFilter {
 
         String authHeader = request.getHeader("Authorization");
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            // Authorization 头优先。若头里的 token 无效，不再回退 X-Session-Id，避免混合身份。
             String token = authHeader.substring(7);
             userPermissionContext.bind(token);
             userPermissionContext.current()
@@ -59,6 +73,7 @@ public class AuthTokenFilter extends OncePerRequestFilter {
                 .ifPresent(authentication ->
                     SecurityContextHolder.getContext().setAuthentication(authentication));
         } else {
+            // 没有 Authorization 头时才尝试 X-Session-Id，这是前端工作台当前的会话恢复路径。
             bindSessionAuthentication(request);
         }
 
@@ -78,6 +93,7 @@ public class AuthTokenFilter extends OncePerRequestFilter {
         if (sessionId == null || sessionId.isBlank()) {
             return;
         }
+        // SessionStore 中的 username/token/orgId 是登录成功后服务端写入的快照，不能由前端请求体提供。
         sessionStore.findById(sessionId.trim())
             .filter(this::hasAuthenticatedUsername)
             .ifPresent(session -> {
@@ -99,6 +115,7 @@ public class AuthTokenFilter extends OncePerRequestFilter {
     }
 
     private Authentication toAuthentication(String username, String roleValue, Set<String> permissions) {
+        // Spring Security 角色必须使用 ROLE_ 前缀；业务权限保持原样作为额外 authority。
         String role = roleValue != null && !roleValue.isBlank()
             ? roleValue.trim().toUpperCase(java.util.Locale.ROOT)
             : "USER";
@@ -112,7 +129,7 @@ public class AuthTokenFilter extends OncePerRequestFilter {
             .filter(item -> item != null && !item.isBlank())
             .map(item -> new SimpleGrantedAuthority(item.trim()))
             .forEach(authorities::add);
-        // SecurityContext 只承载身份和权限；真实 Bearer Token 仍由 ThreadLocal 兼容层负责向 kube-manager 透传。
+        // SecurityContext 只承载身份和权限；真实会话令牌仍由 ThreadLocal 兼容层负责向 kube-manager 透传。
         return new UsernamePasswordAuthenticationToken(username, null, authorities);
     }
 }

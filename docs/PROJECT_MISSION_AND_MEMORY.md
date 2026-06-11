@@ -10,6 +10,42 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
+## Latest Chinese Comment Batch - M5.85-3
+
+M5.85-3 completes Chinese comment rollout Batch 1 for the backend HTTP entry and authorization boundary learning path.
+
+Files covered:
+
+- `AgentSecurityConfig`
+- `AuthTokenFilter`
+- `AgentPrincipal`
+- `AgentPrincipalResolver`
+- `UserPermissionContext`
+- `AuthController`
+- `HITLController`
+- `HitlGuard`
+- `Batch1ChineseCommentContractTest`
+
+Learning focus:
+
+- How kube-manager login/session facts enter kube-agent.
+- Why `AuthTokenFilter` bridges both Spring Security and legacy ThreadLocal context.
+- Why `AgentPrincipal` is a server-side read-only identity snapshot, not a frontend claim.
+- Why `AgentPrincipalResolver` prefers SecurityContext and only then falls back to historical UserPermissionContext.
+- Why login must fail safe when trusted organization context cannot be confirmed.
+- Why HITL confirm creates a server-side marker while clarify is only additional context.
+- Why `HitlGuard` is fail-closed and only one gate in the full Tool execution safety chain.
+
+Verification passed:
+
+- `mvn -q "-Dtest=Batch1ChineseCommentContractTest,AgentSecurityConfigContractTest,AuthTokenFilterSecurityContextTest,AgentPrincipalResolverTest,UserPermissionContextTest,AgentSecurityConfigWebMvcTest,AuthControllerLoginFailSafeTest,M513HitlFailClosedContractTest" test`
+- `mvn -q "-DskipTests" validate`
+- `git diff --check`
+
+Next batch:
+
+- Batch 2 should annotate Tool / MCP / SafeToolExecutor / kube-manager HTTP outlet execution boundaries, with the same pattern: focused files, Chinese teaching comments, source-contract guard, tests, recovery memory, commit, and push.
+
 ## Latest Engineering Rule - M5.85-2
 
 M5.85-2 adds a durable Chinese code-comment policy for the whole kube-agent learning project.
