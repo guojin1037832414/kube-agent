@@ -31,6 +31,23 @@ Current limitations:
 - Real login/chat requires kube-manager on port `8100` and valid credentials.
 - Frontend production build passes, but Vite/Rolldown reports third-party `@vueuse/core` pure-annotation warnings and a large chunk warning; these are not current blockers but should be revisited when code-splitting the workbench.
 
+## 2026-06-11 Governance Read Model Pages
+
+The `kube-agent-vue` workbench now has four dedicated governance pages instead of generic placeholders:
+
+- `/agent/top-tier`: top-tier readiness, technology introduction playbook, compatibility evidence, official protocol watch, and Vue readiness.
+- `/agent/memory`: Memory/RAG readiness, trace-set curation, reviewed evidence manifest, eval gate, and suite binding.
+- `/agent/eval`: eval workbench overview, reviewed trace evidence, release-blocking contract, gate bundle summary, and trace-set catalog.
+- `/agent/kube-manager`: kube-manager HTTP outlet governance, health, write retry readiness, write safety contract, and write release gate.
+
+Architecture rule:
+
+- These pages are read-only operator and learning surfaces. They call existing `GET /api/agent/observability/**` read models and render endpoint paths, status facts, collection counts, and raw JSON.
+- They do not add write APIs, runtime switches, MCP `tools/call`, retrieval execution, CI blocking, kube-manager state-changing actions, retry enablement, or Phase 2 domain controls.
+- Unauthenticated and unauthorized states are visible by design. This teaches the security boundary instead of hiding it behind empty screens.
+
+Learning point: top-tier Agent frontend work is not only chat UX. A serious Agent needs pages that teach why a capability is ready, blocked, reviewed, or forbidden before the runtime is allowed to act.
+
 ## 2026-06-10 M5.84 Top-tier Vue Workbench Migration Package
 
 M5.84 adds a backend-owned dry-run migration package for applying the top-tier Agent technology workbench to `vue-kube-manager`. It is the bridge between the M5.83 acceptance contract and a future real frontend patch.
