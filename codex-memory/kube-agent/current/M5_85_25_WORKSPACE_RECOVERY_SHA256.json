@@ -1,0 +1,47 @@
+{
+    "milestone":  "M5.85-25",
+    "title":  "Expanded top-tier Agent learning guide",
+    "generatedAt":  "2026-06-12T21:09:38+08:00",
+    "files":  [
+                  {
+                      "path":  "docs/learning/以kube-agent为例的顶级Agent开发学习指南.md",
+                      "sha256":  "cbd79a46e40f3d3aa4ab2df25c07440045a239cfb26e3847aac5f51a1ef0e49c"
+                  },
+                  {
+                      "path":  "变更日志.md",
+                      "sha256":  "d0f8d47772ff908b9da9fe624426e21225a047f6f3e06b2de689c8bced5b62d4"
+                  },
+                  {
+                      "path":  "docs/项目使命与当前记忆.md",
+                      "sha256":  "e0792e7d8400605ef3a74519cea91c463b624778e0c15454494e0c60785edd8d"
+                  },
+                  {
+                      "path":  "docs/文档索引.md",
+                      "sha256":  "173d594812542debf23cb3d70d592b900e3a90abd61fbb0776e470cad06faa5c"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/以kube-agent为例的顶级Agent开发学习指南.md",
+                      "sha256":  "cbd79a46e40f3d3aa4ab2df25c07440045a239cfb26e3847aac5f51a1ef0e49c"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/变更日志.md",
+                      "sha256":  "d0f8d47772ff908b9da9fe624426e21225a047f6f3e06b2de689c8bced5b62d4"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/项目使命与当前记忆.md",
+                      "sha256":  "e0792e7d8400605ef3a74519cea91c463b624778e0c15454494e0c60785edd8d"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/文档索引.md",
+                      "sha256":  "173d594812542debf23cb3d70d592b900e3a90abd61fbb0776e470cad06faa5c"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/当前恢复状态.md",
+                      "sha256":  "76648e559580505d4b47a0301ee562b4bc2d81e3f394447ca6842eb2a0d6ad4b"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_M5_85_25_EXPANDED_TOP_AGENT_LEARNING_GUIDE_20260612.md",
+                      "sha256":  "ecf253a50627b96129ee8f9d0a00bd3c64e05d6b1ea71f780ba0b77416fe4877"
+                  }
+              ]
+}
