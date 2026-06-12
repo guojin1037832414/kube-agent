@@ -17,11 +17,19 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Eval workbench promotion workflow result contract tests.
+ *
+ * <p>中文说明：本测试保护前端工作台包装层的教学语义，确保 UI 步骤、补丁摘要和下一步建议
+ * 只是只读证据投影，不会被误解成目录写权限。</p>
+ *
+ * <p>安全边界：这里只验证 wrapper/read model 形状，不调用 Tool/MCP/LLM/RAG/kube-manager，
+ * 不写 audit/memory，不修改目录，也不授予 release authority。</p>
  */
 class AgentEvalWorkbenchPromotionWorkflowServiceTest {
 
     @Test
     void workflow_shouldBuildUiResultWithoutCatalogWriteAuthority() {
+        // 中文说明：workbench wrapper 要把 promotion workflow 变成前端可读的教学视图。
+        // 安全边界：uiSteps / patchSummary / nextActions 只能指引人审，不能生成目录写权限。
         InMemoryAgentAuditRecorder auditRecorder = new InMemoryAgentAuditRecorder();
         String traceId = "trc_88888888888888888888888888888888";
         auditRecorder.record(new AgentAuditEvent(
@@ -130,6 +138,8 @@ class AgentEvalWorkbenchPromotionWorkflowServiceTest {
 
     @Test
     void workflow_shouldRejectUnknownTraceSet() {
+        // 中文说明：未知 trace set 只能返回 empty，不能靠 wrapper 伪造前端页面。
+        // 安全边界：wrapper 层不兜底目录权限，也不创建新 evidence。
         InMemoryAgentAuditRecorder auditRecorder = new InMemoryAgentAuditRecorder();
         AgentReplayTimelineService replayTimelineService = new AgentReplayTimelineService(auditRecorder);
         AgentEvalReportService evalReportService = new AgentEvalReportService(replayTimelineService);

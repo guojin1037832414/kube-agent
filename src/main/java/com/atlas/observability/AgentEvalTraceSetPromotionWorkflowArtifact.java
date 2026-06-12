@@ -7,11 +7,14 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Read-only orchestration artifact for the eval evidence promotion workflow.
+ * Eval 证据晋升工作流的只读编排产物。
  *
- * <p>This object is designed for a future Vue eval workbench: it shows the
- * operator discovery, curation review, and patch proposal in one response,
- * while preserving Git review as the only catalog promotion authority.</p>
+ * <p>中文说明：这个 record 把 promotion workflow 的结果打包成一个前端可直接渲染的教学视图：
+ * 发现了哪些候选、哪些 traceId 被推荐、补丁建议是什么、为什么现在可以进入 Git review。</p>
+ *
+ * <p>安全边界：本 artifact 只生成 read model，不写目录、不执行 runtime mutation、
+ * 不调用 Tool/MCP/LLM/RAG/kube-manager。{@code readyForGitReview=true} 只是“可进入人工 Git review”，
+ * 不是目录写权限，也不是 release authority。</p>
  */
 public record AgentEvalTraceSetPromotionWorkflowArtifact(
     String schemaVersion,
@@ -38,6 +41,8 @@ public record AgentEvalTraceSetPromotionWorkflowArtifact(
         List<String> selectedCandidateTraceIds,
         AgentEvalTraceSetCatalogPatchProposalArtifact proposal,
         int maxSelectedCandidates) {
+        // 中文说明：把 discovery 与 patch proposal 合成单个教学型 artifact，方便前端一次展示整条证据链。
+        // 安全边界：这里不改 trace set 目录，只投影审阅结果。
         List<String> selected = selectedCandidateTraceIds != null
             ? List.copyOf(selectedCandidateTraceIds)
             : List.of();
@@ -64,6 +69,8 @@ public record AgentEvalTraceSetPromotionWorkflowArtifact(
     private static String verdict(AgentEvalTraceSetCandidateDiscoveryResponse discovery,
                                   AgentEvalTraceSetCatalogPatchProposalArtifact proposal,
                                   boolean ready) {
+        // 中文说明：verdict 只描述审阅状态，不描述发布权力。
+        // 安全边界：即使走到 READY_FOR_GIT_REVIEW，也仍然必须经过人审和 Git diff。
         if (ready) {
             return "READY_FOR_GIT_REVIEW";
         }
@@ -81,6 +88,8 @@ public record AgentEvalTraceSetPromotionWorkflowArtifact(
                                                       List<String> selected,
                                                       int maxSelectedCandidates,
                                                       boolean ready) {
+        // 中文说明：workflowPolicy 让前端和学习者明确这条链路的能力边界。
+        // 安全边界：policy 里显式写出 false，避免按钮或布尔值被误读为授权。
         Map<String, Object> policy = new LinkedHashMap<>();
         String traceSetId = discovery != null ? discovery.traceSetId() : "";
         policy.put("schemaVersion", SCHEMA_VERSION);
@@ -118,6 +127,9 @@ public record AgentEvalTraceSetPromotionWorkflowArtifact(
 
     private static Map<String, Object> privacyProof(AgentEvalTraceSetCandidateDiscoveryResponse discovery,
                                                     AgentEvalTraceSetCatalogPatchProposalArtifact proposal) {
+        // 中文说明：privacyProof 证明这条链路只保留脱敏证据，不把 raw principal / org / conversation
+        // / endpoint / reason / parameter values 泄露给前端或审阅者。
+        // 安全边界：只要任一上游混入原始敏感字段，这份 proof 就必须 fail-closed。
         Map<String, Object> discoveryProof = discovery != null ? discovery.privacy() : Map.of();
         Map<String, Object> proposalProof = proposal != null ? proposal.privacy() : Map.of();
         boolean containsRawPrincipal = truthy(discoveryProof, "containsRawPrincipal")

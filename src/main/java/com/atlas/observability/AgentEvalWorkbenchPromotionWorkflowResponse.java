@@ -7,11 +7,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Frontend-ready wrapper around the trace-set promotion workflow.
+ * 面向前端的 trace-set promotion workflow 包装读模型。
  *
- * <p>The raw workflow artifact remains the source of truth. This read model
- * adds UI steps, patch summary, and next-action guidance for the future
- * vue-kube-manager eval workbench without granting catalog write authority.</p>
+ * <p>中文说明：raw workflow artifact 仍然是事实源，这个 response 只负责把候选发现、
+ * curation review、patch proposal 和 gate bundle 的教学信息拼成前端可渲染的工作台视图。</p>
+ *
+ * <p>安全边界：这里是 read model，不是 runtime catalog write。uiSteps、patchSummary、
+ * candidateGateSummary 和 nextActions 都只是教学/审阅导航，不是执行权限，不是 release authority。</p>
  */
 public record AgentEvalWorkbenchPromotionWorkflowResponse(
     String schemaVersion,
@@ -41,6 +43,8 @@ public record AgentEvalWorkbenchPromotionWorkflowResponse(
         AgentEvalTraceSetDefinition definition,
         AgentEvalTraceSetGateArtifact traceSetGate,
         AgentEvalTraceSetPromotionWorkflowArtifact workflow) {
+        // 中文说明：先把 definition/gate/workflow 拼成统一工作台视图，方便前端按步骤理解审阅链路。
+        // 安全边界：这个工厂只做投影，不调用任何运行时执行器，也不写 trace set catalog。
         AgentEvalWorkbenchTraceSetView view = AgentEvalWorkbenchTraceSetView.from(definition, traceSetGate);
         AgentEvalTraceSetCatalogPatchProposalArtifact proposal = workflow != null
             ? workflow.catalogPatchProposal()
@@ -70,6 +74,8 @@ public record AgentEvalWorkbenchPromotionWorkflowResponse(
 
     private static List<Map<String, Object>> buildUiSteps(AgentEvalTraceSetPromotionWorkflowArtifact workflow,
                                                           AgentEvalTraceSetCatalogPatchProposalArtifact proposal) {
+        // 中文说明：uiSteps 是教学型步骤，不是自动执行编排；前端据此展示下一步该看什么。
+        // 安全边界：steps 只描述 read-only 证据，不授予目录写权限。
         AgentEvalTraceSetCandidateDiscoveryResponse discovery = workflow != null ? workflow.candidateDiscovery() : null;
         AgentEvalTraceSetCurationReviewArtifact review = proposal != null ? proposal.curationReview() : null;
         return List.of(
@@ -129,6 +135,8 @@ public record AgentEvalWorkbenchPromotionWorkflowResponse(
     }
 
     private static Map<String, Object> buildPatchSummary(AgentEvalTraceSetCatalogPatchProposalArtifact proposal) {
+        // 中文说明：patchSummary 只提炼 JSON Patch 相关摘要，方便学习者理解“补丁建议”和“目录写入”的区别。
+        // 安全边界：summary 里的 readyForGitReview 只表示可以进入人工 Git review，不代表已经发布。
         Map<String, Object> summary = new LinkedHashMap<>();
         summary.put("schemaVersion", proposal != null ? proposal.schemaVersion() : "");
         summary.put("proposalVerdict", proposal != null ? proposal.proposalVerdict() : "PROPOSAL_UNAVAILABLE");
@@ -148,6 +156,8 @@ public record AgentEvalWorkbenchPromotionWorkflowResponse(
     }
 
     private static Map<String, Object> buildCandidateGateSummary(AgentEvalTraceSetCatalogPatchProposalArtifact proposal) {
+        // 中文说明：candidateGateSummary 把 curation review 的 gate 信息压缩成前端卡片。
+        // 安全边界：gate summary 是前端可读证据，不是 release authority。
         AgentEvalTraceSetCurationReviewArtifact review = proposal != null ? proposal.curationReview() : null;
         AgentEvalSuiteGateArtifact suiteGate = review != null ? review.candidateGate() : null;
         Map<String, Object> summary = new LinkedHashMap<>();
@@ -167,6 +177,8 @@ public record AgentEvalWorkbenchPromotionWorkflowResponse(
 
     private static List<String> buildNextActions(AgentEvalTraceSetPromotionWorkflowArtifact workflow,
                                                  AgentEvalTraceSetCatalogPatchProposalArtifact proposal) {
+        // 中文说明：nextActions 是工作台教学路径，告诉人类下一步该看哪张卡、哪份证据。
+        // 安全边界：这些动作名只是导航建议，不是自动执行按钮。
         if (workflow == null) {
             return List.of("refresh-trace-set-detail");
         }
@@ -192,6 +204,8 @@ public record AgentEvalWorkbenchPromotionWorkflowResponse(
     }
 
     private static Map<String, Object> buildEndpointTemplates(String traceSetId) {
+        // 中文说明：endpointTemplates 让前端和学习者看到 promotion workflow 相关只读入口的模板。
+        // 安全边界：模板不等于权限，路径可见不等于可写。
         String id = safeText(traceSetId);
         Map<String, Object> endpoints = new LinkedHashMap<>();
         endpoints.put("capabilities", "/api/agent/observability/eval/workbench/capabilities");
@@ -214,6 +228,8 @@ public record AgentEvalWorkbenchPromotionWorkflowResponse(
     private static Map<String, Object> buildWorkbenchPolicy(AgentEvalTraceSetPromotionWorkflowArtifact workflow,
                                                             AgentEvalTraceSetCatalogPatchProposalArtifact proposal,
                                                             AgentEvalWorkbenchTraceSetView view) {
+        // 中文说明：workbenchPolicy 直接把“哪些按钮不能出现、哪些能力不能打开”写出来。
+        // 安全边界：policy 的 false 不是装饰字段，而是明确的权限关闭说明。
         Map<String, Object> policy = new LinkedHashMap<>();
         policy.put("schemaVersion", SCHEMA_VERSION);
         policy.put("adminOnly", true);
@@ -242,6 +258,8 @@ public record AgentEvalWorkbenchPromotionWorkflowResponse(
 
     private static Map<String, Object> privacyProof(AgentEvalTraceSetPromotionWorkflowArtifact workflow,
                                                     AgentEvalWorkbenchTraceSetView view) {
+        // 中文说明：privacyProof 证明工作台展示的是脱敏证据，而不是 raw 审计、raw prompt 或 raw endpoint。
+        // 安全边界：一旦上游混入任何 raw 字段，这份 proof 就必须保持 fail-closed。
         Map<String, Object> workflowPrivacy = workflow != null ? workflow.privacy() : Map.of();
         Map<String, Object> viewPrivacy = view != null ? view.privacy() : Map.of();
         boolean containsRawPrincipal = truthy(workflowPrivacy, "containsRawPrincipal")
