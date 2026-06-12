@@ -10,9 +10,13 @@ import java.util.Map;
 /**
  * 虚拟机查询类 Tool 的参数安全辅助。
  *
- * <p>成熟 kube-manager 的虚拟机详情接口把 VM 名称放在 URL path 中，
- * 因此 Agent 侧必须先做路径片段级校验，再交给 {@link UriUtils} 编码。
- * 这里不接入启动、停止、删除等写操作；那些动作后续必须走高风险 HITL。</p>
+ * <p>中文说明：成熟 kube-manager 的虚拟机详情接口把 VM 名称放在 URL path 中。
+ * 输入来自 LLM/Plan/前端参数 Map，输出会进入真实 kube-manager HTTP path，因此 Agent 侧必须先做
+ * 路径片段级校验，再交给 {@link UriUtils} 编码，避免把自然语言或恶意路径片段直接拼接到 URL。</p>
+ *
+ * <p>安全边界：VM 名称只是资源定位符，不是读取或操作授权。这里不接入启动、停止、删除等写操作；
+ * 那些动作后续必须走高风险 ToolPermission、HITL、durable audit、idempotency、release evidence
+ * 和 kube-manager 权限。这里也不能接受 token、orgId、sessionId、currentUserId 等控制面字段作为目标 VM。</p>
  */
 final class VirtualMachineQuerySupport {
 
@@ -22,6 +26,12 @@ final class VirtualMachineQuerySupport {
     private VirtualMachineQuerySupport() {
     }
 
+    /**
+     * 提取、校验并编码 VM 名称 path 片段。
+     *
+     * <p>中文说明：只允许字母、数字、点、下划线和短横线，拒绝斜杠、反斜杠、query、fragment、
+     * 空白和超长名称。返回值仅用于 path segment，不代表资源归属已经通过校验。</p>
+     */
     static String encodedVmName(Map<String, Object> params) {
         Object raw = params.get("name");
         if (raw == null || raw.toString().isBlank()) {

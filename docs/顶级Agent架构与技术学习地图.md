@@ -223,6 +223,18 @@ Batch 4 已补中文教学注释后的学习线：
 - 高风险用户变更 helper 只能构造最小白名单 body：充值只能传 `userId`、`amount`、`remark`，调用方传入的 token、orgId、approved、writeAllowed、releaseDecision 都必须被丢弃。
 - helper 的失败应在本地变成结构化补参/纠错结果，不触发 kube-manager 调用。
 
+### 8.4 Analysis / Catalog Query Helper
+
+学习重点：
+
+- 分析/目录类 helper 负责把自然语言或前端参数收敛成 kube-manager GET query/path，典型领域包括虚拟机详情、repository catalog、sale 产品报价、行业应用、成本账单。
+- VM 名称进入 URL path 前必须做 path segment 校验和编码；VM 名称是定位符，不是启动、停止、删除权限。
+- repository catalog/tag 查询是敏感只读目录；NIM 相关字段只是目录过滤，不等于镜像拉取、部署创建、NIM 创建或 Phase 2 runtime 恢复。
+- sale 产品和租赁金额预估只读取目录/计算报价，不创建订单、不支付、不续费、不确认报价。
+- industry app API history 只读调用历史，不传 requestBody、不重放请求、不调用行业应用 API。
+- financial analysis 只筛选账单/成本记录，不能把 userId、orgId、paymentId、approved、writeAllowed、releaseDecision 等字段混入 query。
+- 这类 helper 的共同原则是：只复制成熟 DTO 审阅过的字段，分页做限幅，布尔/数字做归一化，其他控制字段全部丢弃。
+
 ### 9. Multi-Agent / Expert Review
 
 学习重点：
@@ -242,6 +254,7 @@ Batch 4 已补中文教学注释后的学习线：
 - Batch 5 首批：DTO / store / config 支撑层地基。
 - Batch 5 第二片：Tool 参数 schema、执行结果、执行来源、trace、意图分类、默认值补参和异常等支撑契约层。
 - Batch 5 第三片：query/path/body helper 的 kube-manager 参数收敛边界。
+- Batch 5 第四片：analysis/catalog query helper 的 GET-only 白名单与敏感只读边界。
 
 待推进：
 

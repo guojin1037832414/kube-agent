@@ -10,15 +10,20 @@ import java.util.Map;
 /**
  * 行业应用分析类 Tool 的参数白名单工具。
  *
- * <p>成熟 kube-manager 的 IndustryAppController 暴露了模板、实例、API 文档、API 调用历史、
+ * <p>中文说明：成熟 kube-manager 的 IndustryAppController 暴露了模板、实例、API 文档、API 调用历史、
  * 资源预设和高级参数等 GET 接口。Agent 侧不能把 LLM 传入的任意字段整体透传给后端，
  * 这里只组装 DTO 明确支持的字段，并统一限制分页上限和路径片段格式。</p>
+ *
+ * <p>安全边界：行业应用查询会看到模板、实例和调用历史，可能包含业务上下文。这里的 helper 只构造
+ * 只读 query/path 参数，不创建实例、不调用 API、不重放历史、不发起部署。caller 传入的 token、
+ * orgId、creatorId、requestBody、writeAllowed 或 releaseDecision 都不能进入 kube-manager。</p>
  */
 final class IndustryAppQuerySupport {
 
     private IndustryAppQuerySupport() {
     }
 
+    /** 模板列表 schema；includeDetail 只影响只读返回形状，不代表可部署。 */
     static List<ToolParameterSpec> templateListSpecs() {
         return List.of(
             pageSpec(),
@@ -30,6 +35,7 @@ final class IndustryAppQuerySupport {
         );
     }
 
+    /** 实例列表 schema；mineOnly 只是筛选候选，最终可见范围仍由 kube-manager 权限决定。 */
     static List<ToolParameterSpec> instanceListSpecs() {
         return List.of(
             pageSpec(),
@@ -41,6 +47,7 @@ final class IndustryAppQuerySupport {
         );
     }
 
+    /** API 调用历史 schema；只读查看历史，不重放请求、不发送 requestBody。 */
     static List<ToolParameterSpec> apiHistorySpecs() {
         return List.of(
             pageSpec(),
@@ -51,6 +58,7 @@ final class IndustryAppQuerySupport {
         );
     }
 
+    /** 行业应用模板 path ID schema；正整数要求防止路径片段注入。 */
     static List<ToolParameterSpec> appIdSpecs(String description) {
         return List.of(new ToolParameterSpec(
             "appId",
@@ -61,6 +69,7 @@ final class IndustryAppQuerySupport {
         ));
     }
 
+    /** 行业应用实例 path ID schema；实例 ID 只是定位符，不是访问授权。 */
     static List<ToolParameterSpec> instanceIdSpecs() {
         return List.of(new ToolParameterSpec(
             "instanceId",
@@ -71,6 +80,7 @@ final class IndustryAppQuerySupport {
         ));
     }
 
+    /** 构造模板列表 query 白名单，只复制成熟 DTO 支持的只读字段。 */
     static Map<String, Object> buildTemplateListQuery(Map<String, Object> params) {
         Map<String, Object> query = buildPageLimitQuery(params);
         putTrimmed(query, params, "category");
@@ -80,6 +90,7 @@ final class IndustryAppQuerySupport {
         return query;
     }
 
+    /** 构造实例列表 query 白名单，丢弃 namespace、token、orgId 等无关或控制字段。 */
     static Map<String, Object> buildInstanceListQuery(Map<String, Object> params) {
         Map<String, Object> query = buildPageLimitQuery(params);
         putTrimmed(query, params, "name");
@@ -89,6 +100,7 @@ final class IndustryAppQuerySupport {
         return query;
     }
 
+    /** 构造 API 历史 query 白名单；不会传递 requestBody、responseBody 或重放标记。 */
     static Map<String, Object> buildApiHistoryQuery(Map<String, Object> params) {
         Map<String, Object> query = buildPageLimitQuery(params);
         putTrimmed(query, params, "httpMethod");
@@ -97,6 +109,11 @@ final class IndustryAppQuerySupport {
         return query;
     }
 
+    /**
+     * 校验 path 中的行业应用模板/实例 ID。
+     *
+     * <p>安全边界：只返回正整数文本，拒绝 {@code ../42}、{@code 42/extra}、query、fragment 和小数。</p>
+     */
     static String positiveId(Map<String, Object> params, String name) {
         Object raw = params.get(name);
         if (raw == null) {

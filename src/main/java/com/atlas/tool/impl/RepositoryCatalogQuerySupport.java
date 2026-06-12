@@ -10,16 +10,26 @@ import java.util.Map;
 /**
  * 组织内产品/应用镜像目录 Tool 的参数契约与校验工具。
  *
- * <p>这里的 repository catalog 对齐 mature kube-manager 的
+ * <p>中文说明：这里的 repository catalog 对齐 mature kube-manager 的
  * {@code /api/{orgId}/repository} 系列接口，用于 NGC、NV AIE、NIM 等产品/应用镜像目录。
  * 它不是站点级 registry 配置，也不是普通组织镜像仓库清单，因此单独维护 schema，避免 Agent
  * 把三个相近名词混成一个能力。</p>
+ *
+ * <p>安全边界：catalog / tag 查询是敏感只读目录，不是镜像拉取、部署创建、NIM 创建或二期运行时恢复。
+ * repository 参数只是 query 字段，不能携带空格、脚本、URL query、控制字符、token 或授权材料。
+ * 真实可见范围仍由当前可信 orgId、ToolPermission、HITL 敏感读取确认和 kube-manager 权限决定。</p>
  */
 final class RepositoryCatalogQuerySupport {
 
     private RepositoryCatalogQuerySupport() {
     }
 
+    /**
+     * 目录列表参数 schema。
+     *
+     * <p>中文说明：这些字段只用于 GET 查询筛选和前端/LLM 提示；即使出现 {@code isOneClickDeploy}
+     * 或 NIM 相关筛选，也只是在目录中筛选条目，不打开 NIM 部署、创建或凭据链路。</p>
+     */
     static List<ToolParameterSpec> catalogListSpecs() {
         return List.of(
             pageSpec(),
@@ -39,10 +49,17 @@ final class RepositoryCatalogQuerySupport {
         );
     }
 
+    /** 标签查询只允许 repository 一个业务字段，避免 page/limit/keyword 等无关字段混入 tag endpoint。 */
     static List<ToolParameterSpec> repositoryOnlySpecs() {
         return List.of(repositorySpec());
     }
 
+    /**
+     * 构造目录列表 GET query 白名单。
+     *
+     * <p>安全边界：只复制显式审阅字段，丢弃 organizationId、orgId、token、username、deploy、writeAllowed
+     * 等控制或写入字段；分页和布尔值必须先归一化。</p>
+     */
     static Map<String, Object> buildCatalogQuery(Map<String, Object> params) {
         Map<String, Object> query = new LinkedHashMap<>();
         query.put("page", String.valueOf(positiveIntOrDefault(params.get("page"), "page", 1, 10000)));
@@ -57,6 +74,12 @@ final class RepositoryCatalogQuerySupport {
         return query;
     }
 
+    /**
+     * 构造 repository tag 查询参数。
+     *
+     * <p>中文说明：repository 必须来自目录列表返回的 resourceId/repository；它进入 query 参数，
+     * 不是 URL path，也不能携带 token、URL query 或脚本。</p>
+     */
     static Map<String, Object> buildRepositoryQuery(Map<String, Object> params) {
         return Map.of("repository", repositoryName(params));
     }
@@ -80,6 +103,12 @@ final class RepositoryCatalogQuerySupport {
         );
     }
 
+    /**
+     * 校验 repository 标识。
+     *
+     * <p>安全边界：允许斜杠是因为镜像目录本身常见 {@code namespace/name} 形态；
+     * 但拒绝空格、问号、井号和控制字符，避免把 query 注入或凭据塞进 repository 字段。</p>
+     */
     private static String repositoryName(Map<String, Object> params) {
         Object raw = params.get("repository");
         if (raw == null || raw.toString().isBlank()) {

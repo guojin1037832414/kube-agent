@@ -9,14 +9,19 @@ import java.util.Map;
 /**
  * 成本/账单分析类 Tool 的 query 白名单工具。
  *
- * <p>这些接口涉及消费记录、账单和定价配置，不能把 LLM 传入的参数整体透传给 kube-manager。
+ * <p>中文说明：这些接口涉及消费记录、账单和定价配置，不能把 LLM 传入的参数整体透传给 kube-manager。
  * 本类只组装成熟 DTO 明确支持的字段，组织、用户、Token 等上下文全部交给后端鉴权链路处理。</p>
+ *
+ * <p>安全边界：成本/账单属于敏感只读能力，query 只能表达筛选条件，不能表达用户身份、租户、
+ * 审批、支付、写入或 release 状态。分页上限在 Agent 侧先做限幅，真实可见范围仍由当前可信
+ * token/orgId、ToolPermission、HITL 敏感读取确认和 kube-manager 权限决定。</p>
  */
 final class FinancialAnalysisQuerySupport {
 
     private FinancialAnalysisQuerySupport() {
     }
 
+    /** Pod 使用记录 schema；userName 只是筛选候选，是否生效由后端角色权限决定。 */
     static List<ToolParameterSpec> podUseRecordSpecs() {
         return List.of(
             pageSpec(),
@@ -28,6 +33,7 @@ final class FinancialAnalysisQuerySupport {
         );
     }
 
+    /** Pod 账单 schema；只读筛选账单，不触发扣费、退款或状态流转。 */
     static List<ToolParameterSpec> podUseBillSpecs() {
         return List.of(
             pageSpec(),
@@ -39,6 +45,7 @@ final class FinancialAnalysisQuerySupport {
         );
     }
 
+    /** 计费配置 schema；只读查询配置，不修改价格策略。 */
     static List<ToolParameterSpec> costConfigSpecs() {
         return List.of(
             pageSpec(),
@@ -48,6 +55,7 @@ final class FinancialAnalysisQuerySupport {
         );
     }
 
+    /** 构造 Pod 使用记录 query 白名单，丢弃 userId/token/orgId 等控制字段。 */
     static Map<String, Object> buildPodUseRecordQuery(Map<String, Object> params) {
         Map<String, Object> query = buildPageLimitQuery(params);
         putTrimmed(query, params, "userName");
@@ -57,6 +65,7 @@ final class FinancialAnalysisQuerySupport {
         return query;
     }
 
+    /** 构造 Pod 账单 query 白名单，丢弃 approved、payment、writeAllowed 等写/支付语义字段。 */
     static Map<String, Object> buildPodUseBillQuery(Map<String, Object> params) {
         Map<String, Object> query = buildPageLimitQuery(params);
         putTrimmed(query, params, "applicationName");
@@ -66,6 +75,7 @@ final class FinancialAnalysisQuerySupport {
         return query;
     }
 
+    /** 构造计费配置 query 白名单，只允许分页和时间筛选。 */
     static Map<String, Object> buildCostConfigQuery(Map<String, Object> params) {
         Map<String, Object> query = buildPageLimitQuery(params);
         putTrimmed(query, params, "startTime");
