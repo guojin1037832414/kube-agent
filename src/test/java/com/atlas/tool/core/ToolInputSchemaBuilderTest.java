@@ -9,6 +9,13 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * ToolInputSchemaBuilder 单元测试。
  *
+ * <p>中文说明：本测试保护 {@link ToolParameterSpec} 到 Spring AI inputSchema 的转换形状。
+ * inputSchema 会影响 LLM 生成 Action.params 的字段，但它只是提示/约束材料，不是权限系统。</p>
+ *
+ * <p>安全边界：测试不启动 Spring、不调用 LLM、不执行 Tool、不访问 kube-manager、
+ * 不写 audit/memory。`additionalProperties=true` 只服务历史兼容，不代表 token/orgId/userId、
+ * HITL、audit、release 或 writeAllowed 等控制平面字段可以被透传。</p>
+ *
  * <p>用于锁定 ToolParameterSpec → Spring AI ToolDefinition.inputSchema 的转换契约，
  * 防止后续扩展 Tool Schema 时破坏 LLM 工具调用参数描述。</p>
  */

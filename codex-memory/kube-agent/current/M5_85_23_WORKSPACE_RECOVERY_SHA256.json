@@ -1,0 +1,67 @@
+﻿{
+    "milestone":  "M5.85-23",
+    "title":  "Batch 5 tool core test Chinese comments",
+    "generatedAt":  "2026-06-12T16:51:50+08:00",
+    "files":  [
+                  {
+                      "path":  "src/test/java/com/atlas/tool/core/ToolRegistryPromptContractTest.java",
+                      "sha256":  "dbc8222f8fd74fdce051e0cda82ee9399d5ecf285f2fa69f0707f90fa4508052"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/tool/core/ToolRegistryPermissionTest.java",
+                      "sha256":  "362f2b90597910fa7b105a63ac5c2923ad22637dfba1ee2ed61f29e597caabc9"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/tool/core/ToolParameterNormalizerTest.java",
+                      "sha256":  "005a4d44cc3db63cce1139a28d7d3314574941bf80b4160639c4ec4f11c0462b"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/tool/core/ToolInputSchemaBuilderTest.java",
+                      "sha256":  "59744abb49b530be4615a02c0f4e277242a48d7227ffb20c801c36f45ffa19a1"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/tool/core/ProtectedToolParameterFilterTest.java",
+                      "sha256":  "7679a3475d7a4ec2c5f48bc48755632e932227365c4cf76ffd6ae86b22c7e8e2"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/tool/core/ProtectedToolParameterFilterUsageContractTest.java",
+                      "sha256":  "d2d01f43a4649fdd4721b11c397a4d7a0ec28c281a69ce97efd66bef8a2a3916"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/tool/core/BaseToolOrganizationIdGovernanceTest.java",
+                      "sha256":  "1bb6e91cc1d4b9097475ef491344ad75079584893695dc5a7596c23484b72f90"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/tool/core/AtlasToolCallbackSafeExecutorTest.java",
+                      "sha256":  "229d4535d4760047ed64ba997c9ec64dcd1ea2ae4fd43ab4decc8d2b7d7fe301"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/support/Batch5ToolCoreTestChineseCommentContractTest.java",
+                      "sha256":  "6b2157e2be2835ea128692bf02d64de7be9fe7c0db08fac04e963721ea3020c8"
+                  },
+                  {
+                      "path":  "变更日志.md",
+                      "sha256":  "2b083f4edfe0e6da0a17e901253eec09c41c48883b523d973944ee5ff3f9fad6"
+                  },
+                  {
+                      "path":  "开发路线图.md",
+                      "sha256":  "ceb9a87ead31ad1119ece1d326ee531c1827fa968740ad6c3930fd5478843dc4"
+                  },
+                  {
+                      "path":  "docs/项目使命与当前记忆.md",
+                      "sha256":  "f54fa0de5390a07d792c8d0e6f5a677ac903237386b7809df749d59d9704ee6f"
+                  },
+                  {
+                      "path":  "docs/顶级Agent架构与技术学习地图.md",
+                      "sha256":  "ed62afceb57b9b93d6172d1305805982f8600ccbd56597d7c136cdf8c57c9309"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/当前恢复状态.md",
+                      "sha256":  "5d31782a6d6ab0b6edd8cc0da2aaf758cdcb380ec02025c38966af75996efd3b"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_M5_85_23_TOOL_CORE_TEST_CHINESE_COMMENTS_20260612.md",
+                      "sha256":  "9d1fec18ffff1eebccddb5febe053f35612efbdfa3e9e38732d9f3d42a869345"
+                  }
+              ]
+}

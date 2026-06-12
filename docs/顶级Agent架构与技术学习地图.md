@@ -285,6 +285,17 @@ Batch 4 已补中文教学注释后的学习线：
 - `IntentsLoader` 读取的 intents.yml 是路由目录，不是 Tool 权限表、MCP manifest、kube-manager API 白名单或 Phase 2 域能力开关。
 - `L3IntentClassifier` 的 LLM 输出必须经过强类型解析、置信度阈值、unknown 和 intent 白名单；模型不能动态注册能力、生成控制字段或跳过 SafeToolExecutor。
 
+### 8.7 Tool Core 测试学习线
+
+学习重点：
+
+- 测试也是架构文档的一部分。`ToolRegistryPromptContractTest` 解释 LLM 在 Prompt 里应该看到什么，以及为什么不能泄露内部 endpoint、默认值实现和写控制字段。
+- `ToolRegistryPermissionTest` 说明 Tool 可见性按匿名、认证用户、管理员分层，但可见不等于执行授权。
+- `ToolParameterNormalizerTest` 说明 alias -> canonical 只是参数兼容，不是身份、租户、HITL、audit、release 或写入权限来源。
+- `ProtectedToolParameterFilterTest` 和 usage contract 说明控制平面字段必须集中识别并被 ReAct、Graph、SafeToolExecutor 复用。
+- `BaseToolOrganizationIdGovernanceTest` 说明 orgId 是多租户安全边界，不能从 LLM/前端/测试参数读取。
+- `AtlasToolCallbackSafeExecutorTest` 说明 legacy callback 兼容入口也必须走 SafeToolExecutor，不能回到裸 `BaseTool.execute`。
+
 ### 9. Multi-Agent / Expert Review
 
 学习重点：
@@ -307,6 +318,7 @@ Batch 4 已补中文教学注释后的学习线：
 - Batch 5 第四片：analysis/catalog query helper 的 GET-only 白名单与敏感只读边界。
 - Batch 5 第五片：Tool core adapter 层，包括 AtlasTool、legacy ToolCallback、inputSchema、ToolContext、默认值切面、ToolResult 和结果转换器。
 - Batch 5 第六片：Intent routing 层，包括 IntentRouter、IntentArbiter、RuleMatcher、EmbeddingMatcher、L3IntentClassifier 和 IntentsLoader。
+- Batch 5 第七片：Tool core 关键测试教学注释，包括 Prompt 可见性、Tool 可见性、参数归一化、受保护字段过滤、orgId 治理和 legacy callback 安全执行。
 - Orchestrator hardening 第一片：Graph `tool_call` 入口守卫与 SSE 安全停止原因展示。
 
 待推进：
@@ -336,6 +348,6 @@ Batch 4 已补中文教学注释后的学习线：
 1. 读 `README.md` 和 `开发路线图.md`，确认当前项目边界。
 2. 读 Batch 1/2/3 已注释代码，理解身份、执行边界和 Agent 编排状态机。
 3. 读 Batch 4 已注释代码，理解 Memory/RAG/Audit/Replay/Eval 如何形成只读、脱敏、不可反向授权的证据链。
-4. 读 Batch 5 已注释代码，理解 API 响应、登录会话、Conversation 元数据、异步上下文、意图配置、query helper、Tool core adapter 和 intent routing 为什么也是安全边界。
+4. 读 Batch 5 已注释代码和测试，理解 API 响应、登录会话、Conversation 元数据、异步上下文、意图配置、query helper、Tool core adapter、intent routing 和 Tool core tests 为什么也是安全边界。
 5. 继续 Batch 5 剩余支撑类。
 6. 每完成一个小切片，都把“代码、测试、文档、恢复记忆、Git 提交”作为一个完整闭环。

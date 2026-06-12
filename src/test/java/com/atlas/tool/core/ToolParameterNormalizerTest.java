@@ -22,6 +22,14 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * ToolParameterNormalizer 参数归一化契约测试。
  *
+ * <p>中文说明：本测试保护 LLM/前端/Plan 传来的候选业务字段如何被“补齐成 canonical 参数名”。
+ * 归一化只解决参数命名兼容，不能决定用户身份、租户、HITL、audit、release 或写入权限。</p>
+ *
+ * <p>安全边界：测试只在内存中构造 ToolRegistry 和参数 Map，不执行 Tool、不调用
+ * kube-manager、不调用 LLM/MCP、不写 audit/memory。原始 alias 字段保留是为了兼容和审计可读性，
+ * 不是允许 alias 变成控制平面字段；受保护字段仍必须由 ProtectedToolParameterFilter /
+ * SafeToolExecutor 后续过滤。</p>
+ *
  * <p>这些测试用于锁定 LLM 参数别名兼容规则，尤其防止 {@code name} 这类高歧义字段
  * 被全局误映射到错误资源类型。后续引入 Tool Schema 时，也必须保持这些兼容性契约。</p>
  */

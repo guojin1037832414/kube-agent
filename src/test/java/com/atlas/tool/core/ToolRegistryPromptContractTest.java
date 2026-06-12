@@ -24,6 +24,15 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * ToolRegistry 生成给 ReActPromptBuilder 使用的工具目录参数契约测试。
+ *
+ * <p>中文说明：本测试保护 LLM 在 ReAct Prompt 中“能看到什么工具、能看到哪些参数、
+ * 能看到哪些风险标签”。Prompt 是模型行为引导层，不是最终执行边界，因此测试重点是防止
+ * ToolRegistry 把内部 endpoint、默认值实现、alias 细节或写入控制字段暴露给模型。</p>
+ *
+ * <p>安全边界：本测试只构造内存 ToolRegistry 和本地 Tool 实例，不调用 LLM、不执行
+ * {@link BaseTool#execute(java.util.Map)}、不访问 kube-manager、不创建 HITL marker、
+ * 不写 audit/memory，也不打开 MCP 或 Phase 2 NIM/HPC/Slurm/BCM 运行时能力。它锁定的是
+ * Prompt 可见性契约：LLM 只能看到经过权限过滤和脱敏的工具目录。</p>
  */
 class ToolRegistryPromptContractTest {
 

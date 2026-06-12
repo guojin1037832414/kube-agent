@@ -10,6 +10,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * M5.21-85 共享 Tool 参数保护契约。
  *
+ * <p>中文说明：本测试保护“哪些字段永远不能从 LLM/Plan/前端参数进入真实 Tool”的共享黑名单。
+ * 这些字段包括认证、租户、HITL、audit、release、写入开关、API endpoint 和 Phase 2 release
+ * 控制面材料。</p>
+ *
+ * <p>安全边界：本测试只调用纯函数，不执行 Tool、不启动 Spring、不访问 kube-manager、
+ * 不调用 LLM/MCP、不写 audit/memory。它并不替代 SafeToolExecutor，只是确保多个执行入口使用
+ * 同一份受保护字段语义，避免 ReAct、Graph 和 Tool 执行层各自维护名单后发生漂移。</p>
+ *
  * <p>该测试锁定执行边界的控制平面字段识别规则，防止 ReAct、SafeToolExecutor、
  * execute_node 分别维护不同名单后再次发生安全语义漂移。</p>
  */

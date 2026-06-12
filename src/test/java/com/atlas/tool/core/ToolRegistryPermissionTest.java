@@ -19,6 +19,15 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * ToolRegistry 权限感知集成测试 — 验证public用户/认证用户/管理员对各类Tool的可见性。
  *
+ * <p>中文说明：本测试保护 ToolRegistry 的“可见工具目录”规则。匿名、普通用户和管理员
+ * 在 Prompt/Tool 目录中看到的能力必须不同，否则 LLM 可能在没有权限的情况下被诱导生成
+ * 高风险 Action。</p>
+ *
+ * <p>安全边界：可见性不是最终执行授权，真实 Tool 调用仍必须经过 SafeToolExecutor、
+ * ToolPermission、HITL、audit、release 和 kube-manager 权限。本测试启动 Spring 上下文，
+ * 但不调用真实 LLM、不访问 kube-manager、不执行 Tool、不写 audit/memory，也不打开 MCP
+ * runtime 或 Phase 2 NIM/HPC/Slurm/BCM 权力。</p>
+ *
  * <p>测试覆盖：</p>
  * <ul>
  *   <li>18 个 Tool 全部标注了 @ToolPermission</li>

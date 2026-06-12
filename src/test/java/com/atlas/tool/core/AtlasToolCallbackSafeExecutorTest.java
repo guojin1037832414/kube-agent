@@ -22,6 +22,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * legacy core AtlasToolCallback 安全执行契约。
  *
+ * <p>中文说明：本测试保护旧 Spring AI core callback 适配层，确保它仍然先做参数兼容归一化，
+ * 但真正执行必须委托 SafeToolExecutor（{@link SafeToolExecutor}）。LLM JSON 中伪造的 token/orgId/userId/HITL/audit/write
+ * 控制字段不能被 callback 当作可信上下文。</p>
+ *
+ * <p>安全边界：本测试只使用内存 RecordingTool 和测试用 SafeToolExecutor，不访问 kube-manager、
+ * 不调用真实 LLM、不写 durable audit/memory、不创建 HITL marker，也不打开 MCP runtime 或
+ * Phase 2 NIM/HPC/Slurm/BCM 能力。它证明 legacy callback 兼容入口也不能绕过统一执行边界。</p>
+ *
  * <p>M5.22-4 将旧 core callback 从裸 {@code BaseTool} 执行迁移到
  * {@link SafeToolExecutor}。这个测试锁定兼容入口仍能做 alias 归一化，同时不能信任
  * LLM JSON 伪造的 token/orgId/userId/HITL/审计/写入控制字段。</p>
