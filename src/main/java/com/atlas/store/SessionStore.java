@@ -33,6 +33,14 @@ import java.util.Set;
  *   <li>{@code X-Session-Id: <sessionId>} — 业务会话标识，kube-agent 内部使用</li>
  * </ul>
  *
+ * <p>中文说明：SessionStore 是登录后服务端可信身份上下文的短期缓存。它把 kube-manager
+ * 返回的 token、可信 orgId、用户名和角色固化成 {@link SessionData}，供后续 Spring Security
+ * 与 ThreadLocal 兼容桥恢复当前用户。</p>
+ *
+ * <p>安全边界：sessionId 只是 kube-agent 会话句柄，不是 JWT，也不是 Tool 写权限。
+ * token 不会返回给前端，不应写入普通日志、Memory/RAG、prompt、eval fixture 或审计原文字段。
+ * organizationId 必须由登录链路可信解析后写入，不能把前端请求体里的 orgId 原样缓存。</p>
+ *
  * @author Atlas Team
  * @since 3.1.0-M2.5
  */
@@ -79,6 +87,12 @@ public class SessionStore {
     /**
      * 创建新会话并缓存。
      *
+     * <p>中文说明：调用者必须先完成 kube-manager 登录和可信 orgId 解析；本方法只负责生成
+     * 随机 sessionId 并保存服务端会话事实，不负责再次鉴权。</p>
+     *
+     * <p>安全边界：日志只打印脱敏 sessionId、用户名和 orgId，不打印 token。若 orgId 无法可信解析，
+     * 调用方应 fail-safe，不能传入默认值来“凑合创建会话”。</p>
+     *
      * @param token        kube-manager 返回的 JWT Token
      * @param username     用户名
      * @param organizationId 组织 ID
@@ -98,6 +112,8 @@ public class SessionStore {
     /**
      * 根据 sessionId 查询会话数据。
      *
+     * <p>中文说明：返回 Optional 是为了让认证过滤器对缺失/过期会话显式 fail-closed。</p>
+     *
      * @return Optional 包装，不存在或已过期返回 empty
      */
     public Optional<SessionData> findById(String sessionId) {
@@ -106,6 +122,9 @@ public class SessionStore {
 
     /**
      * 删除会话（登出时调用）。
+     *
+     * <p>安全边界：删除 session 只清理 kube-agent 本地会话缓存，不代表 kube-manager token
+     * 已被远端吊销；真正 token 失效仍依赖 kube-manager。</p>
      */
     public void remove(String sessionId) {
         cache.invalidate(sessionId);
@@ -134,6 +153,8 @@ public class SessionStore {
      * 生成安全的 Session ID。
      *
      * <p>SecureRandom 128-bit → 16 bytes → Base64 URL-safe 编码 → 22 chars</p>
+     *
+     * <p>中文说明：sessionId 需要不可猜测，避免攻击者通过枚举会话句柄横向读取身份上下文。</p>
      */
     private String generateSessionId() {
         byte[] bytes = new byte[16];
@@ -145,6 +166,8 @@ public class SessionStore {
 
     /**
      * Session ID 脱敏 — 日志中只显示前缀 + 前 4 位 + ...
+     *
+     * <p>安全边界：sessionId 虽然不是 JWT，但仍是会话句柄，日志里必须按敏感材料处理。</p>
      */
     private String mask(String sessionId) {
         if (sessionId == null || sessionId.length() < 8) return "***";

@@ -64,6 +64,13 @@ Evidence side:
 - Bearer 请求也必须恢复 token+orgId 原子上下文，否则 Graph/Tool 运行时会 fail closed。
 - 匿名、过期、跨用户、跨会话状态必须 fail closed。
 
+支撑层补充学习线：
+
+- `LoginRequest.organizationId` 是 kube-manager 登录候选参数，不是 kube-agent 本地可信 orgId。
+- `LoginResponse.sessionId` 是 kube-agent 会话句柄，不是 kube-manager JWT，也不是权限本身。
+- `SessionData` 只应存在于服务端内存，token 不能返回前端、写日志、进 Memory/RAG 或 prompt。
+- `SessionStore` 用 SecureRandom 生成不可猜测 sessionId，并通过 TTL 限制本地会话生命周期。
+
 ### 2. HITL 人工确认
 
 关键文件：
@@ -129,6 +136,13 @@ Evidence side:
 - Graph State 不应保存 `SseEmitter`、Lambda 等运行期对象；ReAct 过程事件通过 registry 用 sessionId 间接发布。
 - `execute_node` 是安全教学样例：先按计划形状 fail-closed，再委托 `SafeToolExecutor` 做最终执行边界。
 
+支撑层补充学习线：
+
+- `AtlasAsyncConfig` 保证跨线程传播服务端可信 token/orgId 快照，并在任务结束后恢复旧值。
+- 异步上下文不能从请求体、LLM 参数或前端字段推导身份，否则 Graph/ReAct/Tool 运行时会出现跨用户或跨租户污染。
+- `AtlasConfiguration` 只装配意图识别能力；Embedding 和 LLM 分类失败时应降级到规则层，不应阻断服务启动。
+- 意图命中只是候选智能信号，不能绕过 `SafeToolExecutor`、HITL、审计、kube-manager 权限、Memory/RAG source custody 或 release gate。
+
 ### 6. MCP 治理
 
 关键文件：
@@ -175,6 +189,16 @@ Batch 4 已补中文教学注释后的学习线：
 - `MemoryRagSourceEvidenceDigestResult` 中 `rawSourceAccepted`、`promptEvidenceAllowedNow`、`boundToIngestionRuntime`、`reusableAcrossTenantScope` 当前都必须保持 false。
 - `AgentMemoryRagReadinessService` 和 digest contract service 是 admin-only 只读证据，不执行检索、不调用向量库/LLM/Tool/MCP/kube-manager。
 
+### 8.1 DTO / Store / Config 支撑层
+
+学习重点：
+
+- 顶级 Agent 的安全不是只写在 Controller 和 Tool 里，DTO、Store、Config 也会承载重要边界。
+- `ApiResponse.success` 是前端展示状态，不是权限、HITL、audit、eval 或 release 事实。
+- `Conversation` 系列 DTO 只表达会话元数据；messages 空数组不代表服务端长期记忆，也不是 RAG 文档来源。
+- `ConversationStore` 的 conversationId 只定位资源，详情、改名、删除必须再次按当前可信 owner 收敛。
+- 支撑层越基础，越要写清“不能被拿去当什么”，因为后续功能很容易复用这些字段并误解含义。
+
 ### 9. Multi-Agent / Expert Review
 
 学习重点：
@@ -191,10 +215,11 @@ Batch 4 已补中文教学注释后的学习线：
 - Batch 2：Tool / MCP / SafeToolExecutor / kube-manager HTTP outlet。
 - Batch 3：Orchestrator / Graph / ReAct / Plan 推理和状态机链路。
 - Batch 4：Memory / RAG / Eval / Observability / Audit 证据链。
+- Batch 5 首批：DTO / store / config 支撑层地基。
 
 待推进：
 
-1. Batch 5：DTO / support / config / store 支撑代码。
+1. Batch 5 剩余支撑类：ToolParameterSpec / SafeToolExecutionResult / AgentTraceContext / intent config / exception 等仍承载契约的支撑代码。
 
 注释标准：
 
@@ -218,5 +243,6 @@ Batch 4 已补中文教学注释后的学习线：
 1. 读 `README.md` 和 `开发路线图.md`，确认当前项目边界。
 2. 读 Batch 1/2/3 已注释代码，理解身份、执行边界和 Agent 编排状态机。
 3. 读 Batch 4 已注释代码，理解 Memory/RAG/Audit/Replay/Eval 如何形成只读、脱敏、不可反向授权的证据链。
-4. 开始 Batch 5，围绕 DTO/support/config/store 学习支撑代码如何承载安全契约。
-5. 每完成一个小切片，都把“代码、测试、文档、恢复记忆、Git 提交”作为一个完整闭环。
+4. 读 Batch 5 首批已注释代码，理解 API 响应、登录会话、Conversation 元数据、异步上下文和意图配置为什么也是安全边界。
+5. 继续 Batch 5 剩余支撑类。
+6. 每完成一个小切片，都把“代码、测试、文档、恢复记忆、Git 提交”作为一个完整闭环。

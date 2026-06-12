@@ -27,6 +27,13 @@ import java.util.stream.Collectors;
  *
  * <p>会话列表按 {@code updatedAt} 倒序排列（最新会话在前），满足前端侧边栏展示需求。</p>
  *
+ * <p>中文说明：ConversationStore 只保存当前用户聊天会话的轻量元数据，帮助前端组织侧边栏。
+ * 它不是长期记忆、不是 RAG 文档库、不是审计日志，也不是 Agent trace store。</p>
+ *
+ * <p>安全边界：conversationId 只用于定位资源，不能当授权凭证。凡是详情、改名、删除这类
+ * 用户可见操作，都必须走带 userId 的收敛方法或由 Controller 先用当前 Principal 过滤。
+ * 标题来自用户/前端输入，不能作为 prompt 权威、eval 证据或 release 事实。</p>
+ *
  * @author Atlas Team
  * @since 3.1.0-M2.5
  */
@@ -65,6 +72,11 @@ public class ConversationStore {
     /**
      * 创建新会话。
      *
+     * <p>中文说明：userId 必须来自服务端可信 Principal 或登录会话，不应直接信任 X-Session-Id、
+     * 请求体 userId 或 LLM 生成字段。</p>
+     *
+     * <p>安全边界：title 只是展示字段；这里不写 prompt、不写消息正文、不写 Memory/RAG。</p>
+     *
      * @param userId  所属用户标识（sessionId 或 username）
      * @param title   会话标题，空时默认 "新会话"
      * @return 新创建的 Conversation
@@ -81,6 +93,9 @@ public class ConversationStore {
 
     /**
      * 根据 ID 查询。
+     *
+     * <p>安全边界：该方法只做资源定位，不做授权收敛；Controller 对外暴露时应优先使用
+     * {@link #findByUserAndId(String, String)}。</p>
      */
     public Optional<Conversation> findById(String id) {
         return Optional.ofNullable(cache.getIfPresent(id));
@@ -99,6 +114,8 @@ public class ConversationStore {
 
     /**
      * 列出某用户的全部会话，按 updatedAt 倒序排列（最新在前）。
+     *
+     * <p>中文说明：列表必须按当前可信用户过滤，避免侧边栏泄露其他用户 conversation 元数据。</p>
      */
     public List<Conversation> findByUser(String userId) {
         return cache.asMap().values().stream()
@@ -109,6 +126,9 @@ public class ConversationStore {
 
     /**
      * 更新会话标题。
+     *
+     * <p>安全边界：该方法不校验 owner，只适合内部已经完成归属判断的路径；
+     * 对 Controller 暴露请使用 {@link #updateTitleForUser(String, String, String)}。</p>
      */
     public boolean updateTitle(String id, String newTitle) {
         Conversation existing = cache.getIfPresent(id);
@@ -128,6 +148,8 @@ public class ConversationStore {
 
     /**
      * 仅允许会话所属用户更新标题。
+     *
+     * <p>中文说明：这是对外写元数据时的安全入口，conversationId 命中后还必须匹配 owner。</p>
      */
     public boolean updateTitleForUser(String userId, String id, String newTitle) {
         Conversation existing = cache.getIfPresent(id);
@@ -137,6 +159,9 @@ public class ConversationStore {
 
     /**
      * 更新消息计数。
+     *
+     * <p>中文说明：messageCount 是前端展示计数，不代表服务端保存了消息，也不能证明 Agent
+     * 成功执行了某个任务。</p>
      */
     public boolean updateMessageCount(String id, int count) {
         Conversation existing = cache.getIfPresent(id);
@@ -155,6 +180,9 @@ public class ConversationStore {
 
     /**
      * 删除会话。
+     *
+     * <p>安全边界：该方法不校验 owner，只适合内部已确认归属的路径；用户入口必须使用
+     * {@link #removeForUser(String, String)}。</p>
      */
     public boolean remove(String id) {
         boolean existed = cache.getIfPresent(id) != null;
@@ -167,6 +195,9 @@ public class ConversationStore {
 
     /**
      * 仅允许会话所属用户删除会话。
+     *
+     * <p>中文说明：删除只清理会话元数据，不删除 Memory/RAG、audit 或 eval evidence；
+     * 这些证据链需要各自的生命周期策略。</p>
      */
     public boolean removeForUser(String userId, String id) {
         Conversation existing = cache.getIfPresent(id);

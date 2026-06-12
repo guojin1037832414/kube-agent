@@ -10,7 +10,7 @@
 |---|---|---|
 | Phase 1 顶级 Agent Core | 进行中 | 不降低目标，优先完成安全、编排、Tool 治理、Memory/RAG、Eval、可观测、多 Agent 审查和教学注释。 |
 | NIM / HPC / Slurm / BCM | 二期暂停 | 历史 Tool/测试/证据代码仍可存在，但一期不导出 MCP、不新增 runtime authority，高风险写默认被 durable audit fail-closed 阻断。 |
-| 中文代码注释 | 分批推进 | 已完成安全入口、Tool/MCP/kube-manager 执行边界、Orchestrator / Graph / ReAct / Plan 编排链路、Memory / RAG / Eval / Observability / Audit 证据链；下一批是 DTO / support / config / store 支撑代码。 |
+| 中文代码注释 | 分批推进 | 已完成安全入口、Tool/MCP/kube-manager 执行边界、Orchestrator / Graph / ReAct / Plan 编排链路、Memory / RAG / Eval / Observability / Audit 证据链，以及 DTO / store / config 支撑代码首批；下一步继续 Batch 5 剩余支撑类。 |
 | 文档治理 | 当前刷新 | 主线文档精简到入口、架构学习、使命记忆、ADR、技术栈和恢复记忆；历史波次报告从当前 docs 树移除。 |
 
 ## 核心架构
@@ -38,6 +38,7 @@
 - 高风险写操作默认要求 ready durable audit prewrite；HITL 确认本身不等于可执行。
 - Memory 当前是按用户保存的 caller-submitted bounded summary，会做基础脱敏和截断，但不是可信 RAG prompt authority。
 - Replay / Eval / Audit / Memory-RAG 证据链已补中文教学边界：它们是 admin-only 或用户隔离的只读/脱敏证据，不重新执行 Tool，不调用 MCP/LLM/kube-manager，不授予 release authority。
+- 支撑层 DTO / Store / Config 也承载安全事实：`ApiResponse.success` 不是权限事实，`LoginRequest.organizationId` 只是 kube-manager 登录候选参数，`sessionId` 不是 JWT，`conversationId` 不是授权凭证，异步线程只能传播服务端可信 token/orgId 快照。
 - Eval / Replay 已有 admin-only 确定性读模型和部分运行入口；CI blocking、LLM eval、Memory/RAG retrieval eval runtime 仍必须经过 reviewed trace evidence 和单独 release 审查。
 - 写重试、RAG prompt 注入、A2A runtime handoff、MCP runtime、NIM/HPC/Slurm/BCM 都必须经过证据门和单独 release 审查。
 

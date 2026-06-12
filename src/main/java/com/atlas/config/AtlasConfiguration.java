@@ -27,6 +27,13 @@ import org.springframework.core.env.Environment;
  * 因为它们的依赖链（OpenAI API key）一旦不满足就会级联爆炸（即使 required=false）。
  * 改为通过 {@link Environment} 检查配置，不满足条件时直接跳过该层的创建。</p>
  *
+ * <p>中文说明：这里是 Agent 意图识别链路的装配点。L1 embedding 和 L3 LLM 都是增强能力，
+ * L2/L4 规则层才是必须可用的稳定底座；因此可选 AI 能力失败时应降级，而不是阻断服务启动。</p>
+ *
+ * <p>安全边界：配置装配不等于运行时授权。即使 LLM/Embedding 可用，也只能用于意图分类或预筛，
+ * 不能绕过 SafeToolExecutor、HITL、审计、kube-manager 权限、Memory/RAG source custody 或
+ * release gate。</p>
+ *
  * @author Atlas Team
  * @since 3.1.0
  */
@@ -36,13 +43,21 @@ public class AtlasConfiguration {
 
     private static final Logger log = LoggerFactory.getLogger(AtlasConfiguration.class);
 
-    /** Intent 加载器 */
+    /**
+     * Intent 加载器。
+     *
+     * <p>中文说明：从静态意图定义加载路由知识，给规则层和 LLM 分类层共享同一份基础语义。</p>
+     */
     @Bean
     public IntentsLoader intentsLoader() {
         return new IntentsLoader();
     }
 
-    /** L2/L4 规则匹配器 — 永不失败 */
+    /**
+     * L2/L4 规则匹配器 — 永不失败。
+     *
+     * <p>安全边界：规则层是启动底线；不能因为模型、embedding 或外部配置缺失而让 Agent 完全失明。</p>
+     */
     @Bean
     public RuleMatcher ruleMatcher(IntentsLoader intentsLoader) {
         return new RuleMatcher(intentsLoader);
@@ -51,6 +66,9 @@ public class AtlasConfiguration {
     /**
      * L1 语义预筛 — 条件创建。
      * 内部完整创建 Embedding 链，任何环节失败 → 返回 null。
+     *
+     * <p>中文说明：Embedding 是“更聪明的召回”，不是权限来源；初始化失败只关闭 L1，
+     * 不影响 L2/L4 规则和后续 fail-closed 执行边界。</p>
      */
     @Bean
     public EmbeddingMatcher embeddingMatcher(IntentsLoader intentsLoader, EmbeddingConfig config) {
@@ -70,6 +88,9 @@ public class AtlasConfiguration {
      *
      * <p>要求同时满足：1) api-key 已配置 2) Spring AI 自动配置成功创建了 ChatClient.Builder。
      * 任一不满足则禁用 L3，回退到 L2/L4 规则匹配。不会阻断服务启动。</p>
+     *
+     * <p>安全边界：L3 只做分类建议，不调用 Tool、不写 Memory/RAG、不访问 kube-manager；
+     * API key 缺失时必须显式禁用，不能用占位符触发远端调用。</p>
      */
     @Bean
     public L3IntentClassifier l3IntentClassifier(
@@ -96,6 +117,9 @@ public class AtlasConfiguration {
 
     /**
      * 意图路由器 — 所有可选依赖用 required=false，确保任意层失效都能启动。
+     *
+     * <p>中文说明：IntentRouter 汇总 L1/L2/L3/L4 的候选结论，后续仍要进入 Orchestrator、
+     * Graph 和 Tool 安全边界，不能把意图命中直接当作执行许可。</p>
      */
     @Bean
     public IntentRouter intentRouter(
@@ -106,7 +130,11 @@ public class AtlasConfiguration {
         return new IntentRouter(embeddingMatcher, ruleMatcher, l3IntentClassifier, config);
     }
 
-    /** SSE 发射器 */
+    /**
+     * SSE 发射器。
+     *
+     * <p>安全边界：SSE 只负责事件推送和前端展示，不代表 Tool 执行已经发生，也不携带 token。</p>
+     */
     @Bean
     public StreamingEmitter streamingEmitter() {
         return new StreamingEmitter();
