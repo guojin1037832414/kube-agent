@@ -6,6 +6,23 @@
 
 ---
 
+## [M5.85-5] - Documentation refresh and stale docs cleanup
+
+**Delivery**: Refreshed the project-facing documentation surface and removed stale historical reports from the current tree so Phase 1 top-tier Agent work has a clean, teachable entry path.
+
+**Changes**
+- Rewrote `README.md` as the current project entry with Phase 1 / Phase 2 boundaries, backend architecture, safety invariants, current technology stack, run commands, and recovery links.
+- Rewrote `ROADMAP.md` as the current development order for Chinese comment batches, Orchestrator hardening, kube-manager READ E2E, Eval evidence, Multi-Agent review, and gated advanced-technology adoption.
+- Rewrote `docs/INDEX.md` and `docs/DOCUMENTATION_GOVERNANCE.md` to describe the cleaned documentation tree, truth-source order, deletion rules, Phase 2 document policy, and recovery workflow.
+- Moved ADR-008 from the old `docs/v3.1` tree to `docs/adr/ADR-008-SPRING_AI_ALIBABA.md`.
+- Removed obsolete M4/M5 wave reports, old `docs/v3.1/**` design files, duplicate review logs, stale session snapshots, the old root architecture audit report, the old root documentation governance report, and the superseded 2026-06-08 Java tech-stack audit.
+- Kept current long-lived docs: mission/memory, architecture learning, ADRs, auth-session design, documentation governance, current Java tech-stack audit, advanced tech-stack roadmap, README, ROADMAP, CHANGELOG, AGENTS, TOOL_DEV_SPEC, and `codex-memory`.
+
+**Security**
+- Documentation-only cleanup; no Java runtime behavior changed.
+- Does not execute Tools, call kube-manager, open MCP `tools/call`, run A2A handoff, run retrieval/RAG/eval, write runtime memory or audit, upgrade dependencies, change permissions, change HITL behavior, or reopen NIM/HPC/Slurm/BCM Phase 2 scope.
+- Historical evidence remains recoverable through Git history and `codex-memory/kube-agent/current`.
+
 ## [M5.85-4] - Chinese comments for execution boundaries and documentation governance
 
 **Delivery**: Added Batch 2 Chinese teaching comments for Tool/MCP/kube-manager execution boundaries and refreshed documentation governance so current, historical, and Phase 2 docs are easier to distinguish.
