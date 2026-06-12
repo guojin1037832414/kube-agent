@@ -24,6 +24,14 @@ import java.util.Objects;
 /**
  * Atlas BaseTool → Spring AI ToolCallback 桥接器。
  *
+ * <p>中文说明：Spring AI ReactAgent 子图只能调用 {@link ToolCallback}，而 kube-agent 自己的工具体系是
+ * {@link BaseTool} + ToolRegistry + SafeToolExecutor。本类就是两套世界之间的适配层：
+ * 把 LLM 生成的 JSON 参数解析成 Map，再把执行结果序列化回 JSON。</p>
+ *
+ * <p>安全边界：ToolCallback 不能因为来自 Spring AI 就绕开 kube-agent 的安全链路。
+ * 它不直接调用 BaseTool.execute，不信任 LLM JSON 里的 token/orgId/userId/HITL/audit/release/writeAllowed，
+ * 也不能自己决定写操作是否允许；所有真实执行必须委托 {@link SafeToolExecutor}。</p>
+ *
  * <p>将自有的 {@link BaseTool}（参数为 Map<String,Object>，返回 Map<String,Object>）
  * 桥接到 Spring AI 的 {@link ToolCallback}（参数为 JSON 字符串，返回 JSON 字符串），
  * 使 {@link com.alibaba.cloud.ai.graph.agent.ReactAgent} 能够直接调用 Atlas Tool 体系。</p>
@@ -90,6 +98,10 @@ public class AtlasToolCallback implements ToolCallback {
 
     /**
      * Spring AI 调用入口：JSON 字符串 → Map → 参数归一化 → SafeToolExecutor → JSON 字符串。
+     *
+     * <p>中文说明：这是 delegate/ReactAgent 子图进入 kube-agent Tool 系统的唯一桥。
+     * 输入 JSON 来自 LLM，最多只能作为业务候选参数；可信 token/orgId/userId 必须从父图提前绑定的
+     * ThreadLocal 和 UserPermissionContext 中读取。</p>
      */
     @Override
     public String call(String toolInput) {

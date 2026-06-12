@@ -45,6 +45,15 @@ import java.util.function.Function;
 /**
  * Atlas 统一编排器 — v3.1 P0 清场版。
  *
+ * <p>中文说明：这是用户对话进入后端 Agent Core 的主编排入口，负责把 HTTP/SSE 请求转换成
+ * 一次可追踪、可恢复、可审计的 Agent run。它会先解析服务端可信身份，再选择
+ * Supervisor Graph、ReAct、Plan、Tool fallback 等执行路径，并把过程中产生的状态事件推送给前端。</p>
+ *
+ * <p>安全边界：本类可以读取前端请求里的自然语言问题和 conversationId 候选值，但不能信任前端、
+ * LLM、Plan 或 ReAct 传入的 userId、orgId、token、HITL、audit、release、writeAllowed 等控制字段。
+ * 真实身份、租户、会话归属和 traceId 必须由 Spring Security、SessionStore、ConversationStore
+ * 和服务端上下文重新绑定；所有真实 Tool 执行必须继续委托 {@link SafeToolExecutor}。</p>
+ *
  * <p><b>Phase 0 变更：</b></p>
  * <ul>
  *   <li>删除旧 AtlasAgentBase 及 6 个子类依赖</li>
@@ -169,6 +178,8 @@ public class AtlasOrchestrator {
     @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter streamChat(@RequestBody ChatRequest request,
                                   HttpServletRequest httpReq) {
+        // 中文说明：SSE 是长连接入口，必须先得到服务端可信 RuntimeIdentity，再进入任何 Graph/Tool/LLM 路径。
+        // 安全边界：请求体中的 userId 只是兼容字段，不参与授权；身份失败时直接 fail-closed 返回错误流。
         Optional<RuntimeIdentity> identityOpt = resolveRuntimeIdentity(httpReq);
         if (identityOpt.isEmpty()) {
             return failClosedEmitter("未找到可信用户身份，请重新登录后再试。");
@@ -218,6 +229,8 @@ public class AtlasOrchestrator {
                 emit(emitter, "trace", Map.of("traceId", finalTraceId));
                 // Phase 1: Supervisor Graph 优先路由（AtlasBrain 决策 + 条件边）
                 if (supervisorGraph != null) {
+                    // 中文说明：Supervisor Graph 是当前主路径，Graph State 只保存可序列化状态；
+                    // ReAct 的事件回调、SSE emitter 等运行时对象通过 registry 旁路传递，避免污染 checkpoint。
                     runSupervisorGraph(request, emitter, finalUserId, finalSessionId, finalToken, finalOrgId,
                         finalConversationId, finalTraceId);
                     return;
@@ -559,6 +572,14 @@ public class AtlasOrchestrator {
      * Phase 1: Supervisor Graph 流式执行。
      * 使用 supervisorGraph Bean（START → supervisor → conditional edges → END），
      * 保持与 /chat/graph 相同的 SSE 事件约定。
+     *
+     * <p>中文说明：这里把一次对话 run 组装成 Graph 输入状态，包括用户问题、可信 userId/token/orgId、
+     * conversationId 和 traceId。Graph 节点会根据 {@link BrainDecision} 进入 direct_answer、clarify、
+     * HITL、tool_call、delegate、react_node 或 plan_node。</p>
+     *
+     * <p>安全边界：普通对话请求不能注入 {@link com.atlas.hitl.HitlConfirmation}；
+     * HITL marker 只能由 HITLController 在 confirm 恢复路径写入。这里也不把 SseEmitter/Lambda
+     * 放入 Graph State，防止 checkpoint 序列化、恢复和跨线程传播时携带不可控运行时对象。</p>
      */
     private void runSupervisorGraph(ChatRequest request, SseEmitter emitter,
                                     String userId, String sessionId, String token, String orgId,
@@ -615,6 +636,8 @@ public class AtlasOrchestrator {
                                 .filter(BrainDecision.class::isInstance)
                                 .map(BrainDecision.class::cast)
                                 .ifPresent(decision -> {
+                                    // 中文说明：clarify 与 HITL 都是“暂停并等待人”的状态，但语义不同。
+                                    // clarify 只是补充上下文；HITL 才会生成 confirmToken，且后续恢复仍需 checkpoint+principal 校验。
                                     if (decision.actionType() == BrainDecision.ActionType.ASK_CLARIFY) {
                                         decisionCache.put(sessionId, decision);
                                         emit(emitter, "clarify", Map.of(
@@ -652,6 +675,8 @@ public class AtlasOrchestrator {
 
                         // ── M3.1: Tool 结果经 LLM 润色后推送（仅 tool_call 节点触发）──
                         if ("tool_call".equals(node)) {
+                            // 中文说明：tool_call 的真实执行已经发生在 Graph 节点内，这里只负责把结构化结果转成前端可读内容。
+                            // 安全边界：润色失败只能影响展示文本，不能反向改变 ToolResult、audit、HITL 或 release 判定。
                             state.value("tool_result")
                                 .filter(Map.class::isInstance)
                                 .map(Map.class::cast)
@@ -809,6 +834,13 @@ public class AtlasOrchestrator {
     /**
      * 将 Tool 层结构化补参信号转为前端可消费的 clarify SSE 事件。
      *
+     * <p>中文说明：这属于“执行后补参澄清”。例如 Tool 已经进入安全执行层，但发现业务参数不足，
+     * 会把 requires_clarification、errorCode、suggestions 写回 Graph State；编排器再转成 clarify
+     * SSE，让前端复用同一套澄清交互。</p>
+     *
+     * <p>安全边界：该事件只提示用户补充上下文，不创建 HITL marker，不消费 confirmToken，
+     * 也不自动恢复或重放任何 Tool。去重 key 用 node/errorCode/suggestions，避免同一状态在流式节点更新中重复弹窗。</p>
+     *
      * <p>AtlasBrain 的 ASK_CLARIFY 是“执行前澄清”，而这里处理的是 Tool 已返回
      * {@code errorCode/suggestions} 后的“执行后补参澄清”。两者都用前端已有的 clarify
      * 事件承载，但本方法会额外带上 source/node/errorCode/suggestions，方便前端区分来源。</p>
@@ -854,6 +886,8 @@ public class AtlasOrchestrator {
     }
 
     private Optional<RuntimeIdentity> resolveRuntimeIdentity(HttpServletRequest request) {
+        // 中文说明：运行时身份从 Spring Security 的 AgentPrincipal 开始，再用可选 SessionStore 补齐 token/orgId。
+        // 安全边界：这里不读取请求体 userId/orgId；如果 token 或 orgId 缺失，宁可拒绝本次 SSE，也不降级到匿名或 sysadmin。
         Optional<AgentPrincipal> principalOpt = principalResolver.current()
             .filter(AgentPrincipal::isAuthenticated);
         if (principalOpt.isEmpty()) {
@@ -901,6 +935,8 @@ public class AtlasOrchestrator {
     }
 
     private Optional<String> resolveTrustedConversationId(String candidate, String userId) {
+        // 中文说明：conversationId 是前端传来的候选锚点，必须反查 ConversationStore 证明属于当前用户。
+        // 安全边界：找不到或不属于当前用户时返回 empty，避免 A 用户把 B 用户会话绑定到自己的 Agent run。
         if (isBlank(candidate)) {
             return Optional.of("");
         }

@@ -123,9 +123,11 @@ Evidence side:
 
 - Graph 状态不是普通 Map，它承载身份、会话、trace、SSE、Tool 结果和安全决策上下文。
 - 当前有两条 Graph 路径：`/api/agent/chat/stream` 走主 `supervisorGraph`；`/api/agent/chat/graph` 走实验 `compiledGraph` / `atlasGraph`。
-- ReAct / Plan 产生的是候选行动，不是执行授权。
+- ReAct / Plan 产生的是候选行动，不是执行授权；Plan 是计划证据，ReAct Action JSON 是候选业务参数。
 - ToolCallback 最终仍必须回到 `SafeToolExecutor`。
-- 下一批中文注释应优先覆盖这里，因为这是学习 Agent 编排的主战场。
+- Graph 条件边只决定下一站，不授予 Tool、HITL、audit、release 或写入权力。
+- Graph State 不应保存 `SseEmitter`、Lambda 等运行期对象；ReAct 过程事件通过 registry 用 sessionId 间接发布。
+- `execute_node` 是安全教学样例：先按计划形状 fail-closed，再委托 `SafeToolExecutor` 做最终执行边界。
 
 ### 6. MCP 治理
 
@@ -172,12 +174,12 @@ Evidence side:
 
 - Batch 1：Controller / Security / Principal / HITL。
 - Batch 2：Tool / MCP / SafeToolExecutor / kube-manager HTTP outlet。
+- Batch 3：Orchestrator / Graph / ReAct / Plan 推理和状态机链路。
 
 待推进：
 
-1. Batch 3：Orchestrator / Graph / ReAct / Plan 推理和状态机链路。
-2. Batch 4：Memory / RAG / Eval / Observability / Audit 证据链。
-3. Batch 5：DTO / support / config / store 支撑代码。
+1. Batch 4：Memory / RAG / Eval / Observability / Audit 证据链。
+2. Batch 5：DTO / support / config / store 支撑代码。
 
 注释标准：
 
@@ -199,6 +201,6 @@ Evidence side:
 ## 下一步学习路线
 
 1. 读 `README.md` 和 `开发路线图.md`，确认当前项目边界。
-2. 读 Batch 1/2 已注释代码，理解身份和执行边界。
-3. 开始 Batch 3，围绕 `AtlasOrchestrator` 和 `AtlasGraphConfig` 学习 Graph/ReAct/Plan。
+2. 读 Batch 1/2/3 已注释代码，理解身份、执行边界和 Agent 编排状态机。
+3. 开始 Batch 4，围绕 Memory/RAG/Eval/Observability/Audit 学习证据链。
 4. 每完成一个小切片，都把“代码、测试、文档、恢复记忆、Git 提交”作为一个完整闭环。

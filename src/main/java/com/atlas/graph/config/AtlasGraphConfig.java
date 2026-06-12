@@ -53,6 +53,15 @@ import static com.alibaba.cloud.ai.graph.action.AsyncNodeAction.node_async;
 /**
  * Atlas StateGraph 编排配置 — v3.1 P2。
  *
+ * <p>中文说明：本配置类把 AtlasBrain、PlanEngine、ReActEngine、Spring AI ReactAgent 子图、
+ * SafeToolExecutor 和 SSE 输出串成声明式 StateGraph。它是学习 kube-agent 编排架构时最重要的地图：
+ * 输入状态从 Orchestrator 进入 supervisor，再通过条件边进入 direct_answer、ask_clarify、
+ * tool_call、delegate、react_node、plan_node 或 hitl_confirm。</p>
+ *
+ * <p>安全边界：Graph 只负责“状态流转和路由”，不能把 LLM/Plan/前端生成的控制字段当作执行权威。
+ * Tool 真正执行必须委托 {@link SafeToolExecutor}；HITL marker 只能由服务端确认路径注入；
+ * token/orgId/userId/conversationId 必须来自 Orchestrator 绑定的可信上下文，而不是节点内部推测。</p>
+ *
  * <p>将原有手动 if-else 路由的 {@link com.atlas.orchestrator.AtlasOrchestrator}
  * 迁移为 Spring AI Alibaba {@link StateGraph} + {@link ReactAgent} 的声明式编排：</p>
  *
@@ -350,11 +359,15 @@ public class AtlasGraphConfig {
     }
 
     /**
-     * 判断 Tool 是否必须经过 HITL 人工确认。
+     * 构建 StateGraph 的状态合并策略。
      *
-     * <p>M5.13 采用 fail-closed 策略：只有明确声明为 READ 且未要求确认的 Tool 可以直接执行。
-     * CREATE/UPDATE/DELETE/ACTION/PLACEHOLDER/UNKNOWN 以及元数据缺失，都视为需要确认。
-     * 这样即使某个历史 Tool 尚未补齐风险注解，也不会被默认放行。</p>
+     * <p>中文说明：Graph 每个节点返回的是局部 updates，Spring AI Alibaba 会按 key 的策略把它合并到
+     * OverAllState。这里显式声明哪些字段是替换、哪些字段是追加，避免 answer、plan_steps、
+     * react_steps、tool_result 等关键证据被意外累加或覆盖。</p>
+     *
+     * <p>安全边界：这些 key 中有 token/orgId/hitl_confirmation 等敏感控制面字段，但它们只允许由
+     * Orchestrator 或 HITLController 写入；Graph 节点只能读取并透传给 SafeToolExecutor。
+     * 新增状态 key 时必须先判断它是否可序列化、是否会进入 checkpoint、是否可能泄露到 SSE。</p>
      */
     private KeyStrategyFactory buildKeyStrategyFactory() {
         return () -> {
@@ -400,6 +413,10 @@ public class AtlasGraphConfig {
      * HitlConfirmation。所有真实执行仍必须走 tool_call / ReAct / 后续 execute_node，
      * 并继续受 HitlGuard fail-closed 保护。</p>
      *
+     * <p>中文说明：plan_node 的价值是把“用户想做什么”变成可展示、可审查的计划证据，
+     * 而不是直接替用户操作集群。context 中的 userId/orgId/conversationId 只作为后续扩展锚点，
+     * 当前不会被拼进面向用户的回答，也不会替代 SafeToolExecutor 的可信上下文。</p>
+     *
      * @param planEngine 计划生成引擎
      * @return 异步节点动作
      */
@@ -441,6 +458,10 @@ public class AtlasGraphConfig {
      * <p>当前小样本故意只开放“恰好一个步骤、风险展示为 READ、无需确认、suggestedTool 非空”
      * 的计划；多步计划、非 READ 步骤、声明需要确认的步骤、空工具名都直接 fail-closed。
      * 这样可以先验证统一执行层接线，不会让 LLM/Plan 输出绕过 HITL 或直接触碰真实 Tool。</p>
+     *
+     * <p>中文说明：execute_node 是学习 Agent 安全编排的关键例子。Plan 的输出即使是结构化 record，
+     * 也仍然属于“候选计划”，不是执行授权；因此这里先用本节点做快速 fail-closed，再交给
+     * SafeToolExecutor 做最终边界校验，形成双层防线。</p>
      *
      * @param safeToolExecutor 统一安全工具执行器；execute_node 不允许直接调用 BaseTool#execute
      * @return 异步节点动作
@@ -541,7 +562,13 @@ public class AtlasGraphConfig {
      * 执行结果写入 State 的 answer、react_node_result、react_result、react_steps 等 key，
      * 供下游 SSE 节点消费。</p>
      *
-     * <p>M3.2 批次：同步执行，暂不接入 SSE 流式推送（TODO 第三批）。</p>
+     * <p>中文说明：ReAct 节点负责 Thought → Action → Observation 的多轮诊断推理。
+     * 它读取 Graph State 中的可信身份上下文作为 initialParams，但每轮 Action.params 仍来自 LLM，
+     * 必须由 ReActEngine 和 SafeToolExecutor 过滤受保护字段后才可能进入真实 Tool。</p>
+     *
+     * <p>安全边界：Graph State 只保存 react_event_session_id 这种可序列化字符串；
+     * 真正的事件 sink 存在 {@link ReActEventSinkRegistry} 中。这样 checkpoint 不会携带 Lambda、
+     * SseEmitter 或其它运行时对象，也避免跨线程恢复时污染执行上下文。</p>
      *
      * @param engine 手写 ReAct 引擎（由 Spring 容器注入）
      * @param sinkRegistry ReAct 过程事件接收器运行期注册表
@@ -593,6 +620,14 @@ public class AtlasGraphConfig {
     /**
      * Supervisor 图 — AtlasBrain 决策节点 + 条件路由。
      * START → supervisor → [conditional] → {direct_answer, ask_clarify, tool_call, delegate, react_node} → END
+     *
+     * <p>中文说明：这是 Phase 1 当前主图。它不是一个“让 LLM 任意选工具”的黑盒，而是把
+     * AtlasBrain 的 {@link BrainDecision.ActionType} 显式映射到固定节点。每个节点再根据自己的边界
+     * 决定是回答、澄清、等待 HITL、执行只读 Tool、进入 ReAct，还是生成 Plan。</p>
+     *
+     * <p>安全边界：条件边只决定下一站，不授予执行权。CALL_TOOL、PLAN execute、delegate 子图和
+     * ReAct 内的 Tool 调用都还必须经过统一执行器或 ToolCallback 桥接层，不能绕开租户、权限、
+     * HITL、audit、release 和写入治理。</p>
      */
     @Bean
     public CompiledGraph supervisorGraph(
@@ -626,6 +661,8 @@ public class AtlasGraphConfig {
 
         // 1. Supervisor 节点：调用 AtlasBrain 做决策
         graph.addNode("supervisor", node_async((OverAllState state) -> {
+            // 中文说明：supervisor 节点只产出 BrainDecision，不执行 Tool。
+            // HITL confirm 恢复时会复用服务端注入的 CALL_TOOL 决策，避免再次调用 LLM 改写用户确认过的目标。
             String input = state.value("input").map(Object::toString).orElse("");
             String userId = state.value("user_id").map(Object::toString).orElse("anonymous");
             String token = state.value("token").map(Object::toString).orElse("");
@@ -670,6 +707,7 @@ public class AtlasGraphConfig {
         // 2. 条件边：根据 BrainDecision.actionType 路由
         graph.addConditionalEdges("supervisor",
             edge_async((OverAllState state) -> {
+                // 中文说明：条件边是状态机路由表，失败或未知决策默认 direct_answer，避免落入未定义执行路径。
                 BrainDecision decision = state.value("brain_decision")
                     .filter(BrainDecision.class::isInstance)
                     .map(BrainDecision.class::cast)
@@ -733,6 +771,8 @@ public class AtlasGraphConfig {
                 .map(HitlConfirmation.class::cast)
                 .orElse(null);
 
+            // 中文说明：tool_call 是 Graph 主路径里的真实 Tool 入口，但它不直接调用 BaseTool。
+            // 安全边界：BrainDecision.parameters 仍可能来自 LLM，必须作为不可信业务参数交给 SafeToolExecutor。
             // M4-PX.3-A：Graph tool_call 不再内联 Tool 执行链，而是统一委托 SafeToolExecutor。
             // 这样 tool_call 与后续 execute_node 能共享同一套权限、租户上下文、HITL fail-closed、
             // ThreadLocal 绑定/恢复和受保护参数过滤逻辑，避免多入口安全漂移。
@@ -751,6 +791,8 @@ public class AtlasGraphConfig {
         }));
 
         graph.addNode("delegate", node_async((OverAllState state) -> {
+            // 中文说明：delegate 用于兼容 Spring AI ReactAgent 子图，让专业 Agent 复用现有 ToolCallback 能力。
+            // 安全边界：delegate 只能把父图的可信 token/orgId 显式绑定到当前线程；子图结束后必须恢复 ThreadLocal。
             BrainDecision d = state.value("brain_decision")
                 .filter(BrainDecision.class::isInstance)
                 .map(BrainDecision.class::cast).orElse(null);

@@ -14,6 +14,13 @@ import java.util.Set;
 /**
  * ReAct 记忆体 — 单次 ReAct 请求的中枢记忆。
  *
+ * <p>中文说明：ReActMemory 只保存一次 ReAct run 内部的 Thought、Action、Observation 时间线，
+ * 用于下一轮提示词回灌、重复动作检测和最终摘要。它不是长期 Memory/RAG，也不会跨会话成为
+ * prompt 权威。</p>
+ *
+ * <p>安全边界：这里记录的 Observation 可能来自 Tool 返回、模型总结或阻断原因，不能被当作审计收据、
+ * HITL 确认、release 决策或租户事实。写长期记忆、RAG 召回和 eval trace promotion 必须走专门证据链。</p>
+ *
  * <p>负责按顺序维护 Thought → Action → Observation 循环的每一步记录，
  * 并提供重复动作检测、历史格式化等能力。</p>
  *
@@ -58,6 +65,8 @@ public class ReActMemory {
                         String observation,
                         boolean success,
                         long executionTimeMs) {
+        // 中文说明：每一步只进入本次 ReAct run 的短期记忆，主要服务重复动作检测和提示词上下文。
+        // 安全边界：params 应该已经是展示脱敏后的副本，不能保存 token、orgId 等受保护字段到时间线。
         int stepNum = ++counter;
         Step s = new Step(stepNum, thought, toolName, params, observation, success, executionTimeMs);
         stepList.add(s);

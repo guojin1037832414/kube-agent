@@ -10,7 +10,7 @@
 |---|---|---|
 | Phase 1 顶级 Agent Core | 进行中 | 不降低目标，优先完成安全、编排、Tool 治理、Memory/RAG、Eval、可观测、多 Agent 审查和教学注释。 |
 | NIM / HPC / Slurm / BCM | 二期暂停 | 历史 Tool/测试/证据代码仍可存在，但一期不导出 MCP、不新增 runtime authority，高风险写默认被 durable audit fail-closed 阻断。 |
-| 中文代码注释 | 分批推进 | 已完成安全入口与 Tool/MCP/kube-manager 执行边界，下一批是 Orchestrator / Graph / ReAct / Plan。 |
+| 中文代码注释 | 分批推进 | 已完成安全入口、Tool/MCP/kube-manager 执行边界、Orchestrator / Graph / ReAct / Plan 编排链路；下一批是 Memory / RAG / Eval / Observability / Audit。 |
 | 文档治理 | 当前刷新 | 主线文档精简到入口、架构学习、使命记忆、ADR、技术栈和恢复记忆；历史波次报告从当前 docs 树移除。 |
 
 ## 核心架构

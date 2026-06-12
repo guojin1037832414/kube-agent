@@ -11,6 +11,14 @@ import java.util.stream.Collectors;
 /**
  * ReAct 系统提示词构建器。
  *
+ * <p>中文说明：PromptBuilder 把 ToolRegistry 中“当前用户可见的工具目录”、ReActMemory 中的历史
+ * Observation、已调用动作和格式约束拼成系统提示词。它的目标不是让模型拥有执行权，
+ * 而是把服务端允许模型看到的能力边界清楚地告诉模型。</p>
+ *
+ * <p>安全边界：提示词中的规则只是模型行为引导，不是最终安全控制。
+ * 模型即使违反提示词输出高风险 Action、伪造 token/orgId/HITL/audit/release 字段，
+ * 后续 ReActEngine、ProtectedToolParameterFilter 和 SafeToolExecutor 仍必须 fail-closed。</p>
+ *
  * <p>负责为每一轮 ReAct 循环生成中文系统提示词，注入：
  * <ol>
  *   <li>角色定义（Kubernetes 运维专家）</li>
@@ -42,6 +50,8 @@ public class ReActPromptBuilder {
      * @return 完整系统提示词文本
      */
     public String buildSystemPrompt(String userQuery, ReActMemory memory) {
+        // 中文说明：可见工具列表由 ToolRegistry 根据服务端权限生成，不能由前端或 LLM 自己声明。
+        // 这里把它放进 Prompt，是为了降低模型乱选工具的概率；真正执行仍以 SafeToolExecutor 为准。
         // 1. 获取当前用户可见工具的系统提示词片段
         String visibleToolsPrompt = toolRegistry.buildSystemPromptForCurrentUser();
 

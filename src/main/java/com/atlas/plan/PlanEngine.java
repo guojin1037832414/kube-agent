@@ -11,6 +11,14 @@ import java.util.Map;
 /**
  * Plan-and-Execute + Reflection 最小 POC 引擎。
  *
+ * <p>中文说明：PlanEngine 把用户的复杂需求转换成结构化计划、步骤列表和 Reflection 自检结果，
+ * 用于前端展示、人工审查和后续 execute_node 的候选输入。它是“先想清楚再行动”的教学样例，
+ * 不是一个可以直接操作集群的执行器；Plan 是计划证据，不是执行许可。</p>
+ *
+ * <p>安全边界：当前 Plan 阶段不调用 Tool、不访问 kube-manager、不写 audit、不创建 HITL marker，
+ * 也不会因为用户在自然语言中说“确认”就授予执行权。高风险识别只影响计划展示与提醒，
+ * 最终执行安全仍由 Graph execute_node、SafeToolExecutor、HitlGuard 和 durable audit/release gate 决定。</p>
+ *
  * <p>本类当前只做“规划 + 单次自检”，不直接执行任何 Tool，不访问 kube-manager，
  * 不创建或写入 HitlConfirmation。这样可以先把 PLAN 分支和 Graph State 闭环跑通，
  * 同时不破坏 M5 已完成的 HITL fail-closed 安全边界。</p>
@@ -35,6 +43,10 @@ public class PlanEngine {
     /**
      * 生成最小计划结果。
      *
+     * <p>中文说明：输出的 {@link PlanResult} 是给用户、前端和后续 Graph 节点看的计划证据。
+     * 即使步骤里出现 suggestedTool，也只是候选 intentId；是否能执行还要由 execute_node 按单步 READ
+     * 规则筛选，并交给 SafeToolExecutor 重新判断权限、HITL、租户上下文和 Tool 风险元数据。</p>
+     *
      * <p>注意：context 中可能包含 token/orgId 等敏感运行期信息，当前 POC 不把这些
      * 信息拼接进面向用户的 finalAnswer，避免泄露认证上下文。</p>
      *
@@ -49,6 +61,8 @@ public class PlanEngine {
         boolean diagnostic = containsAny(query, DIAG_KEYWORDS);
 
         List<PlanStep> steps = new ArrayList<>();
+        // 中文说明：第一步永远是确认目标与上下文。Agent 不能把含糊请求直接变成 Tool 调用，
+        // 尤其不能在资源名、namespace、租户、影响范围不清楚时执行写操作。
         steps.add(new PlanStep(
             "step-1-understand",
             1,
@@ -62,6 +76,7 @@ public class PlanEngine {
         ));
 
         if (diagnostic) {
+            // 中文说明：诊断型计划建议交给 ReAct 收集证据，但当前 PLAN 分支本身仍然只规划、不执行。
             steps.add(new PlanStep(
                 "step-2-diagnose",
                 2,
@@ -74,6 +89,7 @@ public class PlanEngine {
                 PlanStepStatus.PENDING
             ));
         } else {
+            // 中文说明：非诊断任务也要先读当前状态，再考虑变更；这是运维 Agent 的基本安全节奏。
             steps.add(new PlanStep(
                 "step-2-read-state",
                 2,
@@ -87,6 +103,8 @@ public class PlanEngine {
             ));
         }
 
+        // 中文说明：第三步把风险显式写给用户看。高风险计划只会进入 WAITING_HITL 展示状态，
+        // 不会在 PlanEngine 内部创建任何服务端确认 marker。
         steps.add(new PlanStep(
             risky ? "step-3-hitl-required" : "step-3-execute-or-answer",
             3,
@@ -123,6 +141,9 @@ public class PlanEngine {
 
     /**
      * 单次 Reflection 自检：只验证计划是否具备步骤与 HITL 标记，不触发重试或执行。
+     *
+     * <p>中文说明：Reflection 在这里是确定性的结构检查，不是再调用一次 LLM。
+     * 这样可以让学习者先看到“计划是否满足安全形状”，而不是让模型用另一段文本覆盖前面的安全约束。</p>
      */
     private ReflectionResult reflect(List<PlanStep> steps, boolean risky) {
         List<String> issues = new ArrayList<>();
@@ -140,6 +161,9 @@ public class PlanEngine {
 
     /**
      * 渲染给用户看的最终文本，明确声明“尚未执行”。
+     *
+     * <p>安全边界：finalAnswer 是展示层文本，不能被后续节点当成执行凭证。
+     * 真正执行只读取结构化 PlanStep，并且必须重新经过 execute_node 与 SafeToolExecutor。</p>
      */
     private String renderFinalAnswer(String summary, List<PlanStep> steps,
                                      String nextActionHint, ReflectionResult reflection) {
@@ -173,6 +197,9 @@ public class PlanEngine {
 
     /**
      * 对 LLM 决策做保守风险识别，仅影响计划展示，不影响执行安全边界。
+     *
+     * <p>中文说明：这里故意只做保守提示，不把它设计成最终策略引擎。
+     * 真实 Tool 风险要以 ToolRegistry 元数据、HitlGuard、durable audit/release gate 为准。</p>
      */
     private boolean isRiskyDecision(BrainDecision decision) {
         if (decision == null) {

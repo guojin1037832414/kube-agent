@@ -36,6 +36,14 @@ import java.util.regex.Pattern;
 /**
  * ReAct 推理引擎 — 手写 ReAct 循环核心。
  *
+ * <p>中文说明：ReActEngine 是 kube-agent 诊断型 Agent 的核心推理循环。它把一次用户问题拆成多轮
+ * Thought → Action → Observation：LLM 负责提出下一步候选 Action，服务端负责解析、校验、执行 Tool，
+ * 再把 Observation 回灌给下一轮提示词。</p>
+ *
+ * <p>安全边界：LLM 输出的 Action JSON 只能代表“候选业务参数”，不能携带或覆盖 token、orgId、
+ * userId、conversationId、HITL、audit、release、writeAllowed 等控制字段。真实 Tool 调用必须统一进入
+ * {@link SafeToolExecutor}；ReAct 的事件、记忆和 Observation 只用于解释与后续推理，不能成为写入授权。</p>
+ *
  * <p><b>设计决策：</b>不使用 Spring AI Alibaba 的 ReactAgent，
  * 而是手写 Thought → Action → Observation 循环，
  * 避免框架 ReactAgent 的 outputKey 污染 AssistantMessage 并破坏结构化路由。</p>
@@ -176,12 +184,23 @@ public class ReActEngine {
     public ReActResult runWithEvents(String userQuery,
                                      Map<String, Object> initialParams,
                                      ReActEventSink eventSink) {
+        // 中文说明：traceId 是跨 Orchestrator、Graph、Tool、Audit 的观测锚点。
+        // 如果上层没有传入，就在服务端生成；不能信任 LLM Action.params 自己声明 trace 权威。
         String traceId = AgentTraceContext.currentOrNew(trustedString(initialParams, "traceId", ""));
         try (AgentTraceContext.Scope ignored = AgentTraceContext.bind(traceId)) {
             return runWithEventsTraced(userQuery, initialParams, eventSink, traceId);
         }
     }
 
+    /**
+     * 执行带 trace 的 ReAct 主循环。
+     *
+     * <p>中文说明：这个方法是学习 ReAct 的主路径。每一轮都构造 prompt、调用 LLM、解析 Thought/Action、
+     * 执行一个 Tool、记录 Observation，并根据 Final Answer、重复动作、超时、最大步数等条件停止。</p>
+     *
+     * <p>安全边界：循环本身不因为“LLM 看起来确认了”而放行高风险动作；所有执行都还要经过
+     * SafeToolExecutor。事件发送、指标记录和 Observation 截断失败时只能影响可观测性，不能影响安全判定。</p>
+     */
     private ReActResult runWithEventsTraced(String userQuery,
                                             Map<String, Object> initialParams,
                                             ReActEventSink eventSink,
@@ -248,6 +267,8 @@ public class ReActEngine {
                 }
 
                 String toolName = action.toolName();
+                // 中文说明：initialParams 是 Orchestrator/Graph 注入的服务端上下文，Action.params 是 LLM 生成的候选参数。
+                // 合并时只能让 Action 补充业务字段，不能覆盖身份、租户、HITL、audit、release、writeAllowed 等控制字段。
                 Map<String, Object> executionParams = mergeInitialAndActionParams(toolName, initialParams, action.params());
                 Map<String, Object> timelineParams = buildTimelineParams(executionParams);
                 emitEvent(sink, ReActEvent.thinking(steps, thought, traceMetadata));
@@ -283,6 +304,8 @@ public class ReActEngine {
                     ToolRegistry.ToolMetadata meta = toolRegistry.resolve(toolName);
                     riskMetadata = withTraceId(buildToolRiskMetadata(meta), traceId);
                     emitEvent(sink, ReActEvent.toolStart(steps, toolName, timelineParams, riskMetadata));
+                    // 中文说明：这里是 ReAct 到真实 Tool 的唯一出口。
+                    // 安全边界：即使 ReActPrompt 已提示模型不要调用高风险 Tool，仍必须由 SafeToolExecutor 重新校验。
                     SafeToolExecutionRequest request = new SafeToolExecutionRequest(
                         meta.intentId(),
                         executionParams,
@@ -445,6 +468,9 @@ public class ReActEngine {
     /**
      * 解析 Action：优先 JSON 格式，回退到 fallback 格式。
      *
+     * <p>中文说明：解析器只负责把 LLM 文本转成结构化候选，不负责做权限或安全判断。
+     * 任何解析成功的 Action 都必须继续通过工具可见性、重复动作检测、受保护字段过滤和 SafeToolExecutor。</p>
+     *
      * @return 解析结果，若未解析到则返回 null
      */
     private ActionParseResult parseAction(String text) {
@@ -579,6 +605,10 @@ public class ReActEngine {
     /**
      * 合并初始上下文参数与本轮 Action 参数，并调用统一参数归一化器。
      *
+     * <p>中文说明：这是 ReAct 参数治理的第一道边界。初始上下文来自服务端可信链路，
+     * Action 参数来自 LLM，二者不能简单 putAll。受保护字段会被忽略，普通业务字段再交给
+     * {@link ToolParameterNormalizer} 按 Tool schema 做 alias 兼容。</p>
+     *
      * <p><b>M5.5 多租户安全治理：</b>Action 参数来自 LLM，不可信；initialParams
      * 来自会话/Graph/认证链路，是 token、organizationId、conversationId、userId 等上下文
      * 的权威来源。因此合并时只允许 Action 补充业务参数，不允许覆盖或新增受保护上下文字段。
@@ -610,6 +640,10 @@ public class ReActEngine {
     /**
      * 构建 ReAct 事件/记忆可展示参数。
      *
+     * <p>中文说明：执行参数中可能包含 token、organizationId、userId、conversationId 等服务端上下文。
+     * 这些字段可以交给 SafeToolExecutor 做授权和 kube-manager 调用，但不能出现在 SSE 时间线、
+     * Observation 记忆或调试面板中，因此这里创建脱敏后的展示副本；这一步就是展示脱敏。</p>
+     *
      * <p>执行请求可以携带 token 等可信上下文给 {@link SafeToolExecutor} 绑定 ThreadLocal，
      * 但这些字段不应该出现在 SSE 时间线、Observation 记忆或调试面板中。这里使用同一个
      * 受保护参数过滤器，确保“展示安全”和“执行安全”不会各自维护一份黑名单。</p>
@@ -627,6 +661,8 @@ public class ReActEngine {
     }
 
     private Map<String, Object> buildBlockedToolResult(SafeToolExecutionResult executionResult) {
+        // 中文说明：SafeToolExecutor 拒绝执行时，ReAct 仍要把拒绝原因作为 Observation 回灌给 LLM。
+        // 安全边界：这不是“失败后再试别的高风险动作”的授权，而是让模型解释为什么当前动作被阻断。
         Map<String, Object> blocked = AtlasToolResult.fail(
             executionResult.answer() != null ? executionResult.answer() : "SafeToolExecutor 已阻止工具执行",
             "SAFE_TOOL_EXECUTION_BLOCKED",
