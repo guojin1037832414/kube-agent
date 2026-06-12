@@ -116,6 +116,8 @@ Evidence side:
 - GET 读请求可以进入 read retry/circuit/bulkhead。
 - POST/PATCH/PUT/DELETE 不允许自动重试，除非未来有幂等、durable audit、post-write readback、HITL 和 release evidence。
 - 业务请求缺用户 Token 时禁止透明降级到 sysadmin。
+- `KubeManagerReadOnlySmokeTest` 是当前真实 8100 联调入口：默认跳过，显式提供当前用户 token/orgId 后只调用 `NodeQueryTool` 的 GET/READ `/api/{orgId}/node`，用于验证 token/orgId/query/path 传播。
+- 这个 smoke 不是生产开关，不执行写方法，不绑定 MCP runtime，不创建 HITL/audit/memory/release 证据，也不恢复 NIM/HPC/Slurm/BCM 二期能力。
 
 ### 5. Graph / ReAct / Plan 编排
 

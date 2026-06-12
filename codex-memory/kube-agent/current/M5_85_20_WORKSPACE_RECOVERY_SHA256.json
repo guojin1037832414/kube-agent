@@ -1,0 +1,85 @@
+﻿{
+    "project":  "kube-agent",
+    "wave":  "M5.85-20",
+    "title":  "kube-manager READ 8100 smoke harness",
+    "generatedAt":  "2026-06-12T16:21:45.6802127+08:00",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "verification":  [
+                         "Test-NetConnection localhost -Port 8100 -\u003e TcpTestSucceeded=False (real smoke not executed in current environment)",
+                         "mvn -q \"-Dtest=KubeManagerReadOnlySmokeTest,KubeManagerHttpClientUrlContractTest,KubeManagerHttpClientTracePropagationTest,VirtualMachineReadToolHttpContractTest\" test",
+                         "mvn -q \"-DskipTests\" validate",
+                         "git diff --check"
+                     ],
+    "safetyInvariants":  [
+                             "The 8100 smoke harness is test-only and opt-in; normal tests do not call kube-manager.",
+                             "The real smoke path requires current user token and trusted orgId and is pinned to NodeQueryTool GET/READ/no-HITL.",
+                             "No MCP tools/call, kube-manager write, HITL, audit/memory write, retrieval/vector runtime, A2A handoff, CI blocking, dependency upgrade, or Phase 2 NIM/HPC/Slurm/BCM authority was opened."
+                         ],
+    "files":  [
+                  {
+                      "path":  "README.md",
+                      "sha256":  "CA0BDAA52579F6E6DD194FBAF4569B079228F55E1F98A6FA4EFAE82EF0808778",
+                      "bytes":  9202
+                  },
+                  {
+                      "path":  "开发路线图.md",
+                      "sha256":  "9E16C3020CA102B4D68CE2949369426498261CAF92AC1B69C877E41942ED75F0",
+                      "bytes":  6254
+                  },
+                  {
+                      "path":  "变更日志.md",
+                      "sha256":  "4F24483B3179242AFCBEE2A735B1BBD8A4E39F1108FC15DDBEBE129C7C402E9B",
+                      "bytes":  430359
+                  },
+                  {
+                      "path":  "docs/项目使命与当前记忆.md",
+                      "sha256":  "C0A02528E91376CF00FD5A95C083757C0E07FDA3CEF7A8DEE608E4F9CD47BE00",
+                      "bytes":  38978
+                  },
+                  {
+                      "path":  "docs/顶级Agent架构与技术学习地图.md",
+                      "sha256":  "154A24B6EF0AF19C5E150359427EF9DA354773C47F5A16015AE9CF184099CD83",
+                      "bytes":  21181
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/e2e/KubeManagerReadOnlySmokeTest.java",
+                      "sha256":  "355E1FA3D814EC767F65566983CE93653843697F17062E420447F7FECA4286E7",
+                      "bytes":  8409
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/README.md",
+                      "sha256":  "CA0BDAA52579F6E6DD194FBAF4569B079228F55E1F98A6FA4EFAE82EF0808778",
+                      "bytes":  9202
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/开发路线图.md",
+                      "sha256":  "9E16C3020CA102B4D68CE2949369426498261CAF92AC1B69C877E41942ED75F0",
+                      "bytes":  6254
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/变更日志.md",
+                      "sha256":  "4F24483B3179242AFCBEE2A735B1BBD8A4E39F1108FC15DDBEBE129C7C402E9B",
+                      "bytes":  430359
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/项目使命与当前记忆.md",
+                      "sha256":  "C0A02528E91376CF00FD5A95C083757C0E07FDA3CEF7A8DEE608E4F9CD47BE00",
+                      "bytes":  38978
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/顶级Agent架构与技术学习地图.md",
+                      "sha256":  "154A24B6EF0AF19C5E150359427EF9DA354773C47F5A16015AE9CF184099CD83",
+                      "bytes":  21181
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/当前恢复状态.md",
+                      "sha256":  "DE7C4BFF45CC610DBEA0A34E36D075931771DE3507E2E7BB86F7A10FE880DECD",
+                      "bytes":  128301
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_M5_85_20_KUBE_MANAGER_READ_8100_SMOKE_HARNESS_20260612.md",
+                      "sha256":  "8A020A82A64D45A5DFCBA88CF980DAFE047243B88DA4FFD2442C36D51CFA4950",
+                      "bytes":  2212
+                  }
+              ]
+}

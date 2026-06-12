@@ -41,6 +41,7 @@
 - 主 `supervisorGraph` 的 direct_answer、tool_call、delegate、ReAct state fallback 和 ReAct content 事件现在共享最终展示内容去重契约：同一段答案只推一次，空文本和 `{}` 占位不生成前端气泡；这仍只是 SSE 展示层，不代表 Tool/HITL/audit/release/write 成功。
 - MCP 当前只导出 admin-only 只读 Manifest / governance，不开放 `tools/call` 运行时执行权；NIM/HPC/Slurm/BCM 这类二期域不会进入一期 MCP 导出清单。
 - kube-manager 是真实外部网络出口，默认连接 `http://localhost:8100`；业务 Tool 请求必须使用当前用户 Token，不能透明降级为 sysadmin。
+- kube-manager `8100` 真实只读联调已有 opt-in smoke：默认单测不会访问外部服务，显式提供当前用户 token/orgId 后才会调用 `NodeQueryTool` 的 GET/READ 链路。
 - 高风险写操作默认要求 ready durable audit prewrite；HITL 确认本身不等于可执行。
 - Memory 当前是按用户保存的 caller-submitted bounded summary，会做基础脱敏和截断，但不是可信 RAG prompt authority。
 - Replay / Eval / Audit / Memory-RAG 证据链已补中文教学边界：它们是 admin-only 或用户隔离的只读/脱敏证据，不重新执行 Tool，不调用 MCP/LLM/kube-manager，不授予 release authority。
@@ -77,6 +78,14 @@ mvn spring-boot:run
 
 # 健康检查
 Invoke-RestMethod http://localhost:8300/api/agent/health
+
+# 可选：真实 kube-manager 8100 只读 smoke
+# 默认测试会跳过；需要先启动 kube-manager，并提供当前用户 token/orgId。
+mvn -q "-Dtest=KubeManagerReadOnlySmokeTest" `
+  "-Datlas.kube-manager.smoke.enabled=true" `
+  "-Datlas.kube-manager.smoke.base-url=http://localhost:8100" `
+  "-Datlas.kube-manager.smoke.token=<当前用户token>" `
+  "-Datlas.kube-manager.smoke.org-id=<当前组织ID>" test
 ```
 
 常用外部依赖：
