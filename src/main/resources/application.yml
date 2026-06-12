@@ -78,7 +78,9 @@ atlas:
   audit:
     durable:
       enabled: ${ATLAS_AUDIT_DURABLE_ENABLED:false}
-      fail-closed-for-high-risk: ${ATLAS_AUDIT_DURABLE_FAIL_CLOSED_FOR_HIGH_RISK:false}
+      # Phase 1 默认关闭真实写运行时：durable audit 未就绪时，高风险 Tool 必须 fail-closed。
+      # 如需本地兼容旧写 Tool，可显式设置环境变量为 false；生产放开前必须先补齐审计、幂等和 release evidence。
+      fail-closed-for-high-risk: ${ATLAS_AUDIT_DURABLE_FAIL_CLOSED_FOR_HIGH_RISK:true}
       path: ${ATLAS_AUDIT_DURABLE_PATH:target/agent-audit/agent-audit.jsonl}
       retention-days: ${ATLAS_AUDIT_DURABLE_RETENTION_DAYS:30}
       max-file-bytes: ${ATLAS_AUDIT_DURABLE_MAX_FILE_BYTES:268435456}

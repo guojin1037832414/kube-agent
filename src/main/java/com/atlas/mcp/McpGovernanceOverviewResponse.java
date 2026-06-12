@@ -83,7 +83,8 @@ public record McpGovernanceOverviewResponse(
                 Map.of(
                     "manifestMode", text(policy.get("mode"), "safe-readonly-manifest"),
                     "failClosed", Boolean.TRUE.equals(policy.get("failClosed")),
-                    "exportRule", text(policy.get("exportRule"), "permission=PUBLIC && operationType=READ")
+                    "exportRule", text(policy.get("exportRule"), "permission=PUBLIC && operationType=READ"),
+                    "phase2DomainsBlocked", policy.getOrDefault("phase2DomainsBlocked", List.of())
                 )
             ),
             card(
@@ -171,6 +172,7 @@ public record McpGovernanceOverviewResponse(
             "caller-provided-tool-call-arguments",
             "write-tool-export",
             "sensitive-read-tool-export",
+            "phase2-domain-tool-export",
             "runtime-tool-registry-mutation"
         );
     }
@@ -214,6 +216,7 @@ public record McpGovernanceOverviewResponse(
         safety.put("runtimeToolRegistryMutation", false);
         safety.put("writeToolExportAllowed", false);
         safety.put("sensitiveReadToolExportAllowed", false);
+        safety.put("phase2DomainToolExportAllowed", false);
         return Map.copyOf(safety);
     }
 

@@ -3,9 +3,14 @@
 > **状态**: Accepted  
 > **日期**: 2026-05-16  
 > **提出者**: Atlas Team  
-> **相关**: ADR-008（选用 Spring AI Alibaba StateGraph）、MIGRATION_StateGraph_ReactAgent.md（已归档）
+> **相关**: ADR-008（选用 Spring AI Alibaba StateGraph）；旧 `MIGRATION_StateGraph_ReactAgent.md` 已从当前 docs 树清理，可从 Git 历史或 `codex-memory` 查找。
 
 ---
+
+> 2026-06-12 现状说明：本文是历史迁移 ADR，描述的是当时从手动路由迁往 StateGraph /
+> ReactAgent 的阶段性完成状态。当前代码后续又引入 ADR-010：supervisor 改为手写
+> `AtlasBrain`，并保留手写 `ReActEngine` 作为安全执行链的一部分。当前运行事实以
+> `AtlasOrchestrator`、`AtlasGraphConfig`、`ReActEngine`、`SafeToolExecutor` 和测试为准。
 
 ## 背景
 
@@ -53,7 +58,7 @@ START → supervisor_agent(AtlasBrain) → [conditional] → query/deploy/rbac/d
 
 - 所有请求默认走 `supervisorGraph`，`chatStream()` 接口已切换
 - 原手动 if-else 路由代码（`AtlasOrchestrator` 旧版）已删除
-- `MIGRATION_StateGraph_ReactAgent.md` 方案已完成使命，已归档至 `docs/archive/`
+- `MIGRATION_StateGraph_ReactAgent.md` 方案已完成使命，当前树不再保留旧 archive 文件；如需查看请走 Git 历史。
 
 ---
 
@@ -68,4 +73,4 @@ START → supervisor_agent(AtlasBrain) → [conditional] → query/deploy/rbac/d
 
 - `src/main/java/com/atlas/graph/config/AtlasGraphConfig.java`（306 行）
 - `src/main/java/com/atlas/orchestrator/AtlasOrchestrator.java`（supervisorGraph 调用）
-- `docs/archive/ARCHIVED_20260518_StateGraph_ReactAgent_Migration.md`（原方案归档）
+- 原迁移方案归档文件已从当前 docs 树清理，保留在 Git 历史 / `codex-memory` 中。

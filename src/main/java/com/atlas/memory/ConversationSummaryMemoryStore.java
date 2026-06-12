@@ -15,13 +15,16 @@ import java.util.regex.Pattern;
 /**
  * 长期记忆摘要存储 — M5.20 最小可用版。
  *
- * <p>当前版本采用 Caffeine 内存缓存，保存“安全摘要”而非完整对话原文。它的目标不是替代
- * Redis/VectorDB，而是在 M5 阶段先形成可验证闭环：</p>
+ * <p>当前版本采用 Caffeine 内存缓存，保存“调用方提交的摘要”而非完整对话原文。它的目标不是替代
+ * Redis/VectorDB，也不是建立可信 RAG 记忆权威，而是在 M5 阶段先形成可验证闭环：</p>
  * <ul>
  *   <li>按用户保存最近 10 条摘要；</li>
- *   <li>自动清洗 token、password、apiKey 等敏感片段；</li>
+ *   <li>用正则做 best-effort 清洗 token、password、apiKey 等敏感片段，并做长度截断；</li>
  *   <li>后续可平滑替换为 Redis/Chroma 持久化实现。</li>
  * </ul>
+ *
+ * <p>安全边界：这里的 redaction 不是 DLP，也不证明摘要内容真实、完整或可直接注入 prompt。
+ * 未来接入 RAG/runtime memory 前，必须补 source custody、租户隔离、删除/导出、reviewed trace 和 eval gate。</p>
  *
  * @author Atlas Team
  * @since 3.1.0-M5.20
@@ -48,6 +51,9 @@ public class ConversationSummaryMemoryStore {
 
     /**
      * 追加一条安全摘要。
+     *
+     * <p>中文说明：调用方只能提交摘要文本，不能借此写入 token/orgId/userId 等控制字段；
+     * userId 来自 Controller 解析后的可信主体，conversationId 只作为定位信息保存。</p>
      */
     public MemorySummary append(String userId, String conversationId, String summary) {
         String safeUserId = normalizeUserId(userId);
@@ -101,6 +107,8 @@ public class ConversationSummaryMemoryStore {
 
     /**
      * 安全记忆摘要记录。
+     *
+     * <p>中文说明：summary 是经过基础清洗和截断后的调用方摘要，不代表服务端事实或 RAG 引用证据。</p>
      */
     public record MemorySummary(String conversationId, String summary, long createdAt) {
     }

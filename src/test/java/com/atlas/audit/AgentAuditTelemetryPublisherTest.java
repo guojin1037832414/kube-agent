@@ -6,6 +6,7 @@ import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationHandler;
 import io.micrometer.observation.ObservationRegistry;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.lang.reflect.Constructor;
@@ -66,10 +67,13 @@ class AgentAuditTelemetryPublisherTest {
 
     @Test
     void recorder_shouldPreferTelemetryAwareConstructorInSpringContext() throws NoSuchMethodException {
+        // Spring 运行时必须优先选择带 telemetry、durable sink 和 JSONL 查询 provider 的构造器。
+        // 两参构造器只服务单元测试或轻量手工装配，不能被误当成生产注入入口，否则 JSONL 查询能力会丢失。
         Constructor<InMemoryAgentAuditRecorder> constructor =
             InMemoryAgentAuditRecorder.class.getConstructor(
                 AgentAuditTelemetryPublisher.class,
-                AgentAuditDurableSink.class
+                AgentAuditDurableSink.class,
+                ObjectProvider.class
             );
 
         assertThat(constructor.getAnnotation(Autowired.class)).isNotNull();

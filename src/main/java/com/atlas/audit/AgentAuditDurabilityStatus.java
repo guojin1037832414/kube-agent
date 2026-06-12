@@ -4,11 +4,15 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Agent audit durability status.
+ * Agent 审计持久化状态快照。
  *
- * <p>This small status object lets execution guards ask one question before a
- * high-risk Tool runs: can this process write the durable audit evidence it is
- * configured to require?</p>
+ * <p>中文说明：SafeToolExecutor 在执行 CREATE / UPDATE / DELETE / ACTION 等高风险 Tool 前，
+ * 只应该依赖这个服务端状态快照判断 durable audit 是否就绪。这里不能读取前端、LLM、Plan 传入的
+ * “已审计”“可写入”声明，因为那些都只是候选输入，不是生产安全事实。</p>
+ *
+ * <p>安全边界：{@link #disabled()} 代表当前没有可用持久审计存储，但仍默认
+ * {@code failClosedForHighRisk=true}。也就是说，Phase 1 顶级 Agent Core 的默认策略是：
+ * durable audit 没准备好时，高风险写 Tool 不进入真实 kube-manager 出口。</p>
  */
 public record AgentAuditDurabilityStatus(
     boolean enabled,
@@ -27,7 +31,7 @@ public record AgentAuditDurabilityStatus(
             false,
             true,
             false,
-            false,
+            true,
             "none",
             "",
             0,

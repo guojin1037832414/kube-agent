@@ -7,6 +7,12 @@
 
 ---
 
+> 2026-06-12 现状说明：这是历史 ADR，记录“引入 Spring AI Alibaba / StateGraph”这一方向的决策。
+> 当前实现并不是完全用框架 `ReactAgent` 替代所有手写逻辑：`supervisorGraph` / `atlasGraph`
+> 仍使用 Spring AI Alibaba Graph 能力，但 kube-agent 也保留了手写 `AtlasBrain` 与手写
+> `ReActEngine`，且所有 Tool 运行时必须经 `SafeToolExecutor`。因此本文中“完全替换手写 ReActEngine /
+> HITL / Checkpoint”的表述应理解为当时的目标，不是当前代码事实；当前事实以 ADR-010、源码和测试为准。
+
 ## 背景
 
 Atlas v3.1 P2 阶段原本规划自行实现：
@@ -171,7 +177,7 @@ spring-ai-alibaba (根 POM)
 - [ADR-008-SpringAIAlibaba选型决策.md](ADR-008-SpringAIAlibaba选型决策.md)
 - [Spring AI Alibaba 官方文档](https://java2ai.com/docs/frameworks/agent-framework/quick-start/)
 - [Spring AI Alibaba Graph 文档](https://java2ai.com/docs/frameworks/graph-core/quick-start/)
-- [旧版 P2 架构方案（已归档）](../../archive/ARCHIVED_20260519_P2_ARCHITECTURE_SPRING_AI_ALIBABA.md) — 保留作为决策历史参考
+- 旧版 P2 架构方案当前已从主 docs 树清理；如需考古，请使用 Git 历史或 `codex-memory` 历史快照。
 
 ---
 

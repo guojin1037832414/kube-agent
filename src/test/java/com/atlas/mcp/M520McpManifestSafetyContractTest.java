@@ -6,6 +6,7 @@ import com.atlas.tool.core.ToolRegistry;
 import com.atlas.tool.impl.DeployDeleteTool;
 import com.atlas.tool.impl.MigConfigListTool;
 import com.atlas.tool.impl.NodeQueryTool;
+import com.atlas.tool.impl.SlurmClusterListTool;
 import com.atlas.tool.impl.UserQueryTool;
 import org.junit.jupiter.api.Test;
 
@@ -18,7 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * M5.20 MCP Manifest 安全契约测试。
  *
  * <p>验证 MCP 对外暴露前必须经过 fail-closed 风险门：普通 READ 可以进入 manifest；
- * SENSITIVE_READ、DELETE/ACTION/CREATE/UNKNOWN 等不得导出。</p>
+ * SENSITIVE_READ、DELETE/ACTION/CREATE/UNKNOWN、以及 NIM/HPC/Slurm/BCM 二期暂停域都不得导出。</p>
  */
 class M520McpManifestSafetyContractTest {
 
@@ -26,6 +27,7 @@ class M520McpManifestSafetyContractTest {
     void buildSafeManifest_shouldOnlyExportDeclaredPlainReadTools() {
         ToolRegistry registry = new ToolRegistry(List.of(
             new NodeQueryTool(null),
+            new SlurmClusterListTool(null),
             new MigConfigListTool(null),
             new UserQueryTool(null),
             new DeployDeleteTool(null)
@@ -39,7 +41,7 @@ class M520McpManifestSafetyContractTest {
         List<Map<String, Object>> tools = (List<Map<String, Object>>) manifest.get("tools");
         assertThat(tools).extracting(t -> t.get("name"))
             .contains("node_query")
-            .doesNotContain("mig_config_list", "user_query", "deploy_delete");
+            .doesNotContain("slurm_cluster_list", "mig_config_list", "user_query", "deploy_delete");
         assertThat(tools).allSatisfy(tool -> {
             assertThat(tool.get("operationType")).isEqualTo(AtlasToolMapping.OperationType.READ.name());
             assertThat(tool.get("requiresConfirmation")).isEqualTo(false);
@@ -51,14 +53,19 @@ class M520McpManifestSafetyContractTest {
         Map<String, Object> policy = (Map<String, Object>) manifest.get("policy");
         assertThat(policy.get("failClosed")).isEqualTo(true);
         assertThat(policy.get("exportRule").toString()).contains("permission=PUBLIC");
+        assertThat(policy.get("phase2DomainsBlocked").toString()).contains("NIM", "HPC", "Slurm", "BCM");
         assertThat(policy.get("blockedOperationTypes").toString())
             .contains("SENSITIVE_READ", "DELETE", "ACTION", "UNKNOWN");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> stats = (Map<String, Object>) manifest.get("stats");
+        assertThat(stats).containsEntry("phase2BlockedTools", 1L);
     }
 
     @Test
     void governanceOverview_shouldRemainManifestOnlyAndNotCallable() {
         ToolRegistry registry = new ToolRegistry(List.of(
             new NodeQueryTool(null),
+            new SlurmClusterListTool(null),
             new MigConfigListTool(null),
             new UserQueryTool(null),
             new DeployDeleteTool(null)
@@ -75,15 +82,16 @@ class M520McpManifestSafetyContractTest {
 
         assertThat(overview.governanceStatus()).isEqualTo("MANIFEST_ONLY_NOT_CALLABLE");
         assertThat(overview.exportedToolCount()).isEqualTo(1);
-        assertThat(overview.blockedToolCount()).isEqualTo(3);
+        assertThat(overview.blockedToolCount()).isEqualTo(4);
         assertThat(overview.toolsCallEnabled()).isFalse();
         assertThat(overview.externalToolExecutionEnabled()).isFalse();
-        assertThat(overview.blockedCapabilities()).contains("mcp-tools-call", "write-tool-export");
+        assertThat(overview.blockedCapabilities()).contains("mcp-tools-call", "write-tool-export", "phase2-domain-tool-export");
         assertThat(overview.safety())
             .containsEntry("manifestOnly", true)
             .containsEntry("toolsCallRuntimeEnabled", false)
             .containsEntry("toolExecution", false)
-            .containsEntry("auditWrite", false);
+            .containsEntry("auditWrite", false)
+            .containsEntry("phase2DomainToolExportAllowed", false);
         assertThat(overview.toString()).doesNotContain("/api/100002", "Bearer", "secret-token-value");
     }
 }

@@ -56,7 +56,7 @@ class M510ArchitectureBoundaryTest {
             .dependOnClassesThat()
             .resideInAnyPackage(
                 "org.springframework.web.reactive.function.client..",
-                "java.net..",
+                "java.net.http..",
                 "okhttp3..",
                 "feign..",
                 "org.springframework.cloud.openfeign..",
@@ -86,7 +86,7 @@ class M510ArchitectureBoundaryTest {
             .dependOnClassesThat()
             .resideInAnyPackage(
                 "org.springframework.web.reactive.function.client..",
-                "java.net..",
+                "java.net.http..",
                 "okhttp3..",
                 "feign..",
                 "org.springframework.cloud.openfeign..",

@@ -8,6 +8,8 @@ import org.springframework.stereotype.Service;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Locale;
+import java.util.Set;
 
 /**
  * MCP Tool Manifest 服务 — M5.20 最小安全闭环。
@@ -31,6 +33,8 @@ import java.util.Map;
  */
 @Service
 public class McpToolManifestService {
+
+    private static final Set<String> PHASE_2_DOMAIN_MARKERS = Set.of("nim", "hpc", "slurm", "bcm");
 
     private final ToolRegistry toolRegistry;
 
@@ -56,13 +60,15 @@ public class McpToolManifestService {
         Map<String, Object> policy = new LinkedHashMap<>();
         policy.put("mode", "safe-readonly-manifest");
         policy.put("failClosed", true);
-        policy.put("exportRule", "permission=PUBLIC && operationType=READ && requiresConfirmation=false && httpMethod/apiEndpoints declared");
+        policy.put("exportRule", "permission=PUBLIC && operationType=READ && requiresConfirmation=false && httpMethod/apiEndpoints declared && phase2Domain=false");
         policy.put("blockedOperationTypes", List.of("UNKNOWN", "SENSITIVE_READ", "CREATE", "UPDATE", "DELETE", "ACTION"));
+        policy.put("phase2DomainsBlocked", List.of("NIM", "HPC", "Slurm", "BCM"));
 
         Map<String, Object> stats = new LinkedHashMap<>();
         stats.put("totalTools", allTools.size());
         stats.put("exportedTools", exportedTools.size());
         stats.put("blockedTools", Math.max(0, allTools.size() - exportedTools.size()));
+        stats.put("phase2BlockedTools", allTools.stream().filter(this::isPhase2Domain).count());
 
         Map<String, Object> manifest = new LinkedHashMap<>();
         manifest.put("name", "atlas-kube-agent-mcp-manifest");
@@ -76,8 +82,10 @@ public class McpToolManifestService {
     /**
      * 判断 Tool 是否允许导出给 MCP。
      *
-     * <p>安全边界：只有 PUBLIC + READ + 无 HITL + 声明 HTTP 元数据的 Tool 才能出现在 Manifest。
-     * SENSITIVE_READ 即使不改变集群状态，也可能读取用户、日志、订单、权限或配额等敏感信息，因此默认不导出。</p>
+     * <p>安全边界：只有 PUBLIC + READ + 无 HITL + 声明 HTTP 元数据、且不属于 Phase 2 暂停域的 Tool
+     * 才能出现在 Manifest。SENSITIVE_READ 即使不改变集群状态，也可能读取用户、日志、订单、权限或配额等
+     * 敏感信息，因此默认不导出。NIM/HPC/Slurm/BCM 虽然有一些历史只读 Tool，但用户已明确这些专家域放到二期；
+     * MCP Manifest 不能把这些暂停域继续宣传成当前一期可见能力。</p>
      */
     public boolean isExportableToMcp(ToolRegistry.ToolMetadata metadata) {
         if (metadata == null) {
@@ -88,7 +96,22 @@ public class McpToolManifestService {
             && !metadata.requiresConfirmation()
             && metadata.httpMethod() != null
             && !metadata.httpMethod().isBlank()
-            && !metadata.apiEndpoints().isEmpty();
+            && !metadata.apiEndpoints().isEmpty()
+            && !isPhase2Domain(metadata);
+    }
+
+    private boolean isPhase2Domain(ToolRegistry.ToolMetadata metadata) {
+        if (metadata == null) {
+            return false;
+        }
+        String searchable = String.join(" ",
+            safe(metadata.name()),
+            safe(metadata.intentId()),
+            safe(metadata.description()),
+            safe(metadata.agent()),
+            String.join(" ", metadata.apiEndpoints())
+        ).toLowerCase(Locale.ROOT);
+        return PHASE_2_DOMAIN_MARKERS.stream().anyMatch(searchable::contains);
     }
 
     /**
@@ -108,5 +131,9 @@ public class McpToolManifestService {
         item.put("requiresConfirmation", metadata.requiresConfirmation());
         item.put("endpointDeclared", !metadata.apiEndpoints().isEmpty());
         return item;
+    }
+
+    private String safe(String value) {
+        return value != null ? value : "";
     }
 }

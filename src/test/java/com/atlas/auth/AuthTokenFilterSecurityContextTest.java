@@ -42,7 +42,7 @@ class AuthTokenFilterSecurityContextTest {
 
     @Test
     void shouldBridgeCachedBearerTokenToSecurityContextDuringRequest() throws Exception {
-        userPermissionContext.onLogin("token-admin", "alice", "sys_admin", Set.of("agent:observe"));
+        userPermissionContext.onLogin("token-admin", "alice", "sys_admin", Set.of("agent:observe"), "100002");
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/agent/observability/snapshot");
         request.addHeader("Authorization", "Bearer token-admin");
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -57,6 +57,7 @@ class AuthTokenFilterSecurityContextTest {
                 .extracting("authority")
                 .contains("ROLE_SYS_ADMIN", "agent:observe");
             assertThat(UserPermissionContext.CURRENT_TOKEN.get()).isEqualTo("token-admin");
+            assertThat(UserPermissionContext.CURRENT_ORG_ID.get()).isEqualTo("100002");
         };
 
         filter.doFilter(request, response, chain);
@@ -145,7 +146,7 @@ class AuthTokenFilterSecurityContextTest {
 
     @Test
     void bearerHeaderShouldTakePrecedenceOverSessionId() throws Exception {
-        userPermissionContext.onLogin("bearer-token", "bearer-user", "sys_admin", Set.of("agent:observe"));
+        userPermissionContext.onLogin("bearer-token", "bearer-user", "sys_admin", Set.of("agent:observe"), "100003");
         String sessionId = sessionStore.createSession(
             "session-token",
             "session-user",
@@ -167,7 +168,7 @@ class AuthTokenFilterSecurityContextTest {
                 .extracting("authority")
                 .contains("ROLE_SYS_ADMIN");
             assertThat(UserPermissionContext.CURRENT_TOKEN.get()).isEqualTo("bearer-token");
-            assertThat(UserPermissionContext.CURRENT_ORG_ID.get()).isNull();
+            assertThat(UserPermissionContext.CURRENT_ORG_ID.get()).isEqualTo("100003");
         };
 
         filter.doFilter(request, response, chain);

@@ -9,7 +9,7 @@
 | 范围 | 状态 | 说明 |
 |---|---|---|
 | Phase 1 顶级 Agent Core | 进行中 | 不降低目标，优先完成安全、编排、Tool 治理、Memory/RAG、Eval、可观测、多 Agent 审查和教学注释。 |
-| NIM / HPC / Slurm / BCM | 二期暂停 | 只保留历史证据和未来设计入口，一期不继续打开这些专家域运行时能力。 |
+| NIM / HPC / Slurm / BCM | 二期暂停 | 历史 Tool/测试/证据代码仍可存在，但一期不导出 MCP、不新增 runtime authority，高风险写默认被 durable audit fail-closed 阻断。 |
 | 中文代码注释 | 分批推进 | 已完成安全入口与 Tool/MCP/kube-manager 执行边界，下一批是 Orchestrator / Graph / ReAct / Plan。 |
 | 文档治理 | 当前刷新 | 主线文档精简到入口、架构学习、使命记忆、ADR、技术栈和恢复记忆；历史波次报告从当前 docs 树移除。 |
 
@@ -33,9 +33,12 @@
 
 - LLM、Plan、前端传入的参数只能是候选业务输入，不能成为 token、orgId、userId、HITL、审计、release 或写入权限事实。
 - `SafeToolExecutor` 是 Graph / ReAct / ToolCallback / Plan 路径进入真实 `BaseTool.execute` 的统一执行边界。
-- MCP 当前只导出只读 Manifest，不开放 `tools/call` 运行时执行权。
+- MCP 当前只导出 admin-only 只读 Manifest / governance，不开放 `tools/call` 运行时执行权；NIM/HPC/Slurm/BCM 这类二期域不会进入一期 MCP 导出清单。
 - kube-manager 是真实外部网络出口，默认连接 `http://localhost:8100`；业务 Tool 请求必须使用当前用户 Token，不能透明降级为 sysadmin。
-- 写操作、写重试、CI blocking、RAG prompt 注入、A2A runtime handoff、MCP runtime、NIM/HPC/Slurm/BCM 都必须经过证据门和单独 release 审查。
+- 高风险写操作默认要求 ready durable audit prewrite；HITL 确认本身不等于可执行。
+- Memory 当前是按用户保存的 caller-submitted bounded summary，会做基础脱敏和截断，但不是可信 RAG prompt authority。
+- Eval / Replay 已有 admin-only 确定性读模型和部分运行入口；CI blocking、LLM eval、Memory/RAG retrieval eval runtime 仍必须经过 reviewed trace evidence 和单独 release 审查。
+- 写重试、RAG prompt 注入、A2A runtime handoff、MCP runtime、NIM/HPC/Slurm/BCM 都必须经过证据门和单独 release 审查。
 
 ## 技术栈
 
@@ -79,6 +82,7 @@ Invoke-RestMethod http://localhost:8300/api/agent/health
 | `docs/文档索引.md` | 当前仍保留的文档索引。 |
 | `docs/项目使命与当前记忆.md` | 用户目标、阶段记忆、恢复叙事。 |
 | `docs/顶级Agent架构与技术学习地图.md` | 总体架构、技术点和学习笔记。 |
+| `docs/learning/以kube-agent为例的顶级Agent开发学习指南.md` | 以当前项目为案例的系统学习文档。 |
 | `docs/文档治理规则.md` | 文档保留、删除、归档和恢复规则。 |
 | `Tool开发规范.md` | Tool 开发规范。 |
 | `docs/adr/` | 架构决策记录。 |

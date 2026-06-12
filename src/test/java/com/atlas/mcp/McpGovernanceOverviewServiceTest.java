@@ -5,6 +5,7 @@ import com.atlas.tool.core.ToolRegistry;
 import com.atlas.tool.impl.DeployDeleteTool;
 import com.atlas.tool.impl.MigConfigListTool;
 import com.atlas.tool.impl.NodeQueryTool;
+import com.atlas.tool.impl.SlurmClusterListTool;
 import com.atlas.tool.impl.UserQueryTool;
 import org.junit.jupiter.api.Test;
 
@@ -41,9 +42,9 @@ class McpGovernanceOverviewServiceTest {
         assertThat(overview.toolsCallEnabled()).isFalse();
         assertThat(overview.externalToolExecutionEnabled()).isFalse();
         assertThat(overview.callerProvidedToolCallAccepted()).isFalse();
-        assertThat(overview.totalToolCount()).isEqualTo(4);
+        assertThat(overview.totalToolCount()).isEqualTo(5);
         assertThat(overview.exportedToolCount()).isEqualTo(1);
-        assertThat(overview.blockedToolCount()).isEqualTo(3);
+        assertThat(overview.blockedToolCount()).isEqualTo(4);
         assertThat(overview.governanceCards()).extracting(card -> card.get("id"))
             .containsExactly(
                 "manifest-export-policy",
@@ -70,7 +71,8 @@ class McpGovernanceOverviewServiceTest {
             "mcp-tools-call",
             "external-agent-tool-execution",
             "write-tool-export",
-            "sensitive-read-tool-export"
+            "sensitive-read-tool-export",
+            "phase2-domain-tool-export"
         );
         assertThat(overview.futureEnablementProtocol())
             .containsEntry("enablementMode", "future-code-release-only")
@@ -90,7 +92,8 @@ class McpGovernanceOverviewServiceTest {
             .containsEntry("externalCalls", false)
             .containsEntry("llmUsed", false)
             .containsEntry("writeToolExportAllowed", false)
-            .containsEntry("sensitiveReadToolExportAllowed", false);
+            .containsEntry("sensitiveReadToolExportAllowed", false)
+            .containsEntry("phase2DomainToolExportAllowed", false);
         assertThat(overview.privacy())
             .containsEntry("redactedOnly", true)
             .containsEntry("containsRawEndpoint", false)
@@ -134,6 +137,7 @@ class McpGovernanceOverviewServiceTest {
     private McpGovernanceOverviewService newService() {
         ToolRegistry registry = new ToolRegistry(List.of(
             new NodeQueryTool(null),
+            new SlurmClusterListTool(null),
             new MigConfigListTool(null),
             new UserQueryTool(null),
             new DeployDeleteTool(null)

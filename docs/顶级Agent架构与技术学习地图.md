@@ -13,7 +13,7 @@
 Frontend / API caller
   -> Spring Security / AuthTokenFilter / AgentPrincipal
   -> AtlasOrchestrator
-  -> AtlasBrain / StateGraph / ReAct / Plan
+  -> AtlasBrain / supervisorGraph / atlasGraph / ReAct / Plan
   -> SafeToolExecutor
   -> ToolRegistry / HITL / Protected params / Audit
   -> KubeManagerHttpClient
@@ -60,6 +60,8 @@ Evidence side:
 - 前端、LLM、请求体都不能直接声明自己是谁。
 - kube-manager session / token 进入 kube-agent 后，要变成服务端可信身份快照。
 - Spring Security 是主身份来源，历史 ThreadLocal 只作为兼容桥。
+- 前端请求中的 `organizationId` 只用于 kube-manager 登录参数；SessionStore 里的 orgId 必须来自 kube-manager 响应或本次 token 反查。
+- Bearer 请求也必须恢复 token+orgId 原子上下文，否则 Graph/Tool 运行时会 fail closed。
 - 匿名、过期、跨用户、跨会话状态必须 fail closed。
 
 ### 2. HITL 人工确认
@@ -72,6 +74,7 @@ Evidence side:
 学习重点：
 
 - confirm 创建服务端 marker；clarify 只补上下文，不等于授权。
+- confirmToken 不是 owner 事实。confirm/clarify 必须先从 checkpoint 校验 `user_id`、当前 principal 和 orgId，再消费 pending 决策。
 - HITL 是写操作和高风险动作的必要门，但不是唯一门。
 - Tool 权限、租户上下文、受保护参数、审计、release evidence 仍要独立成立。
 
@@ -91,6 +94,7 @@ Evidence side:
 - `SafeToolExecutor` 是真实 `BaseTool.execute` 的统一入口。
 - token、orgId、userId、trace、HITL、audit、release、writeAllowed 等字段必须由服务端证据提供。
 - 受保护参数过滤用于防止调用方伪造控制平面字段。
+- 高风险写操作默认要求 ready durable audit prewrite；只有 HITL 匹配但 durable audit 缺失时仍必须阻断。
 
 ### 4. kube-manager HTTP 出口
 
@@ -118,6 +122,7 @@ Evidence side:
 学习重点：
 
 - Graph 状态不是普通 Map，它承载身份、会话、trace、SSE、Tool 结果和安全决策上下文。
+- 当前有两条 Graph 路径：`/api/agent/chat/stream` 走主 `supervisorGraph`；`/api/agent/chat/graph` 走实验 `compiledGraph` / `atlasGraph`。
 - ReAct / Plan 产生的是候选行动，不是执行授权。
 - ToolCallback 最终仍必须回到 `SafeToolExecutor`。
 - 下一批中文注释应优先覆盖这里，因为这是学习 Agent 编排的主战场。
@@ -131,9 +136,9 @@ Evidence side:
 
 学习重点：
 
-- 当前 MCP Manifest 是只读能力目录。
-- 它帮助外部系统理解可见 Tool 元数据，但不提供 `tools/call`。
-- 敏感 READ、写操作、未知风险能力不能因为出现在内部 ToolRegistry 中就被导出。
+- 当前 MCP Manifest 是 admin-only 的只读治理目录。
+- 它是 admin-only 治理读模型，帮助管理员理解可见 Tool 元数据，但不提供 `tools/call`。
+- 敏感 READ、写操作、未知风险能力、NIM/HPC/Slurm/BCM 二期域能力，不能因为出现在内部 ToolRegistry 中就被导出。
 
 ### 7. Observability / Audit / Eval / Replay
 
@@ -142,15 +147,16 @@ Evidence side:
 - 顶级 Agent 需要能解释“发生了什么”，而不只是回答“成功/失败”。
 - Audit 应保留 redacted evidence，不泄露 raw principal、raw token、raw params、endpoint secret。
 - Replay / Eval 使用只读、确定性、脱敏证据，不能反向授权运行时执行。
-- CI blocking 必须等待 reviewed trace evidence 和 release gate。
+- 当前允许 admin-only deterministic replay/eval 读模型和部分 suite run/gate 入口；CI blocking、LLM eval、Memory/RAG retrieval eval runtime 必须等待 reviewed trace evidence 和 release gate。
 
 ### 8. Memory / RAG
 
 学习重点：
 
 - Memory/RAG 不等于“把文本塞进 prompt”。
+- 当前 `ConversationSummaryMemoryStore` 只保存调用方提交的 bounded summary，并做基础正则脱敏和截断；它不是可信 RAG 证据源，也不能直接作为 prompt authority。
 - 可信 Memory/RAG 需要 source custody、citation、tenant/privacy、retention/deletion/export、reviewed trace fixtures 和 eval gates。
-- 当前主要是契约和读模型，retrieval runtime、vector store、durable memory 写入仍关闭。
+- 当前主要是契约、读模型和轻量摘要缓存，retrieval runtime、vector store、durable memory 写入仍关闭。
 
 ### 9. Multi-Agent / Expert Review
 

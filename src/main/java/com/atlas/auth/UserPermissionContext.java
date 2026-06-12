@@ -89,9 +89,21 @@ public class UserPermissionContext {
      * @param permissions 额外权限列表（可选）
      */
     public void onLogin(String token, String username, String role, Set<String> permissions) {
-        UserPermission perm = new UserPermission(token, username, role, permissions);
+        onLogin(token, username, role, permissions, null);
+    }
+
+    /**
+     * 用户登录成功后调用 — 缓存权限与可信组织上下文。
+     *
+     * <p>中文说明：这是新链路首选入口。orgId 必须来自 kube-manager 响应或 token 反查结果，
+     * 不能来自前端请求体。缓存 orgId 的目的，是让 Authorization: Bearer 路径也能恢复 token+orgId
+     * 原子上下文，而不是只认证用户却在 Tool/kube-manager 出口处丢失租户边界。</p>
+     */
+    public void onLogin(String token, String username, String role, Set<String> permissions, String organizationId) {
+        UserPermission perm = new UserPermission(token, username, role, permissions, organizationId);
         cache.put(token, perm);
-        log.info("[UserPermissionContext] 用户登录缓存: {} (role={}, TTL=30min)", username, role);
+        log.info("[UserPermissionContext] 用户登录缓存: {} (role={}, orgId={}, TTL=30min)",
+            username, role, maskOrgId(organizationId));
     }
 
     /**
@@ -120,6 +132,18 @@ public class UserPermissionContext {
      */
     public void bind(String token) {
         CURRENT_TOKEN.set(token);
+        if (token == null || token.isBlank()) {
+            CURRENT_ORG_ID.remove();
+            return;
+        }
+        Optional<String> cachedOrgId = Optional.ofNullable(cache.getIfPresent(token))
+            .map(UserPermission::organizationId)
+            .filter(value -> value != null && !value.isBlank());
+        if (cachedOrgId.isPresent()) {
+            CURRENT_ORG_ID.set(cachedOrgId.get());
+        } else {
+            CURRENT_ORG_ID.remove();
+        }
     }
 
     /**
@@ -136,6 +160,8 @@ public class UserPermissionContext {
         CURRENT_TOKEN.set(token);
         if (orgId != null && !orgId.isBlank()) {
             CURRENT_ORG_ID.set(orgId);
+        } else {
+            CURRENT_ORG_ID.remove();
         }
     }
 
@@ -227,12 +253,24 @@ public class UserPermissionContext {
         String token,
         String username,
         String role,
-        Set<String> permissions
+        Set<String> permissions,
+        String organizationId
     ) {
         public UserPermission {
             permissions = permissions != null
                 ? Set.copyOf(permissions)
                 : Set.of();
+            organizationId = organizationId != null ? organizationId.trim() : "";
+        }
+
+        /**
+         * 兼容旧测试和历史调用方的构造器。
+         *
+         * <p>中文说明：旧链路没有把 orgId 放进权限缓存，只能依赖 ThreadLocal 额外绑定。
+         * 新代码应使用带 organizationId 的 onLogin 重载，避免 Bearer-only 请求丢失租户上下文。</p>
+         */
+        public UserPermission(String token, String username, String role, Set<String> permissions) {
+            this(token, username, role, permissions, "");
         }
 
         public boolean isAdmin() {
@@ -246,5 +284,9 @@ public class UserPermissionContext {
         public boolean hasPermission(String perm) {
             return permissions.contains(perm);
         }
+    }
+
+    private String maskOrgId(String organizationId) {
+        return organizationId == null || organizationId.isBlank() ? "<missing>" : organizationId;
     }
 }

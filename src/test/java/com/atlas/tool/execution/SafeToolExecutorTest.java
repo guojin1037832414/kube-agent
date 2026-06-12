@@ -942,8 +942,9 @@ class SafeToolExecutorTest {
     }
 
     @Test
-    void executeIntent_shouldAllowHighRiskDeleteToolWhenConfirmationTargetMatches() {
-        // 【契约1】高危 DELETE Tool 带服务端 HitlConfirmation 且 target 精确匹配 intentId 时，应放行执行
+    void executeIntent_shouldStillBlockHighRiskDeleteToolWhenOnlyConfirmationMatchesButDurableAuditIsMissing() {
+        // 【契约1】HITL 只是高风险写操作的一道门，不是最终写入授权。
+        // 默认 no-op audit recorder 代表 durable audit 未启用；即使确认 target 精确匹配，也必须先阻断真实 Tool.execute。
         RecordingDeleteTool deleteTool = new RecordingDeleteTool();
         SafeToolExecutor executor = newExecutor(deleteTool);
 
@@ -961,10 +962,10 @@ class SafeToolExecutorTest {
             SafeToolExecutionSource.GRAPH_TOOL_CALL
         ));
 
-        assertTrue(result.executed(), "确认 target 匹配时 DELETE 工具应被执行");
-        assertTrue(result.success(), "DELETE 工具业务执行应返回成功");
-        assertNotNull(deleteTool.lastParams, "确认凭证有效时 Tool 应收到参数");
-        assertEquals("node-x", deleteTool.lastParams.get("name"), "业务参数应正确透传");
+        assertFalse(result.executed(), "默认 fail-closed 模式下，仅有 HITL 确认仍不得执行 DELETE 工具");
+        assertTrue(result.answer().contains("AGENT_AUDIT_DURABLE_REQUIRED"),
+            "阻断原因应明确指向 durable audit 未就绪，而不是误以为 HITL target 不匹配");
+        assertNull(deleteTool.lastParams, "durable audit 未就绪时不得调用真实 Tool.execute");
     }
 
     @Test

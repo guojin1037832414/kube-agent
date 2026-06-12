@@ -47,7 +47,7 @@ class UserPermissionContextTest {
 
     @Test
     void testLogin_cachesPermission() {
-        ctx.onLogin("token-abc", "zhangsan", "user", Set.of("perm1"));
+        ctx.onLogin("token-abc", "zhangsan", "user", Set.of("perm1"), "100002");
 
         ctx.bind("token-abc");
         Optional<UserPermissionContext.UserPermission> p = ctx.current();
@@ -55,6 +55,8 @@ class UserPermissionContextTest {
         assertTrue(p.isPresent());
         assertEquals("zhangsan", p.get().username());
         assertEquals("user", p.get().role());
+        assertEquals("100002", p.get().organizationId(), "可信 orgId 应随登录快照一起缓存");
+        assertEquals("100002", UserPermissionContext.getCurrentOrgId(), "Bearer bind 应恢复 token+orgId 原子上下文");
         assertTrue(p.get().hasPermission("perm1"));
     }
 
@@ -96,10 +98,21 @@ class UserPermissionContextTest {
     }
 
     @Test
+    void testBind_unknownToken_clearsStaleOrgId() {
+        // ThreadLocal 会被线程池复用；绑定未知 token 时必须清掉旧 orgId，不能继承上一个请求的租户。
+        UserPermissionContext.CURRENT_ORG_ID.set("stale-org");
+        ctx.bind("unknown-token");
+
+        assertEquals("unknown-token", UserPermissionContext.CURRENT_TOKEN.get());
+        assertNull(UserPermissionContext.getCurrentOrgId(), "未知 token 不能保留旧组织上下文");
+    }
+
+    @Test
     void testUnbind_clearsToken() {
-        ctx.bind("my-token");
+        ctx.bind("my-token", "100002");
         ctx.unbind();
         assertNull(UserPermissionContext.CURRENT_TOKEN.get());
+        assertNull(UserPermissionContext.CURRENT_ORG_ID.get());
     }
 
     @Test

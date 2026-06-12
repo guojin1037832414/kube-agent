@@ -178,10 +178,48 @@ class M513HitlFailClosedContractTest {
             .contains("inputs.put(\"hitl_confirmation\", confirmation)");
         assertThat(source)
             .as("clarify 恢复不是人工确认，不能携带旧 HitlConfirmation")
-            .contains("runResumeWithCheckpointContext(threadId, clarified, null, emitter)")
+            .contains("runResumeWithCheckpointContext(threadId, clarified, null, emitter, context)")
             .contains("inputs.put(\"hitl_confirmation\", null)")
             .contains("BrainDecision.ActionType.ASK_CLARIFY")
             .contains("clarified_input");
+    }
+
+    /**
+     * confirm/clarify 都必须先校验 checkpoint owner，再消费 pending 决策。
+     *
+     * <p>学习价值：confirmToken 只证明“调用方拿到了凭证”，不证明该凭证属于当前用户；
+     * threadId 也不是秘密。消费 pending 决策前如果不先做归属校验，跨用户失败请求也会破坏原用户状态。</p>
+     */
+    @Test
+    void hitlController_shouldValidateCheckpointOwnerBeforeConsumingPendingDecision() throws IOException {
+        String source = read(HITL_CONTROLLER);
+        String confirmMethod = substringBetween(source,
+            "public SseEmitter confirmAndResume(@RequestBody ConfirmRequest request) {",
+            "public SseEmitter clarifyAndResume(@RequestBody ClarifyRequest request) {");
+        String clarifyMethod = substringBetween(source,
+            "public SseEmitter clarifyAndResume(@RequestBody ClarifyRequest request) {",
+            "private void runResumeWithCheckpointContext(");
+
+        assertThat(confirmMethod.indexOf("CheckpointContext context = loadCheckpointContext(threadId)"))
+            .as("confirm 必须先读取 checkpoint")
+            .isLessThan(confirmMethod.indexOf("decisionCache.remove(threadId, confirmToken)"));
+        assertThat(confirmMethod.indexOf("failClosedUnlessCheckpointOwnedByCurrentPrincipal(context, emitter)"))
+            .as("confirm 必须先校验当前主体和 checkpoint owner")
+            .isLessThan(confirmMethod.indexOf("decisionCache.remove(threadId, confirmToken)"));
+
+        assertThat(clarifyMethod.indexOf("CheckpointContext context = loadCheckpointContext(threadId)"))
+            .as("clarify 必须先读取 checkpoint")
+            .isLessThan(clarifyMethod.indexOf("decisionCache.removeForClarify(threadId)"));
+        assertThat(clarifyMethod.indexOf("failClosedUnlessCheckpointOwnedByCurrentPrincipal(context, emitter)"))
+            .as("clarify 必须先校验当前主体和 checkpoint owner")
+            .isLessThan(clarifyMethod.indexOf("decisionCache.removeForClarify(threadId)"));
+
+        assertThat(source)
+            .contains("一次性”只能由真正的会话 owner 消费")
+            .contains("只有会话 owner 能取消自己的 pending 决策")
+            .contains("当前请求主体也必须携带服务端可信 orgId")
+            .contains("当前登录主体缺少可信组织上下文")
+            .contains("组织上下文与暂停会话不一致");
     }
 
     /**

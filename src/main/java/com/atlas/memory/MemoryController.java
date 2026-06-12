@@ -20,8 +20,13 @@ import java.util.Optional;
 /**
  * 长期记忆摘要控制器 — M5.20 最小可用闭环。
  *
- * <p>只存储摘要，不存储完整用户原文、token、password、apiKey 等敏感信息。前端或编排层在会话结束后
- * 可以提交一条安全摘要；新会话开始前可读取最近摘要注入 Prompt。</p>
+ * <p>中文说明：当前实现只接受调用方提交的 summary 字段，并由 {@link ConversationSummaryMemoryStore}
+ * 做基础脱敏、截断和按用户隔离。它不保存服务端完整对话原文，也不会主动调用 LLM/RAG/vector store
+ * 去生成或检索记忆。</p>
+ *
+ * <p>安全边界：这里的摘要是 caller-submitted bounded summary，只能作为轻量会话提示材料或学习样例；
+ * 在完成 source custody、租户/隐私、删除/导出、reviewed trace、eval gate 之前，不能把它当成可信
+ * RAG 证据或自动注入 prompt 的权威来源。</p>
  *
  * @author Atlas Team
  * @since 3.1.0-M5.20
@@ -46,6 +51,9 @@ public class MemoryController {
 
     /**
      * 查询当前用户最近 10 条安全摘要。
+     *
+     * <p>中文说明：读取 owner 来自 {@link AgentPrincipalResolver}，不来自 {@code X-Session-Id}
+     * 或请求体。返回的是当前用户自己的摘要缓存，不会跨用户聚合，也不触发外部网络/LLM/RAG。</p>
      */
     @GetMapping("/summaries")
     public ResponseEntity<ApiResponse<Map<String, Object>>> summaries(
@@ -65,6 +73,10 @@ public class MemoryController {
 
     /**
      * 追加当前用户的一条会话摘要。
+     *
+     * <p>中文说明：request.summary 是调用方提供的文本，不是服务端验证过的事实。
+     * 本接口只做长度控制、敏感词正则清洗和用户隔离；后续如果要进入 prompt，必须经过更严格的
+     * Memory/RAG source evidence 和 eval gate。</p>
      */
     @PostMapping("/summaries")
     public ResponseEntity<ApiResponse<ConversationSummaryMemoryStore.MemorySummary>> append(

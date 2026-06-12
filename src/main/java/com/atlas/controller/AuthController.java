@@ -151,7 +151,9 @@ public class AuthController {
             // kube-manager 返回格式可能为 {"result": {"orgId":"100002", "token":"jwt..."}, "success": true}
             // 或 {"user": {"organizationId":"100002"}, ...}
             String username = request.getUsername();
-            String resolvedOrgId = orgId;
+            // 请求体里的 organizationId 只作为 kube-manager 登录参数，不能作为本地 Session 的可信租户事实。
+            // 只有 kube-manager 响应字段或使用本次 token 反查得到的结果，才允许写入 SessionStore。
+            String resolvedOrgId = "";
             String role = "user";
             Set<String> permissions = Set.of();
 
@@ -159,17 +161,20 @@ public class AuthController {
             // 这里读取的是 kube-manager 返回的服务端事实，不读取前端请求体里的角色或权限声明。
             JsonNode resultNode = root.path("result");
             if (resultNode.isObject()) {
-                resolvedOrgId = resultNode.path("orgId").asText(resolvedOrgId);
-                resolvedOrgId = resultNode.path("organizationId").asText(resolvedOrgId);
+                resolvedOrgId = firstNonBlank(
+                    resultNode.path("orgId").asText(""),
+                    resultNode.path("organizationId").asText(""),
+                    resolvedOrgId
+                );
             }
             // 2. 尝试 user 节点
             JsonNode userNode = root.path("user");
             if (userNode.isObject()) {
-                resolvedOrgId = userNode.path("organizationId").asText(resolvedOrgId);
+                resolvedOrgId = firstNonBlank(userNode.path("organizationId").asText(""), resolvedOrgId);
                 role = userNode.path("role").asText(role);
             }
             // 3. 根级别 fallback
-            resolvedOrgId = root.path("organizationId").asText(resolvedOrgId);
+            resolvedOrgId = firstNonBlank(root.path("organizationId").asText(""), resolvedOrgId);
 
             // M5.7: 如果响应未包含可信 orgId，用本次登录 token 反查；反查失败必须 fail-safe，不创建 Session。
             // 组织上下文是后续所有 kube-manager 调用的边界；不能仅凭登录请求里的 organizationId 当作可信结果。
@@ -204,7 +209,7 @@ public class AuthController {
 
             // ── 缓存到 UserPermissionContext ──
             // 只有 token 与组织上下文都通过服务端确认后，才把登录事实写入本地权限缓存。
-            userPermissionContext.onLogin(token, username, role, permissions);
+            userPermissionContext.onLogin(token, username, role, permissions, resolvedOrgId);
 
             // ── 生成 Session ID 并缓存到 SessionStore ──
             // 前端后续使用 Session ID；真实 kube-manager token 保留在服务端，减少浏览器侧敏感信息暴露面。
@@ -290,8 +295,18 @@ public class AuthController {
      * 兼容只限 token 所在位置，不代表接受任意登录成功语义。</p>
      */
     private String extractToken(JsonNode root) {
-        // 1. 直接字段
-        if (root.hasNonNull("result")) return root.path("result").asText();
+        // 1. result 可能是字符串 token，也可能是包含 token/orgId 的对象；对象型 result 不能直接 asText。
+        if (root.hasNonNull("result")) {
+            JsonNode result = root.path("result");
+            if (result.isTextual()) {
+                return result.asText();
+            }
+            if (result.isObject()) {
+                if (result.hasNonNull("token")) return result.path("token").asText();
+                if (result.hasNonNull("accessToken")) return result.path("accessToken").asText();
+                if (result.hasNonNull("jwt")) return result.path("jwt").asText();
+            }
+        }
         if (root.hasNonNull("token")) return root.path("token").asText();
 
         // 2. 嵌套 data 对象
@@ -315,6 +330,24 @@ public class AuthController {
      */
     private boolean isUntrustedOrgId(String orgId) {
         return orgId == null || orgId.isBlank() || "1".equals(orgId);
+    }
+
+    /**
+     * 返回第一个非空白字符串。
+     *
+     * <p>中文说明：登录响应可能来自不同版本 kube-manager，字段位置不完全一致。
+     * 这里做的是“服务端响应字段优先”的兼容解析，不会把请求体里的 organizationId 混进可信结果。</p>
+     */
+    private String firstNonBlank(String... values) {
+        if (values == null) {
+            return "";
+        }
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return "";
     }
 
     private String mask(String sessionId) {

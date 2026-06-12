@@ -52,7 +52,8 @@ public class AgentSecurityConfig {
      *
      * <p>中文说明：规则顺序非常重要，越具体的路径越靠前。
      * 公开的登录/健康检查必须允许前端启动；观测和治理接口必须 admin-only；
-     * 聊天、HITL、Memory、MCP、会话接口至少要求已认证；其余 /api/agent/** 也要求认证兜底。</p>
+     * MCP 治理面属于管理员读模型；聊天、HITL、Memory、会话接口至少要求已认证；
+     * 其余 /api/agent/** 也要求认证兜底。</p>
      */
     @Bean
     SecurityFilterChain agentSecurityFilterChain(HttpSecurity http,
@@ -72,12 +73,13 @@ public class AgentSecurityConfig {
                 .requestMatchers("/api/agent/login", "/api/agent/logout", "/api/agent/me", "/api/agent/health").permitAll()
                 // Observability 暴露审计、Trace、Eval、治理证据；普通用户不能读取这些诊断面。
                 .requestMatchers("/api/agent/observability/**").hasAnyRole("ADMIN", "SYS_ADMIN")
+                // MCP manifest/governance 会暴露 Tool 导出策略和被阻断能力，按治理读模型收紧为 admin-only。
+                .requestMatchers("/api/agent/mcp/**").hasAnyRole("ADMIN", "SYS_ADMIN")
                 .requestMatchers(
                     "/api/agent/chat/stream",
                     "/api/agent/chat/graph",
                     "/api/agent/hitl/**",
                     "/api/agent/memory/**",
-                    "/api/agent/mcp/**",
                     "/api/agent/conversations",
                     "/api/agent/conversations/**"
                 ).authenticated()

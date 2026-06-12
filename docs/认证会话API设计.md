@@ -4,6 +4,12 @@
 > 作者：Atlas 后端架构组
 > 日期：2025-05-19
 
+> 2026-06-12 当前实现修订：本文最初是设计方案，其中部分 API 形状已经被后续 M5.29 安全主线调整。
+> 当前登录接口返回 `LoginResponse(sessionId, username, organizationId, message)`，真实 token 保存在服务端
+> `SessionStore`；`X-Session-Id` 是 `ses_*` 登录会话索引，不是 conversationId。会话接口当前使用
+> `/api/agent/conversations` / `/api/agent/conversations/{id}`。前端请求体里的 `organizationId` 只作为
+> kube-manager 登录参数，本地可信 orgId 只接受 kube-manager 响应或本次 token 反查结果。
+
 ---
 
 ## 一、现状分析
@@ -55,13 +61,13 @@
        │  ④ 返回 {token, user, orgId, ...}              │  (localhost:8100)│
        │◀──────────────────────────────────────────────└─────────────────┘
        │
-       │  ⑤ kube-agent 写入 UserPermissionContext.onLogin()
-       │  ⑥ kube-agent 生成 / 复用 conversationId 返回前端
+       │  ⑤ kube-agent 写入 UserPermissionContext.onLogin(token, user, role, permissions, orgId)
+       │  ⑥ kube-agent 生成 ses_* 登录会话 ID 返回前端
        │
        ▼
    POST /api/agent/chat/stream
    Header: Authorization: Bearer <token>
-   Header: X-Session-Id: <conversationId>
+   Header: X-Session-Id: <ses_* sessionId>
 ```
 
 > M5.29-4 更新：当前实现返回的是 `ses_*` sessionId，并保存到 `SessionStore`。后续请求若没有 `Authorization: Bearer`，`AuthTokenFilter` 会用 `X-Session-Id` 反查服务端 `SessionData`，再生成 Spring Security `Authentication`。如果请求显式带了 Bearer，则 Bearer 是本次请求身份权威；未知 Bearer 不自动降级到 SessionId。`X-Session-Id` 是服务端会话索引，不是用户或 LLM 可自声明的身份。
@@ -134,29 +140,19 @@ public class AuthController {
    - 成功：`{"result":"jwt...","success":true}` 或 `{"token":"...","user":{...}}`
    - 失败：透传 HTTP status + message
 5. kube-agent 侧额外处理：
-   - 提取 JWT → 调用 `UserPermissionContext.onLogin(token, username, role, permissions)`
-   - 若响应含 `organizationId`，一并缓存到 `UserPermissionContext.UserPermission`
-   - 生成 conversationId（`conv-` + UUID 前 8 位）并初始化会话元数据存入 `ConversationStore`
+   - 提取 JWT → 解析 kube-manager 响应中的可信 `organizationId`，缺失时用本次 token 反查
+   - 调用 `UserPermissionContext.onLogin(token, username, role, permissions, organizationId)`
+   - 生成 `ses_*` 登录会话 ID 并写入 `SessionStore`
    - 可选择设置 HTTP-only Cookie（见安全章节）
 
-**响应体（200）**：
+**当前实现响应体（200）**：
 ```json
 {
   "success": true,
-  "code": 200,
-  "data": {
-    "token": "eyJhbGciOiJIUzI1NiIs...",
-    "tokenType": "Bearer",
-    "expiresIn": 1800,
-    "user": {
-      "userId": "12345",
-      "username": "zhaotiandi",
-      "realName": "赵天尊",
-      "role": "admin",
-      "organizationId": "100001"
-    },
-    "conversationId": "conv-a1b2c3d4"
-  }
+  "sessionId": "ses_xxxxxxxxxxxxxxxxxxxxxx",
+  "username": "zhaotiandi",
+  "organizationId": "100001",
+  "message": "登录成功"
 }
 ```
 
@@ -173,15 +169,14 @@ public class AuthController {
 
 **请求头**：
 ```
-Authorization: Bearer <token>
-X-Session-Id: <conversationId>
+X-Session-Id: <ses_* sessionId>
 ```
 
-**后端处理**：
-1. 从 Header 提取 Token
-2. `UserPermissionContext.onLogout(token)` — 清除权限缓存
-3. `ConversationStore.remove(conversationId)` — 清理会话元数据（可选，仅清当前前端会话）
-4. （可选）向 kube-manager 发送登出通知（如 kube-manager 有踢 Token 接口）
+**当前后端处理**：
+1. 从 `SessionStore.findById(sessionId)` 读取服务端保存的 token。
+2. `UserPermissionContext.onLogout(token)` — 清除权限缓存。
+3. `SessionStore.remove(sessionId)` — 删除本地登录会话。
+4. 当前不假装撤销 kube-manager 侧 token；远端 revoke 如需支持，应作为单独受控切片。
 
 **响应体**：
 ```json
@@ -194,24 +189,21 @@ X-Session-Id: <conversationId>
 
 #### 4.2.3 GET `/api/agent/me` — 当前登录用户信息
 
-**请求头**：`Authorization: Bearer <token>`
+**请求头**：`X-Session-Id: <ses_* sessionId>`
 
 **响应体**：
 ```json
 {
   "success": true,
   "data": {
-    "userId": "12345",
     "username": "zhaotiandi",
-    "realName": "赵天尊",
     "role": "admin",
-    "organizationId": "100001",
-    "permissions": ["deploy:create", "user:read"]
+    "organizationId": "100001"
   }
 }
 ```
 
-> 直接从 `UserPermissionContext.current()` 读取，零外部调用，性能最优。
+> 当前 `me` 从 `SessionStore` 读取非敏感用户摘要，不返回真实 token，不调用 LLM，不执行 Tool。
 
 ---
 
@@ -227,7 +219,7 @@ src/main/java/com/atlas/controller/ConversationController.java
 
 ```java
 public record Conversation(
-    String id,            // X-Session-Id 值，如 conv-a1b2c3d4
+    String id,            // conversationId，如 conv-a1b2c3d4；不是 X-Session-Id
     String userId,        // 所属用户
     String title,         // 会话标题（首条用户消息前 20 字或默认"新会话"）
     long createdAt,       // 创建时间戳
@@ -263,11 +255,15 @@ public class ConversationStore {
 
 ```java
 @RestController
-@RequestMapping("/api/agent/conversation")
+@RequestMapping("/api/agent")
 public class ConversationController {
 ```
 
-#### 5.4.1 GET `/api/agent/conversation/list` — 列表
+> 当前实现使用复数资源路径：`/api/agent/conversations`、`/api/agent/conversations/{id}`、
+> `/api/agent/conversations/{id}/title`。历史草案中的 `/api/agent/conversation/list`
+> 和 `/api/agent/conversation/{id}` 不再是当前代码路径。
+
+#### 5.4.1 GET `/api/agent/conversations` — 列表
 
 **请求头**：`Authorization: Bearer <token>`
 
@@ -287,7 +283,7 @@ public class ConversationController {
     "list": [
       {
         "id": "conv-a1b2c3d4",
-        "title": "部署 NIM 服务到生产集群",
+      "title": "排查集群异常事件",
         "createdAt": 1716192000000,
         "lastActiveAt": 1716195600000,
         "messageCount": 12,
@@ -298,7 +294,7 @@ public class ConversationController {
 }
 ```
 
-#### 5.4.2 GET `/api/agent/conversation/{conversationId}` — 详情
+#### 5.4.2 GET `/api/agent/conversations/{conversationId}` — 详情
 
 **响应体**：
 ```json
@@ -306,7 +302,7 @@ public class ConversationController {
   "success": true,
   "data": {
     "id": "conv-a1b2c3d4",
-    "title": "部署 NIM 服务到生产集群",
+  "title": "排查集群异常事件",
     "createdAt": 1716192000000,
     "lastActiveAt": 1716195600000,
     "messageCount": 12,
@@ -316,7 +312,7 @@ public class ConversationController {
 }
 ```
 
-#### 5.4.3 PUT `/api/agent/conversation/{conversationId}` — 更新标题
+#### 5.4.3 PUT `/api/agent/conversations/{conversationId}/title` — 更新标题
 
 **请求体**：
 ```json
@@ -325,13 +321,13 @@ public class ConversationController {
 }
 ```
 
-#### 5.4.4 DELETE `/api/agent/conversation/{conversationId}` — 删除
+#### 5.4.4 DELETE `/api/agent/conversations/{conversationId}` — 删除
 
 **权限检查**：仅会话所有者或管理员可删除
 
-#### 5.4.5 POST `/api/agent/conversation` — 主动创建新会话
+#### 5.4.5 POST `/api/agent/conversations` — 主动创建新会话
 
-前端在点击"新建会话"时可调用，预分配 `conversationId`，后续 `chat/stream` 直接携带。
+前端在点击"新建会话"时可调用，预分配 `conversationId`；后续 `chat/stream` 可把它作为业务会话 locator，但不能把它当身份事实。
 
 **响应体**：
 ```json
@@ -413,7 +409,7 @@ private Map<String, Object> proxyLoginToKubeManager(LoginRequest req) {
 | 措施 | 实现 |
 |------|------|
 | **密码不落地** | `LoginRequest` 字段在日志中使用 `@ToString.Exclude` 或 record 自定义 toString |
-| **Token 缓存 TTL** | `UserPermissionContext` 中增加 `expireAfterWrite(Duration.ofMinutes(30))`，目前只用裸 Map，建议改为 Caffeine cache |
+| **Token 缓存 TTL** | `UserPermissionContext` 使用 Caffeine `expireAfterAccess(Duration.ofMinutes(30))`，SessionStore 也使用 Caffeine TTL |
 | **登出失效** | `/logout` 调用 `onLogout()` 立即从内存移除 |
 | **传输加密** | 生产环境 HTTPS 终止于网关，kube-agent 内部 HTTP 可接受 |
 
@@ -423,7 +419,7 @@ private Map<String, Object> proxyLoginToKubeManager(LoginRequest req) {
 |------|------|
 | **conversationId 不可预测** | 使用 `SecureRandom` 或 `UUID` 生成，非自增 ID |
 | **跨用户隔离** | `ConversationStore.findByUserId()` 仅返回当前用户会话，每次操作前检查 `conversation.userId.equals(currentUserId)` |
-| **X-Session-Id 校验** | AtlasOrchestrator 在 `streamChat` 开头校验该 conversation 是否属于当前用户（如 conversationStore 中存在） |
+| **X-Session-Id 校验** | `AuthTokenFilter` 用 `X-Session-Id` 反查 `SessionStore`；conversation owner 由 `ConversationStore.findByUserAndId(...)` 校验 |
 
 ### 8.3 Cookie vs Header 方案
 
@@ -432,40 +428,29 @@ private Map<String, Object> proxyLoginToKubeManager(LoginRequest req) {
 | **纯 Header**（Bearer + X-Session-Id） | 前后端分离清爽、无 CSRF 烦恼、移动端友好 | XSS 需前端妥善保管 Token |
 | **HTTP-Only Cookie** | XSS 无法盗 Token | 需处理 CSRF、跨域配置复杂 |
 
-**建议**：保持当前 **纯 Header 方案**，Token 存前端 `localStorage`（Pinia + persistedstate），`X-Session-Id` 同样前端保管。这是 SPA + SSE 场景的最简方案。
+**当前建议**：保持 Header 方案，但前端只保存 `ses_*` 会话 ID；真实 kube-manager token 保存在服务端 `SessionStore`。如果显式使用 Bearer，仍必须来自登录缓存并能恢复可信 orgId。
 
 ---
 
 ## 九、对现有代码的改动点
 
-### 9.1 零侵入清单（不改现有文件）
-- `AtlasOrchestrator.java`：流式核心逻辑不动
-- `HITLController.java`：HITL 逻辑不动
-- `AuthTokenFilter.java`：Bearer 提取逻辑不动
-- `AsyncContextHolder.java`：Token 透传逻辑不动
-
-### 9.2 轻量修改清单
-- `AtlasOrchestrator.ChatRequest`：支持从 `X-Session-Id` header 读取 `conversationId`
-- `AtlasOrchestrator.streamChat()`：开头增加 `conversationStore.touch(conversationId)`
-
-### 9.3 新增文件清单
+### 9.1 当前已落地文件清单
 
 ```
 controller/
   AuthController.java           # 登录/登出/用户信息
   ConversationController.java   # 会话 CRUD
 
-service/
-  AuthService.java              # 登录代理 + Token 解析 + 权限缓存写入（可选，如逻辑简单可直接放 Controller）
-
 store/
+  SessionStore.java             # ses_* 登录会话 -> token/username/orgId/role/permissions
   ConversationStore.java        # Caffeine 内存会话存储
 
 dto/
-  LoginRequest.java             # username, password, orgId, loginType, captcha
-  LoginResponse.java            # token, user, conversationId
+  LoginRequest.java             # username, password, organizationId
+  LoginResponse.java            # sessionId, username, organizationId, message
   ApiResponse.java              # 统一响应包装 {success, code, message, data}
-  ConversationListResponse.java # 分页响应
+  ConversationItemDto.java
+  ConversationDetailDto.java
 ```
 
 ---
@@ -481,11 +466,11 @@ dto/
 | 登录 | `/api/agent/login` | POST | RPC 感最强的操作，保留动词 |
 | 登出 | `/api/agent/logout` | POST | 同上 |
 | 获取当前用户 | `/api/agent/me` | GET | 资源风格 |
-| 会话列表 | `/api/agent/conversation` | GET | 资源集合 |
-| 创建会话 | `/api/agent/conversation` | POST | 资源创建 |
-| 获取会话 | `/api/agent/conversation/{id}` | GET | 单体资源 |
-| 更新会话 | `/api/agent/conversation/{id}` | PUT | 资源更新 |
-| 删除会话 | `/api/agent/conversation/{id}` | DELETE | 资源删除 |
+| 会话列表 | `/api/agent/conversations` | GET | 资源集合 |
+| 创建会话 | `/api/agent/conversations` | POST | 资源创建 |
+| 获取会话 | `/api/agent/conversations/{id}` | GET | 单体资源 |
+| 更新标题 | `/api/agent/conversations/{id}/title` | PUT | 标题更新 |
+| 删除会话 | `/api/agent/conversations/{id}` | DELETE | 资源删除 |
 
 所有响应统一包装为：
 ```java
@@ -510,23 +495,23 @@ public record ApiResponse<T>(boolean success, int code, String message, T data) 
  |                       |                        | (x-www-form-urlencoded)
  |                       |                        |                     |
  |                       |                        |<---200 {token}------|
- |                       |<---返回 token-----------|                     |
+ |                       |<---返回登录响应----------|                     |
  |                       |                       |                     |
- |                       |--UserPermissionContext.onLogin()               |
- |                       |--ConversationStore.save()                      |
+ |                       |--UserPermissionContext.onLogin(token,user,role,permissions,orgId) |
+ |                       |--SessionStore.createSession()                  |
  |                       |                       |                     |
- |<--200 {token,convId}-|                       |                     |
+ |<--200 {sessionId,user,orgId}-|                |                     |
  |                       |                       |                     |
  |                       |                       |                     |
- |--GET /api/agent/conversation/list--> |          |                     |
- | Authorization: Bearer |                       |                     |
+ |--GET /api/agent/conversations--> |              |                     |
+ | X-Session-Id: ses_*   |                       |                     |
  |                       |--从 cache 查用户会话列表  |                     |
  |<--200 {list}---------|                       |                     |
  |                       |                       |                     |
  |--SSE /api/agent/chat/stream--> |             |                     |
- | X-Session-Id: conv-xxx|                       |                     |
- |                       |--conversationStore.touch()                   |
- |                       |--AuthTokenFilter 提取 Token                    |
+ | X-Session-Id: ses_*   |                       |                     |
+ | conversationId: conv-*|                       |                     |
+ |                       |--AuthTokenFilter 反查 SessionStore             |
  |                       |--ThreadLocal 透传                              |
  |                       |--Graph 执行 / Tool 调用                         |
  |                       |                        |--getCurrentToken()   |
@@ -543,7 +528,7 @@ public record ApiResponse<T>(boolean success, int code, String message, T data) 
 |------|------|------|
 | kube-manager `/api/login` 返回格式变更 | 登录失败 | `AuthService` 中对多种字段名做兼容解析（已有 `KubeManagerHttpClient` 的 `result/token/data` 兼容经验） |
 | `ConversationStore` 内存溢出 | OOM | Caffeine `maximumSize(5000)` + `expireAfterAccess(24h)` 已兜底 |
-| 多实例部署 | 会话数据实例隔离 | Phase 2 将 `ConversationStore` 中的 `Cache` 替换为 Redis `StringRedisTemplate`，接口不变 |
+| 多实例部署 | 会话数据实例隔离 | 后续多实例部署阶段将 `ConversationStore` 中的 `Cache` 替换为 Redis `StringRedisTemplate`，接口不变 |
 | XSS 盗 Token | 安全风险 | 保持短 TTL（30分钟）+ `/logout` 即时失效 + HTTPS 全链路 |
 
 ---
@@ -552,13 +537,13 @@ public record ApiResponse<T>(boolean success, int code, String message, T data) 
 
 | # | 端点 | 方法 | 用途 |
 |---|------|------|------|
-| 1 | `/api/agent/login` | POST | 登录获取 token + conversationId |
+| 1 | `/api/agent/login` | POST | 登录获取 `ses_*` sessionId + username + organizationId |
 | 2 | `/api/agent/logout` | POST | 登出清除服务端缓存 |
 | 3 | `/api/agent/me` | GET | 获取当前用户信息 |
-| 4 | `/api/agent/conversation` | POST | 新建会话 |
-| 5 | `/api/agent/conversation` | GET | 查询会话列表 |
-| 6 | `/api/agent/conversation/{id}` | GET | 查询单个会话 |
-| 7 | `/api/agent/conversation/{id}` | PUT | 重命名会话 |
-| 8 | `/api/agent/conversation/{id}` | DELETE | 删除会话 |
+| 4 | `/api/agent/conversations` | POST | 新建会话 |
+| 5 | `/api/agent/conversations` | GET | 查询会话列表 |
+| 6 | `/api/agent/conversations/{id}` | GET | 查询单个会话 |
+| 7 | `/api/agent/conversations/{id}/title` | PUT | 重命名会话 |
+| 8 | `/api/agent/conversations/{id}` | DELETE | 删除会话 |
 
 以上就是 kube-agent v3.1 登录与会话管理的完整设计方案。

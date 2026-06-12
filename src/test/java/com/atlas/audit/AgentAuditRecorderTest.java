@@ -123,6 +123,9 @@ class AgentAuditRecorderTest {
             .containsEntry("containsRawReason", false)
             .containsEntry("containsRawParameterValues", false)
             .containsEntry("durableRetention", false);
+        assertThat((Map<String, Object>) snapshot.get("durability"))
+            .containsEntry("enabled", false)
+            .containsEntry("failClosedForHighRisk", true);
     }
 
     @Test

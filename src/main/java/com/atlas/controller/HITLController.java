@@ -104,8 +104,16 @@ public class HITLController {
         String confirmToken = request.confirmToken();
         SseEmitter emitter = streamingEmitter.createEmitter("hitl-" + threadId);
 
-        // 安全校验：Token 匹配 + 幂等性检查
-        // remove 成功才代表本次 confirmToken 尚未过期且未被使用；重复提交会被 fail-closed。
+        // 先校验 checkpoint 归属，再消费 confirmToken。
+        // 这个顺序非常关键：如果先 remove，再发现当前用户不是会话 owner，攻击者或误用方就能让原用户的
+        // 待确认决策失效。HITL 的 token 是一次性凭证，但“一次性”只能由真正的会话 owner 消费。
+        CheckpointContext context = loadCheckpointContext(threadId);
+        if (!failClosedUnlessCheckpointOwnedByCurrentPrincipal(context, emitter)) {
+            return emitter;
+        }
+
+        // 安全校验：Token 匹配 + 幂等性检查。
+        // remove 成功才代表本次 confirmToken 尚未过期、未被使用，并且前面已经确认当前操作者拥有该 checkpoint。
         BrainDecision original = decisionCache.remove(threadId, confirmToken);
         if (original == null) {
             CompletableFuture.runAsync(
@@ -130,7 +138,7 @@ public class HITLController {
         // 服务端 marker 是后续执行层唯一可信的人工确认凭证。
         HitlConfirmation confirmation = HitlConfirmation.human(threadId, original.target());
         log.info("[HITL] 用户确认执行: threadId={}, target={}", threadId, original.target());
-        runResumeWithCheckpointContext(threadId, confirmed, confirmation, emitter);
+        runResumeWithCheckpointContext(threadId, confirmed, confirmation, emitter, context);
         return emitter;
     }
 
@@ -148,8 +156,15 @@ public class HITLController {
         String threadId = request.threadId();
         SseEmitter emitter = streamingEmitter.createEmitter("clarify-" + threadId);
 
-        // 清理旧决策（无需 Token 校验，因为是用户主动补充）
-        // clarify 不代表“同意执行”，只代表“提供更多上下文”；后续仍需要重新决策和必要的 HITL。
+        // clarify 虽然不需要 confirmToken，但仍然必须先证明当前用户拥有该 checkpoint。
+        // 否则只要知道 threadId，就可以删除别人正在等待澄清/确认的 pending 决策。
+        CheckpointContext context = loadCheckpointContext(threadId);
+        if (!failClosedUnlessCheckpointOwnedByCurrentPrincipal(context, emitter)) {
+            return emitter;
+        }
+
+        // 清理旧决策：clarify 不代表“同意执行”，只代表“提供更多上下文”。
+        // 清理动作放在归属校验之后，保证只有会话 owner 能取消自己的 pending 决策。
         decisionCache.removeForClarify(threadId);
 
         // 构建新决策：携带用户补充信息
@@ -163,7 +178,7 @@ public class HITLController {
         );
 
         log.info("[HITL] 用户澄清: threadId={}, reply={}", threadId, request.reply());
-        runResumeWithCheckpointContext(threadId, clarified, null, emitter);
+        runResumeWithCheckpointContext(threadId, clarified, null, emitter, context);
         return emitter;
     }
 
@@ -177,28 +192,8 @@ public class HITLController {
     private void runResumeWithCheckpointContext(String threadId,
                                                 BrainDecision decision,
                                                 HitlConfirmation confirmation,
-                                                SseEmitter emitter) {
-        CheckpointContext context = loadCheckpointContext(threadId);
-        Optional<AgentPrincipal> principal = principalResolver.current()
-            .filter(AgentPrincipal::isAuthenticated);
-        // 当前登录用户必须与 checkpoint 中的 user_id 一致，避免 A 用户恢复 B 用户暂停的 Graph。
-        if (principal.isEmpty()
-            || context.userId().isBlank()
-            || !context.userId().equals(principal.get().username())) {
-            CompletableFuture.runAsync(
-                () -> streamingEmitter.error(emitter, "安全上下文不匹配：无法恢复其他用户的会话，请重新发起请求。"),
-                asyncExecutor
-            );
-            return;
-        }
-        // orgId 缺失时不继续恢复；否则后续 kube-manager 出口无法确认租户边界。
-        if (context.orgId().isBlank()) {
-            CompletableFuture.runAsync(
-                () -> streamingEmitter.error(emitter, "安全上下文缺失：无法确定当前用户所属组织，请重新登录后再试。"),
-                asyncExecutor
-            );
-            return;
-        }
+                                                SseEmitter emitter,
+                                                CheckpointContext context) {
         CompletableFuture.runAsync(
             // 异步恢复必须复制 token/orgId，否则线程切换后 Tool 出口会丢失请求安全上下文。
             AsyncContextHolder.wrap(() -> {
@@ -206,6 +201,56 @@ public class HITLController {
                     resumeGraph(threadId, decision, confirmation, emitter, context.traceId());
                 }
             }, context.token(), context.orgId()),
+            asyncExecutor
+        );
+    }
+
+    /**
+     * 恢复前的归属校验。
+     *
+     * <p>中文说明：confirmToken 只能证明“前端拿到了某个待确认凭证”，不能单独证明它属于当前用户。
+     * 因此 confirm 和 clarify 都必须先读取服务端 checkpoint，确认 user_id 与当前登录主体一致，且 checkpoint
+     * 中仍有可信 orgId，才允许消费 pending 决策或恢复 Graph。</p>
+     *
+     * <p>安全边界：这里不执行 Tool、不写业务资源，只决定是否允许进入恢复流程。
+     * 真正的 Tool 执行仍会在 SafeToolExecutor 中再次检查 HITL、权限、审计和参数保护。</p>
+     */
+    private boolean failClosedUnlessCheckpointOwnedByCurrentPrincipal(CheckpointContext context,
+                                                                      SseEmitter emitter) {
+        Optional<AgentPrincipal> principal = principalResolver.current()
+            .filter(AgentPrincipal::isAuthenticated);
+        // 当前登录用户必须与 checkpoint 中的 user_id 一致，避免 A 用户恢复 B 用户暂停的 Graph。
+        if (principal.isEmpty()
+            || context.userId().isBlank()
+            || !context.userId().equals(principal.get().username())) {
+            sendResumeError(emitter, "安全上下文不匹配：无法恢复其他用户的会话，请重新发起请求。");
+            return false;
+        }
+        // orgId 缺失时不继续恢复；否则后续 kube-manager 出口无法确认租户边界。
+        if (context.orgId().isBlank()) {
+            sendResumeError(emitter, "安全上下文缺失：无法确定当前用户所属组织，请重新登录后再试。");
+            return false;
+        }
+
+        // 当前请求主体也必须携带服务端可信 orgId，并且与 checkpoint 一致。
+        // 顶级 Agent 的恢复流程不能只相信“旧 checkpoint 里有租户”，还要证明“当前登录主体仍属于同一租户”。
+        // 如果 Bearer-only 旧链路无法恢复 orgId，必须重新登录或重新发起请求，而不是乐观使用 checkpoint 继续执行。
+        String currentOrgId = principal.get().organizationId();
+        if (currentOrgId == null || currentOrgId.isBlank()) {
+            sendResumeError(emitter, "安全上下文缺失：当前登录主体缺少可信组织上下文，请重新登录后再试。");
+            return false;
+        }
+        if (!context.orgId().equals(currentOrgId)) {
+            sendResumeError(emitter, "安全上下文不匹配：组织上下文与暂停会话不一致，请重新发起请求。");
+            return false;
+        }
+        return true;
+    }
+
+    /** 统一异步发送恢复前 fail-closed 错误，避免 Controller 线程阻塞在 SSE 写入上。 */
+    private void sendResumeError(SseEmitter emitter, String message) {
+        CompletableFuture.runAsync(
+            () -> streamingEmitter.error(emitter, message),
             asyncExecutor
         );
     }

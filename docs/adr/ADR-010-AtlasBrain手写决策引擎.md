@@ -6,9 +6,14 @@
 
 ---
 
+> 2026-06-12 现状说明：本文仍是当前 supervisor 方向的重要 ADR，但其中引用的旧
+> `docs/archive/**` 文件已从当前 docs 树清理。需要查看旧设计时，请使用 Git 历史或
+> `codex-memory` 历史快照。当前代码同时存在 `AtlasBrain`、`StateGraph`、手写
+> `ReActEngine` 和统一 `SafeToolExecutor`，不能把 `BrainDecision` 或 ReAct 结果当作授权事实。
+
 ## 背景
 
-在 M2 阶段的最初设计中（见 `docs/archive/REACT_TASKCLASSIFIER_DESIGN.md`），`supervisor` 节点计划使用 `ReactAgent` 作为分类器：
+在 M2 阶段的最初设计中，`supervisor` 节点计划使用 `ReactAgent` 作为分类器：
 
 - 将 33 个 Tool 绑定到一个 ReactAgent
 - 让其通过 ReAct 循环（思考 → 行动 → 观察）决定路由目标
@@ -78,4 +83,4 @@ BrainDecision 结构：
 - `src/main/java/com/atlas/brain/BrainDecision.java`
 - `src/main/java/com/atlas/brain/StructuredOutputParser.java`
 - `src/main/java/com/atlas/graph/config/AtlasGraphConfig.java`（supervisor 节点 wrapper）
-- `docs/archive/ARCHIVED_20260518_ReAct_TaskClassifier_Design.md`（旧方案归档）
+- 旧 ReAct classifier 设计归档文件已从当前 docs 树清理，保留在 Git 历史 / `codex-memory` 中。

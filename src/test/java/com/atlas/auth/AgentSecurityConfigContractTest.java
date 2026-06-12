@@ -40,12 +40,12 @@ class AgentSecurityConfigContractTest {
 
         assertThat(source).contains("@EnableMethodSecurity");
         assertThat(source).contains(".requestMatchers(\"/api/agent/observability/**\").hasAnyRole(\"ADMIN\", \"SYS_ADMIN\")");
+        assertThat(source).contains(".requestMatchers(\"/api/agent/mcp/**\").hasAnyRole(\"ADMIN\", \"SYS_ADMIN\")");
         assertThat(source)
             .contains("\"/api/agent/chat/stream\"")
             .contains("\"/api/agent/chat/graph\"")
             .contains("\"/api/agent/hitl/**\"")
             .contains("\"/api/agent/memory/**\"")
-            .contains("\"/api/agent/mcp/**\"")
             .contains("\"/api/agent/conversations\"")
             .contains("\"/api/agent/conversations/**\"")
             .contains(").authenticated()");

@@ -620,27 +620,46 @@ class AgentSecurityConfigWebMvcTest {
     }
 
     @Test
-    void memoryAndMcpEndpointsRequireAuthenticatedPrincipal() throws Exception {
+    void memoryEndpointsRequireAuthenticatedPrincipal() throws Exception {
         mockMvc.perform(get("/api/agent/memory/summaries"))
             .andExpect(status().isForbidden());
 
+        mockMvc.perform(get("/api/agent/memory/summaries")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
+            .andExpect(status().isOk());
+    }
+
+    @Test
+    void mcpGovernanceEndpointsRequireAdminRole() throws Exception {
         mockMvc.perform(get("/api/agent/mcp/manifest"))
             .andExpect(status().isForbidden());
 
         mockMvc.perform(get("/api/agent/mcp/governance/overview"))
             .andExpect(status().isForbidden());
 
-        mockMvc.perform(get("/api/agent/memory/summaries")
+        mockMvc.perform(get("/api/agent/mcp/manifest")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
-            .andExpect(status().isOk());
+            .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/agent/mcp/governance/overview")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
+            .andExpect(status().isForbidden());
 
         String sessionId = sessionStore.createSession("session-token", "session-user", "100002", "user", Set.of());
         mockMvc.perform(get("/api/agent/mcp/manifest")
                 .header("X-Session-Id", sessionId))
-            .andExpect(status().isOk());
+            .andExpect(status().isForbidden());
 
         mockMvc.perform(get("/api/agent/mcp/governance/overview")
                 .header("X-Session-Id", sessionId))
+            .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/agent/mcp/manifest")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token"))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/agent/mcp/governance/overview")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token"))
             .andExpect(status().isOk());
     }
 

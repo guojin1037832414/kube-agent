@@ -230,6 +230,7 @@ class JsonlAgentAuditDurableSinkTest {
         assertThat(status.enabled()).isFalse();
         assertThat(status.ready()).isTrue();
         assertThat(status.durableRetention()).isFalse();
+        assertThat(status.failClosedForHighRisk()).isTrue();
         assertThat(status.storageType()).isEqualTo("none");
     }
 

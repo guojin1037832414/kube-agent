@@ -3,11 +3,11 @@ package com.atlas.audit;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * Agent audit configuration.
+ * Agent 审计配置。
  *
- * <p>M5.30 keeps durable audit as an explicit opt-in so local development stays
- * simple. Production can enable JSONL first, then replace the sink with a real
- * database or security log backend under the same interface.</p>
+ * <p>中文说明：JSONL durable audit 仍然是显式开启能力，便于本地学习和测试保持轻量；但高风险写 Tool 的
+ * fail-closed 开关默认打开。这样当 durable audit 尚未启用、路径不可写或未来生产存储未准备好时，
+ * CREATE / UPDATE / DELETE / ACTION 不会因为配置遗漏而直接触达 kube-manager。</p>
  */
 @ConfigurationProperties(prefix = "atlas.audit")
 public class AgentAuditProperties {
@@ -20,7 +20,7 @@ public class AgentAuditProperties {
 
     public static class Durable {
         private boolean enabled = false;
-        private boolean failClosedForHighRisk = false;
+        private boolean failClosedForHighRisk = true;
         private String path = "target/agent-audit/agent-audit.jsonl";
         private int retentionDays = 30;
         private long maxFileBytes = 268_435_456L;
