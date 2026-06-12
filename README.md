@@ -1,4 +1,4 @@
-# Atlas Kube-Agent
+﻿# Atlas Kube-Agent
 
 `kube-agent` 是构建在 `kube-manager` / `vue-kube-manager` 能力之上的 Kubernetes Agent 后端，也是一个长期 Agent 开发学习项目。目标不是“能用的生产级 Agent”，而是一期开出一个顶级 Agent Core：安全边界清晰、证据链完整、可观测、可评测、可恢复，并且每一批代码和文档都能帮助学习 Agent 工程。
 
@@ -75,15 +75,15 @@ Invoke-RestMethod http://localhost:8300/api/agent/health
 
 | 文档 | 用途 |
 |---|---|
-| `ROADMAP.md` | 当前开发计划和顺序表。 |
-| `docs/INDEX.md` | 当前仍保留的文档索引。 |
-| `docs/PROJECT_MISSION_AND_MEMORY.md` | 用户目标、阶段记忆、恢复叙事。 |
-| `docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md` | 总体架构、技术点和学习笔记。 |
-| `docs/DOCUMENTATION_GOVERNANCE.md` | 文档保留、删除、归档和恢复规则。 |
-| `TOOL_DEV_SPEC.md` | Tool 开发规范。 |
+| `开发路线图.md` | 当前开发计划和顺序表。 |
+| `docs/文档索引.md` | 当前仍保留的文档索引。 |
+| `docs/项目使命与当前记忆.md` | 用户目标、阶段记忆、恢复叙事。 |
+| `docs/顶级Agent架构与技术学习地图.md` | 总体架构、技术点和学习笔记。 |
+| `docs/文档治理规则.md` | 文档保留、删除、归档和恢复规则。 |
+| `Tool开发规范.md` | Tool 开发规范。 |
 | `docs/adr/` | 架构决策记录。 |
 | `docs/tech-stack/` | 后端技术栈审计与先进技术路线。 |
-| `codex-memory/kube-agent/current/RECOVERY_STATUS.md` | 新会话恢复优先入口。 |
+| `codex-memory/kube-agent/current/当前恢复状态.md` | 新会话恢复优先入口。 |
 
 ## 恢复规则
 

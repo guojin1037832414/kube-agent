@@ -192,7 +192,7 @@ Evidence side:
 
 ## 下一步学习路线
 
-1. 读 `README.md` 和 `ROADMAP.md`，确认当前项目边界。
+1. 读 `README.md` 和 `开发路线图.md`，确认当前项目边界。
 2. 读 Batch 1/2 已注释代码，理解身份和执行边界。
 3. 开始 Batch 3，围绕 `AtlasOrchestrator` 和 `AtlasGraphConfig` 学习 Graph/ReAct/Plan。
 4. 每完成一个小切片，都把“代码、测试、文档、恢复记忆、Git 提交”作为一个完整闭环。

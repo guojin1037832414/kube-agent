@@ -1,4 +1,4 @@
-# kube-agent Codex 项目规则
+﻿# kube-agent Codex 项目规则
 
 ## 中文注释规则
 
@@ -24,5 +24,5 @@
 ## 项目记忆规则
 
 - 每个有意义的后端/前端切片完成后，都要同步更新 `codex-memory/kube-agent/current` 下的恢复记忆。
-- 长期架构、技术点和学习总结继续维护在 `docs/AGENT_ARCHITECTURE_AND_TECHNICAL_LEARNING.md`。
+- 长期架构、技术点和学习总结继续维护在 `docs/顶级Agent架构与技术学习地图.md`。
 - `H:\codex重要文件` 是历史外部备份路径；当前优先写入 workspace-local `codex-memory`。

@@ -1,4 +1,4 @@
-# ADR-010: AtlasBrain 手写决策器替代 ReactAgent Supervisor
+﻿# ADR-010: AtlasBrain 手写决策器替代 ReactAgent Supervisor
 
 > **状态**: Accepted  
 > **日期**: 2026-05-16  

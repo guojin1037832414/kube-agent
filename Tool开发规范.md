@@ -1,4 +1,4 @@
-# kube-agent Tool 开发规范 v3.1
+﻿# kube-agent Tool 开发规范 v3.1
 
 > 基于 BaseTool + @AtlasToolMapping + @ToolPermission + defaults.yml 的 Tool 开发标准指南。
 
