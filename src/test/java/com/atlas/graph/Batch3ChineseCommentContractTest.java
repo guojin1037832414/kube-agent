@@ -59,6 +59,10 @@ class Batch3ChineseCommentContractTest {
         Map.entry(
             Path.of("src/main/java/com/atlas/graph/node/SseEmitNode.java"),
             List.of("中文说明", "安全边界", "SSE", "不代表 Tool 执行")
+        ),
+        Map.entry(
+            Path.of("src/main/java/com/atlas/graph/node/ToolResultMergeNode.java"),
+            List.of("中文说明", "安全边界", "final_answer", "fail-closed", "不代表 Tool 成功")
         )
     );
 

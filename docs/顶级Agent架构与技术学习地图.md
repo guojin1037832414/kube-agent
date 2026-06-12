@@ -136,6 +136,7 @@ Evidence side:
 - Graph `tool_call` 入口现在有快速 fail-closed 守卫：缺失 Tool 目标、缺失可信 orgId、或候选参数夹带 token/orgId/userId/conversationId/HITL/audit/release/write 控制字段时，不创建 `SafeToolExecutionRequest`，只写入未执行状态和前端可见原因。
 - Graph `react_node` 入口现在会把服务端 Graph State 中的 `traceId` 注入 ReAct `initialParams`，并在 Graph State 与服务端 ThreadLocal 都没有可信 orgId 时提前 fail-closed；这样 ReAct 不会在租户边界不明时先调用 LLM、Tool 或 kube-manager。
 - Graph `execute_node` 入口现在会在单步 READ Plan 候选进入 `SafeToolExecutionRequest` 前确认可信 orgId：先读 Graph State，再读服务端 ThreadLocal，仍缺失则写入 `EXECUTE_TRUSTED_ORG_MISSING` 未执行状态。
+- 旧 `atlasGraph` 的 `merge_result` 现在按展示优先级合并：已有 `final_answer`、`react_node_result`、专业 Agent 结果、通用 `answer`、`supervisor_result`、兜底错误。这样 direct_answer、ReAct 总结和 fail-closed 原因不会在最后一跳丢失。
 - Graph State 不应保存 `SseEmitter`、Lambda 等运行期对象；ReAct 过程事件通过 registry 用 sessionId 间接发布。
 - `execute_node` 是安全教学样例：先按计划形状 fail-closed，再委托 `SafeToolExecutor` 做最终执行边界。
 
@@ -150,6 +151,12 @@ Plan/execute 学习补充：
 - `PlanResult.executable=true` 和 `PlanStep.riskLevel=READ` 只是进入自动执行候选窗口，不是最终执行许可。
 - `execute_node` 的 orgId 必须来自服务端可信上下文，不能来自 `PlanStep.parameters`，因为 Plan 是 LLM/规划链路产物。
 - `execute_node` 只允许单步 READ 进入 `SafeToolExecutor`；多步、非 READ、需要确认、缺工具名、未知业务字段、受保护控制字段或缺失可信 orgId 都必须 fail-closed。
+
+展示合并学习补充：
+
+- `merge_result` 只是把已有状态投影为 `final_answer`，不执行 Tool、不调用 LLM、不访问 kube-manager。
+- `final_answer` 是 SSE 展示文本，不代表 Tool 成功、HITL 已确认、audit 已落盘、release gate 已通过或写操作完成。
+- 安全停止原因必须能展示给用户，否则顶级 Agent 的“可解释 fail-closed”会在 UI 最后一跳消失。
 
 支撑层补充学习线：
 
