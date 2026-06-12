@@ -18,6 +18,15 @@ import java.util.stream.Collectors;
 /**
  * L3 层 — LLM 语义意图分类器。
  *
+ * <p>中文说明：L3IntentClassifier 是意图路由链路里的“语义兜底增强层”，只在 L1/L2
+ * 没有高确定性结果时把用户 query 和意图目录快照交给 LLM，让模型输出一个候选 intentId、
+ * confidence 和 reasoning。它的输出会被 IntentRouter 继续归一化/仲裁，不直接驱动 Tool。</p>
+ *
+ * <p>安全边界：LLM 输出不可信。即使模型高置信度返回 p0/p1 意图，也不能注册 Tool、
+ * 不能跳过 SafeToolExecutor、不能创建 HITL marker、不能写 audit/memory、不能调用 MCP、
+ * 不能访问 kube-manager，也不能生成 token/orgId/userId/writeAllowed/releaseDecision 等控制字段。
+ * 非法 intentId、unknown、低置信度或异常都必须降级到后续层，而不是默认放行。</p>
+ *
  * <p>仅当 L1 Embedding（高置信度短路已跳过）和 L2 规则匹配均未命中时，
  * 由 {@link com.atlas.intent.IntentRouter} 调用本组件进行 LLM 语义分类。</p>
  *
@@ -35,11 +44,6 @@ import java.util.stream.Collectors;
  *
  * @author Atlas Team
  * @since 3.1.0-P1
- */
-/**
- * L3 层 — LLM 意图分类器。
- *
- * <p><b>注意</b>：无 {@code @Component}，由 {@link com.atlas.config.AtlasConfiguration} 条件创建。</p>
  */
 public class L3IntentClassifier {
 
@@ -84,6 +88,9 @@ public class L3IntentClassifier {
     /**
      * 执行 L3 LLM 语义分类。
      *
+     * <p>中文说明：该方法唯一的外部动作是调用配置好的 ChatClient 做分类。返回值仍是
+     * {@link IntentResult} 候选，不携带 Tool 参数，也不应该包含任何敏感控制字段。</p>
+     *
      * @param query 用户原始输入（非空）
      * @return 命中且置信度达标的 {@link IntentResult}；异常/未命中/置信度不足均返回 {@code null}
      */
@@ -101,7 +108,7 @@ public class L3IntentClassifier {
                     .replace("{{intents}}", intentsSnapshot)
                     + "\n\n" + outputConverter.getFormat();
 
-            // 调用 LLM
+            // 安全边界：这里调用 LLM 只做分类；模型回复必须经过强类型解析、置信度和 intent 白名单校验。
             L3ClassificationResult result = chatClient.prompt()
                     .system(systemPrompt)
                     .user("用户输入：" + query)
@@ -129,7 +136,7 @@ public class L3IntentClassifier {
                 return null;
             }
 
-            // 二次校验：防止 LLM 幻觉出非法 intentId
+            // 安全边界：二次校验防止 LLM 幻觉出非法 intentId；目录不存在即降级，不能动态注册能力。
             var def = intentsLoader.getIntent(result.intentId());
             if (def == null) {
                 log.error("[L3] LLM 返回了不在候选列表中的 intentId: '{}', 降级到 L4", result.intentId());
@@ -156,6 +163,9 @@ public class L3IntentClassifier {
 
     /**
      * 刷新意图列表快照。若后续支持 intents.yml 热重载，可调用此方法。
+     *
+     * <p>安全边界：刷新 prompt 快照只影响模型可见目录，不改变 ToolRegistry、MCP manifest、
+     * kube-manager 权限或任何运行时写入能力。</p>
      */
     public void refreshIntentsSnapshot() {
         this.intentsSnapshot = renderIntentsSnapshot(intentsLoader.getAllIntents());
@@ -191,6 +201,9 @@ public class L3IntentClassifier {
      * 将意图定义压缩为 prompt 友好的文本块。
      *
      * <p>只保留 id + description + 最多 2 个 examples，极大节省 Token。</p>
+     *
+     * <p>中文说明：prompt 中故意不暴露内部 endpoint、token、orgId、Tool 参数 schema 或敏感策略细节，
+     * 让 LLM 只能做意图分类，而不能尝试构造执行请求。</p>
      */
     private String renderIntentsSnapshot(java.util.Collection<IntentDefinition> intents) {
         return intents.stream()

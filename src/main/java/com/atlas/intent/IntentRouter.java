@@ -18,6 +18,17 @@ import java.util.Optional;
 /**
  * 意图路由器 — v3.1 统一评分版。
  *
+ * <p>中文说明：IntentRouter 是自然语言进入 Agent 编排前的“候选意图收集器”。
+ * 它把用户 query 依次交给 L1 Embedding、L2 规则、L3 LLM、L4 模糊兜底，再把候选交给
+ * {@link IntentArbiter} 选择一个最可能的 intent。它的输出会帮助 AtlasBrain / Graph 决定
+ * 下一步应该走哪个专业 Agent 或 Tool 候选，但它本身不执行 Tool、不访问 kube-manager、
+ * 不写 audit/memory，也不创建 HITL marker。</p>
+ *
+ * <p>安全边界：任何层命中、短路或仲裁胜出都只是“路由建议”，不是执行许可。
+ * LLM/Embedding/规则分数不能授予 token、orgId、userId、ToolPermission、HITL、audit prewrite、
+ * release evidence 或 kube-manager 写权限；后续真正执行仍必须经过 {@code SafeToolExecutor}
+ * 和服务端可信身份上下文。路由层降级时宁可返回 unknown，也不能把异常解释为放行。</p>
+ *
  * <p>核心理念：<b>收集 → 归一化 → 仲裁</b></p>
  * <ol>
  *   <li><b>收集</b>：L1(L2/L3/L4) 多层分别执行，收集所有命中结果</li>
@@ -57,6 +68,9 @@ public class IntentRouter {
     /**
      * 主路由入口：按收集→归一化→仲裁模式执行。
      *
+     * <p>中文说明：query 来自用户自然语言，可能包含误导性身份、租户、token 或“我已确认”等文本。
+     * 这些文本只能参与语义判断，不能被提升为控制平面事实，也不能直接进入 Tool 参数。</p>
+     *
      * @param query 用户原始 query
      * @return 最佳意图结果（不会返回 null，至少返回 unknown）
      */
@@ -69,9 +83,8 @@ public class IntentRouter {
         log.debug("[IntentRouter] 路由输入: {}", query);
         List<IntentResult> candidates = new ArrayList<>();
 
-        // ═══════════════════════════════════════════
-        // L1: Embedding 语义预筛
-        // ═══════════════════════════════════════════
+        // 中文说明：L1 Embedding 只提供语义相似候选。高置信度短路是性能优化，
+        // 安全边界仍然不变：短路返回的 intent 不能直接执行 Tool。
         IntentResult l1 = safeMatch(() -> {
             if (embeddingMatcher == null) return null;
             IntentResult r = embeddingMatcher.match(query);
@@ -91,9 +104,8 @@ public class IntentRouter {
             log.debug("[IntentRouter] L1 中低置信度 (norm={:.3f})，进入仲裁候选池", l1.confidence());
         }
 
-        // ═══════════════════════════════════════════
-        // L2: 规则精确匹配
-        // ═══════════════════════════════════════════
+        // 中文说明：L2 规则命中来自 intents.yml 的关键词/正则，适合高频确定性路由；
+        // 但规则命中也不是 kube-manager API 白名单或 ToolPermission。
         IntentResult l2 = safeMatch(() -> {
             if (ruleMatcher == null) return null;
             IntentResult r = ruleMatcher.exactMatch(query);
@@ -109,9 +121,8 @@ public class IntentRouter {
             return l2;
         }
 
-        // ═══════════════════════════════════════════
-        // L3: LLM 语义分类
-        // ═══════════════════════════════════════════
+        // 中文说明：L3 LLM 分类可增强泛化能力，但模型输出必须经过阈值、unknown、
+        // intent 白名单和后续仲裁；模型不能自行注册 intent 或声明写权限。
         IntentResult l3 = safeMatch(() -> {
             L3IntentClassifier classifier = l3Classifier.orElse(null);
             if (classifier == null) return null;
@@ -126,9 +137,8 @@ public class IntentRouter {
             log.debug("[IntentRouter] L3 LLM 命中: {} (norm={:.3f})", l3.intentId(), l3.confidence());
         }
 
-        // ═══════════════════════════════════════════
-        // L4: 模糊兜底
-        // ═══════════════════════════════════════════
+        // 中文说明：L4 只是模糊兜底，让用户得到可解释的候选或 unknown；
+        // 低证据 fuzzy 结果不能被当作高风险动作的执行依据。
         IntentResult l4 = safeMatch(() -> {
             if (ruleMatcher == null) return null;
             IntentResult r = ruleMatcher.fuzzyMatch(query);
@@ -175,6 +185,8 @@ public class IntentRouter {
 
     /**
      * 安全执行某层匹配，捕获所有异常防止一层故障拖垮整个路由链。
+     *
+     * <p>安全边界：某层异常只会跳过该层，不能降级成“默认允许执行”。</p>
      */
     private IntentResult safeMatch(java.util.function.Supplier<IntentResult> matcher, String layer) {
         try {
@@ -187,6 +199,9 @@ public class IntentRouter {
 
     /**
      * Unknown 兜底结果。
+     *
+     * <p>中文说明：unknown 是 fail-soft 的对话结果，通常用于澄清或普通回答；
+     * 它不应触发 Tool、MCP、kube-manager 或任何写入链路。</p>
      */
     private IntentResult unknown(String query) {
         return new IntentResult("unknown", "未知意图", 0.0, "L4",

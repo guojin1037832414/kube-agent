@@ -5,6 +5,15 @@ import java.util.*;
 /**
  * 意图冲突仲裁器：当多层返回不同 intentId 且分数均高时，按规则链裁决。
  *
+ * <p>中文说明：仲裁器把多层候选压缩成一个“最值得继续处理”的 {@link IntentResult}。
+ * 它存在的价值是让 L1/L2/L3/L4 的分数能在同一决策面上比较，避免每一层都在自己的局部语义里
+ * 单独决定最终路由。</p>
+ *
+ * <p>安全边界：仲裁胜出只代表“路由候选胜出”，不是 Tool 授权、不是 HITL 确认、
+ * 不是 audit prewrite、不是 release evidence，也不是 kube-manager API 白名单。
+ * 即使 p0/p1 高优意图或 crossBoost 得到 1.0，后续也必须重新经过 SafeToolExecutor、
+ * ToolPermission、受保护字段过滤、HITL 和审计链路。</p>
+ *
  * <p>仲裁规则链（优先级由高到低）：</p>
  * <ol>
  *   <li>同 intentId 合并，取 max score + 3% crossBoost（多层交叉确认）</li>
@@ -39,6 +48,10 @@ public final class IntentArbiter {
 
     /**
      * 仲裁入口。
+     *
+     * <p>中文说明：输入通常来自 IntentRouter 收集的多层候选，候选里可能包含 LLM 自评分、
+     * Embedding 相似度和规则分。这里只做 deterministic 排序与合并，不访问外部服务、不写记忆、
+     * 不执行 Tool。</p>
      *
      * @param results 多层匹配结果
      * @return 唯一最佳结果；全部低于阈值则返回 null（由外部 fallback 到 unknown）
@@ -106,6 +119,9 @@ public final class IntentArbiter {
 
     /**
      * 合并同 intentId，取最高分 + crossBoost。
+     *
+     * <p>安全边界：crossBoost 表示多层证据一致性，只能提高路由置信度；
+     * 不能把候选升级为执行许可或 release authority。</p>
      */
     private static Map<String, IntentResult> mergeByIntentId(List<IntentResult> results) {
         Map<String, IntentResult> merged = new LinkedHashMap<>();

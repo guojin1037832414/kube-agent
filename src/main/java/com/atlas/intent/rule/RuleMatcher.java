@@ -13,6 +13,15 @@ import java.util.regex.Pattern;
 /**
  * L2 层 — 规则精确匹配 + L4 层 — 模糊兜底。
  *
+ * <p>中文说明：RuleMatcher 读取 {@link IntentsLoader} 加载的 intents.yml 目录，
+ * 用关键词、正则和 examples 生成确定性/半确定性的意图候选。它的输出给
+ * {@link com.atlas.intent.IntentRouter} 参与路由仲裁，不直接调用 Tool。</p>
+ *
+ * <p>安全边界：关键词或正则命中不是权限证据。用户自然语言里出现“删除”“已确认”
+ * 或某个资源名称，只能影响 intent 候选，不能创建 HITL marker、不能跳过 ToolPermission、
+ * 不能决定 orgId/token/userId，也不能直接拼接到 kube-manager path/query/body。
+ * 正则异常只记录并跳过该 pattern，不能让匹配器默认放行。</p>
+ *
  * <p><b>L2 精确匹配</b>（score == 100，直接返回）：</p>
  * <ul>
  *   <li>关键词全包含：用户 query 包含某意图全部 keywords</li>
@@ -42,6 +51,9 @@ public class RuleMatcher {
     /**
      * L2 精确匹配。
      *
+     * <p>中文说明：精确匹配适合高频、低成本的路由加速；命中后是否能执行任何 Tool，
+     * 仍取决于后续 Graph / SafeToolExecutor / HITL / audit / kube-manager 权限。</p>
+     *
      * @param query 用户原始输入
      * @return 匹配结果（score = 1.0），未命中返回 null
      */
@@ -69,6 +81,8 @@ public class RuleMatcher {
 
     /**
      * L4 模糊兜底匹配。
+     *
+     * <p>中文说明：模糊兜底是为了把不完整表达变成可澄清的候选，而不是为了猜测用户想执行高风险动作。</p>
      *
      * @param query 用户原始输入
      * @return 最佳模糊匹配结果，未命中返回 null
@@ -107,6 +121,7 @@ public class RuleMatcher {
             try {
                 if (Pattern.compile(p).matcher(query).find()) return true;
             } catch (Exception e) {
+                // 安全边界：坏正则只影响该条 pattern，不得扩大匹配范围或默认命中。
                 log.warn("[RuleMatcher] 正则编译失败: {}", p);
             }
         }

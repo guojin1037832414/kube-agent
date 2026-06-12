@@ -1,0 +1,59 @@
+﻿{
+    "milestone":  "M5.85-22",
+    "title":  "Batch 5 intent routing Chinese comments",
+    "generatedAt":  "2026-06-12T16:43:03+08:00",
+    "files":  [
+                  {
+                      "path":  "src/main/java/com/atlas/intent/IntentRouter.java",
+                      "sha256":  "559ae3e3dc7f66ade00304243b4467582ebd81cc083aed186f4327860afb62fe"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/intent/core/IntentArbiter.java",
+                      "sha256":  "11a626b8bb9e549db0cf515fce4f434896c7cbbbdab7f932e66f31f8e9a911e2"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/intent/rule/RuleMatcher.java",
+                      "sha256":  "3b3c102d81f01891cf26d1b9b3305279102a88c6fd6387f8faabe6fdecf0a7e0"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/intent/EmbeddingMatcher.java",
+                      "sha256":  "98eb20592d3fd1ea8f877d378de9d2db600ef6ce55bc9ef99c0bd37f869d6a56"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/intent/config/IntentsLoader.java",
+                      "sha256":  "78382c79b4b23e0438cf9c2f58b07a9124a145cd28df11f22cf12090a8b27842"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/intent/llm/L3IntentClassifier.java",
+                      "sha256":  "f83e2fc2cbf83968edbcc89327cd14b793601407b1d41222261f473bd325ce3c"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/support/Batch5IntentRoutingChineseCommentContractTest.java",
+                      "sha256":  "3a8d32daeb596962a5ab3bc314165c27b802b144080489203d0919449c3e9235"
+                  },
+                  {
+                      "path":  "变更日志.md",
+                      "sha256":  "3b47e5f5b3327ca08b0c892a9a42431f040de9e2dc6656f7202a20004c6ee056"
+                  },
+                  {
+                      "path":  "开发路线图.md",
+                      "sha256":  "49e751589cc17155bf50ace0e7a15e1b82585e858e348c07ba87ae42ae7a10df"
+                  },
+                  {
+                      "path":  "docs/项目使命与当前记忆.md",
+                      "sha256":  "2fdec1d7bf99753d91fa4d7cadab60ece39b84a691dbdde1fe459cb44da49067"
+                  },
+                  {
+                      "path":  "docs/顶级Agent架构与技术学习地图.md",
+                      "sha256":  "6c3a679e171c15ee8230641fa3a08963125a16db2c28cd6ad429cd5275ffd9c3"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/当前恢复状态.md",
+                      "sha256":  "023ed9202a0bf7440521e53b366547f32d907aff3ad5aa37f1e5308acb9fff5c"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_M5_85_22_INTENT_ROUTING_CHINESE_COMMENTS_20260612.md",
+                      "sha256":  "18d4bb586ae896e806197b51b0b0bfbe140e9f2fb55590a357b94f83e4c2696c"
+                  }
+              ]
+}

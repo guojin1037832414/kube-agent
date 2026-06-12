@@ -12,18 +12,15 @@ import jakarta.annotation.PostConstruct;
 import java.util.*;
 
 /**
- * L1 层 — Embedding 语义预筛。
- *
- * <p>启动时预计算所有意图 examples 的 Embedding 向量并缓存。
- * 运行时将用户 query 与各意图的 examples 平均向量做余弦相似度比较。</p>
- *
- * <p>零 token 消耗，延迟 &lt; 10ms。</p>
- *
- * @author Atlas Team
- * @since 3.1.0
- */
-/**
  * L1 语义预筛器 — Embedding 匹配。
+ *
+ * <p>中文说明：EmbeddingMatcher 在启动时把 intents.yml 中的 examples 编成向量，
+ * 运行时把用户 query 与各意图的平均向量做余弦相似度比较，给 IntentRouter 提供 L1 候选。
+ * 它的作用是低成本发现语义相近意图，尤其是用户没有完全说出关键词时。</p>
+ *
+ * <p>安全边界：Embedding 相似度不是安全门禁。模型文件、向量距离和阈值只能影响候选排序，
+ * 不能授予 ToolPermission、token/orgId/userId、HITL、audit、release 或 kube-manager 写权限。
+ * 预计算失败或缓存为空时应降级到其他层，而不是默认命中某个高风险 intent。</p>
  *
  * <p><b>注意</b>：无 {@code @Component}，由 {@link com.atlas.config.AtlasConfiguration} 条件创建。</p>
  */
@@ -48,6 +45,9 @@ public class EmbeddingMatcher {
 
     /**
      * 预计算所有意图 examples 的 Embedding。
+     *
+     * <p>中文说明：预计算只建立本地只读向量索引，不访问 kube-manager、不执行 Tool、
+     * 不写 audit/memory，也不把用户数据写入持久向量库。</p>
      */
     @PostConstruct
     public void precompute() {
@@ -67,6 +67,8 @@ public class EmbeddingMatcher {
 
     /**
      * L1 匹配：返回最佳匹配的意图，无命中返回 null。
+     *
+     * <p>安全边界：返回 null 是正常降级信号；返回 IntentResult 也只是候选，不能直接执行。</p>
      */
     public IntentResult match(String query) {
         if (intentEmbeddings.isEmpty()) return null;

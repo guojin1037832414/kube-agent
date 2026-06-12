@@ -274,6 +274,17 @@ Batch 4 已补中文教学注释后的学习线：
 - `DefaultValueAspect` 只补普通业务表单草稿字段。defaults.yml 不能生成或覆盖 token、orgId、userId、sessionId、HITL、audit、release、writeAllowed 等控制平面字段。
 - `AtlasToolResult` 和 `AtlasToolResultConverter` 是结果展示/转换契约。`success=true` 不能反向证明 HITL、audit、release 或后续写授权，转换器不能把失败改成成功，也不能透传 raw token/raw audit/raw prompt。
 
+### 8.6 Intent Routing 支撑层
+
+学习重点：
+
+- `IntentRouter` 是候选意图收集器，不是执行器。L1 Embedding、L2 规则、L3 LLM、L4 fuzzy 的命中结果只帮助 AtlasBrain/Graph 选择下一步候选。
+- `IntentArbiter` 的 crossBoost、多层一致和高优意图规则只增强“路由可信度”，不能成为 Tool 授权、HITL、audit、release 或 kube-manager API 白名单。
+- `RuleMatcher` 的关键词/正则命中不是权限证据。用户说“删除”“已确认”“我有权限”只能影响语义候选，不能创建 HITL marker、决定 orgId/token/userId 或直接拼接到 kube-manager 请求。
+- `EmbeddingMatcher` 的相似度阈值和向量索引只做语义检索；预计算失败或缓存为空时必须降级，不允许默认命中高风险 intent。
+- `IntentsLoader` 读取的 intents.yml 是路由目录，不是 Tool 权限表、MCP manifest、kube-manager API 白名单或 Phase 2 域能力开关。
+- `L3IntentClassifier` 的 LLM 输出必须经过强类型解析、置信度阈值、unknown 和 intent 白名单；模型不能动态注册能力、生成控制字段或跳过 SafeToolExecutor。
+
 ### 9. Multi-Agent / Expert Review
 
 学习重点：
@@ -295,6 +306,7 @@ Batch 4 已补中文教学注释后的学习线：
 - Batch 5 第三片：query/path/body helper 的 kube-manager 参数收敛边界。
 - Batch 5 第四片：analysis/catalog query helper 的 GET-only 白名单与敏感只读边界。
 - Batch 5 第五片：Tool core adapter 层，包括 AtlasTool、legacy ToolCallback、inputSchema、ToolContext、默认值切面、ToolResult 和结果转换器。
+- Batch 5 第六片：Intent routing 层，包括 IntentRouter、IntentArbiter、RuleMatcher、EmbeddingMatcher、L3IntentClassifier 和 IntentsLoader。
 - Orchestrator hardening 第一片：Graph `tool_call` 入口守卫与 SSE 安全停止原因展示。
 
 待推进：
@@ -324,6 +336,6 @@ Batch 4 已补中文教学注释后的学习线：
 1. 读 `README.md` 和 `开发路线图.md`，确认当前项目边界。
 2. 读 Batch 1/2/3 已注释代码，理解身份、执行边界和 Agent 编排状态机。
 3. 读 Batch 4 已注释代码，理解 Memory/RAG/Audit/Replay/Eval 如何形成只读、脱敏、不可反向授权的证据链。
-4. 读 Batch 5 已注释代码，理解 API 响应、登录会话、Conversation 元数据、异步上下文、意图配置、query helper 和 Tool core adapter 为什么也是安全边界。
+4. 读 Batch 5 已注释代码，理解 API 响应、登录会话、Conversation 元数据、异步上下文、意图配置、query helper、Tool core adapter 和 intent routing 为什么也是安全边界。
 5. 继续 Batch 5 剩余支撑类。
 6. 每完成一个小切片，都把“代码、测试、文档、恢复记忆、Git 提交”作为一个完整闭环。
