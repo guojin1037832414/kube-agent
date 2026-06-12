@@ -296,6 +296,16 @@ Batch 4 已补中文教学注释后的学习线：
 - `BaseToolOrganizationIdGovernanceTest` 说明 orgId 是多租户安全边界，不能从 LLM/前端/测试参数读取。
 - `AtlasToolCallbackSafeExecutorTest` 说明 legacy callback 兼容入口也必须走 SafeToolExecutor，不能回到裸 `BaseTool.execute`。
 
+### 8.8 Support / Intent 测试学习线
+
+学习重点：
+
+- `TokenPropagatingTaskDecoratorTest` 说明异步线程里的 token/orgId 必须来自服务端可信 ThreadLocal 快照，执行后必须恢复旧值，避免跨用户或跨租户污染。
+- `ConversationStoreTest` 说明 conversationId 只是资源定位符，store 层也要保护 owner 过滤；这不是 Controller 可以跳过 Principal 校验的理由。
+- `IntentArbiterTest` 说明多层 intent 候选的排序、crossBoost 和高优规则只服务路由，不授予 Tool/HITL/audit/release/kube-manager 权力。
+- `EmbeddingMatcherMockTest` 说明 L1 语义召回失败时应 fail-soft 返回 null，让 L2/L3/L4 继续，而不是默认命中高危意图。
+- `RuleMatcherTest` 说明关键词、正则和模糊匹配只产生 L2/L4 证据；“删除”“已确认”等自然语言不能创建 HITL marker 或批准写操作。
+
 ### 9. Multi-Agent / Expert Review
 
 学习重点：
@@ -319,12 +329,13 @@ Batch 4 已补中文教学注释后的学习线：
 - Batch 5 第五片：Tool core adapter 层，包括 AtlasTool、legacy ToolCallback、inputSchema、ToolContext、默认值切面、ToolResult 和结果转换器。
 - Batch 5 第六片：Intent routing 层，包括 IntentRouter、IntentArbiter、RuleMatcher、EmbeddingMatcher、L3IntentClassifier 和 IntentsLoader。
 - Batch 5 第七片：Tool core 关键测试教学注释，包括 Prompt 可见性、Tool 可见性、参数归一化、受保护字段过滤、orgId 治理和 legacy callback 安全执行。
+- Batch 5 第八片：config/store/intent 支撑测试教学注释，包括异步上下文、conversation owner、意图仲裁、Embedding 降级和规则匹配。
 - Orchestrator hardening 第一片：Graph `tool_call` 入口守卫与 SSE 安全停止原因展示。
 
 待推进：
 
 1. Orchestrator hardening 继续：检查 `execute_node`、`react_node`、delegate 子图、Tool result merge、SSE 事件语义和 trace 传播是否一致。
-2. Batch 5 收尾支撑类：检查剩余 support/config/test helper 是否还存在未注释的隐性控制面字段。
+2. Batch 5 收尾支撑类：继续检查剩余 support/test helper、学习文档示例和高频联调用例是否还存在未解释的身份、租户、Tool、HITL、audit、memory 或 kube-manager 边界。
 
 注释标准：
 
@@ -348,6 +359,6 @@ Batch 4 已补中文教学注释后的学习线：
 1. 读 `README.md` 和 `开发路线图.md`，确认当前项目边界。
 2. 读 Batch 1/2/3 已注释代码，理解身份、执行边界和 Agent 编排状态机。
 3. 读 Batch 4 已注释代码，理解 Memory/RAG/Audit/Replay/Eval 如何形成只读、脱敏、不可反向授权的证据链。
-4. 读 Batch 5 已注释代码和测试，理解 API 响应、登录会话、Conversation 元数据、异步上下文、意图配置、query helper、Tool core adapter、intent routing 和 Tool core tests 为什么也是安全边界。
+4. 读 Batch 5 已注释代码和测试，理解 API 响应、登录会话、Conversation 元数据、异步上下文、意图配置、query helper、Tool core adapter、intent routing、Tool core tests 和 support/intent tests 为什么也是安全边界。
 5. 继续 Batch 5 剩余支撑类。
 6. 每完成一个小切片，都把“代码、测试、文档、恢复记忆、Git 提交”作为一个完整闭环。

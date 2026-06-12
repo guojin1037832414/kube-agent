@@ -1,0 +1,71 @@
+{
+    "milestone":  "M5.85-24",
+    "title":  "Batch 5 support test Chinese comments",
+    "generatedAt":  "2026-06-12T18:23:46+08:00",
+    "files":  [
+                  {
+                      "path":  "src/test/java/com/atlas/config/TokenPropagatingTaskDecoratorTest.java",
+                      "sha256":  "98c7e01b6d69221cb4ae1602dd5673609af2206f31d334f364fecf587920fc2b"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/store/ConversationStoreTest.java",
+                      "sha256":  "5c7ee34b83c1cd55318b8991db1b36fe16eb3f1307349f49daa55c6ee33f04e3"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/intent/core/IntentArbiterTest.java",
+                      "sha256":  "c160b5705900b3b93fd289491fe383ad3021ad6313659877478d7a192a0714e7"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/intent/EmbeddingMatcherMockTest.java",
+                      "sha256":  "647f3d35791281021922511eed7f7c2925b17889f873115f36d1dcee48c324be"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/intent/rule/RuleMatcherTest.java",
+                      "sha256":  "0e7dd6c5236cd4731fa07c9c1b8f563566aa2a3a4dd0a5d45dba33f38863d6c5"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/support/Batch5SupportTestChineseCommentContractTest.java",
+                      "sha256":  "c8df443621462a1f242224a525f781e6cad61017401c99fb122f807047566a98"
+                  },
+                  {
+                      "path":  "变更日志.md",
+                      "sha256":  "80ae714dba23de86e87d9edced52b1e25d85735df469e9ef1add6f308aeb3a61"
+                  },
+                  {
+                      "path":  "开发路线图.md",
+                      "sha256":  "091c7d12f0dce279b2126210d19c6485d593486fdc78b58d53ffe9bd338c7c59"
+                  },
+                  {
+                      "path":  "docs/项目使命与当前记忆.md",
+                      "sha256":  "aeef0b160132f60efc07dbc7f6abf8517be3fb22ac66c3ad6c65ca23235e17e8"
+                  },
+                  {
+                      "path":  "docs/顶级Agent架构与技术学习地图.md",
+                      "sha256":  "a56537af8913b776183f06a2be47b1d95349b0fee6d0a0fd2348dea185d3aff7"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/变更日志.md",
+                      "sha256":  "80ae714dba23de86e87d9edced52b1e25d85735df469e9ef1add6f308aeb3a61"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/开发路线图.md",
+                      "sha256":  "091c7d12f0dce279b2126210d19c6485d593486fdc78b58d53ffe9bd338c7c59"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/项目使命与当前记忆.md",
+                      "sha256":  "aeef0b160132f60efc07dbc7f6abf8517be3fb22ac66c3ad6c65ca23235e17e8"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/顶级Agent架构与技术学习地图.md",
+                      "sha256":  "a56537af8913b776183f06a2be47b1d95349b0fee6d0a0fd2348dea185d3aff7"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/当前恢复状态.md",
+                      "sha256":  "65bbf4c13664e2a5c53c0c1d1b858e9ff2ada4a169f56398881e612271355707"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_M5_85_24_SUPPORT_TEST_CHINESE_COMMENTS_20260612.md",
+                      "sha256":  "526044330864108d511e222af9433b88d24b0a4380ade41daed9ed157ef0699e"
+                  }
+              ]
+}

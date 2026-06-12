@@ -9,6 +9,15 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * IntentArbiter 纯单元测试 — 验证多层意图冲突仲裁规则链。
  *
+ * <p>中文说明：本测试把 L1 Embedding、L2 规则、L3 LLM 分类、L4 模糊兜底产生的
+ * {@link IntentResult} 当作“候选路由证据”输入，验证 {@link IntentArbiter} 如何合并、
+ * 排序和选择最可信的一个 intent。输出只给后续编排层做提示，不直接执行任何业务动作。</p>
+ *
+ * <p>安全边界：IntentArbiter 是纯函数仲裁器，不调用 Tool、MCP、LLM、Embedding、RAG、
+ * kube-manager，也不写 audit/memory。confidence、crossBoost、matchedLevel、priority 和 exact
+ * 命中都不是 Tool 授权、HITL 确认、release evidence 或 kube-manager 写权限；真正执行仍必须经过
+ * SafeToolExecutor、权限校验、HITL/audit/release 等独立边界。</p>
+ *
  * <p>仲裁规则链（优先级由高到低）：</p>
  * <ol>
  *   <li>同 intentId 合并，取 max score + 3% crossBoost</li>
@@ -200,9 +209,9 @@ class IntentArbiterTest {
         IntentResult r2 = new IntentResult("node_query", "查询节点", 0.75, "L3", "query", "p0", "节点");
         IntentResult merged = IntentArbiter.arbitrate(List.of(r1, r2));
         assertEquals("node_query", merged.intentId());
-        // max(0.80, 0.75) + 0.03 = 0.83
+        // 中文说明：crossBoost 只说明多个证据源支持同一 intent，不能被解释成权限升级。
         assertEquals(0.83, merged.confidence(), 0.001, "同intentId合并应取最高分+crossBoost");
-        // 层级取更高者 L1 > L3（按 LAYER_PRIORITY，L3 > L1）→ merged时取pickHigherLayer
+        // 安全边界：层级取更高者只是路由排序，不会触发 Tool、HITL marker 或 kube-manager 调用。
         assertEquals("L3", merged.matchedLevel(), "同intentId合并取更高层级");
     }
 

@@ -21,6 +21,16 @@ import static org.mockito.Mockito.when;
  * <p>由于 RuleMatcher 依赖 {@link IntentsLoader} 获取意图定义，测试中通过
  * {@code @MockBean} stub 返回预定义的静态意图列表。</p>
  *
+ * <p>中文说明：本测试用一组静态 {@link IntentDefinition} 模拟 intents.yml 中的路由目录，
+ * 验证关键词、正则和部分关键词如何产生 L2/L4 {@link IntentResult}。这些输出只给
+ * IntentRouter/IntentArbiter 做候选证据，帮助学习“规则命中”和“真正可执行”之间的距离。</p>
+ *
+ * <p>安全边界：本测试虽然启动 Spring 测试上下文，但只 stub {@link IntentsLoader}，
+ * 不调用真实 LLM/Embedding/RAG、Tool、MCP 或 kube-manager，也不写 audit/memory。
+ * 关键词命中、正则命中、模糊分数和高危 intentId 都不是 Tool 授权、HITL 确认或写权限；
+ * 删除/创建等高危意图即使命中，也必须在后续 SafeToolExecutor、权限、HITL、audit/release
+ * 边界中重新校验。</p>
+ *
  * @version 3.1.0-M2
  */
 @SpringBootTest
@@ -34,7 +44,8 @@ class RuleMatcherTest {
     private IntentsLoader intentsLoader;
 
     /**
-     * 构建 stub 意图列表
+     * 中文说明：构建 stub 意图列表，模拟只读路由目录给 RuleMatcher 提供匹配素材。
+     * 安全边界：这些定义不是 Tool 权限表、不是 MCP manifest，也不会注册或执行任何 Tool。
      */
     private void stubIntents() {
         List<IntentDefinition> defs = new ArrayList<>();

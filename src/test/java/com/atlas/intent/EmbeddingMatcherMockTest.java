@@ -22,6 +22,14 @@ import static org.mockito.Mockito.*;
  *
  * <p>只测试降级场景（无需验证命中逻辑），确保 IntentRouter 能安全跳过 L1。</p>
  *
+ * <p>中文说明：本测试用 Mockito 模拟 {@link IntentsLoader} 和 {@link EmbeddingService}，
+ * 重点学习 L1 语义召回不可用时系统怎样返回 null，把控制权交还给 L2/L3/L4 路由链路，
+ * 而不是让一次 embedding 预计算失败拖垮整个 Agent 对话。</p>
+ *
+ * <p>安全边界：本测试不加载真实向量模型、不访问外部网络、不调用 RAG/向量库、
+ * 不调用 LLM/Tool/MCP、不访问 kube-manager，也不写 audit/memory。Embedding 相似度只是意图候选证据，
+ * 不是权限门禁；空缓存、空 query 或预计算异常都必须 fail-soft 返回 null，让后续安全边界继续工作。</p>
+ *
  * @version 3.1.0-M2
  */
 @ExtendWith(MockitoExtension.class)
@@ -46,7 +54,7 @@ class EmbeddingMatcherMockTest {
 
     @Test
     void testPrecomputeException_emptyCache_returnsNull() {
-        // 空意图列表 → precompute 不添加任何 embedding
+        // 中文说明：空意图列表表示没有可用语义候选，precompute 不应伪造 embedding。
         when(intentsLoader.getAllIntents()).thenReturn(List.of());
 
         embeddingMatcher.precompute();
@@ -61,8 +69,8 @@ class EmbeddingMatcherMockTest {
 
     @Test
     void testBatchEncodeException_doesNotCrash() {
-        // 使用真实 EmbeddingMatcher 的 precompute 行为：
-        // 当 intentsLoader 返回 null（模拟异常链），应正常跳过
+        // 中文说明：当上游目录异常返回 null 时，L1 层应降级而不是中断整条意图路由链。
+        // 安全边界：降级不代表授权通过，只是让 L2/L3/L4 继续给出候选证据。
         when(intentsLoader.getAllIntents()).thenReturn(null);
 
         assertDoesNotThrow(() -> embeddingMatcher.precompute());
