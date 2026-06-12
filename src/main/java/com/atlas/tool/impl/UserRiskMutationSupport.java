@@ -9,15 +9,26 @@ import java.util.Map;
 /**
  * 用户/RBAC 高风险变更 Tool 的参数白名单与校验工具。
  *
- * <p>用户启用、禁用、充值都会改变账号状态或资金余额，不能让 LLM 自由拼接 path/body。
- * 这里集中做正整数校验与 body 白名单，避免把 organizationId、token、sessionId、当前登录
- * userId 等上下文字段误透传给 kube-manager。</p>
+ * <p>中文说明：用户启用、禁用、删除、充值都会改变账号状态或资金余额，属于高风险写操作。
+ * 输入可能来自 LLM Action JSON、PlanStep、前端表单或人工补参；输出会进入 kube-manager path/body，
+ * 因此必须集中做正整数校验与 body 白名单，避免每个 Tool 自行拼接产生漂移。</p>
+ *
+ * <p>安全边界：目标用户 ID 和充值 body 只是业务参数，不是写授权。这里不能把 organizationId、
+ * orgId、token、sessionId、当前登录 userId、approved、auditReceipt、writeAllowed、releaseDecision
+ * 等控制面字段透传给 kube-manager；真实写操作仍必须满足 ToolPermission、admin/RBAC、HITL、
+ * durable audit、idempotency、release evidence 和 kube-manager 权限。</p>
  */
 final class UserRiskMutationSupport {
 
     private UserRiskMutationSupport() {
     }
 
+    /**
+     * 提取目标用户正整数 ID。
+     *
+     * <p>中文说明：这里刻意支持 id/targetUserId/targetId 这些业务别名，但明确拒绝当前登录上下文
+     * userId，避免“对自己操作”和“对目标用户操作”在高风险 Tool 中混淆。</p>
+     */
     static String targetUserId(Map<String, Object> params) {
         Object raw = firstPresent(params, "id", "targetUserId", "targetId");
         if (raw == null || String.valueOf(raw).trim().isEmpty()) {
@@ -38,6 +49,13 @@ final class UserRiskMutationSupport {
         return value;
     }
 
+    /**
+     * 构造用户充值请求体白名单。
+     *
+     * <p>安全边界：body 只允许 {@code userId}、{@code amount} 和可选 {@code remark}。
+     * 即使调用方传入 approved、token、balance、organizationId、releaseDecision 等字段，也不会进入
+     * kube-manager 写请求体；是否允许充值由外层安全链路决定。</p>
+     */
     static Map<String, Object> rechargeBody(Map<String, Object> params) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("userId", Integer.parseInt(targetUserId(params)));
@@ -49,6 +67,12 @@ final class UserRiskMutationSupport {
         return body;
     }
 
+    /**
+     * 提取以“分”为单位的正整数充值金额。
+     *
+     * <p>中文说明：拒绝负数、小数、货币符号和超出 Integer 的金额，避免 LLM 把自然语言金额
+     * 或异常大额数字直接送入真实资金变更接口。</p>
+     */
     private static Integer positiveAmount(Object raw) {
         if (raw == null || String.valueOf(raw).trim().isEmpty()) {
             throw new AtlasToolValidationException(
@@ -76,6 +100,11 @@ final class UserRiskMutationSupport {
         }
     }
 
+    /**
+     * 按业务别名顺序读取第一个存在的参数。
+     *
+     * <p>安全边界：该方法只在受控 key 列表中查找，不会扫描整个 Map，也不会接受控制面字段。</p>
+     */
     private static Object firstPresent(Map<String, Object> params, String... keys) {
         for (String key : keys) {
             Object value = params.get(key);

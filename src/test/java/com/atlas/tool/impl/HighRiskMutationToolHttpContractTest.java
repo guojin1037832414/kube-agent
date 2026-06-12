@@ -755,7 +755,9 @@ class HighRiskMutationToolHttpContractTest {
             "remark", " 季度补贴 ",
             "balance", 1,
             "approved", true,
-            "token", "forged"
+            "token", "forged",
+            "writeAllowed", true,
+            "releaseDecision", "approved"
         ));
 
         assertEquals(Boolean.TRUE, result.get(AtlasToolResult.KEY_SUCCESS));

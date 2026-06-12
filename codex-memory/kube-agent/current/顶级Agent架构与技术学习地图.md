@@ -212,6 +212,17 @@ Batch 4 已补中文教学注释后的学习线：
 - `IntentDefaults`、`DefaultValueRegistry`、`DefaultValueApplier` 只能补普通表单草稿字段，不能生成或覆盖 token、orgId、userId、HITL、audit、release、writeAllowed、admin 或 kube-manager 写控制字段。
 - Tool 校验和权限异常只提供澄清、提示和审计信号；错误码、suggestions、deniedTool、requiredRole、currentRole 都不能泄露敏感事实，也不能被前端或 LLM 解释成可继续执行。
 
+### 8.3 Query / Path / Body Helper
+
+学习重点：
+
+- 很多 Agent 风险发生在“把候选参数拼进真实 HTTP”这一刻。下载任务、课件、模板、TensorBoard、文件/存储和用户变更 helper 的任务，是把 LLM/Plan/前端输入收敛成 kube-manager 可接受的 path/query/body。
+- 进入 URL path 的 ID 必须是正整数文本，拒绝 `../42`、`42/extra`、`1?debug=true`、fragment、脚本、负数、小数和空白。
+- 资源 ID 只是定位符，不是授权凭证。能否读取或写入仍取决于当前可信 token/orgId、ToolPermission、HITL、audit、release evidence 和 kube-manager 权限。
+- 文件/存储 helper 当前只做必填非空收敛，不能证明路径/PVC/挂载点属于当前用户；具体 Tool 仍要依赖成熟后端列表、白名单和后续门禁。
+- 高风险用户变更 helper 只能构造最小白名单 body：充值只能传 `userId`、`amount`、`remark`，调用方传入的 token、orgId、approved、writeAllowed、releaseDecision 都必须被丢弃。
+- helper 的失败应在本地变成结构化补参/纠错结果，不触发 kube-manager 调用。
+
 ### 9. Multi-Agent / Expert Review
 
 学习重点：
@@ -230,10 +241,11 @@ Batch 4 已补中文教学注释后的学习线：
 - Batch 4：Memory / RAG / Eval / Observability / Audit 证据链。
 - Batch 5 首批：DTO / store / config 支撑层地基。
 - Batch 5 第二片：Tool 参数 schema、执行结果、执行来源、trace、意图分类、默认值补参和异常等支撑契约层。
+- Batch 5 第三片：query/path/body helper 的 kube-manager 参数收敛边界。
 
 待推进：
 
-1. Batch 5 收尾支撑类：query support、路径/参数构造辅助类和少量测试契约。
+1. Batch 5 收尾支撑类：检查剩余 support/config/test helper 是否还存在未注释的隐性控制面字段。
 
 注释标准：
 

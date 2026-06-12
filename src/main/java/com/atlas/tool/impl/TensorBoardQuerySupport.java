@@ -8,14 +8,24 @@ import java.util.Map;
 /**
  * TensorBoard 只读 Tool 的路径参数校验辅助类。
  *
- * <p>成熟 kube-manager 的 trainjob TensorBoard runs 接口会把 deploymentId 放进 URL path。
- * Agent 侧必须只接受正整数，避免 LLM 或用户输入把请求路径导向非预期接口。</p>
+ * <p>中文说明：成熟 kube-manager 的 trainjob TensorBoard runs 接口会把 deploymentId 放进 URL path。
+ * 输入可能来自 tensorboard_list 的返回、LLM 提取或前端选择；输出会拼进训练任务 runs 查询路径，
+ * 因此必须先收敛成正整数文本。</p>
+ *
+ * <p>安全边界：deploymentId 只是 TensorBoard 资源定位符，不代表用户有权读取训练任务 runs。
+ * 这里拒绝路径、query、fragment、脚本、负数和小数，避免把只读查询导向非预期接口；
+ * 真实读取仍由可信 token/orgId、ToolPermission、敏感读取确认和 kube-manager 权限共同约束。</p>
  */
 final class TensorBoardQuerySupport {
 
     private TensorBoardQuerySupport() {
     }
 
+    /**
+     * 提取并校验 TensorBoard deploymentId。
+     *
+     * <p>中文说明：校验失败会在 Tool 层转成结构化失败和补参建议，不触发 HTTP client。</p>
+     */
     static String positiveTensorBoardDeploymentId(Map<String, Object> params) {
         Object raw = params.get("tensorBoardDeploymentId");
         if (raw == null || raw.toString().isBlank()) {
