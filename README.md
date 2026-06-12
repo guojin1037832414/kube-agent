@@ -35,6 +35,7 @@
 - `SafeToolExecutor` 是 Graph / ReAct / ToolCallback / Plan 路径进入真实 `BaseTool.execute` 的统一执行边界。
 - Graph `tool_call` 现在在创建 `SafeToolExecutionRequest` 前先做入口守卫：空目标、缺失可信 orgId、伪造控制字段都会 fail-closed，并通过 SSE 展示未执行原因；`SafeToolExecutor` 仍是最终边界。
 - Graph `react_node` 现在会把服务端 `traceId` 传入 ReAct `initialParams`，并在缺失可信 orgId 时于调用 LLM / Tool / kube-manager 前 fail-closed；ReAct 每轮 `Action.params` 仍只是候选业务字段。
+- Graph `execute_node` 现在会在单步 READ Plan 候选创建 `SafeToolExecutionRequest` 前确认可信 orgId；PlanStep 参数不能补租户上下文，缺失可信 orgId 会 fail-closed。
 - MCP 当前只导出 admin-only 只读 Manifest / governance，不开放 `tools/call` 运行时执行权；NIM/HPC/Slurm/BCM 这类二期域不会进入一期 MCP 导出清单。
 - kube-manager 是真实外部网络出口，默认连接 `http://localhost:8100`；业务 Tool 请求必须使用当前用户 Token，不能透明降级为 sysadmin。
 - 高风险写操作默认要求 ready durable audit prewrite；HITL 确认本身不等于可执行。

@@ -517,32 +517,48 @@ public class AtlasGraphConfig {
                     executeResult.put("stepId", step.id());
                     executeResult.put("reason", "Plan 参数属于不可信输入，出现 token/orgId/userId/conversationId 或 HITL/release/write 控制字段时按 fail-closed 策略停止。");
                 } else {
-                    // 【关键安全边界】execute_node 不直接执行任何 Tool，只构造服务端可信请求，
-                    // 然后交给 SafeToolExecutor 统一校验 Tool 元数据、权限、HITL、租户上下文和异常恢复。
-                    SafeToolExecutionRequest request = new SafeToolExecutionRequest(
-                        step.suggestedTool(),
-                        stepParameters,
-                        state.value("user_id").map(Object::toString).orElse("anonymous"),
-                        state.value("token").map(Object::toString).orElse(""),
-                        state.value("orgId").map(Object::toString).orElse(""),
-                        state.value("conversation_id").map(Object::toString).orElse(""),
-                        state.value("traceId").map(Object::toString).orElse(""),
-                        null,
-                        SafeToolExecutionSource.PLAN_EXECUTE_NODE
-                    );
-                    SafeToolExecutionResult result = safeToolExecutor.executeIntent(request);
-                    Map<String, Object> updates = result.toGraphUpdates();
-                    Map<String, Object> executedResult = new HashMap<>();
-                    executedResult.put("executed", result.executed());
-                    executedResult.put("success", result.success());
-                    executedResult.put("code", result.executed() ? "EXECUTE_STEP_DELEGATED" : "EXECUTE_STEP_BLOCKED_BY_SAFE_EXECUTOR");
-                    executedResult.put("intentId", step.suggestedTool());
-                    executedResult.put("source", SafeToolExecutionSource.PLAN_EXECUTE_NODE.name());
-                    executedResult.put("stepCount", planSteps.size());
-                    updates.put("execute_node_result", result.answer());
-                    updates.put("execute_result", executedResult);
-                    updates.put("execute_steps", planSteps);
-                    return updates;
+                    String orgId = state.value("orgId").map(Object::toString).orElse("");
+                    if (orgId.isBlank()) {
+                        orgId = com.atlas.auth.UserPermissionContext.getCurrentOrgId();
+                    }
+                    if (orgId == null || orgId.isBlank()) {
+                        // 中文说明：execute_node 是 Plan 自动执行候选入口，即使当前只允许单步 READ，
+                        // 也必须先确认服务端可信 orgId。缺少租户边界时不能把问题留给 Tool 自己猜，
+                        // 也不能让 Plan 输出或前端字段补 orgId，因此这里在创建 SafeToolExecutionRequest 前停止。
+                        answer = "⛔ execute_node 已停止：缺失可信组织上下文，无法确认本次计划执行的租户边界。";
+                        executeResult.put("code", "EXECUTE_TRUSTED_ORG_MISSING");
+                        executeResult.put("stepId", step.id());
+                        executeResult.put("source", SafeToolExecutionSource.PLAN_EXECUTE_NODE.name());
+                        executeResult.put("reason", "Plan 自动执行候选缺少服务端可信 orgId，按 fail-closed 策略停止。");
+                    } else {
+                        // 【关键安全边界】execute_node 不直接执行任何 Tool，只构造服务端可信请求，
+                        // 然后交给 SafeToolExecutor 统一校验 Tool 元数据、权限、HITL、租户上下文和异常恢复。
+                        // orgId 必须来自 Graph State 或服务端 ThreadLocal，不能来自 PlanStep.parameters。
+                        SafeToolExecutionRequest request = new SafeToolExecutionRequest(
+                            step.suggestedTool(),
+                            stepParameters,
+                            state.value("user_id").map(Object::toString).orElse("anonymous"),
+                            state.value("token").map(Object::toString).orElse(""),
+                            orgId,
+                            state.value("conversation_id").map(Object::toString).orElse(""),
+                            state.value("traceId").map(Object::toString).orElse(""),
+                            null,
+                            SafeToolExecutionSource.PLAN_EXECUTE_NODE
+                        );
+                        SafeToolExecutionResult result = safeToolExecutor.executeIntent(request);
+                        Map<String, Object> updates = result.toGraphUpdates();
+                        Map<String, Object> executedResult = new HashMap<>();
+                        executedResult.put("executed", result.executed());
+                        executedResult.put("success", result.success());
+                        executedResult.put("code", result.executed() ? "EXECUTE_STEP_DELEGATED" : "EXECUTE_STEP_BLOCKED_BY_SAFE_EXECUTOR");
+                        executedResult.put("intentId", step.suggestedTool());
+                        executedResult.put("source", SafeToolExecutionSource.PLAN_EXECUTE_NODE.name());
+                        executedResult.put("stepCount", planSteps.size());
+                        updates.put("execute_node_result", result.answer());
+                        updates.put("execute_result", executedResult);
+                        updates.put("execute_steps", planSteps);
+                        return updates;
+                    }
                 }
             }
 
