@@ -531,6 +531,14 @@ public class AtlasOrchestrator {
                                 "result", result.toString()
                             ))
                         );
+                        if (resultOpt.isEmpty() && ("tool_call".equals(node) || "execute_node".equals(node))) {
+                            // 中文说明：实验 Graph 入口也要展示入口守卫或 execute_node 返回的安全停止原因。
+                            // 这只是 SSE 展示，不改变 SafeToolExecutor / HITL / audit 的真实执行判定。
+                            state.value("answer")
+                                .map(Object::toString)
+                                .filter(answer -> !answer.isBlank())
+                                .ifPresent(answer -> emit(emitter, "content", Map.of("content", answer)));
+                        }
                         if ("tool_call".equals(node) || "execute_node".equals(node)) {
                             emitStructuredClarificationIfPresent(
                                 emitter,
@@ -677,6 +685,7 @@ public class AtlasOrchestrator {
                         if ("tool_call".equals(node)) {
                             // 中文说明：tool_call 的真实执行已经发生在 Graph 节点内，这里只负责把结构化结果转成前端可读内容。
                             // 安全边界：润色失败只能影响展示文本，不能反向改变 ToolResult、audit、HITL 或 release 判定。
+                            boolean hasToolResult = state.value("tool_result").isPresent();
                             state.value("tool_result")
                                 .filter(Map.class::isInstance)
                                 .map(Map.class::cast)
@@ -714,6 +723,15 @@ public class AtlasOrchestrator {
                                         emit(emitter, "content", Map.of("content", sb.toString()));
                                     }
                                 });
+                            if (!hasToolResult) {
+                                // 中文说明：Graph 入口守卫可能在创建 SafeToolExecutionRequest 前就 fail-closed，
+                                // 此时没有 tool_result，但 answer 里有面向用户的安全停止原因，必须继续推给前端。
+                                // 安全边界：这里仅展示未执行原因，不会把 answer 解释为 Tool 成功、HITL 确认或审计回执。
+                                state.value("answer")
+                                    .map(Object::toString)
+                                    .filter(answer -> !answer.isBlank())
+                                    .ifPresent(answer -> emit(emitter, "content", Map.of("content", answer)));
+                            }
                             emitStructuredClarificationIfPresent(
                                 emitter,
                                 sessionId,

@@ -133,6 +133,7 @@ Evidence side:
 - ReAct / Plan 产生的是候选行动，不是执行授权；Plan 是计划证据，ReAct Action JSON 是候选业务参数。
 - ToolCallback 最终仍必须回到 `SafeToolExecutor`。
 - Graph 条件边只决定下一站，不授予 Tool、HITL、audit、release 或写入权力。
+- Graph `tool_call` 入口现在有快速 fail-closed 守卫：缺失 Tool 目标、缺失可信 orgId、或候选参数夹带 token/orgId/userId/conversationId/HITL/audit/release/write 控制字段时，不创建 `SafeToolExecutionRequest`，只写入未执行状态和前端可见原因。
 - Graph State 不应保存 `SseEmitter`、Lambda 等运行期对象；ReAct 过程事件通过 registry 用 sessionId 间接发布。
 - `execute_node` 是安全教学样例：先按计划形状 fail-closed，再委托 `SafeToolExecutor` 做最终执行边界。
 
@@ -255,10 +256,12 @@ Batch 4 已补中文教学注释后的学习线：
 - Batch 5 第二片：Tool 参数 schema、执行结果、执行来源、trace、意图分类、默认值补参和异常等支撑契约层。
 - Batch 5 第三片：query/path/body helper 的 kube-manager 参数收敛边界。
 - Batch 5 第四片：analysis/catalog query helper 的 GET-only 白名单与敏感只读边界。
+- Orchestrator hardening 第一片：Graph `tool_call` 入口守卫与 SSE 安全停止原因展示。
 
 待推进：
 
-1. Batch 5 收尾支撑类：检查剩余 support/config/test helper 是否还存在未注释的隐性控制面字段。
+1. Orchestrator hardening 继续：检查 `execute_node`、`react_node`、delegate 子图、Tool result merge、SSE 事件语义和 trace 传播是否一致。
+2. Batch 5 收尾支撑类：检查剩余 support/config/test helper 是否还存在未注释的隐性控制面字段。
 
 注释标准：
 

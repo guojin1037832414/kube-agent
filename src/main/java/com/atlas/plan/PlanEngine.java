@@ -45,7 +45,7 @@ public class PlanEngine {
      *
      * <p>中文说明：输出的 {@link PlanResult} 是给用户、前端和后续 Graph 节点看的计划证据。
      * 即使步骤里出现 suggestedTool，也只是候选 intentId；是否能执行还要由 execute_node 按单步 READ
-     * 规则筛选，并交给 SafeToolExecutor 重新判断权限、HITL、租户上下文和 Tool 风险元数据。</p>
+     * 规则筛选，并交给 SafeToolExecutor 重新判断权限、HITL、租户上下文和工具风险元数据。</p>
      *
      * <p>注意：context 中可能包含 token/orgId 等敏感运行期信息，当前 POC 不把这些
      * 信息拼接进面向用户的 finalAnswer，避免泄露认证上下文。</p>
@@ -199,7 +199,7 @@ public class PlanEngine {
      * 对 LLM 决策做保守风险识别，仅影响计划展示，不影响执行安全边界。
      *
      * <p>中文说明：这里故意只做保守提示，不把它设计成最终策略引擎。
-     * 真实 Tool 风险要以 ToolRegistry 元数据、HitlGuard、durable audit/release gate 为准。</p>
+     * 真实工具风险要以后端工具注册元数据、HitlGuard、durable audit/release gate 为准。</p>
      */
     private boolean isRiskyDecision(BrainDecision decision) {
         if (decision == null) {

@@ -766,6 +766,9 @@ public class AtlasGraphConfig {
             }
 
             String orgId = state.value("orgId").map(Object::toString).orElse("");
+            if (orgId.isBlank()) {
+                orgId = com.atlas.auth.UserPermissionContext.getCurrentOrgId();
+            }
             HitlConfirmation confirmation = state.value("hitl_confirmation")
                 .filter(HitlConfirmation.class::isInstance)
                 .map(HitlConfirmation.class::cast)
@@ -773,6 +776,16 @@ public class AtlasGraphConfig {
 
             // 中文说明：tool_call 是 Graph 主路径里的真实 Tool 入口，但它不直接调用 BaseTool。
             // 安全边界：BrainDecision.parameters 仍可能来自 LLM，必须作为不可信业务参数交给 SafeToolExecutor。
+            // 入口层先做一次快速 fail-closed：空目标、缺失可信 orgId、伪造 token/orgId/HITL/audit/write 等控制字段
+            // 都不会进入 SafeToolExecutionRequest。SafeToolExecutor 仍保留最终兜底，形成“Graph 入口守卫 + 执行器边界”的双层防线。
+            Map<String, Object> guardUpdates = guardGraphToolCallCandidate(
+                d,
+                orgId,
+                state.value("traceId").map(Object::toString).orElse("")
+            );
+            if (!guardUpdates.isEmpty()) {
+                return guardUpdates;
+            }
             // M4-PX.3-A：Graph tool_call 不再内联 Tool 执行链，而是统一委托 SafeToolExecutor。
             // 这样 tool_call 与后续 execute_node 能共享同一套权限、租户上下文、HITL fail-closed、
             // ThreadLocal 绑定/恢复和受保护参数过滤逻辑，避免多入口安全漂移。
@@ -974,5 +987,67 @@ public class AtlasGraphConfig {
             }
         }
         return false;
+    }
+
+    /**
+     * Graph tool_call 入口的快速安全守卫。
+     *
+     * <p>中文说明：这里处理的是 AtlasBrain 已经选择 CALL_TOOL 之后、真正创建
+     * {@link SafeToolExecutionRequest} 之前的最后一小步。它不是替代 SafeToolExecutor，
+     * 而是把明显不可信的候选调用尽早停住，让 Graph State 里留下可学习、可审计的阻断原因。</p>
+     *
+     * <p>安全边界：{@link BrainDecision#target()} 和 {@link BrainDecision#parameters()} 仍可能受
+     * LLM 影响；可信 orgId 只能来自 Orchestrator 注入的 Graph State 或服务端 ThreadLocal。
+     * 一旦发现目标为空、可信组织缺失，或参数中夹带 token/orgId/userId/conversationId/HITL/audit/release/write
+     * 等控制字段，本方法直接返回未执行状态，不调用 Tool、不访问 kube-manager、不消费 HITL marker。</p>
+     */
+    private static Map<String, Object> guardGraphToolCallCandidate(BrainDecision decision,
+                                                                   String trustedOrgId,
+                                                                   String traceId) {
+        if (decision == null || decision.target() == null || decision.target().isBlank()) {
+            return failClosedGraphToolCallUpdates(
+                "⛔ Graph tool_call 已停止：AtlasBrain 未给出明确 Tool 目标，系统不会猜测执行。",
+                "GRAPH_TOOL_TARGET_MISSING",
+                traceId
+            );
+        }
+        if (trustedOrgId == null || trustedOrgId.isBlank()) {
+            return failClosedGraphToolCallUpdates(
+                "⛔ Graph tool_call 已停止：缺失可信组织上下文，无法确认本次 Tool 调用的租户边界。",
+                "GRAPH_TRUSTED_ORG_MISSING",
+                traceId
+            );
+        }
+        if (containsProtectedToolParam(decision.parameters())) {
+            return failClosedGraphToolCallUpdates(
+                "⛔ Graph tool_call 已停止：候选参数包含受保护的系统上下文或控制字段，LLM/Plan 不能覆盖身份、租户、会话、HITL、审计、发布或写入许可。",
+                "PROTECTED_GRAPH_TOOL_PARAMETER",
+                traceId
+            );
+        }
+        return Map.of();
+    }
+
+    /**
+     * 构造 Graph 层 fail-closed 更新。
+     *
+     * <p>这些字段只用于展示、测试和后续审计关联，不会被下游节点解释为 Tool 已执行、
+     * HITL 已确认或 release gate 已通过。</p>
+     */
+    private static Map<String, Object> failClosedGraphToolCallUpdates(String answer,
+                                                                      String code,
+                                                                      String traceId) {
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("answer", answer);
+        updates.put("tool_error_code", code);
+        updates.put("execute_result", Map.of(
+            "executed", false,
+            "code", code,
+            "source", SafeToolExecutionSource.GRAPH_TOOL_CALL.name()
+        ));
+        if (traceId != null && !traceId.isBlank()) {
+            updates.put("traceId", traceId);
+        }
+        return updates;
     }
 }
