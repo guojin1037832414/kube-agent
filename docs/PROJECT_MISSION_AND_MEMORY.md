@@ -10,6 +10,46 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
+## Latest Chinese Comment Batch - M5.85-4
+
+M5.85-4 completes Chinese comment rollout Batch 2 for backend Tool/MCP/kube-manager execution boundaries and starts current documentation governance cleanup.
+
+Files covered:
+
+- `SafeToolExecutor`
+- `SafeToolExecutionRequest`
+- `ToolRegistry`
+- `ProtectedToolParameterFilter`
+- `McpToolManifestService`
+- `McpManifestController`
+- `KubeManagerHttpClient`
+- `KubeManagerHttpResiliencePolicy`
+- `Batch2ChineseCommentContractTest`
+- `docs/INDEX.md`
+- `docs/DOCUMENTATION_GOVERNANCE.md`
+
+Learning focus:
+
+- Why LLM/Plan/frontend parameters are candidate business input, not authorization facts.
+- Why token, orgId, userId, HITL marker, audit receipt, release decision, writeAllowed, and trace fields must come from server-owned control-plane evidence.
+- Why `SafeToolExecutor` remains the single real `BaseTool.execute` boundary for Graph/ReAct/ToolCallback/Plan paths.
+- Why MCP Manifest is only a read-only capability catalogue and not `tools/call` runtime authority.
+- Why kube-manager HTTP outlet is a real external network boundary and must use current user Token, with sysadmin fallback forbidden for normal Tool requests.
+- Why read retry is allowed while write retry remains blocked until idempotency, durable audit, post-write readback, HITL, and release evidence are complete.
+- Why old M5.21 wave documents are not deleted casually: they are historical audit evidence and Phase 2 reference, especially for paused NIM/HPC/Slurm/BCM work.
+
+Documentation cleanup:
+
+- Replaced the obsolete M2-era `docs/INDEX.md` with a current M5.85 index.
+- Added `docs/DOCUMENTATION_GOVERNANCE.md` to define truth-source order, document categories, cleanup rules, and future cleanup steps.
+- Marked `README.md` and `ROADMAP.md` as needing later refresh instead of silently treating them as current truth sources.
+- Kept M5.21 NIM/HPC/Slurm/BCM documents as historical/Phase-2 reference; no bulk deletion or archive move was performed in this slice.
+
+Safety invariant:
+
+- Batch 2 changes comments, tests, and documentation governance only.
+- It does not alter Tool execution behavior, permissions, HITL decisions, MCP runtime, kube-manager HTTP behavior, retry behavior, audit persistence, dependency versions, eval/retrieval runtime, memory writes, or Phase 2 NIM/HPC/Slurm/BCM scope.
+
 ## Latest Chinese Comment Batch - M5.85-3
 
 M5.85-3 completes Chinese comment rollout Batch 1 for the backend HTTP entry and authorization boundary learning path.

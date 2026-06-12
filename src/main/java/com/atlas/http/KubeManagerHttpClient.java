@@ -27,6 +27,14 @@ import java.util.Map;
 /**
  * kube-manager 后端 HTTP 客户端 — 所有 Tool 共用。
  *
+ * <p>中文说明：这是 kube-agent 触达 kube-manager 的真实外部网络出口。绝大多数 Tool 最终都会通过
+ * 本客户端访问 8100 端口或配置中的 kube-manager baseUrl，因此它不仅是 HTTP 封装，也是租户隔离、
+ * token 透传、trace 传播和写入安全治理的关键边界。</p>
+ *
+ * <p>安全边界：业务 GET/POST/PATCH/PUT/DELETE 必须使用当前真实用户 Token。
+ * 缺失用户 Token 时禁止透明降级到 sysadmin fallback token；fallback 只保留给未来显式系统任务，
+ * 不能被普通 Tool、LLM、Plan 或前端参数触发。</p>
+ *
  * <p><b>P1.4 重大变更：从 sysadmin 统一登录 → 每个用户使用自己的 Token。</b></p>
  * <ul>
  *   <li>旧方案：{@code ensureAuthenticated()} 使用配置的用户名密码调用 /api/login 获取统一 Token</li>
@@ -126,6 +134,9 @@ public class KubeManagerHttpClient {
     /**
      * 通用 GET 请求 — 带查询参数。
      *
+     * <p>中文说明：GET 通常用于只读查询，但仍会触达 kube-manager 外部网络出口，
+     * 因此必须携带当前用户 Token 和 trace header，不能在无用户上下文时静默匿名访问。</p>
+     *
      * <p>P1.4：每次请求自动从 ThreadLocal 读取用户 Token，无需手动传入。</p>
      * <p><b>M5.8 安全收口：</b>业务请求必须使用真实用户 Token，缺失用户上下文时
      * 直接 fail-closed，禁止透明降级到 sysadmin 统一 Token，避免后台兼容能力成为权限放大器。</p>
@@ -177,6 +188,9 @@ public class KubeManagerHttpClient {
     /**
      * 通用 POST 请求 — 发送 JSON Body。
      *
+     * <p>中文说明：POST 在 kube-manager 中经常代表创建、提交或动作类请求。
+     * 调用方即使已经通过 ToolRegistry/HITL，也必须在这里再次确认真实用户 Token 存在。</p>
+     *
      * <p>P1.4：每次请求自动从 ThreadLocal 读取用户 Token。</p>
      * <p><b>M5.8 安全收口：</b>POST 通常承载创建、提交、变更等业务动作，
      * 必须由当前用户 Token 发起；缺失用户 Token 时拒绝执行，不允许 sysadmin 降级代跑。</p>
@@ -212,6 +226,9 @@ public class KubeManagerHttpClient {
     /**
      * 通用 PATCH 请求 — 发送 JSON Body。
      *
+     * <p>安全边界：PATCH 常用于资源变更。这里不会接受调用方传入的“writeAllowed”
+     * 之类参数作为授权依据，只继承服务端 ThreadLocal 中的真实用户 Token。</p>
+     *
      * <p>kube-manager 的缩放等变更接口使用 PATCH。这里与 POST/DELETE 一样必须携带
      * 当前用户真实 Token，避免 Agent 在缺少用户上下文时替用户修改线上资源。</p>
      */
@@ -241,6 +258,9 @@ public class KubeManagerHttpClient {
 
     /**
      * 通用 POST 请求 - 同时发送 query 参数与 JSON Body。
+     *
+     * <p>中文说明：该重载用于成熟 kube-manager 接口的 query + body 组合。
+     * query 参数仍是业务参数，不能携带 token、orgId、HITL、audit 或 release 控制字段。</p>
      *
      * <p>Helm install 等成熟 kube-manager 接口使用 path variable + query + body 的组合。
      * 这里集中封装 URI 构造，避免 Tool 自己拼接查询串导致 chart 名称、版本号等参数转义不一致。</p>
@@ -282,14 +302,11 @@ public class KubeManagerHttpClient {
     /**
      * 通用 PUT 请求 - 发送 JSON Body。
      *
+     * <p>中文说明：PUT 与 POST/PATCH 一样属于可能改变系统状态的 HTTP 方法。
+     * 它只负责发送已经过上游治理的 body，不自行解释 LLM 生成的写入许可字段。</p>
+     *
      * <p>实验实例启动/关闭等动作在成熟前端中使用 PUT。这里与 POST/PATCH 一样强制使用
      * 当前登录用户 Token，避免高风险变更在缺少用户上下文时降级成系统账号代跑。</p>
-     */
-    /**
-     * DELETE 请求（部分旧接口用 POST 模拟 DELETE，这里提供原生 DELETE）。
-     *
-     * <p><b>M5.8 安全收口：</b>删除类请求风险最高，必须绑定真实用户 Token；
-     * 如果当前线程没有可信用户上下文，立即拒绝，禁止使用 sysadmin fallback token。</p>
      */
     public Map<String, Object> put(String path, Map<String, Object> body) {
         String token = resolveUserTokenRequired("PUT", path);
@@ -317,6 +334,9 @@ public class KubeManagerHttpClient {
 
     /**
      * 通用 PUT 请求 - 同时发送 query 参数与 JSON Body。
+     *
+     * <p>安全边界：query/body 的组合只解决 kube-manager API 形态，不放宽写入治理。
+     * idempotency key、durable audit、release evidence 等写入证据仍应由更上层专门组件管理。</p>
      *
      * <p>Helm upgrade 的成熟接口把 chart 放在 query 中，把升级参数放在 body 中。
      * 该重载让 Tool 只表达业务字段，不直接拼接 URL 查询串。</p>
@@ -355,6 +375,16 @@ public class KubeManagerHttpClient {
         return parseJson(responseBody);
     }
 
+    /**
+     * DELETE 请求（部分旧接口用 POST 模拟 DELETE，这里提供原生 DELETE）。
+     *
+     * <p><b>M5.8 安全收口：</b>删除类请求风险最高，必须绑定真实用户 Token；
+     * 如果当前线程没有可信用户上下文，立即拒绝，禁止使用 sysadmin fallback token。</p>
+     *
+     * <p>中文说明：DELETE 只负责把已经被上游批准的删除请求送到 kube-manager。
+     * 它不会因为调用方传了 {@code approved=true}、{@code releaseDecision=accepted}
+     * 或类似字段就自行放行。</p>
+     */
     public Map<String, Object> delete(String path, Map<String, Object> queryParams) {
         String token = resolveUserTokenRequired("DELETE", path);
         log.debug("[HTTP DELETE] {} 参数={}, tokenSource=user_threadlocal", path, queryParams);
@@ -389,6 +419,12 @@ public class KubeManagerHttpClient {
     /**
      * 统一写入 kube-manager 出口请求头。
      *
+     * <p>中文说明：这里集中写入真实用户 Token 和 trace 证据。所有业务 HTTP 请求都应该经过该 helper，
+     * 这样后续增加 auditId、idempotency key 或 OpenTelemetry baggage 时不会出现某个方法漏传。</p>
+     *
+     * <p>安全边界：该方法只接收已经由 {@link #resolveUserTokenRequired(String, String)}
+     * 确认过的 token；不要从 Tool 参数、LLM 输出或前端 body 中提取 token 调用它。</p>
+     *
      * <p>M5.24 将 M5.23 的 Agent traceId 接到 HTTP outlet。这里刻意把 token、traceId 和
      * W3C traceparent 放在一个 helper 中，后续接入 auditId、idempotency key、tenant evidence、
      * OpenTelemetry baggage 时不需要在每个 GET/POST/PUT/DELETE 分支复制逻辑。</p>
@@ -409,6 +445,9 @@ public class KubeManagerHttpClient {
 
     /**
      * 解析业务请求必须使用的真实用户 Token。
+     *
+     * <p>中文说明：这是业务 Tool 的 token 闸门。GET 看似只读，但仍可能读取敏感资源；
+     * POST/PATCH/PUT/DELETE 更可能改变集群状态，所以它们都不能在没有用户会话时使用系统账号代跑。</p>
      *
      * <p><b>M5.8 安全边界：</b>{@link #get(String, Map)}、{@link #post(String, Map)}、
      * {@link #delete(String, Map)} 都是由 Agent Tool 发起的业务请求，必须继承当前登录用户的
@@ -438,6 +477,9 @@ public class KubeManagerHttpClient {
 
     /**
      * 解析系统任务可用的 Token。
+     *
+     * <p>安全边界：这是保留的系统任务兼容能力，不是普通 Tool 的后门。
+     * 新增任何调用方前，必须先写清楚 admin-only、system-only、审计、用途白名单和不会被 LLM/前端触发的证据。</p>
      *
      * <p><b>重要：</b>该方法允许在没有用户 ThreadLocal Token 时执行 sysadmin 降级登录，
      * 因此禁止被业务 Tool 的 get/post/delete 默认路径调用。业务请求必须使用
@@ -484,6 +526,9 @@ public class KubeManagerHttpClient {
     /**
      * 使用 sysadmin 账号执行降级登录。
      * <p>注意：必须传 organizationId + loginType，否则后端返回 TooManyResultsException。</p>
+     *
+     * <p>中文说明：这段逻辑只是为了历史兼容和未来系统任务预留。普通 Agent 对话、Plan 执行、
+     * ToolCallback 和 ReAct 执行都不应该依赖它获取权限。</p>
      */
     private void doFallbackLogin() {
         if (loginPassword == null || loginPassword.isBlank()) {
@@ -560,6 +605,9 @@ public class KubeManagerHttpClient {
 
     /**
      * 解析用户名对应的组织ID（P1.4 修复）。
+     *
+     * <p>中文说明：组织 ID 是多租户隔离的关键证据。这里使用当前用户 Token 做桶式搜索，
+     * 目的是从 kube-manager 响应中得到服务端可信 orgId，而不是相信前端或 LLM 传入的组织字段。</p>
      *
      * <p><b>核心挑战：</b></p>
      * <ul>
@@ -694,6 +742,9 @@ public class KubeManagerHttpClient {
 
     /**
      * 解析 JSON 响应为 Map。空响应返回空 Map。
+     *
+     * <p>中文说明：Tool 层需要尽量保留 kube-manager 返回的信息给 LLM/前端做总结，
+     * 所以这里使用 Map 承载动态 JSON。安全过滤不在这里完成，敏感字段脱敏应由调用方的 Tool/审计/读模型负责。</p>
      */
     @SuppressWarnings("unchecked")
     private Map<String, Object> parseJson(String body) {

@@ -33,6 +33,13 @@ import java.util.stream.Collectors;
 /**
  * Atlas 统一安全 Tool 执行器。
  *
+ * <p>中文说明：这是 kube-agent 当前最重要的 Tool 执行边界。LLM/Plan/前端只能提出“想调用什么 Tool
+ * 以及业务参数是什么”，不能直接决定认证 token、组织 ID、HITL 状态、审计回执或写入放行结果。
+ * 本类负责把不可信的候选执行请求转换成一次经过权限、HITL、参数净化和 durable audit 检查的服务端执行。</p>
+ *
+ * <p>安全边界：本类会调用真实 {@link BaseTool#execute(Map)}，因此它是 Tool 能力进入 kube-manager、
+ * MCP/A2A 适配层或其他外部系统前的最后一道后端门禁。新增入口必须复用这里，而不是绕过这里直接调用 Tool。</p>
+ *
  * <p>M4-PX.3 引入该组件，用于把既有 Graph {@code tool_call} 节点中的安全执行链
  * 下沉到统一边界。后续 {@code execute_node}、ReAct、ToolCallback 等入口都应逐步复用
  * 本组件，避免每个入口各自复制权限、HITL、租户上下文和参数过滤逻辑。</p>
@@ -84,6 +91,9 @@ public class SafeToolExecutor {
     /**
      * 按 intentId 安全执行 Tool。
      *
+     * <p>中文说明：调用方传入的是候选执行请求，而不是授权事实。这里会重新绑定 traceId，
+     * 并把后续失败都转成结构化 {@link SafeToolExecutionResult}，方便 Graph、SSE、前端和审计链路统一理解。</p>
+     *
      * <p>方法内部严格保持“上下文绑定 → Tool/权限解析 → 参数净化 → HITL 校验 → execute → 恢复上下文”
      * 的顺序。任何失败都会返回结构化的未执行结果，而不是继续降级猜测。</p>
      *
@@ -100,6 +110,8 @@ public class SafeToolExecutor {
     }
 
     private SafeToolExecutionResult executeIntentWithTrace(SafeToolExecutionRequest request, String traceId) {
+        // 中文说明：审计 actor 必须先从服务端当前安全上下文解析，后续 request.userId 只能作为兼容字段，
+        // 不能覆盖 Spring Security / SessionStore / UserPermissionContext 里已经确认的身份事实。
         AgentPrincipal auditPrincipal = currentAuditPrincipal();
         if (request == null) {
             SafeToolExecutionResult result = SafeToolExecutionResult.notExecuted(
@@ -115,6 +127,8 @@ public class SafeToolExecutor {
             return result;
         }
 
+        // 安全边界：orgId 是租户隔离核心。缺失可信 orgId 时必须 fail-closed，
+        // 不能让 Tool 自己从 LLM 参数、前端字段或 kube-manager fallback token 中猜租户。
         String orgId = resolveTrustedOrgId(request.orgId());
         if (orgId == null || orgId.isBlank()) {
             SafeToolExecutionResult result = SafeToolExecutionResult.notExecuted(
@@ -125,6 +139,8 @@ public class SafeToolExecutor {
 
         String previousToken = UserPermissionContext.CURRENT_TOKEN.get();
         String previousOrgId = UserPermissionContext.CURRENT_ORG_ID.get();
+        // 中文说明：ThreadLocal 只在本次 Tool 执行窗口内临时绑定，用于兼容现有 BaseTool/KubeManagerHttpClient。
+        // finally 中必须恢复旧值，防止线程池复用时把 A 用户的 token/orgId 泄漏到 B 用户请求。
         bindThreadLocalContext(request.token(), orgId);
         try {
             Optional<BaseTool> toolOpt = toolRegistry.findByIntentId(intentId);
@@ -151,6 +167,8 @@ public class SafeToolExecutor {
                 return result;
             }
 
+            // 安全边界：durable audit 是高风险写入的前置证据门。只有审计存储声明可用且预写回执被接受时，
+            // CREATE/UPDATE/DELETE/ACTION 等操作才有资格继续；READ 类操作不会被这个门额外放大权限。
             SafeToolExecutionResult durableGate = verifyDurableAuditGate(request, metadata, traceId, orgId, auditPrincipal);
             if (durableGate != null) {
                 return durableGate;
@@ -218,6 +236,8 @@ public class SafeToolExecutor {
                              boolean success,
                              String reason) {
         try {
+            // 中文说明：审计事件记录的是“后端判定过的一次执行尝试”，不是 LLM 的自述。
+            // 参数摘要、身份、traceId、Tool 风险元数据都在 AgentAuditEventFactory 中继续做脱敏和归一化。
             AgentAuditEvent event = AgentAuditEventFactory.fromExecution(
                 request, metadata, traceId, orgId, auditPrincipal, outcome, executed, success, reason);
             auditRecorder.record(event);
@@ -254,6 +274,8 @@ public class SafeToolExecutor {
             recordAudit(request, metadata, traceId, orgId, auditPrincipal, AgentAuditOutcome.BLOCKED, false, false, result.answer());
             return result;
         }
+        // 中文说明：高风险 Tool 在真实执行前先写 PREPARED 证据，避免“已经改了集群但没有审计落点”。
+        // 这里的 receipt 只是本次执行的 durable audit 证据，不代表业务写入已经成功，也不能被前端伪造。
         AgentAuditEvent preparedEvent = AgentAuditEventFactory.fromExecution(
             request,
             metadata,
@@ -348,7 +370,8 @@ public class SafeToolExecutor {
                 }
             });
         }
-        // 系统上下文字段最后写入，防止不可信参数覆盖租户与用户边界。
+        // 中文说明：服务端可信上下文最后写入，防止 LLM/Plan/前端在 parameters 中伪造 userId、organizationId、
+        // conversationId 或 token 后覆盖真实身份。Tool 只应该看到“已净化业务参数 + 后端确认上下文”。
         toolParams.put("userId", request.userId() != null && !request.userId().isBlank()
             ? request.userId() : "anonymous");
         toolParams.put("organizationId", orgId);

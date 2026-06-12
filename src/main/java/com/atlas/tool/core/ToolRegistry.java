@@ -15,6 +15,14 @@ import java.util.stream.Collectors;
 /**
  * Atlas Tool 注册中心 — v3.1 P1.4 权限感知完整版。
  *
+ * <p>中文说明：ToolRegistry 是 Agent 能力目录，不是 Tool 执行器。它负责启动时收集 Tool 元数据、
+ * 给 LLM/Prompt 提供“当前用户可见能力”、给审计/MCP 提供系统视角风险元数据，但不直接调用
+ * {@link BaseTool#execute(java.util.Map)}。</p>
+ *
+ * <p>安全边界：Prompt 可见性必须按当前用户权限过滤；系统审计视角可以读取全量元数据，
+ * 但调用方需要继续隐藏内部 endpoint、token、租户、审计和写入控制字段。新增方法时不要把内部 endpoint
+ * 或 admin-only Tool 直接暴露给普通用户 Prompt。</p>
+ *
  * <p>结合 Spring AI Function Calling 自动扫描 + Agent 分组 + <b>权限感知</b>，
  * 为意图路由和 Agent 执行提供统一的 Tool 查询服务。</p>
  *
@@ -36,10 +44,10 @@ public class ToolRegistry {
 
     private static final Logger log = LoggerFactory.getLogger(ToolRegistry.class);
 
-    /** Spring 自动注入所有 BaseTool 子类 */
+    /** 中文说明：Spring 自动注入所有 BaseTool 子类；这里只建目录，不在 init 阶段执行 Tool。 */
     private final List<BaseTool> tools;
 
-    /** 用户权限上下文（ThreadLocal 方式获取当前请求用户） */
+    /** 中文说明：用户权限上下文用于 Prompt 可见性过滤；缺失用户时只能看到 PUBLIC 能力。 */
     private final UserPermissionContext userPermissionContext;
 
     /** name → Tool */
@@ -59,7 +67,7 @@ public class ToolRegistry {
     @PostConstruct
     public void init() {
         for (BaseTool tool : tools) {
-            // 提取注解信息
+            // 中文说明：Tool 注解是能力治理的主入口，后续 MCP Manifest、HITL、Prompt 风险标签都依赖这些元数据。
             AtlasToolMapping mapping = tool.getClass().getAnnotation(AtlasToolMapping.class);
             ToolPermission perm = tool.getClass().getAnnotation(ToolPermission.class);
 
@@ -72,14 +80,14 @@ public class ToolRegistry {
             String description = mapping != null && !mapping.description().isBlank()
                 ? mapping.description() : tool.getDescription();
 
-            // ═══ P1.4 新增：解析权限策略 ═══
+            // 中文说明：权限策略决定 Tool 是否进入当前用户 Prompt。这里是“可见性预检”，真实执行仍要由 SafeToolExecutor 复核。
             ToolPermission.Policy policy = (perm != null)
                 ? perm.value() : ToolPermission.Policy.PUBLIC;
             Set<String> requiredRoles = (perm != null && perm.roles().length > 0)
                 ? Set.of(perm.roles()) : Set.of();
             boolean adminOnly = (policy == ToolPermission.Policy.ADMIN_ONLY);
 
-            // ═══ P1.4 修复：重复检测 — 先检测再 put ═══
+            // 中文说明：重复 Tool 名会让 LLM/Plan 路由到不确定实现，所以启动期必须显式报错并跳过重复注册。
             if (toolByName.containsKey(name)) {
                 BaseTool existing = toolByName.get(name);
                 if (existing != tool) {
@@ -90,7 +98,7 @@ public class ToolRegistry {
                 continue;
             }
 
-            // 建立索引
+            // 中文说明：同时建立 name、intentId、agent 三套索引，分别服务直接查找、意图执行和 Prompt 分组展示。
             toolByName.put(name, tool);
             if (!intentId.isBlank()) {
                 toolByIntentId.put(intentId, tool);
@@ -171,6 +179,9 @@ public class ToolRegistry {
     /**
      * 按 Agent 类型列出当前用户<b>可见</b>的 ToolMetadata。
      *
+     * <p>中文说明：该方法用于 Prompt 可见性，不是系统审计。返回结果已经根据当前用户权限过滤，
+     * 因此 LLM 不会在系统提示词里看到越权 Tool。</p>
+     *
      * <p>P1.4 权限感知：已按用户权限过滤，LLM 系统提示词中不会包含越权 Tool。</p>
      *
      * @param agentCode agent代码，如 "query" / "deploy" / "rbac"
@@ -190,6 +201,9 @@ public class ToolRegistry {
 
     /**
      * 判断 Tool 是否对<b>当前请求用户</b>可见。
+     *
+     * <p>中文说明：这是 Prompt/菜单/预检层的可见性判断。它不代表 Tool 已经通过 HITL、
+     * durable audit、租户上下文和参数净化；真正执行仍必须走 SafeToolExecutor。</p>
      *
      * <p>P1.4 新增：接入 {@link UserPermissionContext} ThreadLocal 判断权限。</p>
      */
@@ -280,6 +294,9 @@ public class ToolRegistry {
     /**
      * 构建当前用户的 System Prompt（已按权限过滤可见 Tool）。
      *
+     * <p>安全边界：System Prompt 只暴露给 LLM 当前用户可调用的能力摘要和风险标签。
+     * 不要把内部 endpoint、原始 token、租户细节、审计回执、HITL marker 或写入放行字段放进 Prompt。</p>
+     *
      * <p>P1.4 关键功能：LLM 的 System Prompt 中只包含当前用户有权调用的 Tool，
      * 从源头上防止 LLM "看到" 越权 Tool 并尝试调用。</p>
      *
@@ -344,6 +361,9 @@ public class ToolRegistry {
     /**
      * 构建面向 ReAct/LLM 的紧凑参数契约。
      *
+     * <p>中文说明：参数契约用于降低 LLM 生成错误参数的概率，但它不是安全边界。
+     * LLM 即使输出了未声明字段，也必须由 SafeToolExecutor 按 ToolParameterSpec 再次校验或拒绝。</p>
+     *
      * <p>设计目标：</p>
      * <ul>
      *   <li>只展示 canonical 参数名、类型、必填性和极简说明，降低 prompt 膨胀；</li>
@@ -404,6 +424,9 @@ public class ToolRegistry {
 
     /**
      * 返回系统审计视角的全部 Tool 元数据。
+     *
+     * <p>中文说明：这是系统审计视角，不受当前用户 Prompt 可见性限制。MCP Manifest、治理报表、
+     * 安全测试可以用它统计全量风险，但对外展示时必须继续脱敏并过滤不可导出的能力。</p>
      *
      * <p>M5.20 MCP Manifest / 审计测试使用该方法做全量风险门控统计。该方法不用于普通用户 Prompt，
      * 因此不会改变权限感知的运行时行为；对外输出时仍必须由调用方过滤敏感字段和不可暴露 Tool。</p>

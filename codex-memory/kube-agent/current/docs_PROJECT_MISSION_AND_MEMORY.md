@@ -10,6 +10,46 @@ The owner explicitly clarified on 2026-06-06 that the target is higher than a no
 
 The owner further clarified on 2026-06-08 that Phase 1 itself must deliver the top-tier Agent core. Moving NIM / HPC / Slurm / BCM to Phase 2 only postpones those specialist domain plugins; it must not reduce Phase 1 standards for architecture, orchestration, safety, Tool governance, frontend workflow, observability, evaluation, documentation, or recovery memory.
 
+## Latest Chinese Comment Batch - M5.85-4
+
+M5.85-4 completes Chinese comment rollout Batch 2 for backend Tool/MCP/kube-manager execution boundaries and starts current documentation governance cleanup.
+
+Files covered:
+
+- `SafeToolExecutor`
+- `SafeToolExecutionRequest`
+- `ToolRegistry`
+- `ProtectedToolParameterFilter`
+- `McpToolManifestService`
+- `McpManifestController`
+- `KubeManagerHttpClient`
+- `KubeManagerHttpResiliencePolicy`
+- `Batch2ChineseCommentContractTest`
+- `docs/INDEX.md`
+- `docs/DOCUMENTATION_GOVERNANCE.md`
+
+Learning focus:
+
+- Why LLM/Plan/frontend parameters are candidate business input, not authorization facts.
+- Why token, orgId, userId, HITL marker, audit receipt, release decision, writeAllowed, and trace fields must come from server-owned control-plane evidence.
+- Why `SafeToolExecutor` remains the single real `BaseTool.execute` boundary for Graph/ReAct/ToolCallback/Plan paths.
+- Why MCP Manifest is only a read-only capability catalogue and not `tools/call` runtime authority.
+- Why kube-manager HTTP outlet is a real external network boundary and must use current user Token, with sysadmin fallback forbidden for normal Tool requests.
+- Why read retry is allowed while write retry remains blocked until idempotency, durable audit, post-write readback, HITL, and release evidence are complete.
+- Why old M5.21 wave documents are not deleted casually: they are historical audit evidence and Phase 2 reference, especially for paused NIM/HPC/Slurm/BCM work.
+
+Documentation cleanup:
+
+- Replaced the obsolete M2-era `docs/INDEX.md` with a current M5.85 index.
+- Added `docs/DOCUMENTATION_GOVERNANCE.md` to define truth-source order, document categories, cleanup rules, and future cleanup steps.
+- Marked `README.md` and `ROADMAP.md` as needing later refresh instead of silently treating them as current truth sources.
+- Kept M5.21 NIM/HPC/Slurm/BCM documents as historical/Phase-2 reference; no bulk deletion or archive move was performed in this slice.
+
+Safety invariant:
+
+- Batch 2 changes comments, tests, and documentation governance only.
+- It does not alter Tool execution behavior, permissions, HITL decisions, MCP runtime, kube-manager HTTP behavior, retry behavior, audit persistence, dependency versions, eval/retrieval runtime, memory writes, or Phase 2 NIM/HPC/Slurm/BCM scope.
+
 ## Latest Chinese Comment Batch - M5.85-3
 
 M5.85-3 completes Chinese comment rollout Batch 1 for the backend HTTP entry and authorization boundary learning path.
@@ -108,6 +148,32 @@ Safety boundary:
 - The page does not upgrade Java, Spring Boot, Spring AI, OpenAI integration, MCP, A2A, OTel, RAG, or dependency versions.
 - It does not create compatibility branches, run eval suites, replay traces, mutate trace-set catalogs, enable CI blocking, call MCP `tools/call`, execute Tools, open retrieval/vector/reranker/GraphRAG runtime, mutate prompts or memory, call kube-manager state-changing APIs, enable write retry, approve releases, issue durable receipts, or reopen Phase 2 NIM/HPC/Slurm/BCM.
 - Missing evidence remains `Unknown`, `Unavailable`, or `Not evaluated`; health UP, auth, SSE done, and tool_done remain evidence context only.
+
+`kube-agent-vue` now has a dedicated `/agent/eval` Eval Workbench in addition to the `/agent/memory` Memory/RAG Workbench and `/agent/top-tier` Governance Evidence Matrix.
+
+Current Eval frontend evidence:
+
+- `/agent/eval` consumes six existing backend GET read models under `/api/agent/observability/eval/**`: workbench capabilities, workbench overview, reviewed trace evidence, release-blocking gate contract, gate-bundle summary, and trace-set catalog.
+- It renders release eligibility, reviewed trace progress, CI blocking state, trace-set gate rows, reviewed trace rows, release checks, review workflow, next actions, gate bundle/catalog JSON, quality/safety/privacy JSON, and raw read models.
+- It explicitly says `Eval evidence is not release authority`, `GET-only read models`, `CI blocking disabled`, `reviewed trace required`, `no eval run`, `no trace set catalog mutation`, and `no enable ci blocking`.
+- Browser audit for `/agent/eval` found only `Refresh`, `Operator unknown`, `Clear session`, and `Load Eval evidence`; no Approve, Execute, Retry, Save, Resume, Override, Run Eval, Enable CI, Promote, or Apply Patch controls exist.
+- Neutral status semantics were tightened: local `done/completed/tool_done` events are `readonly/Observed`, and metric cards use shared `StatusKind`, `statusLabel`, and evidence source instead of legacy success/danger/info state mapping.
+- Frontend verification passed with `npm run verify:governance`, `npm run typecheck`, `npm run verify`, `git diff --check`, and browser checks for `/agent/eval`.
+
+`kube-agent-vue` now has a dedicated `/agent/memory` Memory/RAG Workbench and a `/agent/top-tier` Governance Evidence Matrix.
+
+Current frontend evidence:
+
+- `/agent/memory` consumes nine existing backend GET read models under `/api/agent/observability/memory-rag/**`.
+- It renders Memory/RAG readiness, citation/source custody, source digest, durable lifecycle, eval gates, suite binding, trace-set curation, curation overview, reviewed trace manifest, and raw JSON evidence.
+- `/agent/top-tier` now labels backend, local, derived, and unknown evidence separately. It explicitly says that health UP, auth, and SSE completion do not prove readiness, policy, permission, HITL, eval, SLO, cost, release authority, or task success.
+- `ChatConsole` quick prompts fill the draft only through `selectQuickPrompt(...)`; they do not auto-send.
+- Frontend verification passed with `npm run verify`, `npm run verify:governance`, HTTP health checks for ports `8500` and `5173`, and browser checks for `/agent/memory`, `/agent/top-tier`, and `/agent/workbench`.
+
+Still not complete:
+
+- Reviewed Memory/RAG trace fixtures are still missing for `memory-rag-citation-fidelity`, `memory-rag-privacy-tenant`, and `memory-rag-lifecycle-policy`.
+- Retrieval runtime, vector stores, embeddings, rerankers, GraphRAG, durable memory writes, eval runtime, CI blocking, MCP runtime `tools/call`, kube-manager write authority, and Phase 2 NIM/HPC/Slurm/BCM remain closed.
 
 ## Latest Phase 1 Core Memory - M5.85-1
 

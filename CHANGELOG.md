@@ -6,6 +6,21 @@
 
 ---
 
+## [M5.85-4] - Chinese comments for execution boundaries and documentation governance
+
+**Delivery**: Added Batch 2 Chinese teaching comments for Tool/MCP/kube-manager execution boundaries and refreshed documentation governance so current, historical, and Phase 2 docs are easier to distinguish.
+
+**Changes**
+- Added Chinese teaching comments to `SafeToolExecutor`, `SafeToolExecutionRequest`, `ToolRegistry`, `ProtectedToolParameterFilter`, `McpToolManifestService`, `McpManifestController`, `KubeManagerHttpClient`, and `KubeManagerHttpResiliencePolicy`.
+- Added `Batch2ChineseCommentContractTest` to protect important execution-boundary comment markers.
+- Refreshed `docs/INDEX.md` from an obsolete M2-era index into a current M5.85 document map.
+- Added `docs/DOCUMENTATION_GOVERNANCE.md` with truth-source order, document categories, cleanup rules, and next cleanup recommendations.
+- Documented that M5.21 NIM/HPC/Slurm/BCM wave docs are historical audit evidence and Phase 2 reference, not current Phase 1 work.
+
+**Security**
+- Comment/documentation-only slice; no runtime behavior changed.
+- Does not execute Tools, open MCP `tools/call`, call kube-manager, change retry behavior, modify audit persistence, run eval/retrieval runtime, write memory at runtime, upgrade dependencies, or reopen NIM/HPC/Slurm/BCM Phase 2 scope.
+
 ## [M5.84-1] - Top-tier Vue workbench migration package
 
 **Delivery**: Added a backend-owned dry-run migration package endpoint that turns the M5.83 acceptance contract into concrete `vue-kube-manager` repository facts, route snippets, file blueprints, GET-only API exports, Jest test blueprints, validation scans, and forbidden-runtime assertions without writing the frontend repository.

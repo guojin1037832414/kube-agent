@@ -2,6 +2,36 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-12 Batch 2 Chinese Comments - Tool/MCP/kube-manager Execution Boundaries
+
+This slice completes the second Chinese-comment rollout batch for the execution boundary learning path: SafeToolExecutor, ToolRegistry, protected Tool parameters, MCP Manifest, and kube-manager HTTP outlet.
+
+Files annotated:
+
+- `src/main/java/com/atlas/tool/execution/SafeToolExecutor.java`
+- `src/main/java/com/atlas/tool/execution/SafeToolExecutionRequest.java`
+- `src/main/java/com/atlas/tool/core/ToolRegistry.java`
+- `src/main/java/com/atlas/tool/core/ProtectedToolParameterFilter.java`
+- `src/main/java/com/atlas/mcp/McpToolManifestService.java`
+- `src/main/java/com/atlas/mcp/McpManifestController.java`
+- `src/main/java/com/atlas/http/KubeManagerHttpClient.java`
+- `src/main/java/com/atlas/http/KubeManagerHttpResiliencePolicy.java`
+- `src/test/java/com/atlas/tool/execution/Batch2ChineseCommentContractTest.java`
+
+Architecture lesson: Tool execution is where an Agent stops being only a text interface and starts touching real systems. The code now explains in Chinese why LLM/Plan/frontend parameters are only candidate business input, why token/orgId/userId/HITL/audit/release/write-control fields must come from the server, why SafeToolExecutor is the single real BaseTool execution boundary, and why kube-manager HTTP calls must use the real current user token rather than sysadmin fallback.
+
+MCP lesson: MCP Manifest is only a read-only capability catalogue. It is not `tools/call`, not Tool execution, not kube-manager access, and not runtime authorization. Exported items hide internal endpoints and only include safe PUBLIC READ metadata; sensitive reads and writes remain blocked.
+
+Resilience lesson: read retry and write retry are not the same engineering problem. GET requests may use retry/circuit/bulkhead protection, but POST/PATCH/PUT/DELETE remain no-auto-retry until idempotency evidence, durable audit, post-write readback, HITL, and release evidence prove repeated writes cannot multiply side effects.
+
+Test pattern: `Batch2ChineseCommentContractTest` protects semantic markers such as `中文说明`, `安全边界`, `LLM/Plan/前端`, `服务端可信上下文`, `Manifest 不是执行授权`, `外部网络出口`, `禁止透明降级`, and `幂等证据`. This keeps the learning comments alive through future refactors.
+
+Documentation governance: `docs/INDEX.md` was refreshed from an obsolete M2-era index into a current M5.85 index. `docs/DOCUMENTATION_GOVERNANCE.md` now defines truth-source order, current/historical/Phase-2 document categories, cleanup rules, and the next safe cleanup steps. M5.21 NIM/HPC/Slurm/BCM wave docs are intentionally retained as historical audit evidence and Phase 2 reference, not deleted.
+
+Safety invariant: Batch 2 is comments, tests, and documentation governance only. It does not change Tool execution behavior, permission checks, HITL decisions, MCP runtime, kube-manager HTTP behavior, retry behavior, audit persistence, dependency versions, eval/retrieval runtime, memory writes, or Phase 2 NIM/HPC/Slurm/BCM scope.
+
+Teaching conclusion: a top-tier Agent needs execution boundaries that are visible to humans, not just enforced by code. Future contributors should be able to read the Tool/MCP/HTTP classes and understand exactly where candidate intent becomes a governed backend action.
+
 ## 2026-06-11 Batch 1 Chinese Comments - Security Entry And HITL Boundary
 
 This slice completes the first Chinese-comment rollout batch for the highest-risk learning surfaces: HTTP security entry, identity bridging, principal resolution, login/session creation, and HITL fail-closed execution gating.
@@ -132,6 +162,245 @@ Safety invariant: the page does not perform dependency upgrades, create compatib
 The frontend governance scan now treats `/agent/top-tier` as a protected latest-technology workbench. It requires the 15 endpoint bindings, the shared GET-only `loadObservabilityDocument(...)` workflow, disabled runtime markers, blocked shortcut markers, forbidden runtime-control markers, and neutral evidence semantics.
 
 Teaching conclusion: the user's Phase 1 target remains a top-tier Agent, not a reduced MVP. The right frontend lesson is to make advanced technology visible as a governed adoption system: what exists, what is officially sourced, what is compatible, what evidence is missing, which experts must review it, and exactly which runtime shortcuts remain closed.
+
+## 2026-06-11 Frontend Eval Workbench
+
+This slice is a frontend consumption slice for the existing backend Eval Workbench contracts, not a new eval runtime or release gate opening.
+
+`kube-agent-vue` now renders `/agent/eval` as a dedicated read-only Eval Workbench. The page consumes six backend-owned GET contracts:
+
+- `GET /api/agent/observability/eval/workbench/capabilities`
+- `GET /api/agent/observability/eval/workbench/overview`
+- `GET /api/agent/observability/eval/reviewed-trace-evidence`
+- `GET /api/agent/observability/eval/release-blocking-gate-contract`
+- `GET /api/agent/observability/eval/workbench/gate-bundle-summary`
+- `GET /api/agent/observability/eval/trace-sets`
+
+Architecture lesson: top-tier Agent eval is a chain of evidence, not a button. The backend has already separated capability discovery, workbench overview, reviewed trace evidence, release-blocking contract, gate-bundle summary, and trace-set catalog. The frontend should preserve that separation so a learner can see why "a test exists" is different from "reviewed trace evidence exists", "gate bundle is release eligible", "CI blocking is enabled", and "a human release decision happened".
+
+The frontend workbench renders release eligibility, reviewed trace progress, CI blocking state, trace-set gate rows, reviewed trace rows, release checks, review workflow, next actions, gate bundle/catalog JSON, quality/safety/privacy JSON, and raw read models. Missing backend evidence remains `Unknown`, `Unavailable`, or `Not evaluated`.
+
+Safety invariant: the page does not run eval suites, replay traces, execute candidate discovery, execute curation review, execute promotion workflow, execute catalog patch review, mutate trace-set catalogs, POST raw gate bundles, enable CI blocking, approve releases, call MCP `tools/call`, execute Tools, call kube-manager state-changing APIs, run retrieval/vector/memory runtime, or reopen NIM/HPC/Slurm/BCM Phase 2 scope.
+
+The same frontend slice tightens neutral evidence semantics across the console. Local `done`, `completed`, and `tool_done` events now map to `readonly/Observed`, not `success/Completed`; metric cards render shared `StatusKind` plus evidence source directly. This prevents frontend UI language from teaching that stream completion, tool completion, health UP, or authenticated session equals task success, policy approval, permission approval, eval pass, or release readiness.
+
+Teaching conclusion: Eval is one of the places where a top-tier Agent project can quietly become unsafe if UI vocabulary is sloppy. The UI must make evidence provenance visible and keep release authority backend-owned until reviewed trace fixtures, deterministic gates, human review, CI wiring, audit evidence, and recovery memory all line up.
+
+## 2026-06-11 Frontend Memory/RAG Workbench
+
+This slice is a frontend consumption slice for the existing backend Memory/RAG contracts, not a new Memory/RAG runtime opening.
+
+`kube-agent-vue` now renders `/agent/memory` as a dedicated read-only Memory/RAG Workbench. The page consumes nine backend-owned GET contracts under `/api/agent/observability/memory-rag/**`:
+
+- readiness
+- citation and source custody
+- source evidence digest
+- durable memory lifecycle
+- Memory/RAG eval gate
+- eval-suite binding
+- trace-set curation contract
+- trace-set curation workbench overview
+- reviewed trace-evidence manifest
+
+Architecture lesson: top-tier Agent memory is not "the system can retrieve text." Memory becomes trustworthy only when the control plane can explain source custody, citation fidelity, tenant isolation, retention/deletion/export policy, reviewed redacted trace fixtures, and deterministic eval gates before retrieved content influences prompts.
+
+The frontend workbench therefore shows evidence and blockers, not authority. It renders summary metrics, readiness cards, trace-set curation state, reviewed manifest rows, eval gate/suite binding, citation/source JSON, lifecycle/privacy/safety JSON, and raw read models. Missing backend evidence remains `Unknown`, `Unavailable`, or `Not evaluated`.
+
+Safety invariant: the page does not run retrieval, call vector stores, call embeddings, invoke rerankers, execute GraphRAG, mutate prompts, write durable memory, mutate trace-set catalogs, run eval suites, enable CI blocking, call MCP `tools/call`, execute Tools, call kube-manager state-changing APIs, or reopen NIM/HPC/Slurm/BCM Phase 2 scope.
+
+The same frontend slice adds a `Governance Evidence Matrix` to `/agent/top-tier`. That matrix is deliberately conservative: backend health, local session state, and SSE completion are displayed as evidence context only. They do not prove readiness, permission, policy, HITL, audit, eval, SLO, cost, release authority, or task success.
+
+Teaching conclusion: a top-tier Agent learning project should make negative space visible. Closed buttons, missing evidence, unknown states, and blocked runtime shortcuts are not UI weakness; they are the learning surface that prevents "new technology" from quietly becoming unreviewed production authority.
+
+## 2026-06-11 Frontend Settings Contract Evidence
+
+`kube-agent-vue` now exposes `/agent/settings` as a read-only Settings Contract page. This page intentionally closes the last AgentOps placeholder route while avoiding the common mistake of turning frontend runtime values into configuration authority.
+
+Frontend behavior:
+
+- The page displays current frontend/runtime evidence: API base, Workbench mode, operator session, conversation anchor, backend health, readiness facts already present in the store, runtime status text, and local error text.
+- It does not call backend settings write APIs, `fetch`, `postJson`, `loadObservabilityDocument(...)`, MCP endpoints, HITL endpoints, eval endpoints, or kube-manager state-changing endpoints.
+- It renders explicit closed contracts: settings save is `Unavailable`; policy/model config, tool enablement, and HITL/Eval/Memory/Kube Outlet settings are `Unknown` until backend-owned contracts exist.
+- It links only to Workbench and Readiness, and those links are navigation evidence, not configuration or runtime authority.
+
+Architecture learning point:
+
+- A top-tier Agent console must separate configuration evidence from configuration authority. A visible API base or `Health UP` state can help the operator understand the current browser context, but it cannot prove that model providers, policy rules, tool exports, HITL queues, eval gates, memory stores, or kube-manager outlets are correctly configured.
+- Frontend settings pages are especially dangerous because they look harmless. If they quietly save flags, bypass backend contracts, or infer readiness from local state, they can teach the wrong mental model and open runtime authority before audit, permission, and release gates exist.
+- The safe order is: display local/static/backend evidence first, mark missing contracts as `Unknown` or `Unavailable`, then later add backend-owned read/write contracts with permissions, audit records, deterministic tests, and recovery memory.
+
+Safety invariant:
+
+- No backend code changed in this slice. The frontend only consumed existing Pinia state.
+- `/agent/settings` exposes no save, no config mutation, no runtime switch, no MCP `tools/call`, no Tool execution, no eval run, no HITL confirmation, no kube-manager write action, no CI blocking switch, and no Phase 2 NIM / HPC / Slurm / BCM reopening control.
+- The governance scanner now requires `/agent/settings` to mount `SettingsContractView`, so all AgentOps navigation routes are real read-only pages rather than placeholders.
+
+## 2026-06-11 Frontend Runs, HITL, And Observability Evidence
+
+`kube-agent-vue` now exposes three more AgentOps surfaces: `/agent/runs`, `/agent/hitl`, and `/agent/observability`. They intentionally teach different evidence layers of a top-tier Agent console.
+
+Backend contracts consumed by `/agent/observability`:
+
+- `GET /api/agent/observability/snapshot`
+- `GET /api/agent/observability/audit/index`
+- `GET /api/agent/observability/audit/trace/{traceId}?limit=...`
+- `GET /api/agent/observability/audit/id/{auditId}`
+
+Frontend behavior:
+
+- `/agent/runs` is a local session ledger derived from the current browser session, conversation, messages, and SSE events. It is useful for operator orientation, but it is not backend run history, audit truth, or eval evidence.
+- `/agent/hitl` is a local HITL signal viewer. It derives clarify/HITL/approval-like/human-review evidence from current frontend events and messages only. It is not a backend approval queue, confirmation workflow, policy override, or checkpoint resume surface.
+- `/agent/observability` reads backend metrics/audit read models through the shared read-only observability loader. It renders ReAct/tool/HITL counters, durable audit readiness, audit index redaction metadata, trace audit events, auditId lookup, local context, and raw JSON.
+- All three pages render missing backend evidence as `Unknown`, `Unavailable`, or `Not evaluated`. The frontend does not convert missing events into success, policy approval, HITL completion, eval pass, or release authority.
+
+Architecture learning point:
+
+- A mature Agent console separates current UI session state from backend-owned audit truth. The current browser can explain what the operator just saw, but durable audit, backend HITL queue state, and replay/eval evidence must come from server-owned read models.
+- Clarification is not approval. A `clarify` event can ask the user for information, but it cannot become a Tool execution decision unless a later backend-owned HITL contract records that authority.
+- `traceId` and `auditId` are lookup anchors, not authorization facts. Authorization remains server-side through Spring Security and `AgentPrincipalResolver`; the frontend only asks for redacted evidence.
+- Observability must start as GET/admin-only/read-only evidence. Replay execution, retry, eval-suite runs, trace-set curation, MCP `tools/call`, kube-manager writes, and release switches are separate authority planes and stay closed until reviewed backend contracts and tests explicitly open them.
+
+Safety invariant:
+
+- No backend code changed in this slice. The frontend consumed existing read models and the governance scanner now requires the snapshot/audit endpoint prefixes.
+- `/agent/runs` exposes no backend run retrieval, persistence, rerun, retry, approval, or mutation control.
+- `/agent/hitl` exposes no backend HITL queue call, confirm/clarify invocation, policy override, approval decision, checkpoint resume, or Tool execution.
+- `/agent/observability` exposes no replay execution, Tool execution, eval-suite run, trace-set mutation, MCP runtime call, kube-manager state-changing action, runtime mutation, CI blocking switch, or Phase 2 NIM / HPC / Slurm / BCM reopening control.
+
+## 2026-06-11 Frontend Tools Governance And MCP Manifest
+
+`kube-agent-vue` now exposes `/agent/tools` as a real read-only Tools Governance page. This turns the backend MCP manifest and MCP governance overview into a learning surface for Agent tool safety.
+
+Backend contracts consumed:
+
+- `GET /api/agent/mcp/manifest`
+- `GET /api/agent/mcp/governance/overview`
+
+Frontend behavior:
+
+- The page loads both contracts through the shared read-only observability loader.
+- It renders total/exported/blocked tool counts, safe manifest policy, exported read-only tool metadata, governance cards, blocked capabilities, future enablement protocol, and raw JSON.
+- Tool names, intent ids, HTTP methods, and agent names are displayed as review evidence only. They are not executable handles.
+
+Architecture learning point:
+
+- 顶级 Agent 的工具治理不是“先给前端一个调用按钮”。正确顺序是先让 manifest、export policy、blocked capabilities、future enablement protocol 和 raw evidence 可见。
+- MCP manifest metadata, governance evidence, and runtime `tools/call` authority are separate layers. Mixing them in the UI would teach the wrong mental model and create production risk.
+- A tool can be visible in a safe manifest while still not callable by the frontend. Visibility is evidence; it is not permission.
+
+Safety invariant:
+
+- No backend code changed in this slice. The frontend consumed existing MCP read models.
+- The page does not call MCP `tools/call`, execute Tools, mutate ToolRegistry state, accept caller-provided tool arguments, export write tools, approve runtime MCP, or issue release decisions.
+- `kube-agent-vue` governance scanning now treats `/agent/tools` as a required read-only route and checks the MCP manifest/governance endpoint prefixes.
+
+## 2026-06-11 Frontend Trace Explorer And Evidence Read Models
+
+`kube-agent-vue` now exposes `/agent/trace` as a real read-only Trace Explorer. This is the first frontend page that directly drills into the backend replay/eval evidence chain by trace id instead of only showing current session events.
+
+Backend contracts consumed:
+
+- `GET /api/agent/observability/replay/trace/{traceId}?limit=...`
+- `GET /api/agent/observability/eval/trace/{traceId}?limit=...`
+
+Frontend behavior:
+
+- The page validates trace anchors locally and bounds `limit`, then calls only the shared `loadObservabilityDocument(...)` read-only loader.
+- It renders summary tiles, a redacted replay timeline, deterministic eval checks, Replay Read Model JSON, and Eval Read Model JSON.
+- Missing evidence stays Unknown or unavailable. The UI does not turn missing fields into policy, permission, risk, approval, score, pass/fail, or release authority.
+
+Architecture learning point:
+
+- Workbench Evidence Tabs and Trace Explorer serve different layers. Evidence Tabs are current-session event projections; Trace Explorer is backend-owned redacted audit/eval read-model replay by trace id.
+- A top-tier Agent workbench should let learners inspect how runtime decisions become durable audit records, replay timeline steps, and deterministic eval evidence without giving the frontend runtime authority.
+- The correct first frontend binding for observability is GET/admin-only/read-only, not a replay button. Replay, retry, approve, execute, publish, eval-suite run, and trace-set mutation stay closed until separate backend contracts, tests, and release evidence exist.
+
+Safety invariant:
+
+- No backend code changed in this slice. The frontend only consumed existing M5.32/M5.33 read models.
+- The page does not call MCP `tools/call`, execute Tools, run eval suites, mutate trace-set catalogs, call kube-manager state-changing APIs, enable CI blocking, or reopen NIM / HPC / Slurm / BCM.
+- `kube-agent-vue` governance scanning now covers Trace Explorer and the shared UI primitives used by governance/evidence pages, so security wording and empty-state semantics remain machine-checked.
+
+## 2026-06-11 Frontend Admin Console And Backend Boot Reliability
+
+This slice turns the temporary `kube-agent-vue` chat page into a vue-kube-manager-style admin console and restores a verified local backend runtime for frontend testing.
+
+Runtime verification:
+
+- Backend jar starts on `http://localhost:8500` with `--atlas.backend.base-url=http://localhost:8100`, local placeholder OpenAI keys, and `atlas.embedding.enabled=false`.
+- `GET /api/agent/health` returns `status=UP`, `totalTools=183`, `supervisorGraphEnabled=true`, and `graphEnabled=true`.
+- Frontend dev server runs on `http://localhost:5173`, and Vite `/api` proxy reaches the backend health endpoint.
+- Browser verification confirms visible `Kube Agent`, `Agent Workbench`, backend `UP`, runtime panel, login form, and no console errors.
+
+Backend learning point:
+
+- Several read-only governance services use two constructors: a production constructor with Spring dependencies and a package-private constructor that accepts `Clock` for deterministic tests.
+- Spring Boot runtime can fail constructor selection when more than one constructor exists and no explicit injection constructor is marked.
+- The fix is intentionally small: add `@Autowired` to the production constructor while keeping the test constructor package-private. This preserves deterministic tests and removes startup ambiguity.
+
+Frontend learning point:
+
+- The first usable Agent UI should already teach the operator how the Agent is wired: backend health, session state, stream/graph mode, SSE events, capability blocks, and top-tier readiness are visible on one work surface.
+- The visual language follows `vue-kube-manager`: fixed dark sidebar, compact white navbar, grey workspace background, white admin panels, and Element-family form controls.
+- Phase 1 remains top-tier even while NIM / HPC / Slurm / BCM are paused: the frontend keeps those domains out of the primary workflow and focuses on Agent orchestration, Memory/RAG, Eval Gate, kube-manager outlet governance, and safe operator visibility.
+
+Current limitations:
+
+- Local backend uses a placeholder OpenAI key, so real LLM chat still needs a valid key.
+- Real login/chat requires kube-manager on port `8100` and valid credentials.
+- Frontend production build passes, but Vite/Rolldown reports third-party `@vueuse/core` pure-annotation warnings and a large chunk warning; these are not current blockers but should be revisited when code-splitting the workbench.
+
+## 2026-06-11 Governance Read Model Pages
+
+The `kube-agent-vue` workbench now has four dedicated governance pages instead of generic placeholders:
+
+- `/agent/top-tier`: top-tier readiness, technology introduction playbook, compatibility evidence, official protocol watch, and Vue readiness.
+- `/agent/memory`: Memory/RAG readiness, trace-set curation, reviewed evidence manifest, eval gate, and suite binding.
+- `/agent/eval`: eval workbench overview, reviewed trace evidence, release-blocking contract, gate bundle summary, and trace-set catalog.
+- `/agent/kube-manager`: kube-manager HTTP outlet governance, health, write retry readiness, write safety contract, and write release gate.
+
+Architecture rule:
+
+- These pages are read-only operator and learning surfaces. They call existing `GET /api/agent/observability/**` read models and render endpoint paths, status facts, collection counts, and raw JSON.
+- They do not add write APIs, runtime switches, MCP `tools/call`, retrieval execution, CI blocking, kube-manager state-changing actions, retry enablement, or Phase 2 domain controls.
+- Unauthenticated and unauthorized states are visible by design. This teaches the security boundary instead of hiding it behind empty screens.
+
+Learning point: top-tier Agent frontend work is not only chat UX. A serious Agent needs pages that teach why a capability is ready, blocked, reviewed, or forbidden before the runtime is allowed to act.
+
+Quality gate:
+
+- `kube-agent-vue` now provides `npm run verify:governance`.
+- The scan verifies required governance routes, observability endpoint prefixes, and a unified read-only loader.
+- It fails if governance pages introduce mutating HTTP methods, MCP `tools/call`, CI blocking enablement, write retry enablement, kube-manager state-changing actions, retrieval runtime execution, or Phase 2 domain reopening controls.
+- `npm run verify` is the preferred frontend slice acceptance entry point. It runs the governance scan, TypeScript checking, and production build in one sequence.
+
+## 2026-06-11 Governance Teaching Panels And Scan Hardening
+
+The four `kube-agent-vue` governance pages now teach the domain boundary directly in the UI:
+
+- Each page passes `learningNotes` and `blockedActions` into `GovernanceReadModelView`.
+- The shared component renders two compact panels: `学习要点` and `当前关闭的权力`.
+- The pages still only call GET read models through `loadObservabilityDocument(endpoint.path)`.
+- Browser verification on `/agent/top-tier` confirmed visible `MCP tools/call`, `NIM/HPC/Slurm/BCM`, `刷新全部`, and no console errors.
+
+Why this matters:
+
+- A top-tier Agent workbench must teach the operator why a capability is blocked, not merely hide the button.
+- Governance pages are a controlled learning surface for advanced Agent engineering: technical adoption, Memory/RAG, Eval Gate, and kube-manager outlet safety are visible before runtime authority is granted.
+- Teaching text is allowed to mention dangerous concepts, but executable endpoints and handlers remain forbidden.
+
+Quality gate hardening:
+
+- `verify-governance-readonly.mjs` now requires every governance page to declare and render `learningNotes` and `blockedActions`.
+- It preserves boundary markers such as MCP `tools/call`, `run retrieval`, `enable ci blocking`, `enable write retry`, `kube-manager state changing action`, and `NIM/HPC/Slurm/BCM`.
+- It also scans AgentOps placeholder routes and rejects runtime-authority shortcuts under `path`, `url`, `endpoint`, `href`, or `to`.
+- Handler detection now covers camelCase, snake_case, and kebab-case names, so future frontend code cannot quietly add runtime controls by renaming them.
+
+Recovery note:
+
+- `kube-agent-vue` is the current Vue 3 / Element Plus temporary workbench used for fast learning and integration tests.
+- Formal `vue-kube-manager` integration remains a future reviewed migration target through the M5.84 package.
+- Quick restore path: backend `http://localhost:8500`, frontend `http://localhost:5173/agent/workbench`, then run `npm run verify` in `F:\gitProject\kube-agent-vue`.
 
 ## 2026-06-10 M5.84 Top-tier Vue Workbench Migration Package
 

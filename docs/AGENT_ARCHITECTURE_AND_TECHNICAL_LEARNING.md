@@ -2,6 +2,36 @@
 
 > 维护规则：这个文件是长期学习文档，不是一次性审计记录。后续每完成一个重要阶段，都要把新的架构决策、技术点、测试模式和学习要点同步进来。
 
+## 2026-06-12 Batch 2 Chinese Comments - Tool/MCP/kube-manager Execution Boundaries
+
+This slice completes the second Chinese-comment rollout batch for the execution boundary learning path: SafeToolExecutor, ToolRegistry, protected Tool parameters, MCP Manifest, and kube-manager HTTP outlet.
+
+Files annotated:
+
+- `src/main/java/com/atlas/tool/execution/SafeToolExecutor.java`
+- `src/main/java/com/atlas/tool/execution/SafeToolExecutionRequest.java`
+- `src/main/java/com/atlas/tool/core/ToolRegistry.java`
+- `src/main/java/com/atlas/tool/core/ProtectedToolParameterFilter.java`
+- `src/main/java/com/atlas/mcp/McpToolManifestService.java`
+- `src/main/java/com/atlas/mcp/McpManifestController.java`
+- `src/main/java/com/atlas/http/KubeManagerHttpClient.java`
+- `src/main/java/com/atlas/http/KubeManagerHttpResiliencePolicy.java`
+- `src/test/java/com/atlas/tool/execution/Batch2ChineseCommentContractTest.java`
+
+Architecture lesson: Tool execution is where an Agent stops being only a text interface and starts touching real systems. The code now explains in Chinese why LLM/Plan/frontend parameters are only candidate business input, why token/orgId/userId/HITL/audit/release/write-control fields must come from the server, why SafeToolExecutor is the single real BaseTool execution boundary, and why kube-manager HTTP calls must use the real current user token rather than sysadmin fallback.
+
+MCP lesson: MCP Manifest is only a read-only capability catalogue. It is not `tools/call`, not Tool execution, not kube-manager access, and not runtime authorization. Exported items hide internal endpoints and only include safe PUBLIC READ metadata; sensitive reads and writes remain blocked.
+
+Resilience lesson: read retry and write retry are not the same engineering problem. GET requests may use retry/circuit/bulkhead protection, but POST/PATCH/PUT/DELETE remain no-auto-retry until idempotency evidence, durable audit, post-write readback, HITL, and release evidence prove repeated writes cannot multiply side effects.
+
+Test pattern: `Batch2ChineseCommentContractTest` protects semantic markers such as `中文说明`, `安全边界`, `LLM/Plan/前端`, `服务端可信上下文`, `Manifest 不是执行授权`, `外部网络出口`, `禁止透明降级`, and `幂等证据`. This keeps the learning comments alive through future refactors.
+
+Documentation governance: `docs/INDEX.md` was refreshed from an obsolete M2-era index into a current M5.85 index. `docs/DOCUMENTATION_GOVERNANCE.md` now defines truth-source order, current/historical/Phase-2 document categories, cleanup rules, and the next safe cleanup steps. M5.21 NIM/HPC/Slurm/BCM wave docs are intentionally retained as historical audit evidence and Phase 2 reference, not deleted.
+
+Safety invariant: Batch 2 is comments, tests, and documentation governance only. It does not change Tool execution behavior, permission checks, HITL decisions, MCP runtime, kube-manager HTTP behavior, retry behavior, audit persistence, dependency versions, eval/retrieval runtime, memory writes, or Phase 2 NIM/HPC/Slurm/BCM scope.
+
+Teaching conclusion: a top-tier Agent needs execution boundaries that are visible to humans, not just enforced by code. Future contributors should be able to read the Tool/MCP/HTTP classes and understand exactly where candidate intent becomes a governed backend action.
+
 ## 2026-06-11 Batch 1 Chinese Comments - Security Entry And HITL Boundary
 
 This slice completes the first Chinese-comment rollout batch for the highest-risk learning surfaces: HTTP security entry, identity bridging, principal resolution, login/session creation, and HITL fail-closed execution gating.
