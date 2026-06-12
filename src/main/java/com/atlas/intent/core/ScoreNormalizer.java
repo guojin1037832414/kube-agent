@@ -3,6 +3,14 @@ package com.atlas.intent.core;
 /**
  * 统一归一化器：将 L1~L4 各层原始分数映射到 [0, 1] 校准空间。
  *
+ * <p>中文说明：不同意图层的原始分数含义不同，例如 Embedding cosine、规则 exact、LLM 自评分、
+ * fuzzy 命中分不能直接比较。该类把它们转换到同一排序空间，输出给 IntentResult 和
+ * IntentArbiter，帮助路由过程更稳定、可解释。</p>
+ *
+ * <p>安全边界：归一化分数只参与“选哪个候选意图”的智能决策，不是安全门禁。任何分数都不能
+ * 绕过 SafeToolExecutor、ToolPermission、HITL、durable audit、kube-manager 权限、MCP
+ * admin-only 只读边界、Memory/RAG source custody 或 release gate。</p>
+ *
  * <p>设计原则：
  * <ul>
  *   <li>L1（Embedding）：Sigmoid 拉伸，放大中段区分度</li>
@@ -29,6 +37,9 @@ public final class ScoreNormalizer {
 
     /**
      * 通用归一化入口。
+     *
+     * <p>中文说明：调用方传入的 rawScore 可能来自模型、规则或 fuzzy 算法；这里只做数值校准和截断，
+     * 不读取用户身份、不访问 kube-manager、不调用 Tool，也不产生审计或记忆写入。</p>
      *
      * @param rawScore 原始分数
      * @param level    "L1" / "L2" / "L3" / "L4"
@@ -83,6 +94,8 @@ public final class ScoreNormalizer {
 
     /**
      * 报告分（仅用于日志 / 监控面板），带层级权重因子。
+     *
+     * <p>安全边界：报告分用于人类观察不同层命中的相对强弱，不参与 Tool 调用、写操作放行或发布阻断。</p>
      */
     public static double reportScore(double normalizedScore, String level) {
         return switch (level) {

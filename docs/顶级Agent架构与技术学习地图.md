@@ -199,6 +199,19 @@ Batch 4 已补中文教学注释后的学习线：
 - `ConversationStore` 的 conversationId 只定位资源，详情、改名、删除必须再次按当前可信 owner 收敛。
 - 支撑层越基础，越要写清“不能被拿去当什么”，因为后续功能很容易复用这些字段并误解含义。
 
+### 8.2 支撑契约层
+
+学习重点：
+
+- `ToolParameterSpec` 描述 Tool 业务参数 schema、required 和 aliases，只输出给 schema 生成、参数归一化、提示词目录和调试面板；它不是 Tool 权限表，不能声明 token、orgId、userId、HITL、audit、release 或 writeAllowed 等控制字段。
+- `SafeToolExecutionResult` 是 SafeToolExecutor 输出给 Graph/SSE/前端的执行回执；`executed`、`success`、`requiresClarification` 分别表达是否进入 Tool、业务是否成功、是否需要补参，不能反向授予权限或 release authority。
+- `SafeToolExecutionSource` 只说明候选调用来自 Graph、Plan、ReAct、ToolCallback 或 fallback，来源标签不能绕过 SafeToolExecutor、ToolPermission、HITL、durable audit 或 kube-manager 权限。
+- `AgentTraceContext.traceId` 是链路关联 ID，用于日志、SSE、审计、OTel 和回放；它不是身份、租户、Session、审计 receipt、release evidence 或 Tool 授权。
+- `IntentDefinition` 是意图目录配置，`IntentResult` 是分类候选结果；confidence、matchedLevel、agent、level 和 rawQuery 只能帮助路由和观测，不能注册 Tool、导出 MCP、跳过权限、批准写操作或授予 release authority。
+- `EmbeddingConfig` 和 `L3ClassificationResult` 只增强意图候选；模型路径/模型 ID 属于供应链配置，LLM confidence/reasoning 是不可信建议，必须经过阈值、unknown、intent 白名单和统一安全执行链。
+- `IntentDefaults`、`DefaultValueRegistry`、`DefaultValueApplier` 只能补普通表单草稿字段，不能生成或覆盖 token、orgId、userId、HITL、audit、release、writeAllowed、admin 或 kube-manager 写控制字段。
+- Tool 校验和权限异常只提供澄清、提示和审计信号；错误码、suggestions、deniedTool、requiredRole、currentRole 都不能泄露敏感事实，也不能被前端或 LLM 解释成可继续执行。
+
 ### 9. Multi-Agent / Expert Review
 
 学习重点：
@@ -216,10 +229,11 @@ Batch 4 已补中文教学注释后的学习线：
 - Batch 3：Orchestrator / Graph / ReAct / Plan 推理和状态机链路。
 - Batch 4：Memory / RAG / Eval / Observability / Audit 证据链。
 - Batch 5 首批：DTO / store / config 支撑层地基。
+- Batch 5 第二片：Tool 参数 schema、执行结果、执行来源、trace、意图分类、默认值补参和异常等支撑契约层。
 
 待推进：
 
-1. Batch 5 剩余支撑类：ToolParameterSpec / SafeToolExecutionResult / AgentTraceContext / intent config / exception 等仍承载契约的支撑代码。
+1. Batch 5 收尾支撑类：query support、路径/参数构造辅助类和少量测试契约。
 
 注释标准：
 

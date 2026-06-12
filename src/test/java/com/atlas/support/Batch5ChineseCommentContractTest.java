@@ -79,6 +79,76 @@ class Batch5ChineseCommentContractTest {
             Path.of("src/main/java/com/atlas/config/AtlasConfiguration.java"),
             List.of("中文说明", "安全边界", "可选 AI 能力失败时应降级",
                 "不能绕过 SafeToolExecutor", "HITL", "审计", "kube-manager 权限")
+        ),
+        Map.entry(
+            Path.of("src/main/java/com/atlas/tool/core/ToolParameterSpec.java"),
+            List.of("中文说明", "安全边界", "业务参数长什么样", "不负责身份",
+                "SafeToolExecutor", "受保护控制面字段")
+        ),
+        Map.entry(
+            Path.of("src/main/java/com/atlas/tool/execution/SafeToolExecutionResult.java"),
+            List.of("中文说明", "安全边界", "统一执行回执", "不是新的权限来源",
+                "success=true", "不能反向证明 HITL")
+        ),
+        Map.entry(
+            Path.of("src/main/java/com/atlas/tool/execution/SafeToolExecutionSource.java"),
+            List.of("中文说明", "安全边界", "执行来源只用于记录",
+                "绝不能作为绕过 SafeToolExecutor", "PLAN_EXECUTE_NODE")
+        ),
+        Map.entry(
+            Path.of("src/main/java/com/atlas/observability/AgentTraceContext.java"),
+            List.of("中文说明", "安全边界", "traceId 只能用于关联观测证据",
+                "不是用户身份", "日志注入", "线程池")
+        ),
+        Map.entry(
+            Path.of("src/main/java/com/atlas/intent/config/IntentDefinition.java"),
+            List.of("中文说明", "安全边界", "来自 {@code intents.yml}",
+                "不是 Tool 权限表", "二期运行时权力")
+        ),
+        Map.entry(
+            Path.of("src/main/java/com/atlas/intent/core/IntentResult.java"),
+            List.of("中文说明", "安全边界", "智能路由候选", "不是执行许可",
+                "来自用户自然语言")
+        ),
+        Map.entry(
+            Path.of("src/main/java/com/atlas/intent/core/ScoreNormalizer.java"),
+            List.of("中文说明", "安全边界", "转换到同一排序空间",
+                "不是安全门禁", "不产生审计或记忆写入")
+        ),
+        Map.entry(
+            Path.of("src/main/java/com/atlas/intent/llm/L3ClassificationResult.java"),
+            List.of("中文说明", "安全边界", "模型自报结果", "LLM 输出不可信",
+                "不能成为 Tool 权限")
+        ),
+        Map.entry(
+            Path.of("src/main/java/com/atlas/intent/embedding/EmbeddingConfig.java"),
+            List.of("中文说明", "安全边界", "输入来自部署环境或 application 配置",
+                "只增强意图候选", "供应链行为")
+        ),
+        Map.entry(
+            Path.of("src/main/java/com/atlas/tool/defaults/IntentDefaults.java"),
+            List.of("中文说明", "安全边界", "表单草稿默认值",
+                "不能生成 token", "不可变 Map")
+        ),
+        Map.entry(
+            Path.of("src/main/java/com/atlas/tool/defaults/DefaultValueRegistry.java"),
+            List.of("中文说明", "安全边界", "defaults.yml",
+                "不是安全授权", "已有用户参数不被覆盖")
+        ),
+        Map.entry(
+            Path.of("src/main/java/com/atlas/tool/defaults/DefaultValueApplier.java"),
+            List.of("中文说明", "安全边界", "补参辅助器",
+                "不是权限系统", "参数 Map")
+        ),
+        Map.entry(
+            Path.of("src/main/java/com/atlas/tool/exception/AtlasToolValidationException.java"),
+            List.of("中文说明", "安全边界", "候选业务参数",
+                "不是权限系统", "不能包含 token")
+        ),
+        Map.entry(
+            Path.of("src/main/java/com/atlas/tool/exception/PermissionDeniedException.java"),
+            List.of("中文说明", "安全边界", "服务端权限证据不足",
+                "fail-closed", "不能被 LLM 重新解释")
         )
     );
 

@@ -9,9 +9,13 @@ import java.util.regex.Pattern;
 /**
  * Agent trace 上下文。
  *
- * <p>M5.23 引入的最小 trace 内核：先用 ThreadLocal + MDC 打通请求、Tool 执行、
- * ReAct 和日志链路。后续接入 OpenTelemetry Span、审计持久化和前端回放时，都应复用
- * 这里的 traceId，而不是每层各自生成一套 ID。</p>
+ * <p>中文说明：这是 M5.23 引入的最小 trace 内核，先用 ThreadLocal + MDC 打通请求、Tool 执行、
+ * ReAct、审计和日志链路。后续接入 OpenTelemetry Span、审计持久化、Eval trace set 和前端回放时，
+ * 都应复用这里的 traceId，而不是每层各自生成一套无法关联的 ID。</p>
+ *
+ * <p>安全边界：traceId 只能用于关联观测证据，不是用户身份、租户、Session、HITL、audit prewrite、
+ * release gate 或 Tool 执行授权。外部传入候选值必须先经过 {@link #safeCandidateOrBlank(String)}
+ * 过滤，避免日志注入、header 注入或把任意用户输入写入 MDC。</p>
  */
 public final class AgentTraceContext {
 
@@ -27,10 +31,22 @@ public final class AgentTraceContext {
     private AgentTraceContext() {
     }
 
+    /**
+     * 读取当前线程绑定的 traceId。
+     *
+     * <p>中文说明：该值通常由 Controller、Graph 或 SafeToolExecutor 在进入执行链路时绑定，
+     * 输出给日志、审计和 SSE 关联展示。没有绑定时返回 null，调用方不能把 null 当作授权缺省通过。</p>
+     */
     public static String currentTraceId() {
         return CURRENT_TRACE_ID.get();
     }
 
+    /**
+     * 获取安全候选 traceId、当前线程 traceId 或新生成 traceId。
+     *
+     * <p>中文说明：外部 gateway/header/SSE 请求带来的 trace 候选会先做最小规范化；
+     * 候选不可信时退回当前线程值或服务端新值，保证观测链路连续但不接受任意字符串进入日志。</p>
+     */
     public static String currentOrNew(String candidate) {
         String accepted = safeCandidateOrBlank(candidate);
         if (!accepted.isBlank()) {
@@ -43,6 +59,12 @@ public final class AgentTraceContext {
         return newTraceId();
     }
 
+    /**
+     * 将 traceId 绑定到当前线程和日志 MDC，并在 Scope 关闭时恢复旧值。
+     *
+     * <p>安全边界：线程池会复用线程，必须使用 try-with-resources 关闭 Scope，否则后续用户请求可能继承
+     * 上一个请求的 traceId，造成审计和日志串线。traceId 绑定不绑定 token/orgId，也不授予任何 Tool 权限。</p>
+     */
     public static Scope bind(String traceId) {
         String previous = CURRENT_TRACE_ID.get();
         String previousMdc = MDC.get(MDC_TRACE_ID);
@@ -52,11 +74,22 @@ public final class AgentTraceContext {
         return new Scope(previous, previousMdc);
     }
 
+    /**
+     * 清理当前线程 trace 上下文。
+     *
+     * <p>中文说明：用于明确结束请求或测试隔离，避免 ThreadLocal/MDC 污染后续链路。</p>
+     */
     public static void clear() {
         CURRENT_TRACE_ID.remove();
         MDC.remove(MDC_TRACE_ID);
     }
 
+    /**
+     * 生成 kube-agent 内部 traceId。
+     *
+     * <p>中文说明：使用 128-bit 随机值并带 {@code trc_} 前缀，便于人类在日志里搜索；
+     * 它的随机性用于降低碰撞概率，不用于认证或防重放。</p>
+     */
     public static String newTraceId() {
         byte[] bytes = new byte[16];
         RANDOM.nextBytes(bytes);
@@ -79,6 +112,12 @@ public final class AgentTraceContext {
         return "00-" + w3cTraceId + "-" + newSpanId() + "-01";
     }
 
+    /**
+     * 提取可用于 W3C Trace Context 的 32 位 hex trace-id。
+     *
+     * <p>中文说明：只有内部 {@code trc_ + 32hex} 或标准 32hex 形态会被传播为 traceparent；
+     * 网关自定义短 ID 仍可作为 X-Trace-Id 展示，但不会伪装成标准 OpenTelemetry trace-id。</p>
+     */
     public static String w3cTraceIdOrBlank(String traceId) {
         String accepted = safeCandidateOrBlank(traceId);
         if (accepted.isBlank()) {
@@ -126,6 +165,12 @@ public final class AgentTraceContext {
         return trimmed;
     }
 
+    /**
+     * trace 绑定作用域。
+     *
+     * <p>中文说明：Scope 保存进入当前链路前的 ThreadLocal/MDC 值，关闭时原样恢复。
+     * 这对异步和线程池尤其重要：Agent trace 是观测关联，不应该泄漏到下一次请求。</p>
+     */
     public static final class Scope implements AutoCloseable {
         private final String previous;
         private final String previousMdc;
