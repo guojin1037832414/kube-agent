@@ -134,8 +134,15 @@ Evidence side:
 - ToolCallback 最终仍必须回到 `SafeToolExecutor`。
 - Graph 条件边只决定下一站，不授予 Tool、HITL、audit、release 或写入权力。
 - Graph `tool_call` 入口现在有快速 fail-closed 守卫：缺失 Tool 目标、缺失可信 orgId、或候选参数夹带 token/orgId/userId/conversationId/HITL/audit/release/write 控制字段时，不创建 `SafeToolExecutionRequest`，只写入未执行状态和前端可见原因。
+- Graph `react_node` 入口现在会把服务端 Graph State 中的 `traceId` 注入 ReAct `initialParams`，并在 Graph State 与服务端 ThreadLocal 都没有可信 orgId 时提前 fail-closed；这样 ReAct 不会在租户边界不明时先调用 LLM、Tool 或 kube-manager。
 - Graph State 不应保存 `SseEmitter`、Lambda 等运行期对象；ReAct 过程事件通过 registry 用 sessionId 间接发布。
 - `execute_node` 是安全教学样例：先按计划形状 fail-closed，再委托 `SafeToolExecutor` 做最终执行边界。
+
+ReAct 学习补充：
+
+- `initialParams` 是服务端上下文容器：`token`、`organizationId`、`conversationId`、`userId` 和 `traceId` 必须来自 Orchestrator / Principal / Graph State。
+- 每轮 LLM 输出的 `Action.params` 只能补充 `namespace`、`podName`、`keyword` 等业务字段，不能声明身份、租户、trace、HITL、audit、release 或写入许可。
+- `traceId` 只用于日志、SSE、审计和未来 OTel 关联，不是 Tool 查询条件，也不是跨租户授权证据。
 
 支撑层补充学习线：
 

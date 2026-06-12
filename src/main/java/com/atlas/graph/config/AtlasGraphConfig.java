@@ -566,6 +566,11 @@ public class AtlasGraphConfig {
      * 它读取 Graph State 中的可信身份上下文作为 initialParams，但每轮 Action.params 仍来自 LLM，
      * 必须由 ReActEngine 和 SafeToolExecutor 过滤受保护字段后才可能进入真实 Tool。</p>
      *
+     * <p>安全边界：initialParams 里的 token、organizationId、conversationId、userId、traceId
+     * 都必须来自 Orchestrator / Principal / Graph State 这条服务端链路。LLM 只能在 Action.params
+     * 中补充 namespace、podName、keyword 等业务字段，不能声明自己属于哪个组织，也不能伪造
+     * traceId、HITL、audit、release 或写入许可。</p>
+     *
      * <p>安全边界：Graph State 只保存 react_event_session_id 这种可序列化字符串；
      * 真正的事件 sink 存在 {@link ReActEventSinkRegistry} 中。这样 checkpoint 不会携带 Lambda、
      * SseEmitter 或其它运行时对象，也避免跨线程恢复时污染执行上下文。</p>
@@ -578,20 +583,37 @@ public class AtlasGraphConfig {
             ReActEngine engine,
             ReActEventSinkRegistry sinkRegistry) {
         return node_async((OverAllState state) -> {
-            // 1. 从 State 读取必要上下文
+            // 1. 从 State 读取必要上下文。这里读到的是 Orchestrator 已经写入 Graph State 的服务端上下文，
+            //    不是前端请求体或 LLM 输出；后续会作为 ReActEngine 的可信 initialParams。
             String input = state.value("input").map(Object::toString).orElse("");
             String token = state.value("token").map(Object::toString).orElse("");
             String userId = state.value("user_id").map(Object::toString).orElse("anonymous");
             String orgId = state.value("orgId").map(Object::toString).orElse("");
             String conversationId = state.value("conversation_id").map(Object::toString).orElse("");
+            String traceId = state.value("traceId").map(Object::toString).orElse("");
+            if (orgId.isBlank()) {
+                orgId = com.atlas.auth.UserPermissionContext.getCurrentOrgId();
+            }
+            if (orgId == null || orgId.isBlank()) {
+                // 中文说明：ReAct 会在循环内部调用 SafeToolExecutor。缺少可信 orgId 时，
+                // 即使用户只是“诊断”，也无法确认 kube-manager 查询属于哪个租户，因此在 Graph 节点入口就停止。
+                // 安全边界：这里不降级为 anonymous/default org，不调用 LLM，不调用 Tool，也不访问 kube-manager。
+                return failClosedGraphReActUpdates(
+                    "⛔ ReAct 已停止：缺失可信组织上下文，无法确认本次诊断和工具调用的租户边界。",
+                    "GRAPH_REACT_TRUSTED_ORG_MISSING",
+                    traceId
+                );
+            }
 
-            // 2. 构造 initialParams，透传身份、租户和会话信息供工具调用使用
-            //    ReActEngine.run 会将 initialParams 与每轮 Action params 合并后透传至工具执行层
+            // 2. 构造 initialParams，透传身份、租户、会话和 trace 信息供 ReAct/SafeToolExecutor 使用。
+            //    ReActEngine.runWithEvents 会将 initialParams 与每轮 Action.params 合并，但受保护字段只能保留服务端版本。
+            //    traceId 只用于观测链路关联，不会作为业务参数展示给 Tool、SSE 时间线或 ReActMemory。
             Map<String, Object> initialParams = new HashMap<>();
             initialParams.put("userId", userId);
             initialParams.put("token", token);
             initialParams.put("organizationId", orgId);
             initialParams.put("conversationId", conversationId);
+            initialParams.put("traceId", traceId);
 
             // 3. 执行同步 ReAct 推理循环。
             //    Graph State 只允许保存纯数据，不能保存 Lambda/SseEmitter 等运行期对象。
@@ -1044,6 +1066,34 @@ public class AtlasGraphConfig {
             "executed", false,
             "code", code,
             "source", SafeToolExecutionSource.GRAPH_TOOL_CALL.name()
+        ));
+        if (traceId != null && !traceId.isBlank()) {
+            updates.put("traceId", traceId);
+        }
+        return updates;
+    }
+
+    /**
+     * 构造 ReAct Graph 节点的 fail-closed 更新。
+     *
+     * <p>中文说明：ReAct 节点失败时仍然写入 {@code answer} 和 {@code react_node_result}，
+     * 是为了让 SSE 前端、学习文档和调试面板看到“为什么没有进入多轮推理”。同时写入
+     * {@code execute_result.executed=false}，用于明确表达没有 Tool 被调用，也没有访问 kube-manager。</p>
+     *
+     * <p>安全边界：这些更新只描述阻断结果，不代表 ReAct 成功、Tool 成功、HITL 已确认、
+     * audit 已落盘或 release gate 已通过。traceId 只用于把这次阻断和日志/SSE/未来审计证据串起来。</p>
+     */
+    private static Map<String, Object> failClosedGraphReActUpdates(String answer,
+                                                                   String code,
+                                                                   String traceId) {
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("answer", answer);
+        updates.put("react_node_result", answer);
+        updates.put("tool_error_code", code);
+        updates.put("execute_result", Map.of(
+            "executed", false,
+            "code", code,
+            "source", SafeToolExecutionSource.REACT_ENGINE.name()
         ));
         if (traceId != null && !traceId.isBlank()) {
             updates.put("traceId", traceId);

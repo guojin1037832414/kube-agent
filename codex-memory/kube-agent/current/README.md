@@ -10,7 +10,7 @@
 |---|---|---|
 | Phase 1 顶级 Agent Core | 进行中 | 不降低目标，优先完成安全、编排、Tool 治理、Memory/RAG、Eval、可观测、多 Agent 审查和教学注释。 |
 | NIM / HPC / Slurm / BCM | 二期暂停 | 历史 Tool/测试/证据代码仍可存在，但一期不导出 MCP、不新增 runtime authority，高风险写默认被 durable audit fail-closed 阻断。 |
-| 中文代码注释 | 分批推进 | 已完成安全入口、Tool/MCP/kube-manager 执行边界、Orchestrator / Graph / ReAct / Plan 编排链路、Memory / RAG / Eval / Observability / Audit 证据链，以及 Batch 5 的 DTO / store / config、support contract、query/path/body helper、分析目录 query helper；当前已进入 Orchestrator hardening。 |
+| 中文代码注释 | 分批推进 | 已完成安全入口、Tool/MCP/kube-manager 执行边界、Orchestrator / Graph / ReAct / Plan 编排链路、Memory / RAG / Eval / Observability / Audit 证据链，以及 Batch 5 的 DTO / store / config、support contract、query/path/body helper、分析目录 query helper；当前正在推进 Orchestrator hardening。 |
 | 文档治理 | 当前刷新 | 主线文档精简到入口、架构学习、使命记忆、ADR、技术栈和恢复记忆；历史波次报告从当前 docs 树移除。 |
 
 ## 核心架构
@@ -34,6 +34,7 @@
 - LLM、Plan、前端传入的参数只能是候选业务输入，不能成为 token、orgId、userId、HITL、审计、release 或写入权限事实。
 - `SafeToolExecutor` 是 Graph / ReAct / ToolCallback / Plan 路径进入真实 `BaseTool.execute` 的统一执行边界。
 - Graph `tool_call` 现在在创建 `SafeToolExecutionRequest` 前先做入口守卫：空目标、缺失可信 orgId、伪造控制字段都会 fail-closed，并通过 SSE 展示未执行原因；`SafeToolExecutor` 仍是最终边界。
+- Graph `react_node` 现在会把服务端 `traceId` 传入 ReAct `initialParams`，并在缺失可信 orgId 时于调用 LLM / Tool / kube-manager 前 fail-closed；ReAct 每轮 `Action.params` 仍只是候选业务字段。
 - MCP 当前只导出 admin-only 只读 Manifest / governance，不开放 `tools/call` 运行时执行权；NIM/HPC/Slurm/BCM 这类二期域不会进入一期 MCP 导出清单。
 - kube-manager 是真实外部网络出口，默认连接 `http://localhost:8100`；业务 Tool 请求必须使用当前用户 Token，不能透明降级为 sysadmin。
 - 高风险写操作默认要求 ready durable audit prewrite；HITL 确认本身不等于可执行。
