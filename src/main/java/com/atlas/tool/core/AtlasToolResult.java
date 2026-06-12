@@ -6,6 +6,15 @@ import java.util.Map;
 /**
  * Atlas Tool 统一返回结构 — 专门为 LLM 消费设计。
  *
+ * <p>中文说明：这是具体 Tool 执行后返回给 {@link com.atlas.tool.execution.SafeToolExecutor}、
+ * Graph、ReAct 和前端投影层的统一数据容器。它把“执行是否成功、给人的说明、业务数据、
+ * 错误码和澄清建议”整理成稳定 Map，便于 LLM 继续推理，也便于前端用相同字段渲染结果。</p>
+ *
+ * <p>安全边界：{@code success=true} 只表示某个 Tool 在当前执行链路中返回了成功结构，
+ * 不反向证明 HITL 已确认、audit prewrite 已落盘、release gate 已通过，也不能成为后续
+ * 写操作的授权来源。{@code data/message/suggestions} 都必须保持脱敏，不能包含 token、
+ * password、raw prompt、raw audit、内部 endpoint 或未审阅的 kube-manager 响应原文。</p>
+ *
  * <p><b>强制字段：</b></p>
  * <ul>
  *   <li><b>success</b>：操作是否成功（布尔，LLM 可据此决定下一步）</li>
@@ -48,6 +57,9 @@ public class AtlasToolResult extends LinkedHashMap<String, Object> {
     /**
      * 成功返回。
      *
+     * <p>中文说明：成功结构只表达“当前 Tool 的业务处理结果”。调用方若要展示给前端或喂给 LLM，
+     * 仍应确认 data 已经是脱敏后的业务摘要，而不是原始凭证、原始审计或内部 HTTP 细节。</p>
+     *
      * @param message 简短摘要（如 "查询到 3 个节点"）
      * @param data    业务数据对象（任意 POJO / List / Map）
      */
@@ -68,6 +80,9 @@ public class AtlasToolResult extends LinkedHashMap<String, Object> {
 
     /**
      * 失败返回（业务异常）。
+     *
+     * <p>中文说明：失败结果用于让 LLM/前端知道下一步该澄清什么，例如补参数或重新登录；
+     * 它不是权限拒绝的替代系统，也不能让模型把失败原因重新解释成“可以继续执行”。</p>
      *
      * @param message    人类可读错误信息
      * @param errorCode  可选内部错误码（如 "PVC_NAME_CONFLICT"）

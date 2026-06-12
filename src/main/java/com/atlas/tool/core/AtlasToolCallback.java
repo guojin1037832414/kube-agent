@@ -23,6 +23,17 @@ import java.util.Map;
 /**
  * Atlas 专用 ToolCallback — 将 {@link BaseTool} 包装为 Spring AI 可识别的 ToolCallback。
  *
+ * <p>中文说明：这是 legacy core 路径的 Spring AI 适配器，输入来自模型生成的
+ * {@code toolInput} JSON 字符串，输出给 Spring AI / ReAct 继续消费。它的职责是做协议转换：
+ * JSON → Map、参数别名归一化、委托统一执行器、再把执行回执转成 JSON；它不拥有任何
+ * kube-manager 权限，也不决定用户到底能否调用某个 Tool。</p>
+ *
+ * <p>安全边界：LLM 传进来的 JSON 永远是不可信候选业务输入，里面的 {@code token}、
+ * {@code orgId}、{@code userId}、{@code confirmation}、{@code writeAllowed} 等字段不能作为
+ * 服务端可信上下文。本类必须通过 {@link SafeToolExecutor} 执行，不能直接调用
+ * {@link BaseTool#execute(Map)}；返回给 LLM 的 JSON 也只是展示/观察材料，不是 HITL 确认、
+ * audit prewrite、release gate 或 kube-manager 写入成功证明。</p>
+ *
  * <p>这是早期 core 包中的兼容桥接类。新的 Graph Bridge 路径使用
  * {@code com.atlas.graph.bridge.AtlasToolCallback}，但这个类仍可能被历史 Spring AI
  * 注册链路引用，所以它也必须委托 {@link SafeToolExecutor}，不能直接调用 Tool。</p>
@@ -97,11 +108,14 @@ public class AtlasToolCallback implements ToolCallback {
     @Override
     public String call(String toolInput) {
         try {
-            // 1. JSON → Map（LLM 传的参数）
+            // 中文说明：这里解析的是模型生成的 Tool JSON，只能当作候选业务参数，
+            // 不能把其中任何 token/orgId/userId/HITL 字段提升为服务端可信事实。
             Map<String, Object> params = parseInput(toolInput);
-            // 2. 兼容旧入口的 alias 归一化；真正的受保护参数过滤由 SafeToolExecutor 再做一次。
+            // 中文说明：兼容旧入口的 alias 归一化只补齐普通业务字段；
+            // 真正的受保护参数过滤、权限和 HITL 门禁必须由 SafeToolExecutor 再做一次。
             Map<String, Object> normalizedParams = parameterNormalizer.normalize(tool.getToolName(), params);
-            // 3. 委托统一安全执行边界。ToolCallback 不能相信 LLM JSON 中的 token/orgId/userId/HITL 字段。
+            // 安全边界：ToolCallback 是适配器，不是执行边界。这里必须委托统一安全执行器，
+            // 并从服务端 ThreadLocal/Principal 取可信上下文，而不是信任 LLM JSON。
             SafeToolExecutionResult result = safeToolExecutor.executeIntent(new SafeToolExecutionRequest(
                 resolveIntentId(),
                 normalizedParams,
@@ -113,10 +127,10 @@ public class AtlasToolCallback implements ToolCallback {
                 null,
                 SafeToolExecutionSource.TOOL_CALLBACK
             ));
-            // 4. Map → JSON（返回给 LLM）
+            // 中文说明：返回给 LLM 的 JSON 是观察结果/阻断原因，不代表前端可以据此放行写操作。
             return DEFAULT_CONVERTER.convert(toCallbackPayload(result), Map.class);
         } catch (Exception e) {
-            // 任何序列化/调用异常都返回结构化错误，不抛出让 LLM 断线
+            // 安全边界：任何序列化/调用异常都返回结构化错误，不把异常栈、token 或内部 endpoint 暴露给 LLM。
             return fallbackError(e);
         }
     }
@@ -132,7 +146,8 @@ public class AtlasToolCallback implements ToolCallback {
         try {
             return OBJECT_MAPPER.readValue(toolInput, MAP_TYPE);
         } catch (Exception e) {
-            // LLM 偶尔传的不是 JSON 对象，尝试包一层
+            // 中文说明：LLM 偶尔会传非 JSON 对象；包成 raw 只用于后续澄清/失败解释，
+            // 不能把 raw 文本拼接进 URL path、query、body 或审计原文。
             return Map.of("raw", toolInput);
         }
     }
@@ -182,6 +197,8 @@ public class AtlasToolCallback implements ToolCallback {
             payload.put("source", SafeToolExecutionSource.TOOL_CALLBACK.name());
             return payload;
         }
+        // 中文说明：未执行或被阻断时只给出可解释的展示字段，不伪造 tool_result、
+        // HITL marker、audit receipt 或 trace 成功证据。
         payload.put("success", false);
         payload.put("error", "SAFE_TOOL_EXECUTION_BLOCKED");
         payload.put("message", result.answer() != null ? result.answer() : "ToolCallback 已被安全执行器阻断");

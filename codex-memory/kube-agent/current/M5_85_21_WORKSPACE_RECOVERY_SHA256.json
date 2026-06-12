@@ -1,0 +1,63 @@
+﻿{
+    "milestone":  "M5.85-21",
+    "title":  "Batch 5 core adapter Chinese comments",
+    "generatedAt":  "2026-06-12T16:34:36+08:00",
+    "files":  [
+                  {
+                      "path":  "src/main/java/com/atlas/tool/core/AtlasTool.java",
+                      "sha256":  "87ea05c890311e25c841cb02df20f0b8aa0fd6798c004dcd4482ac7296c0f40a"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/tool/core/AtlasToolCallback.java",
+                      "sha256":  "c39f8cb780566ddac583bc832a5cf4a42d4b801a917579b8507f6498b6567114"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/tool/core/AtlasToolContext.java",
+                      "sha256":  "0748fa002165ffd4f8f60001d0d29f82ad769efc23392b2ce0e7a5731d852f3e"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/tool/core/AtlasToolResult.java",
+                      "sha256":  "990c7e4373f82c942aab28f6d985056f6e4355e25452311e01b067ee1894df0b"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/tool/core/AtlasToolResultConverter.java",
+                      "sha256":  "fd18a43468f8b20074d41dc91e29cfe23dce73a7b7861a43db0d3787f8904815"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/tool/core/DefaultValueAspect.java",
+                      "sha256":  "0445a0f566600a30d40b1145bdef3681a4ce88656b0a2b3d396a4f08f4c47d26"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/tool/core/ToolInputSchemaBuilder.java",
+                      "sha256":  "881d1873da7f06739edb07681241665db9a83aecf25b3b19097a8c66494e257c"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/support/Batch5CoreAdapterChineseCommentContractTest.java",
+                      "sha256":  "3560c53c5d88678ec5c8e9b64069316a5a8285b2490baee009ccb7ca02b0f9de"
+                  },
+                  {
+                      "path":  "变更日志.md",
+                      "sha256":  "16d2219181c6223179113d2d3b2858ea6e594bfc4215b1d36d1bda2ffcf3870e"
+                  },
+                  {
+                      "path":  "开发路线图.md",
+                      "sha256":  "b0818bd472f61c14500442891bef8ae7f3bd2c06aa34df6f0a6b3b42d7847e9c"
+                  },
+                  {
+                      "path":  "docs/项目使命与当前记忆.md",
+                      "sha256":  "1595588321f6d3d923ee5b0c32d3cf3253a6ae0df66bb843fc7d3bee6e327d24"
+                  },
+                  {
+                      "path":  "docs/顶级Agent架构与技术学习地图.md",
+                      "sha256":  "035819cdc5ccf4bef917d3cc28ef266bbed6e26be1231dfff811d305250aaee9"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/当前恢复状态.md",
+                      "sha256":  "3382ae0b9fb5416b29e1da349d61b996f6e5f90281aabe37f26fdfe894493970"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_M5_85_21_CORE_ADAPTER_CHINESE_COMMENTS_20260612.md",
+                      "sha256":  "df4247b12ffcc17a27d5bac357d04ea143cb7e2012354fcc317a9c7520bcb60e"
+                  }
+              ]
+}

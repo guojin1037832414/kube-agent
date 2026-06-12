@@ -263,6 +263,17 @@ Batch 4 已补中文教学注释后的学习线：
 - financial analysis 只筛选账单/成本记录，不能把 userId、orgId、paymentId、approved、writeAllowed、releaseDecision 等字段混入 query。
 - 这类 helper 的共同原则是：只复制成熟 DTO 审阅过的字段，分页做限幅，布尔/数字做归一化，其他控制字段全部丢弃。
 
+### 8.5 Tool Core Adapter 支撑层
+
+学习重点：
+
+- `AtlasTool` 只是最小 Tool 接口形状，说明“候选业务参数 Map -> 结构化结果 Map”；它不是执行授权、HITL、audit、release 或 kube-manager token/orgId 来源。
+- legacy `AtlasToolCallback` 是 Spring AI 协议适配器，输入来自 LLM 生成的 JSON，输出给 Spring AI/ReAct 继续消费；它必须委托 `SafeToolExecutor`，不能直接调用 `BaseTool.execute`。
+- `ToolInputSchemaBuilder` 生成的 inputSchema 只是给 LLM 的字段提示。`required` 和 `aliases` 可以降低参数错误率，但不能替代受保护字段过滤、权限、HITL、审计或具体 Tool 校验。
+- `AtlasToolContext` 是早期 ToolContext 兼容模型，帮助理解“上下文对象”和“Tool 入参 Map”不同；它不能从前端、LLM、PlanStep 或 MCP 参数中恢复权限。
+- `DefaultValueAspect` 只补普通业务表单草稿字段。defaults.yml 不能生成或覆盖 token、orgId、userId、sessionId、HITL、audit、release、writeAllowed 等控制平面字段。
+- `AtlasToolResult` 和 `AtlasToolResultConverter` 是结果展示/转换契约。`success=true` 不能反向证明 HITL、audit、release 或后续写授权，转换器不能把失败改成成功，也不能透传 raw token/raw audit/raw prompt。
+
 ### 9. Multi-Agent / Expert Review
 
 学习重点：
@@ -283,6 +294,7 @@ Batch 4 已补中文教学注释后的学习线：
 - Batch 5 第二片：Tool 参数 schema、执行结果、执行来源、trace、意图分类、默认值补参和异常等支撑契约层。
 - Batch 5 第三片：query/path/body helper 的 kube-manager 参数收敛边界。
 - Batch 5 第四片：analysis/catalog query helper 的 GET-only 白名单与敏感只读边界。
+- Batch 5 第五片：Tool core adapter 层，包括 AtlasTool、legacy ToolCallback、inputSchema、ToolContext、默认值切面、ToolResult 和结果转换器。
 - Orchestrator hardening 第一片：Graph `tool_call` 入口守卫与 SSE 安全停止原因展示。
 
 待推进：
@@ -312,6 +324,6 @@ Batch 4 已补中文教学注释后的学习线：
 1. 读 `README.md` 和 `开发路线图.md`，确认当前项目边界。
 2. 读 Batch 1/2/3 已注释代码，理解身份、执行边界和 Agent 编排状态机。
 3. 读 Batch 4 已注释代码，理解 Memory/RAG/Audit/Replay/Eval 如何形成只读、脱敏、不可反向授权的证据链。
-4. 读 Batch 5 首批已注释代码，理解 API 响应、登录会话、Conversation 元数据、异步上下文和意图配置为什么也是安全边界。
+4. 读 Batch 5 已注释代码，理解 API 响应、登录会话、Conversation 元数据、异步上下文、意图配置、query helper 和 Tool core adapter 为什么也是安全边界。
 5. 继续 Batch 5 剩余支撑类。
 6. 每完成一个小切片，都把“代码、测试、文档、恢复记忆、Git 提交”作为一个完整闭环。
