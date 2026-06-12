@@ -751,6 +751,14 @@ public class AtlasOrchestrator {
                             );
                         }
 
+                        if ("delegate".equals(node)) {
+                            // 中文说明：delegate 子图返回的是专业 Agent 的展示结果或安全停止原因。
+                            // 安全边界：这里仅把已有 State 投影成 SSE content，不执行 Tool、不调用 LLM、
+                            // 不访问 kube-manager，也不把自然语言结果解释为 HITL/audit/release/write 成功证据。
+                            delegateDisplayContent(state::value)
+                                .ifPresent(content -> emit(emitter, "content", Map.of("content", content)));
+                        }
+
                         // ── M3.2: ReAct 节点结果推送（手写 ReAct 引擎执行结果）──
                         if ("react_node".equals(node) && !reactContentEmitted.get()) {
                             String reactAnswer = state.value("react_node_result")
@@ -901,6 +909,38 @@ public class AtlasOrchestrator {
         payload.put("requiredContext", suggestions != null ? suggestions : List.of());
         payload.put("content", buildClarificationContent(errorCode, suggestions));
         emit(emitter, "clarify", payload);
+    }
+
+    /**
+     * 从 delegate 节点 State 中提取前端可展示内容。
+     *
+     * <p>中文说明：delegate 节点可能返回 query/deploy/diag/rbac/storage/network 等专业 Agent 输出，
+     * 也可能因为目标 Agent 缺失、可信 orgId 缺失或子图异常而只返回 {@code answer}。这个 helper 只做
+     * 展示选择，保证用户能看到专业 Agent 结果或 fail-closed 原因。</p>
+     *
+     * <p>安全边界：delegate 内容不是 Tool 成功、HITL 确认、audit 回执、release gate 或写操作完成证明；
+     * 它只是 SSE 文本。真实 Tool 调用仍由 ToolCallback / SafeToolExecutor 在子图内部兜底校验。</p>
+     */
+    private Optional<String> delegateDisplayContent(Function<String, Optional<Object>> stateValue) {
+        String[] delegateResultKeys = {
+            "query_result",
+            "deploy_result",
+            "diag_result",
+            "rbac_result",
+            "storage_result",
+            "network_result",
+            "answer"
+        };
+        for (String key : delegateResultKeys) {
+            Optional<Object> value = stateValue.apply(key);
+            if (value.isPresent()) {
+                String content = String.valueOf(value.get());
+                if (!content.isBlank() && !"{}".equals(content)) {
+                    return Optional.of(content);
+                }
+            }
+        }
+        return Optional.empty();
     }
 
     private Optional<RuntimeIdentity> resolveRuntimeIdentity(HttpServletRequest request) {

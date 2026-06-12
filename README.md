@@ -37,6 +37,7 @@
 - Graph `react_node` 现在会把服务端 `traceId` 传入 ReAct `initialParams`，并在缺失可信 orgId 时于调用 LLM / Tool / kube-manager 前 fail-closed；ReAct 每轮 `Action.params` 仍只是候选业务字段。
 - Graph `execute_node` 现在会在单步 READ Plan 候选创建 `SafeToolExecutionRequest` 前确认可信 orgId；PlanStep 参数不能补租户上下文，缺失可信 orgId 会 fail-closed。
 - 旧 `atlasGraph` 的 `merge_result` 会优先保留已有 `final_answer`、ReAct 结果和 fail-closed `answer`，确保用户能看到最终回答或安全停止原因；这只是展示合并，不代表 Tool 成功。
+- 主 `supervisorGraph` 的 delegate 节点会把专业 Agent 输出或 delegate fail-closed 原因推成 SSE `content`；这只是展示投影，真实 Tool 调用仍必须通过 ToolCallback / SafeToolExecutor。
 - MCP 当前只导出 admin-only 只读 Manifest / governance，不开放 `tools/call` 运行时执行权；NIM/HPC/Slurm/BCM 这类二期域不会进入一期 MCP 导出清单。
 - kube-manager 是真实外部网络出口，默认连接 `http://localhost:8100`；业务 Tool 请求必须使用当前用户 Token，不能透明降级为 sysadmin。
 - 高风险写操作默认要求 ready durable audit prewrite；HITL 确认本身不等于可执行。
