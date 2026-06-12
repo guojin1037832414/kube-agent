@@ -14,6 +14,13 @@ import java.util.Map;
  * <p>The artifact is intentionally deterministic and non-mutating. It can be
  * attached to a Git review, but runtime code must not write the classpath
  * catalog directly.</p>
+ *
+ * <p>中文说明：这是 curation review 通过后的“补丁建议”，把候选 traceIds 转成 RFC6902 JSON Patch，
+ * 方便开发者在 Git 中审阅 {@code observability/eval-trace-sets.json} 应如何更新。</p>
+ *
+ * <p>安全边界：本 record 只生成 artifact，不执行文件写入，不调用 runtime catalog mutation，
+ * 不打开 CI blocking，不执行 eval/replay/Tool/MCP/LLM/RAG/kube-manager。即使 {@code readyForGitReview=true}，
+ * 也只是说明补丁可以进入人工 Git review，不等于 release authority。</p>
  */
 public record AgentEvalTraceSetCatalogPatchProposalArtifact(
     String schemaVersion,

@@ -1,0 +1,79 @@
+{
+    "milestone":  "M5.85-26",
+    "title":  "Eval trace curation Chinese comments",
+    "generatedAt":  "2026-06-12T23:07:26+08:00",
+    "files":  [
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentEvalTraceSetCatalogService.java",
+                      "sha256":  "7bafbf69ad44c049e800d196d726f457dfc8cedcae8921a405b8c85f59e98714"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentEvalTraceSetDefinition.java",
+                      "sha256":  "6d24c17a9fc1cf3306f7de20478d25cbc30dee785db6e04d5e93730fc3fc4eb2"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentEvalTraceSetCandidateDiscoveryService.java",
+                      "sha256":  "c55bbb68c4b5dfc65e2af7d2d57b9006ab76135e98006896b63eba1039241a0d"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentEvalTraceSetCandidate.java",
+                      "sha256":  "ef5a3fb507173984119112870bc76d11f26f654a9dcfd8270f301d565d4de1e2"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentEvalTraceSetCandidateDiscoveryResponse.java",
+                      "sha256":  "c6566894515c18ffcee718ca052b6f4e10edeeeef1980350d7154b15115cfd98"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentEvalTraceSetCurationReviewArtifact.java",
+                      "sha256":  "c9f46e9d025a971be5aaac6dac50cf3f15d0b39bf30eb42e6f580d355b24a97f"
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/observability/AgentEvalTraceSetCatalogPatchProposalArtifact.java",
+                      "sha256":  "fac0eb53ec1a76863d6b90ab583683f12d0e49ec3e36d80eaf700cc81250795c"
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/observability/Batch4EvalTraceCurationChineseCommentContractTest.java",
+                      "sha256":  "4072755d887b7ff04d6b49fa009aa1e93a9edcc1f1cd2cbe06b0d8ebf9349152"
+                  },
+                  {
+                      "path":  "变更日志.md",
+                      "sha256":  "f682256998256241fcc8cd1836f300a088d51cd43d574ba3177ad64042831a84"
+                  },
+                  {
+                      "path":  "开发路线图.md",
+                      "sha256":  "3c50349ef7f8f32d8f1df3ec6941168d3d5f796a82715c89c3c8cae0d43bff19"
+                  },
+                  {
+                      "path":  "docs/项目使命与当前记忆.md",
+                      "sha256":  "62f61cfec939b930b151804916c173c6d27054cf17e407f28470fe7668619d13"
+                  },
+                  {
+                      "path":  "docs/顶级Agent架构与技术学习地图.md",
+                      "sha256":  "e17e851a3f3bc830b08aabfa3b91f840a437da14ec64392640e52b46033ec3ca"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/变更日志.md",
+                      "sha256":  "f682256998256241fcc8cd1836f300a088d51cd43d574ba3177ad64042831a84"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/开发路线图.md",
+                      "sha256":  "3c50349ef7f8f32d8f1df3ec6941168d3d5f796a82715c89c3c8cae0d43bff19"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/项目使命与当前记忆.md",
+                      "sha256":  "62f61cfec939b930b151804916c173c6d27054cf17e407f28470fe7668619d13"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/顶级Agent架构与技术学习地图.md",
+                      "sha256":  "e17e851a3f3bc830b08aabfa3b91f840a437da14ec64392640e52b46033ec3ca"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/当前恢复状态.md",
+                      "sha256":  "73fd6a69da3da54d58c637f5a27868cc624ad4d262dc9926f9320716b8d0c13d"
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_M5_85_26_EVAL_TRACE_CURATION_CHINESE_COMMENTS_20260612.md",
+                      "sha256":  "1c93e119b02b294df1a99922d4df8176cfad7258fc95f7b1bdf216c410d5cb9f"
+                  }
+              ]
+}

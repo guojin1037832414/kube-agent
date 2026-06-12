@@ -11,6 +11,13 @@ import java.util.Map;
  *
  * <p>This is intentionally review-only. It evaluates candidate trace IDs against
  * the trace set's attached suite, but it never mutates the classpath catalog.</p>
+ *
+ * <p>中文说明：这是“候选 traceId 能否进入目录”的审阅产物。输入来自管理员提交的候选 traceIds，
+ * 先用 attached suite 做 deterministic gate，再输出 READY / REJECT 的审阅结论给前端和 Git review。</p>
+ *
+ * <p>安全边界：本 artifact 是 review-only，不修改 {@code eval-trace-sets.json}，不把候选 traceId
+ * 直接提升成 release gate，不执行 Tool/MCP/LLM/RAG/kube-manager，不写 audit/memory。只有通过人审、
+ * Git diff、CI gate bundle 和恢复记忆后，traceIds 才能成为版本化 evidence anchor。</p>
  */
 public record AgentEvalTraceSetCurationReviewArtifact(
     String schemaVersion,

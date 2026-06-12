@@ -7,6 +7,13 @@ import java.util.Map;
 
 /**
  * Admin-only redacted candidate discovery result for trace-set curation.
+ *
+ * <p>中文说明：这是候选发现接口的整体响应，告诉前端扫描了多少 redacted audit event、
+ * 找到多少 traceId 候选、哪些候选被推荐进入人工 review，以及 discoveryPolicy/副作用边界。</p>
+ *
+ * <p>安全边界：响应是 admin-only read model，不接受前端 traceId 写入 catalog，不运行 eval gate，
+ * 不执行 Tool/MCP/LLM/RAG/kube-manager，不写 audit/memory。candidateTraceIds 只是下一步
+ * curation-review 的输入建议，不是已发布 trace set。</p>
  */
 public record AgentEvalTraceSetCandidateDiscoveryResponse(
     String schemaVersion,

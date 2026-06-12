@@ -9,6 +9,14 @@ import java.util.Map;
  *
  * <p>The trace IDs are replay evidence anchors only. They are never Tool
  * arguments, kube-manager endpoints, or authorization material.</p>
+ *
+ * <p>中文说明：这个 record 描述一个可版本化的 Eval trace set：它属于哪个 suite、需要哪些
+ * reviewed redacted traceIds、有哪些 evidenceRequirements、以及当前 curationPolicy / privacy guarantees。
+ * 输出给 Eval 工作台、gate bundle 和人工审阅流程，用于回答“这个 trace set 是否已经有足够证据”。</p>
+ *
+ * <p>安全边界：traceIds 只能是脱敏 replay 证据锚点，不能携带 raw principal、raw org、raw conversation、
+ * raw endpoint、raw reason、raw parameter values，也不能被当作 Tool 参数、kube-manager path、HITL token、
+ * audit receipt、release authority 或 retrieval runtime 开关。</p>
  */
 public record AgentEvalTraceSetDefinition(
     String id,

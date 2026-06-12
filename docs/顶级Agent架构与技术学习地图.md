@@ -192,6 +192,7 @@ Plan/execute 学习补充：
 - Audit 应保留 redacted evidence，不泄露 raw principal、raw token、raw params、endpoint secret。
 - Replay / Eval 使用只读、确定性、脱敏证据，不能反向授权运行时执行。
 - 当前允许 admin-only deterministic replay/eval 读模型和部分 suite run/gate 入口；CI blocking、LLM eval、Memory/RAG retrieval eval runtime 必须等待 reviewed trace evidence 和 release gate。
+- Eval trace set catalog、candidate discovery、curation review 和 catalog patch proposal 是 release-gate evidence 的审阅链路。它们可以告诉管理员哪些 redacted replay traceId 值得审阅、如何生成 Git patch 建议，但不自动写 catalog、不执行 eval runtime、不打开 CI blocking，也不把 traceId 当成身份/租户/Tool/HITL/audit/release 权力。
 
 Batch 4 已补中文教学注释后的学习线：
 

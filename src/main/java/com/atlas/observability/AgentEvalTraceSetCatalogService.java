@@ -15,6 +15,16 @@ import java.util.Optional;
 
 /**
  * Loads versioned golden/red-team trace set metadata for deterministic eval gates.
+ *
+ * <p>中文说明：这是 Eval trace set 的目录加载与审阅编排服务。输入来自
+ * {@code classpath:observability/eval-trace-sets.json} 以及管理员显式传入的候选 traceId，
+ * 输出给 Observability / Eval 工作台，用于展示哪些 trace set 已定义、哪些候选证据可以进入
+ * 人工 Git review、以及 CI gate bundle 将如何 fail-closed。</p>
+ *
+ * <p>安全边界：本服务是 catalog/read-model/review-only 层，不直接写 classpath catalog，
+ * 不执行 eval runtime、不调用 Tool/MCP/LLM/RAG/kube-manager、不写 audit/memory，也不打开
+ * retrieval/vector/CI blocking 或 Phase 2 NIM/HPC/Slurm/BCM 权力。traceIds 是 redacted replay
+ * evidence anchor，不是用户身份、租户、Tool 参数、HITL token、audit receipt 或 release authority。</p>
  */
 @Service
 public class AgentEvalTraceSetCatalogService {
@@ -37,6 +47,10 @@ public class AgentEvalTraceSetCatalogService {
         return AgentEvalTraceSetCatalogResponse.of(CATALOG_SOURCE, definitions, privacyProof());
     }
 
+    /**
+     * 中文说明：按 traceSetId 查找版本化目录定义，供前端详情页、候选发现和 gate 预览使用。
+     * 安全边界：这里不会接受 caller 提供的 traceId 覆盖目录，也不会把目录命中解释为 release 通过。
+     */
     public Optional<AgentEvalTraceSetDefinition> findDefinition(String traceSetId) {
         String normalized = normalizeId(traceSetId);
         if (normalized.isBlank()) {
@@ -52,6 +66,11 @@ public class AgentEvalTraceSetCatalogService {
             .flatMap(definition -> gate(definition, request));
     }
 
+    /**
+     * 中文说明：生成整个 trace set catalog 的紧凑 gate bundle，供 CI 或前端读取“当前是否可发布”。
+     * 安全边界：bundle 是 artifact-only 证据包；即使未来 CI 读取它，也不能在这里执行 Tool、
+     * 写 catalog、调用 kube-manager 或把空 trace set 伪装成已 reviewed。
+     */
     public AgentEvalTraceSetGateBundleArtifact gateBundle(AgentEvalSuiteRequest request) {
         List<AgentEvalTraceSetGateArtifact> gates = definitions.stream()
             .map(definition -> gate(definition, request)
@@ -67,6 +86,11 @@ public class AgentEvalTraceSetCatalogService {
                 .map(gate -> AgentEvalTraceSetCurationReviewArtifact.from(definition, gate, CATALOG_SOURCE)));
     }
 
+    /**
+     * 中文说明：把通过 review-only gate 的候选 traceId 转成 RFC6902 JSON Patch 建议，方便人工 Git review。
+     * 安全边界：这里只生成补丁建议，不写 {@code eval-trace-sets.json}；真实目录提升必须由人审、Git diff、
+     * CI gate bundle 和恢复记忆共同完成，不能由运行时接口自动完成。
+     */
     public Optional<AgentEvalTraceSetCatalogPatchProposalArtifact> catalogPatchProposal(String traceSetId,
                                                                                         AgentEvalSuiteRequest request) {
         return findDefinition(traceSetId)
@@ -167,6 +191,10 @@ public class AgentEvalTraceSetCatalogService {
         return builtInDefinitions();
     }
 
+    /**
+     * 中文说明：当 classpath 资源不可读时返回保守内置目录，保证 Observability 页面仍能解释 gate 缺口。
+     * 安全边界：内置目录 traceIds 为空且 fail-closed；它只说明“需要 reviewed evidence”，不会生成假证据。
+     */
     private List<AgentEvalTraceSetDefinition> builtInDefinitions() {
         return List.of(
             definition(

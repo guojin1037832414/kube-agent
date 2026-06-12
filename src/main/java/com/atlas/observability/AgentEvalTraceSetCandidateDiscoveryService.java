@@ -20,6 +20,15 @@ import java.util.Set;
  *
  * <p>The service consumes only {@link AgentAuditQueryEvent}; it does not read raw
  * audit records, call kube-manager, execute Tools, or mutate trace-set catalog files.</p>
+ *
+ * <p>中文说明：本服务从 {@link AgentAuditQueryService} 的 redacted recentEvents 里聚合同一个
+ * traceId 的多条审计投影，给管理员推荐“可能值得进入 trace-set curation review”的候选锚点。
+ * 输入是已脱敏审计读模型，不是 raw audit；输出给 Eval 工作台的候选列表和 review endpoint。</p>
+ *
+ * <p>安全边界：候选发现是 read-only / recommendation-only，不写 catalog、不调用 curationReview、
+ * 不运行 eval、不执行 Tool、不访问 kube-manager、不调用 MCP/LLM/RAG、不写 audit/memory，也不打开
+ * retrieval/vector/CI blocking。推荐结果不是自动提升，必须继续经过 review-only gate、JSON Patch、
+ * 人工 Git review 和恢复记忆记录。</p>
  */
 @Service
 public class AgentEvalTraceSetCandidateDiscoveryService {
@@ -45,6 +54,10 @@ public class AgentEvalTraceSetCandidateDiscoveryService {
             .map(definition -> discover(definition, maxEvents));
     }
 
+    /**
+     * 中文说明：对指定 trace set 做有界扫描，避免 Observability 页面为了推荐候选而读取过多审计投影。
+     * 安全边界：扫描上限被固定在 {@link #MAX_EVENTS}，且只接受 W3C trace anchor；非法或敏感字符串会被丢弃。
+     */
     private AgentEvalTraceSetCandidateDiscoveryResponse discover(AgentEvalTraceSetDefinition definition,
                                                                  Integer maxEvents) {
         int boundedMaxEvents = boundMaxEvents(maxEvents);
@@ -129,6 +142,11 @@ public class AgentEvalTraceSetCandidateDiscoveryService {
     }
 
     private static final class CandidateAccumulator {
+        /**
+         * 中文说明：Accumulator 只在内存中汇总同一 traceId 的 redacted audit 投影，用于生成推荐理由。
+         * 安全边界：它只统计 phase/outcome/operationType/参数是否受保护等元数据，不读取 raw 参数值、
+         * raw endpoint、raw principal，也不触发任何 Tool 或外部调用。
+         */
         private final String traceId;
         private Instant firstSeenAt;
         private Instant lastSeenAt;
@@ -247,6 +265,10 @@ public class AgentEvalTraceSetCandidateDiscoveryService {
         }
 
         private Recommendation recommend(String traceSetId) {
+            /*
+             * 中文说明：推荐逻辑只决定“是否值得人工审阅”，不是自动加入目录。
+             * 安全边界：不同 trace set 的推荐条件是 deterministic metadata rule，不调用模型，也不执行 eval runtime。
+             */
             List<String> reasons = new ArrayList<>();
             boolean recommended;
             switch (safeText(traceSetId)) {
