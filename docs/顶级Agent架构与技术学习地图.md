@@ -42,6 +42,8 @@ Evidence side:
 
 先进技术策略：不盲目追新。OpenAI Responses/Agents、MCP runtime、A2A、OTel GenAI、GraphRAG、reranker、vector store、Spring AI 2、Spring Boot 4、Java 21/25 等都先进入官方来源审查、兼容矩阵、证据就绪、Vue 可视化和 release gate。
 
+详细学习入口：`docs/learning/以kube-agent为例的顶级Agent开发学习指南.md` 已扩展为技术专题精读手册，适合按 Java/Spring 控制平面、LLM/Tool Calling、Graph/ReAct/Plan、多 Agent、MCP、RAG、Eval/Observability、安全治理和测试质量门逐章学习。
+
 ## 核心模块学习
 
 ### 1. 身份与权限入口
