@@ -1,6 +1,6 @@
 # 以 kube-agent 为例的顶级 Agent 开发学习指南
 
-> 最后更新：2026-06-12
+> 最后更新：2026-06-13
 > 适用范围：Phase 1 顶级 Agent Core。NIM / HPC / Slurm / BCM 是 Phase 2 暂停域。
 
 ## 1. 学习目标
@@ -1000,5 +1000,211 @@ kube-agent 的对应防线：
 | RAG / Embedding | [Spring AI RAG](https://docs.spring.io/spring-ai/reference/api/retrieval-augmented-generation.html)、[Spring AI Vector Databases](https://docs.spring.io/spring-ai/reference/api/vectordbs.html)、[ONNX Runtime Java](https://onnxruntime.ai/docs/get-started/with-java.html)、[DJL Tokenizers](https://docs.djl.ai/master/extensions/tokenizers/index.html) |
 | 安全治理 | [OWASP LLM Top 10](https://owasp.org/www-project-top-10-for-large-language-model-applications/)、[NIST AI RMF](https://www.nist.gov/itl/ai-risk-management-framework)、[NIST AI RMF Resource Center](https://airc.nist.gov/airmf-resources/airmf/) |
 | 测试与质量 | [JUnit](https://docs.junit.org/current/user-guide/)、[AssertJ](https://assertj.github.io/doc/)、[Mockito](https://site.mockito.org/)、[ArchUnit](https://www.archunit.org/userguide/html/000_Index.html)、[Testcontainers](https://java.testcontainers.org/)、[JaCoCo](https://www.eclemma.org/jacoco/trunk/doc/maven.html)、[CycloneDX](https://cyclonedx.github.io/cyclonedx-maven-plugin/) |
+
+## 19. 技术知识点学习卡片
+
+本节把 kube-agent 已经用到或即将纳入治理的技术拆成学习卡片。每张卡片都按同一个问题来读：它解决什么问题、在 kube-agent 里对应什么代码、学习时最容易误解什么、应该从哪里读一手资料。
+
+### 19.1 Java / Maven / Spring Boot 控制平面
+
+| 知识点 | 详细解释 | kube-agent 中的落点 | 学习资料 |
+|---|---|---|---|
+| Java 17 | 当前主线使用的稳定 Java 基线。重点不是语法炫技，而是用 record、不可变对象、明确异常边界和类型系统减少 Agent 状态污染。Java 21/25 的虚拟线程、模式匹配等能力值得学习，但必须先进入兼容矩阵。 | `pom.xml` 的 `java.version`、大量 DTO record、Service 层显式 fail-closed。 | [Java 17 Language Updates](https://docs.oracle.com/en/java/javase/17/language/java-language-changes.html)、[Records](https://docs.oracle.com/en/java/javase/17/language/records.html) |
+| Maven | 负责依赖版本、生命周期、插件和质量门。顶级 Agent 的 Maven 不只是 `mvn package`，还要承载测试、覆盖率、静态分析、SBOM 和 JDK 版本约束。 | `pom.xml` 中 Spring AI BOM、JaCoCo、SpotBugs、CycloneDX、Enforcer。 | [Maven Lifecycle](https://maven.apache.org/guides/introduction/introduction-to-the-lifecycle.html)、[Maven Enforcer](https://maven.apache.org/enforcer/enforcer-rules/requireJavaVersion.html) |
+| Spring Boot | 应用控制平面：HTTP、配置、Actuator、自动装配、生命周期和测试支撑。它让 Agent 能像企业后端一样治理，而不是像脚本一样拼调用。 | Controller、Service、Config、Actuator、`spring-boot-starter-*`。 | [Spring Boot Reference](https://docs.spring.io/spring-boot/reference/index.html)、[Actuator](https://docs.spring.io/spring-boot/reference/actuator/index.html) |
+| Spring Validation | 把输入形状约束前移到边界层。它只能证明字段格式大致合规，不能证明调用方有权限，也不能证明 LLM 参数可信。 | `controller` 和 request DTO 的入参约束。 | [Validation](https://docs.spring.io/spring-framework/reference/core/validation/beanvalidation.html) |
+| Spring AOP | 适合横切关注点，例如默认值、审计、观测、保护性拦截。学习时要记住 AOP 不是安全捷径，真实授权仍应在显式服务边界。 | `DefaultValueAspect` 等支撑层。 | [Spring AOP](https://docs.spring.io/spring-framework/reference/core/aop.html) |
+
+当前官方 Spring AI Reference 已展示 2.0.0 线，但 kube-agent 主线仍以 `pom.xml` 中已经验证过的 Spring AI 1.1.x 为准。学习最新资料可以帮助理解方向，依赖升级必须另走官方版本审查、兼容矩阵、测试证据和恢复记忆。
+
+### 19.2 Spring Security / 身份 / 租户
+
+| 知识点 | 详细解释 | kube-agent 中的落点 | 学习资料 |
+|---|---|---|---|
+| Authentication | 回答“当前调用者是谁”。在 Agent 系统里，它必须来自服务端 session、Bearer token 或可信身份桥，不能来自 prompt、请求体或前端隐藏字段。 | `AuthTokenFilter`、`AgentPrincipal`、`SessionStore`。 | [Spring Security Authentication](https://docs.spring.io/spring-security/reference/servlet/authentication/index.html) |
+| Authorization | 回答“当前调用者能做什么”。认证通过不等于能调用 Tool、能写 kube-manager、能查看 observability 或能发布目录。 | `AgentSecurityConfig`、`@PreAuthorize`、admin-only Observability。 | [Spring Security Authorization](https://docs.spring.io/spring-security/reference/servlet/authorization/index.html) |
+| Principal | 服务端可信主体快照。它应该包含 userId、username、roles、orgId 等审计和权限需要的事实，但不能携带 raw token 给前端。 | `AgentPrincipal`、`AgentPrincipalResolver`。 | [Spring Security Servlet Architecture](https://docs.spring.io/spring-security/reference/servlet/architecture.html) |
+| Session | kube-agent 本地会话句柄。`ses_*` 是定位服务端内存状态的 key，不是 kube-manager token，也不是授权本身。 | `SessionStore`、`X-Session-Id` bridge。 | [Spring Security Sessions](https://docs.spring.io/spring-security/reference/servlet/authentication/session-management.html) |
+| Multi-tenant Boundary | orgId 是租户边界。它必须来自 kube-manager 响应、token 反查或服务端可信上下文，不能由 LLM/Plan/Tool params 声明。 | `UserPermissionContext`、`BaseTool.resolveOrganizationId(...)`。 | [Kubernetes Multi-tenancy](https://kubernetes.io/docs/concepts/security/multi-tenancy/) |
+
+读这组代码时要训练一个习惯：看到 `userId`、`orgId`、`role`、`token` 就问“它来自哪里”。如果答案是前端、LLM、Plan、ReAct Action、MCP caller 或普通 Map 参数，就必须降级为不可信候选。
+
+### 19.3 LLM / Tool Calling / Structured Output
+
+| 知识点 | 详细解释 | kube-agent 中的落点 | 学习资料 |
+|---|---|---|---|
+| ChatModel | 抽象模型调用，屏蔽不同厂商 API 差异。它负责产生文本或结构化候选结果，不负责生产系统授权。 | `brain`、`intent`、Spring AI OpenAI-compatible 接入。 | [Spring AI Chat Models](https://docs.spring.io/spring-ai/reference/api/chatmodel.html) |
+| Structured Output | 把模型输出解析成 Java 对象。它提高可解析性，但不能消除幻觉、注入或权限伪造。 | `BrainDecision`、意图分类结果、计划输出。 | [Spring AI Structured Output](https://docs.spring.io/spring-ai/reference/api/structured-output-converter.html)、[OpenAI Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs) |
+| Tool / Function Calling | 模型请求应用执行某个函数，真正执行发生在应用侧。Tool schema 是“模型该怎么填参数”的提示，不是“模型有权限”的证明。 | `ToolRegistry`、`AtlasToolCallback`、`SafeToolExecutor`。 | [Spring AI Tool Calling](https://docs.spring.io/spring-ai/reference/api/tools.html)、[OpenAI Function Calling](https://developers.openai.com/api/docs/guides/function-calling) |
+| Prompt Engineering | 通过 system/developer/user prompt 影响模型行为。它是质量工具，不是安全边界；恶意输入仍可能诱导模型输出伪造控制字段。 | Intent prompt、ReAct prompt、Plan prompt。 | [OpenAI Prompting](https://developers.openai.com/api/docs/guides/prompt-engineering)、[Spring AI Prompts](https://docs.spring.io/spring-ai/reference/api/prompt.html) |
+| Model Fallback | 模型失败、超时、返回无法解析时，要回到规则、fail-soft 或 fail-closed。生产 Agent 不能把模型不可用变成越权执行。 | `EmbeddingMatcher` fail-soft、`AtlasBrain` fallback、Graph fail-closed reason。 | [Spring AI Generic Model API](https://docs.spring.io/spring-ai/reference/api/generic-model.html) |
+
+这组技术的学习口诀是：LLM 负责“候选智能”，服务端负责“可信事实”。越是先进的模型输出格式，越不能跳过 `SafeToolExecutor`、HITL、audit、tenant 和 release gate。
+
+### 19.4 Graph / ReAct / Plan / 多 Agent
+
+| 知识点 | 详细解释 | kube-agent 中的落点 | 学习资料 |
+|---|---|---|---|
+| Graph | 把 Agent 流程表达成节点和边。它让状态转移可观察、可测试、可恢复，但边的选择不等于授权。 | `AtlasGraphConfig`、`supervisorGraph`、`atlasGraph`。 | [Spring AI Alibaba](https://github.com/alibaba/spring-ai-alibaba)、[Spring AI Alibaba Docs](https://java2ai.com/docs/quick-start) |
+| ReAct | Reason + Act：把思考、行动、观察拆开。学习价值是让工具调用过程可审计；风险是模型生成的 Action 容易被误当成可信命令。 | `react` 包、ReAct timeline、ReAct fail-closed。 | [ReAct Paper](https://arxiv.org/abs/2210.03629) |
+| Plan-and-Execute | 先计划，再执行。计划适合解释复杂任务，但 PlanStep 仍然是候选结构，不能携带可信 token/orgId/writeAllowed。 | `plan` 包、`execute_node` READ-only guard。 | [OpenAI Agents Orchestration](https://developers.openai.com/api/docs/guides/agents/orchestration) |
+| Supervisor / Delegate | Supervisor 决定走 direct answer、Tool、专业 Agent 或 fail-closed。delegate 文本只是展示或专家意见，不是权限转移。 | `AtlasOrchestrator`、delegate SSE display。 | [OpenAI Agents SDK](https://developers.openai.com/api/docs/guides/agents) |
+| Multi-Agent Review | 多专家可以审查安全、架构、测试、RAG、Kubernetes 等维度。当前应先落为 read model 和证据链，不急于开放 runtime handoff。 | `observability` 多专家审查读模型。 | [A2A Protocol](https://a2a-protocol.org/latest/specification/)、[OpenAI Agents Guardrails](https://developers.openai.com/api/docs/guides/agents/guardrails-approvals) |
+
+真正掌握这组技术，不是会画节点图，而是能指出每个节点的输入可信度、输出去向、失败语义、是否会触达 Tool、是否会写 audit/memory、是否可能越过租户边界。
+
+### 19.5 Tool 治理 / kube-manager HTTP 出口 / Resilience
+
+| 知识点 | 详细解释 | kube-agent 中的落点 | 学习资料 |
+|---|---|---|---|
+| Tool Registry | Tool 元数据目录，描述 name、description、风险级别、operationType、权限和 schema。它决定可见性和候选能力，不是最终执行许可。 | `ToolRegistry`。 | [Spring AI Tool Calling](https://docs.spring.io/spring-ai/reference/api/tools.html) |
+| Protected Params | 过滤调用方伪造的控制字段。token、orgId、userId、confirmed、auditReceipt、releaseDecision、writeAllowed 都不能来自 LLM/前端。 | `ProtectedToolParameterFilter`。 | [OWASP LLM01 Prompt Injection](https://genai.owasp.org/llmrisk/llm01-prompt-injection/) |
+| SafeToolExecutor | 真实 Tool 执行唯一边界。它重绑服务端身份、校验权限、应用 HITL/audit/release gate，再调用具体 Tool。 | `tool/execution`。 | 结合项目源码学习；外部可先读 Spring AI Tool Calling 和 OWASP LLM Top 10。 |
+| kube-manager HTTP Outlet | 触达 `8100` 的外部系统边界。读请求和写请求必须分级治理，尤其写请求需要幂等、审计、HITL、readback 和 release evidence。 | `KubeManagerHttpClient`、`NodeQueryTool`、8100 READ smoke。 | [Kubernetes API Concepts](https://kubernetes.io/docs/reference/using-api/api-concepts/)、[Kubernetes RBAC](https://kubernetes.io/docs/reference/access-authn-authz/rbac/) |
+| Resilience4j | 提供 retry、circuit breaker、bulkhead 等韧性能力。读请求可谨慎重试；写请求不能因为“提高成功率”就自动重试。 | `KubeManagerHttpResiliencePolicy`。 | [Resilience4j Guide](https://resilience4j.readme.io/docs/getting-started) |
+
+学习 Tool 时可以拿一个 GET Tool 做练习：先找它的 schema，再找 operationType，再看参数白名单和 path/query 编码，最后确认执行一定经过 `SafeToolExecutor`，而不是从 Graph/ReAct/Controller 直接调用 `BaseTool.execute(...)`。
+
+### 19.6 HITL / Audit / Release Gate
+
+| 知识点 | 详细解释 | kube-agent 中的落点 | 学习资料 |
+|---|---|---|---|
+| HITL | Human-in-the-loop，让高风险动作进入人工确认。但 HITL 只是必要门，不是充分授权，confirmToken 必须 owner-first 校验。 | `HITLController`、`HitlGuard`、`TimedDecisionCache`。 | [OpenAI Guardrails and Approvals](https://developers.openai.com/api/docs/guides/agents/guardrails-approvals) |
+| Audit | 记录谁、何时、对什么资源、以什么结果执行了什么动作。Agent audit 必须 redacted、typed、trace-linked，不能泄露 token/raw prompt。 | `audit` 包、durable JSONL sink、admin audit query。 | [Kubernetes Auditing](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/) |
+| Durable Prewrite | 高风险写操作执行前先写入准备证据。这样即使执行失败，也能解释尝试过什么、为什么被阻断或如何追责。 | `AgentAuditDurableSink#prewriteHighRisk(...)`。 | 结合项目源码学习；参考审计和 release engineering 思路。 |
+| Release Gate | 把上线权力从“开发者感觉可以”变成“证据满足条件”。它应汇总测试、reviewed trace、SBOM、审计、文档和人审。 | eval trace catalog、promotion workflow、catalog patch proposal。 | [OpenAI Evals](https://developers.openai.com/api/docs/guides/evals)、[NIST AI RMF](https://www.nist.gov/itl/ai-risk-management-framework) |
+| CI Blocking | 让评测失败阻断合并或发布。当前 kube-agent 仍关闭 CI blocking，因为 reviewed trace 和 gate bundle 还在补证据。 | Observability/Eval read models。 | [GitHub Actions](https://docs.github.com/actions)、[OpenAI Evaluation Best Practices](https://developers.openai.com/api/docs/guides/evals) |
+
+HITL、Audit、Release Gate 的关系可以记成：HITL 证明有人确认，Audit 证明系统留下证据，Release Gate 证明这类能力允许上线。三者不能互相替代。
+
+### 19.7 Memory / RAG / Embedding / VectorStore
+
+| 知识点 | 详细解释 | kube-agent 中的落点 | 学习资料 |
+|---|---|---|---|
+| Chat Memory | 保存对话摘要或上下文状态。它提升连续对话体验，但不能把用户提交的摘要直接当作事实或权限。 | `memory`、`ConversationSummaryMemoryStore`。 | [Spring AI Chat Memory](https://docs.spring.io/spring-ai/reference/api/chat-memory.html) |
+| RAG | 检索增强生成。工程重点是 source custody、权限、chunk、digest、citation、删除、租户隔离和 eval，而不是“接一个向量库”。 | `memoryrag` readiness / citation / digest / lifecycle read models。 | [Spring AI RAG](https://docs.spring.io/spring-ai/reference/api/retrieval-augmented-generation.html) |
+| Embedding | 把文本映射为向量。模型版本、tokenizer、维度、归一化方式变化都会影响检索结果。 | ONNX Runtime、DJL tokenizer 依赖；runtime prompt influence 未打开。 | [Spring AI Embedding Models](https://docs.spring.io/spring-ai/reference/api/embeddings.html)、[ONNX Runtime Java](https://onnxruntime.ai/docs/get-started/with-java.html) |
+| VectorStore | 保存向量并做相似度检索。生产场景必须处理 tenant filter、delete/export、索引重建、召回评测和敏感数据泄露。 | 当前仅做合同和 readiness，不绑定生产检索。 | [Spring AI Vector Databases](https://docs.spring.io/spring-ai/reference/api/vectordbs.html) |
+| Citation | 回答中引用来源。Citation 不是装饰，它让用户和管理员能回到 source/chunk/hash 验证事实来源。 | citation-source contract、source evidence digest。 | [OpenAI Citation Formatting](https://developers.openai.com/api/docs/guides/citation-formatting) |
+
+RAG 的学习顺序建议是：先学信息检索和 citation，再学 embedding/vector store，最后学 GraphRAG、reranker、agentic retrieval。否则很容易搭出一个“能召回文本但无法证明权限和来源”的系统。
+
+### 19.8 Observability / Tracing / Eval / Replay
+
+| 知识点 | 详细解释 | kube-agent 中的落点 | 学习资料 |
+|---|---|---|---|
+| TraceId | 关联一次请求的多段证据。它是观测锚点，不是身份、租户、授权、HITL token 或 release authority。 | `AgentTraceContext`、HTTP `traceparent`、SSE、audit、replay。 | [W3C Trace Context](https://www.w3.org/TR/trace-context/)、[OpenTelemetry Traces](https://opentelemetry.io/docs/concepts/signals/traces/) |
+| Micrometer Tracing | Spring 生态中的 tracing 门面，便于接入 OTel exporter。 | `micrometer-tracing-bridge-otel`、Observation publisher。 | [Micrometer Tracing](https://docs.micrometer.io/tracing/reference/index.html) |
+| OTel GenAI Semantic Conventions | OpenTelemetry 对 GenAI 调用、工具、模型、token 等语义的标准化方向。kube-agent 应逐步对齐，但不能泄露敏感 prompt/token。 | audit telemetry projection、未来 GenAI span 对齐。 | [OTel GenAI Semantic Conventions](https://opentelemetry.io/docs/specs/semconv/gen-ai/) |
+| Replay | 把一次 Agent 行为还原成 redacted 时间线，用于审计、教学和 eval 输入。 | `AgentReplayTimelineService`。 | 结合项目源码学习；参考 OpenAI tracing 和 OTel。 |
+| Eval | 把预期行为变成可重复检查。顶级 Agent 的 eval 要覆盖安全不变量、工具边界、RAG 证据、SSE 展示和 release gate。 | `observability` eval suite、trace set catalog、promotion workflow。 | [OpenAI Evals](https://developers.openai.com/api/docs/guides/evals)、[Spring AI Model Evaluation](https://docs.spring.io/spring-ai/reference/api/testing.html) |
+
+可观测不是“多打日志”。对 Agent 来说，真正有价值的是能解释：为什么命中这个 intent、为什么没有执行 Tool、参数在哪里被过滤、HITL 谁确认、audit 是否落盘、用户最终看到了什么。
+
+### 19.9 MCP / 协议互操作 / 外部工具生态
+
+| 知识点 | 详细解释 | kube-agent 中的落点 | 学习资料 |
+|---|---|---|---|
+| MCP Resources | 对外暴露可读取的上下文资源。安全重点是租户隔离、脱敏、权限和生命周期。 | 当前只读治理设想，runtime 未开放。 | [MCP Specification](https://modelcontextprotocol.io/specification/2025-06-18) |
+| MCP Prompts | 对外暴露可复用 prompt 模板。模板变量来源必须可控，否则会成为 prompt injection 放大器。 | 当前未开放 runtime prompt registry。 | [MCP Prompts](https://modelcontextprotocol.io/specification/2025-06-18/server/prompts) |
+| MCP Tools | 对外暴露可调用动作。`tools/list` 只是可见性，`tools/call` 才是执行面；两者必须分离治理。 | `mcp` manifest/governance admin-only read model；`tools/call` 关闭。 | [MCP Tools](https://modelcontextprotocol.io/specification/2025-06-18/server/tools)、[Spring AI MCP](https://docs.spring.io/spring-ai/reference/api/mcp/mcp-overview.html) |
+| External Agent / Connector | 外部 Agent 或连接器可能成为新的能力入口。接入前必须回答身份传递、审计、租户、失败补偿和数据泄露问题。 | 多 Agent compatibility/readiness 读模型。 | [OpenAI MCP and Connectors](https://developers.openai.com/api/docs/guides/tools-connectors-mcp) |
+| A2A / Handoff | Agent 间交接任务。它可以扩展专家能力，但绝不等于权限转移；接收方仍要重新证明身份、租户和执行边界。 | 一期仅证据和兼容性，不开放 runtime handoff。 | [A2A Protocol Specification](https://a2a-protocol.org/latest/specification/) |
+
+MCP 的学习重点是“协议让集成更标准，但不会自动让系统更安全”。kube-agent 当前只开放 admin-only manifest/governance，就是为了先学会如何安全地描述能力，再考虑如何安全地调用能力。
+
+### 19.10 测试 / 质量 / 供应链
+
+| 知识点 | 详细解释 | kube-agent 中的落点 | 学习资料 |
+|---|---|---|---|
+| JUnit | Java 测试主框架。Agent 项目中，JUnit 不只测功能，还要保护安全不变量和学习注释。 | `src/test/java`。 | [JUnit User Guide](https://docs.junit.org/current/user-guide/) |
+| AssertJ / Mockito | AssertJ 让断言更可读；Mockito 让外部依赖可替身。重点是验证“不该调用的东西没有被调用”。 | Service/Controller/Tool 测试。 | [AssertJ](https://assertj.github.io/doc/)、[Mockito](https://site.mockito.org/) |
+| ArchUnit | 用测试保护架构边界，例如禁止绕过 `SafeToolExecutor`、禁止 Controller 直接触达危险执行层。 | 已引入依赖，适合后续扩展。 | [ArchUnit User Guide](https://www.archunit.org/userguide/html/000_Index.html) |
+| Testcontainers | 让集成测试使用真实依赖容器。未来适合验证 vector store、数据库、消息队列等，但要避免默认测试依赖外部环境。 | 已引入 Spring Boot Testcontainers。 | [Testcontainers for Java](https://java.testcontainers.org/) |
+| JaCoCo / SpotBugs / CycloneDX | 覆盖率、静态分析和 SBOM。它们不替代代码审查，但能给 release gate 提供客观证据。 | Maven plugins、质量 profile。 | [JaCoCo](https://www.eclemma.org/jacoco/trunk/doc/maven.html)、[SpotBugs Maven Plugin](https://spotbugs.github.io/spotbugs-maven-plugin/)、[CycloneDX Maven Plugin](https://cyclonedx.github.io/cyclonedx-maven-plugin/) |
+| OWASP / NIST | OWASP 给常见 LLM 风险分类，NIST AI RMF 给治理框架。项目应把这些框架落成测试、文档、read model 和 release gate。 | Prompt injection、excessive agency、sensitive information、governance docs。 | [OWASP LLM Top 10](https://owasp.org/www-project-top-10-for-large-language-model-applications/)、[NIST AI RMF](https://www.nist.gov/itl/ai-risk-management-framework) |
+
+测试学习建议：每读一个测试，不只看断言成功，还要写下它保护了哪个安全事实。例如“Tool schema 不是权限系统”“conversationId 不是授权”“traceId 不是身份”“readyForGitReview 不是 release authority”。
+
+## 20. 源码精读路线：从一次聊天请求学完整 Agent
+
+这一节适合你真正打开 IDE，沿着调用链读代码。每一步都不是孤立文件，而是一个知识点入口。
+
+| 步骤 | 先读哪里 | 要理解什么 | 能力验收 |
+|---:|---|---|---|
+| 1 | `AgentSecurityConfig`、`AuthTokenFilter` | 请求如何变成可信 `Authentication`。 | 能说明匿名、session、Bearer 的处理差异。 |
+| 2 | `AgentPrincipalResolver`、`UserPermissionContext` | 服务端如何恢复 user/org/token 快照。 | 能指出为什么请求体 orgId 不可信。 |
+| 3 | `AtlasOrchestrator` | 聊天请求如何进入 SSE、Graph、Brain、ReAct。 | 能画出 `/chat/stream` 的主链路。 |
+| 4 | `AtlasBrain`、`intent` 包 | LLM、规则、embedding 如何产生候选 intent。 | 能解释 intent confidence 为什么不是权限。 |
+| 5 | `AtlasGraphConfig` | Graph 节点如何路由 direct/tool/delegate/react/plan。 | 能指出每个节点的 fail-closed 输出。 |
+| 6 | `react`、`plan` 包 | ReAct Action 和 PlanStep 如何被解析。 | 能说明 Action.params 为什么不能带 token/orgId。 |
+| 7 | `ToolRegistry`、`ProtectedToolParameterFilter` | Tool 可见性和参数过滤如何工作。 | 能列出受保护字段。 |
+| 8 | `SafeToolExecutor` | 真实 Tool 执行前的最终校验。 | 能说明 HITL/audit/release 与 Tool 权限的顺序。 |
+| 9 | `BaseTool`、`KubeManagerHttpClient` | 如何触达 kube-manager 8100。 | 能区分 READ retry 和 WRITE no-auto-retry。 |
+| 10 | `audit`、`observability` | 结果如何进入审计、replay、eval、read model。 | 能把一次行为还原成证据链。 |
+| 11 | `memoryrag`、`mcp` | 为什么这些高级能力当前多为合同和治理面。 | 能解释为什么 runtime 仍关闭。 |
+| 12 | `src/test/java` | 测试如何保护安全不变量和中文教学注释。 | 能为新切片写 focused test 和 source marker test。 |
+
+读源码时建议做一张表，列出每个变量的“可信等级”：
+
+| 可信等级 | 来源 | 允许用途 |
+|---|---|---|
+| 服务端可信 | Spring Security、SessionStore、kube-manager token 反查、durable audit、HITL 服务端 marker。 | 授权、审计、Tool 执行上下文。 |
+| 审阅后可信 | reviewed redacted trace、human Git review、release gate artifact。 | 发布证据、回归评测、学习材料。 |
+| 候选输入 | 用户文本、前端字段、LLM JSON、ReAct Action、PlanStep、MCP caller input。 | 语义理解、普通业务参数候选。 |
+| 展示输出 | SSE content、Workbench card、UI steps、summary。 | 给用户或管理员理解，不证明执行成功。 |
+
+## 21. 官方文档精读顺序
+
+如果你想系统学习，不建议按链接列表随便点。推荐按下面顺序精读，每一轮都回到 kube-agent 找对应代码。
+
+1. 后端基础：读 [Spring Boot Reference](https://docs.spring.io/spring-boot/reference/index.html) 的 Web、Configuration、Actuator，再读 [Spring Security Reference](https://docs.spring.io/spring-security/reference/index.html) 的 Authentication、Authorization、Session Management。
+2. LLM 应用基础：读 [Spring AI Introduction](https://docs.spring.io/spring-ai/reference/index.html)、[Chat Client](https://docs.spring.io/spring-ai/reference/api/chatclient.html)、[Tool Calling](https://docs.spring.io/spring-ai/reference/api/tools.html)、[Structured Output](https://docs.spring.io/spring-ai/reference/api/structured-output-converter.html)。
+3. Agent 编排：读 [OpenAI Agents SDK](https://developers.openai.com/api/docs/guides/agents)、[Orchestration](https://developers.openai.com/api/docs/guides/agents/orchestration)、[Guardrails](https://developers.openai.com/api/docs/guides/agents/guardrails-approvals)，再对照 `AtlasOrchestrator`、Graph、ReAct、Plan。
+4. 外部系统边界：读 [Kubernetes API Concepts](https://kubernetes.io/docs/reference/using-api/api-concepts/)、[RBAC Good Practices](https://kubernetes.io/docs/concepts/security/rbac-good-practices/)、[Kubernetes Auditing](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/)，再对照 kube-manager HTTP outlet。
+5. RAG 与记忆：读 [Spring AI RAG](https://docs.spring.io/spring-ai/reference/api/retrieval-augmented-generation.html)、[Vector Databases](https://docs.spring.io/spring-ai/reference/api/vectordbs.html)、[Chat Memory](https://docs.spring.io/spring-ai/reference/api/chat-memory.html)，再对照 `memoryrag` 的合同为何先于 runtime。
+6. MCP 与互操作：读 [MCP Specification](https://modelcontextprotocol.io/specification/2025-06-18)、[MCP Tools](https://modelcontextprotocol.io/specification/2025-06-18/server/tools)、[Spring AI MCP](https://docs.spring.io/spring-ai/reference/api/mcp/mcp-overview.html)，再对照当前 manifest-only 设计。
+7. 可观测与评测：读 [OpenTelemetry Docs](https://opentelemetry.io/docs/)、[OTel GenAI Semantic Conventions](https://opentelemetry.io/docs/specs/semconv/gen-ai/)、[OpenAI Tracing](https://openai.github.io/openai-agents-python/tracing/)、[OpenAI Evals](https://developers.openai.com/api/docs/guides/evals)，再对照 replay/eval/observability。
+8. 安全治理：读 [OWASP LLM Top 10](https://owasp.org/www-project-top-10-for-large-language-model-applications/)、[NIST AI RMF](https://www.nist.gov/itl/ai-risk-management-framework)，再把每个风险映射到 kube-agent 的代码、测试、文档和 release gate。
+9. 工程质量：读 [JUnit](https://docs.junit.org/current/user-guide/)、[AssertJ](https://assertj.github.io/doc/)、[Mockito](https://site.mockito.org/)、[ArchUnit](https://www.archunit.org/userguide/html/000_Index.html)、[Testcontainers](https://java.testcontainers.org/)、[CycloneDX](https://cyclonedx.github.io/cyclonedx-maven-plugin/)，再写一个小切片完成闭环。
+
+每读完一个主题，都要回答四个问题：这个技术给 Agent 带来什么能力、它新增了什么风险、kube-agent 当前是否已经打开 runtime、如果要打开还缺什么证据。
+
+## 22. 新技术采纳规则：学习最新，不盲目上主干
+
+顶级 Agent 必须跟进新技术，但“学习最新”和“主干启用”之间要有闸门。kube-agent 后续引入 Java 21/25、Spring Boot 4、Spring AI 2、MCP runtime、A2A handoff、GraphRAG、reranker、LLM-as-judge、CI blocking、真实写 Tool 时，都应走下面流程：
+
+1. 官方来源确认：只从官方文档、规范、发布说明或项目仓库读取能力边界。
+2. 当前版本对比：说明当前 `pom.xml` 和主线实现是什么，不能假设已经升级。
+3. 兼容矩阵：列出 JDK、Spring Boot、Spring AI、Spring AI Alibaba、测试框架、部署环境的兼容关系。
+4. 安全边界设计：明确是否会调用 Tool/MCP/kube-manager/LLM/外部网络，是否会写 audit/memory，是否会影响 release。
+5. Read model 先行：先做 admin-only/read-only 合同或 readiness，让前端和学习文档可见。
+6. Focused test：写单元测试、契约测试、source marker test，必要时补 ArchUnit。
+7. Reviewed trace：用脱敏轨迹证明高风险链路没有回归。
+8. Release gate：把是否允许启用变成可审查证据，而不是口头决定。
+9. 恢复记忆：更新 `codex-memory/kube-agent/current`，保证新会话能继续。
+10. 小步提交：每个可审查切片提交推送，避免大爆炸式变更。
+
+这条规则本身也是学习重点。很多 Agent 项目失败不是因为技术不够新，而是把新能力绕过了身份、租户、审计、评测和恢复链路。
+
+## 23. 学习练习任务库
+
+下面这些练习适合边学边做，每个练习都能映射到一个真实后端切片。
+
+| 难度 | 练习 | 目标 |
+|---|---|---|
+| 入门 | 画出 `/api/agent/chat/stream` 的请求生命线。 | 理解 Controller、Security、Orchestrator、Graph、SSE 的关系。 |
+| 入门 | 给一个 DTO 写中文教学注释。 | 训练“输入来源、输出去向、不能做什么”的注释风格。 |
+| 入门 | 阅读一个 source marker test。 | 理解为什么注释也能成为学习项目的契约。 |
+| 进阶 | 审查一个 READ Tool。 | 判断 schema、参数过滤、orgId 来源、HTTP path/query 是否安全。 |
+| 进阶 | 给 Graph fail-closed 补一个测试。 | 理解编排节点不能隐式执行高风险动作。 |
+| 进阶 | 为 Memory/RAG 新增一个只读 readiness 字段。 | 学会先定义合同，再考虑 runtime。 |
+| 进阶 | 为 MCP manifest 增加一个安全 proof 字段。 | 学会区分 tools/list 和 tools/call。 |
+| 高级 | 设计一个写 Tool 上线证据包。 | 串联 HITL、durable audit、idempotency、readback、release gate。 |
+| 高级 | 设计一个 reviewed redacted trace fixture intake contract。 | 把 eval trace 从运行轨迹变成可审阅、可回归的发布证据。 |
+| 高级 | 写一个 ArchUnit 规则草案。 | 防止未来代码绕过 `SafeToolExecutor` 或直接调用 kube-manager 写接口。 |
+| 高级 | 做一次官方版本兼容审查。 | 学会把 Java/Spring/Spring AI/MCP 的新版本变成证据，而不是冲动升级。 |
+
+完成练习时不要只提交代码，还要同步更新文档和恢复记忆。这个项目的学习目标不是“我会写一个功能”，而是“我能证明这个功能为什么安全、如何测试、如何恢复、如何教学”。
 
 最后提醒一句：资料越新，越不能直接变成主干依赖或运行时开关。kube-agent 的路线是先把新技术变成“可解释的合同、测试、文档、读模型和恢复记忆”，再用 reviewed trace、eval gate 和 release evidence 决定是否进入运行时。

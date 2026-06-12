@@ -1,6 +1,6 @@
 ﻿# kube-agent 顶级 Agent 架构与技术点学习地图
 
-> 最后更新：2026-06-12
+> 最后更新：2026-06-13
 > 这个文件是长期学习地图，不是历史流水账。旧波次细节保留在 Git 历史和 `codex-memory` 中。
 
 ## 一句话架构
@@ -42,7 +42,7 @@ Evidence side:
 
 先进技术策略：不盲目追新。OpenAI Responses/Agents、MCP runtime、A2A、OTel GenAI、GraphRAG、reranker、vector store、Spring AI 2、Spring Boot 4、Java 21/25 等都先进入官方来源审查、兼容矩阵、证据就绪、Vue 可视化和 release gate。
 
-详细学习入口：`docs/learning/以kube-agent为例的顶级Agent开发学习指南.md` 已扩展为技术专题精读手册，适合按 Java/Spring 控制平面、LLM/Tool Calling、Graph/ReAct/Plan、多 Agent、MCP、RAG、Eval/Observability、安全治理和测试质量门逐章学习。
+详细学习入口：`docs/learning/以kube-agent为例的顶级Agent开发学习指南.md` 已扩展为技术专题精读手册，并在 M5.85-29 继续加入技术知识卡片、源码精读路线、官方文档精读顺序、新技术采纳规则和练习任务库，适合按 Java/Spring 控制平面、LLM/Tool Calling、Graph/ReAct/Plan、多 Agent、MCP/A2A、RAG、Eval/Observability、安全治理和测试质量门逐章学习。
 
 ## 核心模块学习
 
