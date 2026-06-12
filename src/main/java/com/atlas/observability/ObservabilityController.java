@@ -26,6 +26,14 @@ import java.util.Optional;
  * <p>生产级指标仍通过 Spring Boot Actuator/Micrometer 暴露；本接口只返回 Atlas 维度的摘要快照，
  * 便于前端状态页或人工排障快速确认指标链路已经工作。</p>
  *
+ * <p>中文说明：这个 Controller 是顶级 Agent 的 admin-only 控制面入口，负责把 Memory/RAG、
+ * durable audit、replay、eval、kube-manager outlet 和前端 workbench 的只读证据组织成稳定 API。
+ * 它本身不执行 Tool、不调用 MCP、不访问 kube-manager、不调用 LLM，也不改变 prompt。</p>
+ *
+ * <p>安全边界：这里暴露的是诊断/治理/学习材料，不是运行时授权面。所有入口都要经过管理员校验；
+ * eval、replay、RAG contract 和 release gate contract 只说明证据状态，不授予 release authority，
+ * 也不能绕过 SafeToolExecutor、HITL、审计预写或外部系统权限。</p>
+ *
  * @author Atlas Team
  * @since 3.1.0-M5.20
  */
@@ -367,7 +375,12 @@ public class ObservabilityController {
         return ResponseEntity.ok(ApiResponse.ok(vueReadinessControlPlaneService.controlPlane()));
     }
 
-    /** 构建 Memory/RAG 学习层就绪契约，不执行检索、不调用向量库。 */
+    /**
+     * 构建 Memory/RAG 学习层就绪契约。
+     *
+     * <p>中文说明：admin-only，只读取摘要记忆 store 的有限统计和合同状态；不执行检索、
+     * 不调用向量库、不调用 LLM/Tool/MCP/kube-manager，也不把摘要记忆变成 prompt 权威。</p>
+     */
     @GetMapping("/memory-rag/readiness")
     @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
     public ResponseEntity<ApiResponse<AgentMemoryRagReadinessResponse>> memoryRagReadiness() {
@@ -378,7 +391,12 @@ public class ObservabilityController {
         return ResponseEntity.ok(ApiResponse.ok(memoryRagReadinessService.readiness()));
     }
 
-    /** 构建 Memory/RAG 引用与来源契约，不执行检索、不改变 prompt。 */
+    /**
+     * 构建 Memory/RAG 引用与来源契约。
+     *
+     * <p>安全边界：这是只读合同视图，不执行检索、不改变 prompt、不写 memory，
+     * 不调用向量库、LLM、Tool、MCP 或 kube-manager。</p>
+     */
     @GetMapping("/memory-rag/citation-source-contract")
     @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
     public ResponseEntity<ApiResponse<AgentMemoryRagCitationSourceContractResponse>> memoryRagCitationSourceContract() {
@@ -389,7 +407,13 @@ public class ObservabilityController {
         return ResponseEntity.ok(ApiResponse.ok(memoryRagCitationSourceContractService.contract()));
     }
 
-    /** Build the Memory/RAG source evidence digest contract without ingestion or retrieval runtime binding. */
+    /**
+     * 构建 Memory/RAG 来源证据摘要合同。
+     *
+     * <p>中文说明：admin-only，只对 synthetic sample 做本地 SHA-256 digest，用来证明来源、
+     * 片段、租户、ACL、脱敏和保留策略的证据形状稳定。它不执行摄取、不执行检索、
+     * 不调用向量库、LLM、Tool、MCP 或 kube-manager，也不改变 prompt。</p>
+     */
     @GetMapping("/memory-rag/source-evidence-digest-contract")
     @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
     public ResponseEntity<ApiResponse<AgentMemoryRagSourceEvidenceDigestContractResponse>> memoryRagSourceEvidenceDigestContract() {
@@ -400,7 +424,12 @@ public class ObservabilityController {
         return ResponseEntity.ok(ApiResponse.ok(memoryRagSourceEvidenceDigestContractService.contract()));
     }
 
-    /** Describe durable Memory/RAG lifecycle evidence before any persistent runtime is bound. */
+    /**
+     * 描述 durable Memory/RAG 生命周期合同。
+     *
+     * <p>中文说明：这是未来持久记忆上线前的只读治理材料，不绑定持久化运行时，
+     * 不写 memory、不导出原文、不授予跨租户复用能力。</p>
+     */
     @GetMapping("/memory-rag/durable-memory-lifecycle-contract")
     @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
     public ResponseEntity<ApiResponse<AgentMemoryRagDurableMemoryLifecycleContractResponse>> memoryRagDurableMemoryLifecycleContract() {
@@ -411,7 +440,12 @@ public class ObservabilityController {
         return ResponseEntity.ok(ApiResponse.ok(memoryRagDurableMemoryLifecycleContractService.contract()));
     }
 
-    /** Describe Memory/RAG eval gates before any retrieval evidence can influence prompts. */
+    /**
+     * 描述 Memory/RAG eval gate 合同。
+     *
+     * <p>安全边界：当前只发布合同状态，不运行 eval、不执行检索、不允许检索证据影响 prompt；
+     * 它也不是 release authority。</p>
+     */
     @GetMapping("/memory-rag/eval-gate-contract")
     @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
     public ResponseEntity<ApiResponse<AgentMemoryRagEvalGateContractResponse>> memoryRagEvalGateContract() {
@@ -422,7 +456,12 @@ public class ObservabilityController {
         return ResponseEntity.ok(ApiResponse.ok(memoryRagEvalGateContractService.contract()));
     }
 
-    /** Describe Memory/RAG eval-suite binding before any eval runtime or retrieval runtime is bound. */
+    /**
+     * 描述 Memory/RAG eval-suite 绑定合同。
+     *
+     * <p>中文说明：只说明未来 trace set、eval suite 与 RAG 证据之间如何绑定，
+     * 不启动 eval runtime，也不绑定 retrieval runtime。</p>
+     */
     @GetMapping("/memory-rag/eval-suite-binding-contract")
     @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
     public ResponseEntity<ApiResponse<AgentMemoryRagEvalSuiteBindingContractResponse>> memoryRagEvalSuiteBindingContract() {
@@ -433,7 +472,11 @@ public class ObservabilityController {
         return ResponseEntity.ok(ApiResponse.ok(memoryRagEvalSuiteBindingContractService.contract()));
     }
 
-    /** Describe Memory/RAG trace-set curation gaps before reviewed trace IDs are promoted. */
+    /**
+     * 描述 Memory/RAG trace-set 策展缺口。
+     *
+     * <p>安全边界：只输出 reviewed trace 晋升前的缺口，不接收任意 trace 作为可信 RAG 证据。</p>
+     */
     @GetMapping("/memory-rag/trace-set-curation-contract")
     @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
     public ResponseEntity<ApiResponse<AgentMemoryRagTraceSetCurationContractResponse>> memoryRagTraceSetCurationContract() {
@@ -444,7 +487,11 @@ public class ObservabilityController {
         return ResponseEntity.ok(ApiResponse.ok(memoryRagTraceSetCurationContractService.contract()));
     }
 
-    /** Build the Vue-ready Memory/RAG trace-set curation workbench without runtime actions. */
+    /**
+     * 构建 Vue 可渲染的 Memory/RAG trace-set 策展工作台总览。
+     *
+     * <p>中文说明：只读前端视图，不执行运行时动作，不修改 catalog，不写 memory。</p>
+     */
     @GetMapping("/memory-rag/workbench/trace-set-curation/overview")
     @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
     public ResponseEntity<ApiResponse<AgentMemoryRagTraceSetCurationWorkbenchOverviewResponse>> memoryRagTraceSetCurationWorkbenchOverview() {
@@ -455,7 +502,11 @@ public class ObservabilityController {
         return ResponseEntity.ok(ApiResponse.ok(memoryRagTraceSetCurationWorkbenchOverviewService.overview()));
     }
 
-    /** Publish the Memory/RAG reviewed trace-evidence intake manifest without accepting trace IDs. */
+    /**
+     * 发布 Memory/RAG reviewed trace-evidence 接入清单。
+     *
+     * <p>安全边界：该入口不接受调用方 traceId，不提升 trace set，也不把候选 evidence 写入 prompt。</p>
+     */
     @GetMapping("/memory-rag/workbench/trace-set-curation/review-manifest")
     @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
     public ResponseEntity<ApiResponse<AgentMemoryRagReviewedTraceEvidenceManifestResponse>> memoryRagReviewedTraceEvidenceManifest() {
@@ -543,6 +594,12 @@ public class ObservabilityController {
         return ResponseEntity.ok(ApiResponse.ok(kubeManagerHttpOutletGovernanceWorkbenchOverviewService.overview()));
     }
 
+    /**
+     * 查询 Agent 观测快照。
+     *
+     * <p>中文说明：admin-only，只聚合 metrics 和 audit 的脱敏摘要；不执行 Tool、不重放请求、
+     * 不访问 kube-manager，也不暴露原始参数值。</p>
+     */
     @GetMapping("/snapshot")
     @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> snapshot() {
@@ -561,7 +618,12 @@ public class ObservabilityController {
         )));
     }
 
-    /** 查询脱敏审计索引元信息。 */
+    /**
+     * 查询脱敏审计索引元信息。
+     *
+     * <p>中文说明：admin-only，只返回 durable audit/read model 的能力与限制，
+     * 包括是否 redacted-only、扫描上限和 retention/export 元数据。</p>
+     */
     @GetMapping("/audit/index")
     @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> auditIndex() {
@@ -572,7 +634,12 @@ public class ObservabilityController {
         return ResponseEntity.ok(ApiResponse.ok(auditQueryService.indexMetadata()));
     }
 
-    /** 按 auditId 查询单条脱敏审计事件。 */
+    /**
+     * 按 auditId 查询单条脱敏审计事件。
+     *
+     * <p>安全边界：只读 redacted audit，不恢复 raw principal、raw reason、raw endpoint
+     * 或原始参数值，也不触发重新执行。</p>
+     */
     @GetMapping("/audit/id/{auditId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
     public ResponseEntity<ApiResponse<AgentAuditQueryResponse>> auditByAuditId(@PathVariable String auditId) {
@@ -583,7 +650,11 @@ public class ObservabilityController {
         return ResponseEntity.ok(ApiResponse.ok(auditQueryService.findByAuditId(auditId)));
     }
 
-    /** 按 traceId 查询脱敏审计时间线。 */
+    /**
+     * 按 traceId 查询脱敏审计时间线。
+     *
+     * <p>中文说明：这是 admin-only 诊断读接口，给 replay/eval 提供证据，不代表 Tool 执行授权。</p>
+     */
     @GetMapping("/audit/trace/{traceId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
     public ResponseEntity<ApiResponse<AgentAuditQueryResponse>> auditByTraceId(@PathVariable String traceId,
@@ -595,7 +666,12 @@ public class ObservabilityController {
         return ResponseEntity.ok(ApiResponse.ok(auditQueryService.findByTraceId(traceId, limit)));
     }
 
-    /** 鎸?traceId 鏌ヨ鍓嶇鍙洖鏀剧殑鑴辨晱 Agent timeline銆?*/
+    /**
+     * 按 traceId 查询前端可回放的脱敏 Agent timeline。
+     *
+     * <p>安全边界：replay 只是只读证据时间线，不重新执行 Tool/MCP/kube-manager，
+     * 不恢复原始 prompt、reason 或参数值，也不改变运行时状态。</p>
+     */
     @GetMapping("/replay/trace/{traceId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
     public ResponseEntity<ApiResponse<AgentReplayTimelineResponse>> replayByTraceId(@PathVariable String traceId,
@@ -607,7 +683,12 @@ public class ObservabilityController {
         return ResponseEntity.ok(ApiResponse.ok(replayTimelineService.traceTimeline(traceId, limit)));
     }
 
-    /** Evaluate redacted replay evidence for a trace. */
+    /**
+     * 对单条 trace 的脱敏 replay evidence 做确定性评测。
+     *
+     * <p>中文说明：eval 只读 redacted replay evidence，不调用 LLM、Tool、MCP 或 kube-manager；
+     * 结果用于学习、回归和治理，不参与 Tool 放行，也不授予 release authority。</p>
+     */
     @GetMapping("/eval/trace/{traceId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
     public ResponseEntity<ApiResponse<AgentEvalReportResponse>> evalByTraceId(@PathVariable String traceId,
@@ -619,7 +700,12 @@ public class ObservabilityController {
         return ResponseEntity.ok(ApiResponse.ok(evalReportService.evaluateTrace(traceId, limit)));
     }
 
-    /** Evaluate a deterministic release-gate style suite from redacted replay evidence. */
+    /**
+     * 基于脱敏 replay evidence 评测一组 trace。
+     *
+     * <p>安全边界：这里的 release-gate style 只是确定性报告形状，不等于真实发布授权。
+     * 它不执行外部调用、不修改 catalog、不写审计，也不授予 release authority。</p>
+     */
     @PostMapping("/eval/suite")
     @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
     public ResponseEntity<ApiResponse<AgentEvalSuiteResponse>> evalSuite(@RequestBody(required = false) AgentEvalSuiteRequest request) {
@@ -652,7 +738,11 @@ public class ObservabilityController {
         )));
     }
 
-    /** List built-in deterministic eval suites that CI or the frontend can run with trace evidence. */
+    /**
+     * 列出内置确定性 eval suite。
+     *
+     * <p>中文说明：这是只读目录视图，CI 或前端可以据此知道有哪些套件，但不会自动运行或放行发布。</p>
+     */
     @GetMapping("/eval/suites")
     @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
     public ResponseEntity<ApiResponse<AgentEvalSuiteCatalogResponse>> evalSuites() {
@@ -663,7 +753,12 @@ public class ObservabilityController {
         return ResponseEntity.ok(ApiResponse.ok(evalSuiteCatalogService.catalog()));
     }
 
-    /** Run a named deterministic eval suite using caller-provided redacted trace anchors. */
+    /**
+     * 运行已开放的命名确定性 eval suite。
+     *
+     * <p>安全边界：仅允许 runtimeExecutionAllowed 的 suite 运行；未开放的 suite fail-closed。
+     * 输入 trace 只是脱敏证据锚点，不是 prompt 权威，也不是 release authority。</p>
+     */
     @PostMapping("/eval/suites/{suiteId}/run")
     @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
     public ResponseEntity<ApiResponse<AgentEvalSuiteRunResponse>> runEvalSuite(@PathVariable String suiteId,
@@ -683,7 +778,12 @@ public class ObservabilityController {
                 .body(ApiResponse.fail("未知的 Agent eval suite: " + suiteId)));
     }
 
-    /** Produce a compact CI/release-gate artifact without embedded replay or per-trace reports. */
+    /**
+     * 生成紧凑的 CI/release-gate artifact。
+     *
+     * <p>中文说明：artifact 只承载评测摘要，不内嵌 replay 原文或逐 trace 报告；它是治理证据，
+     * 不是自动发布按钮。</p>
+     */
     @PostMapping("/eval/suites/{suiteId}/gate")
     @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
     public ResponseEntity<ApiResponse<AgentEvalSuiteGateArtifact>> evalSuiteGate(@PathVariable String suiteId,
@@ -725,7 +825,12 @@ public class ObservabilityController {
         return ResponseEntity.ok(ApiResponse.ok(evalWorkbenchOverviewService.overview()));
     }
 
-    /** Publish reviewed eval trace evidence readiness without mutating catalogs or running evals. */
+    /**
+     * 发布 reviewed eval trace evidence 就绪状态。
+     *
+     * <p>安全边界：只读 catalog 派生视图，不修改 catalog、不运行 eval、不提升 trace set，
+     * 也不授予 release authority。</p>
+     */
     @GetMapping("/eval/reviewed-trace-evidence")
     @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
     public ResponseEntity<ApiResponse<AgentReviewedEvalTraceEvidenceResponse>> reviewedEvalTraceEvidence() {
@@ -736,7 +841,12 @@ public class ObservabilityController {
         return ResponseEntity.ok(ApiResponse.ok(reviewedEvalTraceEvidenceService.evidence()));
     }
 
-    /** Publish release-blocking eval gate readiness without enabling CI blocking. */
+    /**
+     * 发布 release-blocking eval gate 合同状态。
+     *
+     * <p>中文说明：这里只说明未来阻断式门禁需要哪些证据，不启用 CI blocking，
+     * 不改变发布流水线，也不授予 release authority。</p>
+     */
     @GetMapping("/eval/release-blocking-gate-contract")
     @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
     public ResponseEntity<ApiResponse<AgentReleaseBlockingEvalGateContractResponse>> releaseBlockingEvalGateContract() {
@@ -907,6 +1017,12 @@ public class ObservabilityController {
         return ResponseEntity.ok(ApiResponse.ok(evalTraceSetCatalogService.gateBundle(request)));
     }
 
+    /**
+     * 统一管理员守卫。
+     *
+     * <p>中文说明：这些观测 API 都是 admin-only，因为它们可能暴露审计数量、工具名、
+     * traceId、治理缺口和评测状态。守卫只读取服务端 Principal，不信任请求体里的身份字段。</p>
+     */
     private <T> ResponseEntity<ApiResponse<T>> requireAdmin() {
         Optional<AgentPrincipal> currentUser = principalResolver.current();
         if (currentUser.isEmpty() || !currentUser.get().isAuthenticated()) {

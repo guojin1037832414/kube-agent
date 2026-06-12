@@ -16,12 +16,15 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * JSONL-backed redacted audit read model.
+ * 基于 JSONL 的脱敏审计只读模型。
  *
- * <p>Phase 1 keeps the first durable store intentionally simple: append-only
- * JSONL plus a bounded reverse scan. The contract stays behind
- * {@link AgentAuditQueryService}, so a later database/search backend can replace
- * this class without changing controller semantics.</p>
+ * <p>中文说明：Phase 1 故意把第一版 durable store 做简单：追加式 JSONL + 有界反向扫描。
+ * 查询合同藏在 {@link AgentAuditQueryService} 后面，未来换成数据库、搜索引擎或对象存储索引时，
+ * Controller、Replay 和 Eval 不需要改变语义。</p>
+ *
+ * <p>安全边界：这是 admin-only 观测面的 redacted read model，不提供原文导出、不做全文搜索、
+ * 不恢复 raw principal/raw reason/raw endpoints/raw parameter values，也不执行删除、轮转或 purge。
+ * retention 当前只是 metadata-only，用来提醒学习项目下一阶段需要补合规生命周期。</p>
  */
 @Service
 public class JsonlAgentAuditQueryService implements AgentAuditQueryService {
@@ -36,6 +39,11 @@ public class JsonlAgentAuditQueryService implements AgentAuditQueryService {
         this.path = resolvePath(this.properties.getDurable().getPath());
     }
 
+    /**
+     * 判断 JSONL 读模型是否可用。
+     *
+     * <p>中文说明：只有启用 durable audit 且文件存在时才读取；不可用时上层可退回内存 ring buffer。</p>
+     */
     public boolean available() {
         return properties.getDurable().isEnabled() && Files.isRegularFile(path);
     }
@@ -92,6 +100,12 @@ public class JsonlAgentAuditQueryService implements AgentAuditQueryService {
         );
     }
 
+    /**
+     * 输出前端和排障需要的索引元信息。
+     *
+     * <p>安全边界：这里会明确声明 containsRaw* 均为 false，并暴露 scan/retention/export 的限制，
+     * 避免使用者误以为当前 JSONL 已经具备完整合规存储能力。</p>
+     */
     @Override
     public Map<String, Object> indexMetadata() {
         boolean available = available();
@@ -157,6 +171,12 @@ public class JsonlAgentAuditQueryService implements AgentAuditQueryService {
         return Math.max(1, Math.min(properties.getDurable().getAuditIdMaxPhaseRecords(), 100));
     }
 
+    /**
+     * 从最新记录开始做有界扫描。
+     *
+     * <p>中文说明：有界扫描保护本地文件不会因为审计量变大而拖垮管理接口；如果扫描被截断，
+     * 响应会显式标记 truncated，让 eval 和前端知道证据覆盖不足。</p>
+     */
     private ScanResult scan(int maxScanRecords, AuditEventPredicate predicate, int maxResults) {
         if (!available()) {
             return new ScanResult(List.of(), false);
@@ -200,6 +220,11 @@ public class JsonlAgentAuditQueryService implements AgentAuditQueryService {
     }
 
     @SuppressWarnings("unchecked")
+    /**
+     * 解析单行 durable audit 记录。
+     *
+     * <p>安全边界：只读取 JSONL 里已经脱敏的字段；解析失败直接跳过，不尝试从原始日志或外部系统补证据。</p>
+     */
     private AgentAuditQueryEvent parseLine(String line) {
         try {
             Map<String, Object> record = objectMapper.readValue(line, Map.class);

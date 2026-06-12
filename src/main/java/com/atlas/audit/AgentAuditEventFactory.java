@@ -19,6 +19,14 @@ import java.util.Map;
  *
  * <p>集中生成 auditId、风险元数据和参数摘要，避免不同执行入口复制审计字段。
  * 参数摘要只记录键、类型和受保护状态，不保存 token/password/secret 等真实值。</p>
+ *
+ * <p>中文说明：SafeToolExecutor、Graph ToolCallback、ReAct 或未来 MCP/A2A 出口都应该通过这里生成
+ * 同一形状的 audit event。这样 replay、eval、durable audit 和前端观测可以消费同一份脱敏证据，
+ * 不需要知道每个入口的内部实现。</p>
+ *
+ * <p>安全边界：本工厂不执行 Tool、不调用 kube-manager、不发网络请求，也不授予写权限。
+ * 它只把服务端可信主体、工具元数据和参数“存在性摘要”固化为证据；原始 reason、endpoint 与参数值
+ * 后续仍会被读模型进一步压缩或隐藏。</p>
  */
 public final class AgentAuditEventFactory {
 
@@ -78,6 +86,12 @@ public final class AgentAuditEventFactory {
         );
     }
 
+    /**
+     * 把业务参数转换成可审计但不可还原的摘要。
+     *
+     * <p>中文说明：这里只保留参数名、类型、是否受保护和是否出现。前端和评测能据此判断
+     * “是否有高风险参数参与”，但不能从审计记录中恢复 secret、token 或 kube-manager 请求体。</p>
+     */
     static Map<String, Object> summarizeParameters(Map<String, Object> parameters) {
         if (parameters == null || parameters.isEmpty()) {
             return Map.of("count", 0, "keys", List.of());
@@ -129,6 +143,11 @@ public final class AgentAuditEventFactory {
         return value.getClass().getSimpleName();
     }
 
+    /**
+     * 优先使用服务端认证主体，而不是调用方请求体中的 userId。
+     *
+     * <p>安全边界：fallback 只兼容旧入口或测试；生产链路要让 Principal 成为审计身份来源。</p>
+     */
     private static String trustedUserId(AgentPrincipal principal, String fallback) {
         if (principal != null && principal.isAuthenticated()) {
             return principal.username();
@@ -136,6 +155,9 @@ public final class AgentAuditEventFactory {
         return fallback;
     }
 
+    /**
+     * 优先使用服务端认证主体中的组织上下文，避免前端伪造组织边界。
+     */
     private static String trustedOrganizationId(AgentPrincipal principal, String fallback) {
         if (principal != null && principal.organizationId() != null && !principal.organizationId().isBlank()) {
             return principal.organizationId();

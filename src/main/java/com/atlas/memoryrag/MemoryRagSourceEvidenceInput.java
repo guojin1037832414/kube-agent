@@ -6,12 +6,16 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
- * Future Memory/RAG source evidence used for deterministic digest derivation.
+ * Memory/RAG 来源证据输入模型。
  *
- * <p>中文说明：这个输入模型只接收已经脱敏、已经摘要化或已经计算好的证据指纹。
- * 它故意不包含原始文档、原始 prompt、原始租户标识、Authorization header 或 token。
- * 未来接入向量库、GraphRAG、reranker 或多 Agent 互操作时，所有证据都要先落到这个
- * 可审计的“来源证据指纹”模型上。</p>
+ * <p>中文说明：这个 record 是未来持久记忆与 RAG 引用进入 Agent Core 前的证据闸门。
+ * 它只接收已经脱敏、已经摘要化或已经计算好的证据指纹，用于推导 deterministic digest。
+ * 它故意不包含原始文档、原始 prompt、原始租户标识、Authorization header 或 token。</p>
+ *
+ * <p>安全边界：当前模型不是检索输入，不会触发向量库、embedding、reranker、LLM、
+ * MCP Tool 或 kube-manager。未来接入向量库、GraphRAG、reranker 或多 Agent 互操作时，
+ * 所有证据都要先落到这个可审计的“来源证据指纹”模型上，再经过 reviewed trace 和 eval gate，
+ * 不能把 caller-submitted summary 当作 prompt 权威。</p>
  */
 public record MemoryRagSourceEvidenceInput(
     String sourceId,
@@ -62,6 +66,13 @@ public record MemoryRagSourceEvidenceInput(
         "DELETE_EXPORT_SUPPORTED"
     );
 
+    /**
+     * 构造时立即规整并校验所有证据字段。
+     *
+     * <p>中文说明：把校验放在 canonical constructor 中，是为了保证对象一旦创建成功，
+     * 就已经满足“稳定 ID + SHA-256 digest + 受控枚举”的契约。后续 digest 推导器无需再次猜测
+     * 字段是否包含原始 secret、raw-document 或 raw-prompt。</p>
+     */
     public MemoryRagSourceEvidenceInput {
         sourceId = stableId("sourceId", sourceId);
         sourceType = sourceType(sourceType);
@@ -78,6 +89,11 @@ public record MemoryRagSourceEvidenceInput(
         retrievalPolicyDigest = digest("retrievalPolicyDigest", retrievalPolicyDigest);
     }
 
+    /**
+     * 校验安全稳定 ID。
+     *
+     * <p>安全边界：稳定 ID 只能用于证据定位，不允许把原始租户、用户、token 或文档正文塞进来。</p>
+     */
     private static String stableId(String name, String value) {
         String normalized = required(name, value);
         if (!STABLE_ID.matcher(normalized).matches()) {
@@ -87,6 +103,11 @@ public record MemoryRagSourceEvidenceInput(
         return normalized;
     }
 
+    /**
+     * 校验来源类型白名单。
+     *
+     * <p>中文说明：来源类型必须显式枚举，避免未来把任意业务字符串误当作可进入 RAG 的证据类型。</p>
+     */
     private static String sourceType(String value) {
         String normalized = required("sourceType", value).toLowerCase(Locale.ROOT);
         if (!SOURCE_TYPES.contains(normalized)) {
@@ -95,6 +116,11 @@ public record MemoryRagSourceEvidenceInput(
         return normalized;
     }
 
+    /**
+     * 校验受控枚举字段。
+     *
+     * <p>中文说明：redactionStatus 与 retentionPolicy 是合规语义，不允许调用方自由发挥。</p>
+     */
     private static String enumValue(String name, String value, Set<String> allowed) {
         String normalized = required(name, value).toUpperCase(Locale.ROOT);
         if (!allowed.contains(normalized)) {
@@ -103,6 +129,12 @@ public record MemoryRagSourceEvidenceInput(
         return normalized;
     }
 
+    /**
+     * 校验 SHA-256 指纹字段。
+     *
+     * <p>安全边界：这里只接受 digest，不接受 URI、正文、ACL 原文或 prompt 片段，
+     * 因此错误输入会 fail-fast，而不是被静默写入证据链。</p>
+     */
     private static String digest(String name, String value) {
         String normalized = required(name, value).toLowerCase(Locale.ROOT);
         rejectRawMarkers(name, normalized);
@@ -122,6 +154,12 @@ public record MemoryRagSourceEvidenceInput(
         return value.trim();
     }
 
+    /**
+     * 拦截明显的原始敏感材料标记。
+     *
+     * <p>中文说明：这不是完整 DLP，而是证据模型的低成本防呆线；真正接入生产 RAG 前，
+     * 仍需要专门的内容分级、脱敏、租户隔离和删除/导出机制。</p>
+     */
     private static void rejectRawMarkers(String name, String value) {
         String lowered = value.toLowerCase(Locale.ROOT);
         for (String marker : FORBIDDEN_RAW_MARKERS) {

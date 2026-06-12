@@ -16,11 +16,16 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * In-memory Agent audit recorder with an optional durable sink.
+ * 带可选持久化出口的内存 Agent 审计记录器。
  *
- * <p>The in-memory ring buffer is still the fast diagnostic view used by tests
- * and admin snapshots. The durable sink is an append-only evidence channel that
- * can be swapped later without changing SafeToolExecutor audit semantics.</p>
+ * <p>中文说明：内存 ring buffer 是给测试、管理员快照和前端诊断使用的快速视图；
+ * durable sink 是追加式证据通道，后续可以替换为数据库、Kafka 或 SIEM，而不改变
+ * SafeToolExecutor 的审计语义。</p>
+ *
+ * <p>安全边界：本类不执行 Tool、不调用 MCP、不访问 kube-manager，也不参与 prompt 构造。
+ * 查询接口只返回 redacted read model，不返回原始 principal、reason、endpoint 或参数值。
+ * durable 写入失败不会篡改 Tool 结果，但 durabilityStatus 会把风险暴露给 admin-only 观测面；
+ * 对高风险写操作，prewriteHighRisk 仍由执行链 fail-closed 处理。</p>
  */
 @Service
 @Primary
@@ -92,12 +97,23 @@ public class InMemoryAgentAuditRecorder implements AgentAuditRecorder, AgentAudi
         publishTelemetry(event);
     }
 
+    /**
+     * 返回内存中最近审计事件的副本。
+     *
+     * <p>中文说明：这是进程内诊断材料，不是 durable 合规存储；调用方不能修改内部队列。</p>
+     */
     public List<AgentAuditEvent> recentEvents() {
         synchronized (monitor) {
             return List.copyOf(recentEvents);
         }
     }
 
+    /**
+     * 生成管理员快照。
+     *
+     * <p>安全边界：快照只面向 Observability admin-only 入口，且会再次把参数名、reason
+     * 和遥测投影压缩成脱敏摘要，避免诊断视图泄露原始运行时输入。</p>
+     */
     @Override
     public Map<String, Object> snapshot() {
         List<AgentAuditEvent> events;
@@ -118,6 +134,9 @@ public class InMemoryAgentAuditRecorder implements AgentAuditRecorder, AgentAudi
         );
     }
 
+    /**
+     * 暴露 durable audit 当前状态，供前端和评测判断证据链是否可靠。
+     */
     public AgentAuditDurabilityStatus durabilityStatus() {
         return durableSink.status();
     }
@@ -127,6 +146,12 @@ public class InMemoryAgentAuditRecorder implements AgentAuditRecorder, AgentAudi
         return durableSink.prewriteHighRisk(event);
     }
 
+    /**
+     * 按 auditId 查询脱敏事件。
+     *
+     * <p>中文说明：优先查询 JSONL durable read model；未启用时退回内存 ring buffer，
+     * 但两种路径都必须保持 redacted-only。</p>
+     */
     @Override
     public AgentAuditQueryResponse findByAuditId(String auditId) {
         if (jsonlQueryAvailable()) {
@@ -233,6 +258,12 @@ public class InMemoryAgentAuditRecorder implements AgentAuditRecorder, AgentAudi
         );
     }
 
+    /**
+     * 构建不会泄露原始输入的诊断摘要。
+     *
+     * <p>中文说明：这里把 event 中可能较敏感的字段进一步压缩为前端可显示的只读证据，
+     * 不恢复原始参数值，也不输出完整 reason 文本。</p>
+     */
     private Map<String, Object> diagnosticSummary(AgentAuditEvent event) {
         Map<String, Object> summary = new LinkedHashMap<>();
         summary.put("auditId", event.auditId());
@@ -317,6 +348,12 @@ public class InMemoryAgentAuditRecorder implements AgentAuditRecorder, AgentAudi
         return value != null ? value : "";
     }
 
+    /**
+     * 追加 durable audit 证据。
+     *
+     * <p>安全边界：最终审计写入失败只影响诊断状态，不反向改写 Tool 结果；高风险执行前证据
+     * 由 {@link #prewriteHighRisk(AgentAuditEvent)} 和 SafeToolExecutor 的 fail-closed 策略控制。</p>
+     */
     private void appendDurable(AgentAuditEvent event) {
         try {
             durableSink.append(event);
@@ -325,6 +362,11 @@ public class InMemoryAgentAuditRecorder implements AgentAuditRecorder, AgentAudi
         }
     }
 
+    /**
+     * 发布审计遥测投影。
+     *
+     * <p>中文说明：遥测是可观测材料，不是业务控制流；失败时不能改变 Tool 执行结果。</p>
+     */
     private void publishTelemetry(AgentAuditEvent event) {
         if (telemetryPublisher == null) {
             return;

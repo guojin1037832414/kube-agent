@@ -12,7 +12,15 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * Builds a frontend-friendly replay timeline from the redacted audit query API.
+ * 从脱敏审计查询模型构建前端可渲染的 replay timeline。
+ *
+ * <p>中文说明：Replay 在这里不是“重新播放执行”，而是把 {@link AgentAuditQueryService}
+ * 返回的 redacted audit events 转成前端 timeline DTO。它帮助人和 eval 看清一次 trace
+ * 经历了 PRE_EXECUTION、FINAL、BLOCKED、ERROR 等阶段。</p>
+ *
+ * <p>安全边界：本服务只读脱敏审计视图，不读取 raw audit，不重新执行 Tool、不调用 MCP、
+ * 不访问 kube-manager、不调用 LLM，也不恢复原始 prompt、reason 或参数值。timeline
+ * 只能作为诊断/评测证据，不是 prompt 权威，也不是运行时授权。</p>
  */
 @Service
 public class AgentReplayTimelineService {
@@ -23,6 +31,12 @@ public class AgentReplayTimelineService {
         this.auditQueryService = auditQueryService;
     }
 
+    /**
+     * 构建指定 trace 的 oldest-first timeline。
+     *
+     * <p>中文说明：审计查询通常按 newest-first 返回；前端回放更适合 oldest-first，因此这里反转顺序。
+     * 反转只改变展示顺序，不改变审计事实，也不会触发任何运行时动作。</p>
+     */
     public AgentReplayTimelineResponse traceTimeline(String traceId, int maxResults) {
         AgentAuditQueryResponse auditResponse = auditQueryService.findByTraceId(traceId, maxResults);
         List<AgentAuditQueryEvent> chronologicalEvents = new ArrayList<>(auditResponse.events());
@@ -41,6 +55,12 @@ public class AgentReplayTimelineService {
         );
     }
 
+    /**
+     * 把单条审计读模型投影成 timeline step。
+     *
+     * <p>安全边界：step 只携带 reasonSummary、parameterSummary 和 telemetry 这类脱敏字段；
+     * 不输出 endpoint 列表、原始主体、完整原因文本或参数值。</p>
+     */
     private AgentReplayTimelineStep toStep(AgentAuditQueryEvent event, int position) {
         String outcome = safeText(event.outcome()).toUpperCase(Locale.ROOT);
         String operationType = safeText(event.operationType());
@@ -76,6 +96,12 @@ public class AgentReplayTimelineService {
         return !auditId.isBlank() ? auditId + ":" + position : "step-" + position;
     }
 
+    /**
+     * 推导阶段标签。
+     *
+     * <p>中文说明：durable audit 可能包含 PRE_EXECUTION 和 FINAL 两种相位；如果旧事件缺少相位，
+     * 则用 outcome 做兼容推断，保证前端和 eval 仍能解释时间线。</p>
+     */
     private String phase(AgentAuditQueryEvent event, String outcome) {
         String recordPhase = safeText(event.recordPhase()).toUpperCase(Locale.ROOT);
         if (!recordPhase.isBlank()) {
@@ -119,6 +145,11 @@ public class AgentReplayTimelineService {
         return "unknown";
     }
 
+    /**
+     * 生成前端筛选和学习用标签。
+     *
+     * <p>安全边界：标签只表达 outcome、operation 和执行/确认状态，不包含原始参数或敏感业务值。</p>
+     */
     private List<String> labels(AgentAuditQueryEvent event, String outcome, String operationType) {
         List<String> labels = new ArrayList<>();
         if (!outcome.isBlank()) {

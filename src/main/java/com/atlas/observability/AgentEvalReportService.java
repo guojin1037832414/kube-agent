@@ -17,6 +17,14 @@ import java.util.Set;
  *
  * <p>M5.33 的边界很重要：评测器只读 replay DTO，不读 raw audit，不调用 LLM，
  * 不访问 kube-manager，也不参与 Tool 放行。</p>
+ *
+ * <p>中文说明：这是 Phase 1 把“可观测证据”变成“治理信号”的核心服务。它把 timeline 中的
+ * prewrite、执行状态、确认标记、隐私证明、截断状态等信息转换成稳定 checks，帮助我们学习
+ * 顶级 Agent 如何用确定性证据守住安全边界。</p>
+ *
+ * <p>安全边界：本服务不调用 Tool、不调用 MCP、不调用向量库、不调用外部网络，也不授予
+ * release authority。即使方法名里出现 suite/gate，它也只是生成报告或 artifact，不能绕过
+ * CI、人工 review、HITL 或生产发布流程。</p>
  */
 @Service
 public class AgentEvalReportService {
@@ -33,6 +41,12 @@ public class AgentEvalReportService {
         this.replayTimelineService = replayTimelineService;
     }
 
+    /**
+     * 对单条 trace 生成确定性评测报告。
+     *
+     * <p>中文说明：输入是 traceId 和查询上限，证据来自 replayTimelineService 的 redacted timeline。
+     * 评测只检查 replay 证据是否自洽，不判断业务结果真实正确，也不执行任何补证据动作。</p>
+     */
     public AgentEvalReportResponse evaluateTrace(String traceId, int maxResults) {
         AgentReplayTimelineResponse replay = replayTimelineService.traceTimeline(traceId, maxResults);
         List<AgentReplayTimelineStep> steps = replay.steps();
@@ -62,6 +76,12 @@ public class AgentEvalReportService {
         );
     }
 
+    /**
+     * 对一组 trace 生成 suite 级报告。
+     *
+     * <p>安全边界：suite pass 只是本服务内部的确定性信号，不等于真实发布门禁已通过；
+     * trace 数量、查询上限和最低分都会被约束，避免调用方用超大输入拖垮观测接口。</p>
+     */
     public AgentEvalSuiteResponse evaluateSuite(List<String> traceIds,
                                                 int maxResults,
                                                 int minimumScore,
@@ -103,6 +123,12 @@ public class AgentEvalReportService {
         );
     }
 
+    /**
+     * 组合单 trace 的评测检查项。
+     *
+     * <p>中文说明：检查项覆盖隐私、顺序、trace 一致性、高风险 prewrite、确认标记和截断状态；
+     * 这些是顶级 Agent 治理的最小确定性骨架。</p>
+     */
     private List<AgentEvalCheck> checks(AgentReplayTimelineResponse replay, Summary summary) {
         List<AgentEvalCheck> checks = new ArrayList<>();
         checks.add(tracePresenceCheck(replay));
@@ -165,6 +191,11 @@ public class AgentEvalReportService {
         return summary;
     }
 
+    /**
+     * 汇总 suite 的隐私证明。
+     *
+     * <p>安全边界：只要任意 report 暴露 raw 字段，suitePrivacy 就不能标记 redactedOnly。</p>
+     */
     private Map<String, Object> suitePrivacy(List<AgentEvalReportResponse> reports) {
         boolean containsRawPrincipal = reports.stream().anyMatch(report -> truthy(report.privacy(), "containsRawPrincipal"));
         boolean containsRawOrganization = reports.stream().anyMatch(report -> truthy(report.privacy(), "containsRawOrganization"));
@@ -217,6 +248,12 @@ public class AgentEvalReportService {
         return AgentEvalCheck.pass("TRACE_HAS_STEPS", "trace", "Trace has replayable evidence steps.", evidence);
     }
 
+    /**
+     * 校验 replay 隐私证明。
+     *
+     * <p>中文说明：eval 的第一原则是“证据可用但不泄露原文”。如果 replay 不能证明 redacted-only，
+     * 后续所有治理结论都不可靠。</p>
+     */
     private AgentEvalCheck privacyCheck(AgentReplayTimelineResponse replay) {
         Map<String, Object> privacy = replay.privacy();
         boolean redacted = Boolean.TRUE.equals(privacy.get("redactedOnly"))
@@ -295,6 +332,12 @@ public class AgentEvalReportService {
         return AgentEvalCheck.fail("EXECUTION_SEMANTICS", "outcome", "Replay contains impossible success/execution combinations.", evidence);
     }
 
+    /**
+     * 校验高风险写操作是否具备执行前 durable audit 证据。
+     *
+     * <p>安全边界：缺少 prewrite evidence 时 fail，是为了避免 CREATE/UPDATE/DELETE/ACTION
+     * 这类高风险操作在无持久审计前提下被当作可发布质量。</p>
+     */
     private AgentEvalCheck preExecutionEvidenceCheck(Summary summary) {
         Map<String, Object> evidence = Map.of(
             "preExecutionSteps", summary.preExecutionSteps,
@@ -352,6 +395,12 @@ public class AgentEvalReportService {
         return AgentEvalCheck.pass("REPLAY_NOT_TRUNCATED", "coverage", "Replay evidence was not truncated.", evidence);
     }
 
+    /**
+     * 汇总 timeline 中用于治理判断的确定性计数。
+     *
+     * <p>中文说明：Summary 不读外部系统，只从脱敏 step 中提取结构化证据；
+     * 这让评测可以在 CI 或本地稳定复现。</p>
+     */
     private Summary summarize(List<AgentReplayTimelineStep> steps) {
         Summary summary = new Summary();
         Map<String, Integer> firstPreExecutionPositionByAuditId = new HashMap<>();

@@ -19,11 +19,15 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Append-only JSONL durable audit sink.
+ * 追加式 JSONL durable audit 写入器。
  *
- * <p>It intentionally stores redacted evidence only. Raw user, organization,
- * conversation, reason text, endpoint strings, and parameter values stay out of
- * the durable record. The stable telemetry projection is the storage contract.</p>
+ * <p>中文说明：Phase 1 先用简单、可检查、易迁移的 JSONL 保存审计证据。每一行都是一条
+ * redacted durable audit record，后续可以被 replay、eval、前端审计页或外部 SIEM 消费。</p>
+ *
+ * <p>安全边界：本类只存脱敏证据，不保存 raw principal、raw reason、raw endpoints、
+ * raw parameter values 或真实 kube-manager 请求体；持久记录只包含 reasonSummary、
+ * parameterSummary、apiEndpointCount 和 telemetry projection。它不执行 Tool、不调用 MCP、
+ * 不访问 kube-manager，也不把 durable audit 写入结果变成 prompt 或 release authority。</p>
  */
 @Component
 public class JsonlAgentAuditDurableSink implements AgentAuditDurableSink {
@@ -78,6 +82,12 @@ public class JsonlAgentAuditDurableSink implements AgentAuditDurableSink {
         }
     }
 
+    /**
+     * 追加一条 JSONL 证据记录。
+     *
+     * <p>中文说明：recordPhase 用于区分 PRE_EXECUTION 和 FINAL，帮助 eval 检查高风险写操作
+     * 是否先有 durable prewrite 证据。文件写入是追加式，不在这里做删除、导出或轮转。</p>
+     */
     private void appendDurableRecord(AgentAuditEvent event, String recordPhase) {
         try {
             if (!ready && !preparePath()) {
@@ -122,6 +132,12 @@ public class JsonlAgentAuditDurableSink implements AgentAuditDurableSink {
         );
     }
 
+    /**
+     * 把运行时审计事件投影为可长期保存的脱敏记录。
+     *
+     * <p>安全边界：这里是 durable audit 的最后一道隐私防线，任何原始身份、原因文本、
+     * endpoint 字符串或参数值都不能进入 JSONL。</p>
+     */
     private Map<String, Object> toDurableRecord(AgentAuditEvent event, String recordPhase) {
         AgentAuditTelemetryProjection projection = AgentAuditTelemetryProjector.project(event);
         Map<String, Object> record = new LinkedHashMap<>();
@@ -159,6 +175,12 @@ public class JsonlAgentAuditDurableSink implements AgentAuditDurableSink {
     }
 
     @SuppressWarnings("unchecked")
+    /**
+     * 对参数摘要做二次脱敏。
+     *
+     * <p>中文说明：即使上游已经标记 protected 字段，这里仍根据名称兜底清洗 token/password
+     * 等敏感参数名，确保 durable 证据只说明“有这个类别的参数”，不泄露具体值。</p>
+     */
     private Map<String, Object> redactedParameterSummary(Map<String, Object> parameterSummary) {
         if (parameterSummary == null || parameterSummary.isEmpty()) {
             return Map.of("count", 0, "keys", java.util.List.of());

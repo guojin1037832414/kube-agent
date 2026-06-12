@@ -151,6 +151,14 @@ Evidence side:
 - Replay / Eval 使用只读、确定性、脱敏证据，不能反向授权运行时执行。
 - 当前允许 admin-only deterministic replay/eval 读模型和部分 suite run/gate 入口；CI blocking、LLM eval、Memory/RAG retrieval eval runtime 必须等待 reviewed trace evidence 和 release gate。
 
+Batch 4 已补中文教学注释后的学习线：
+
+- `AgentAuditEventFactory` 把服务端可信主体、工具元数据和参数“存在性摘要”固化为审计证据。
+- `JsonlAgentAuditDurableSink` 只写 redacted durable audit record，不保存 raw reason、raw endpoint 或 raw parameter values。
+- `JsonlAgentAuditQueryService` 是 admin-only redacted read model，当前通过有界 JSONL reverse scan 提供查询，retention 仍是 metadata-only。
+- `AgentReplayTimelineService` 把审计读模型投影为前端 timeline，不重新执行 Tool/MCP/kube-manager。
+- `AgentEvalReportService` 只读 replay DTO，生成 deterministic checks；它是治理信号，不参与 Tool 放行，也不授予 release authority。
+
 ### 8. Memory / RAG
 
 学习重点：
@@ -159,6 +167,13 @@ Evidence side:
 - 当前 `ConversationSummaryMemoryStore` 只保存调用方提交的 bounded summary，并做基础正则脱敏和截断；它不是可信 RAG 证据源，也不能直接作为 prompt authority。
 - 可信 Memory/RAG 需要 source custody、citation、tenant/privacy、retention/deletion/export、reviewed trace fixtures 和 eval gates。
 - 当前主要是契约、读模型和轻量摘要缓存，retrieval runtime、vector store、durable memory 写入仍关闭。
+
+Batch 4 已补中文教学注释后的学习线：
+
+- `MemoryRagSourceEvidenceInput` 只接受稳定 ID、SHA-256 digest 和受控枚举，不接受原始文档、原始 prompt、Authorization header 或 token。
+- `MemoryRagSourceEvidenceDigestDeriver` 生成 source/chunk/evidence 三层 digest，帮助未来引用、评测、审计和多 Agent 审阅共享同一证据锚点。
+- `MemoryRagSourceEvidenceDigestResult` 中 `rawSourceAccepted`、`promptEvidenceAllowedNow`、`boundToIngestionRuntime`、`reusableAcrossTenantScope` 当前都必须保持 false。
+- `AgentMemoryRagReadinessService` 和 digest contract service 是 admin-only 只读证据，不执行检索、不调用向量库/LLM/Tool/MCP/kube-manager。
 
 ### 9. Multi-Agent / Expert Review
 
@@ -175,11 +190,11 @@ Evidence side:
 - Batch 1：Controller / Security / Principal / HITL。
 - Batch 2：Tool / MCP / SafeToolExecutor / kube-manager HTTP outlet。
 - Batch 3：Orchestrator / Graph / ReAct / Plan 推理和状态机链路。
+- Batch 4：Memory / RAG / Eval / Observability / Audit 证据链。
 
 待推进：
 
-1. Batch 4：Memory / RAG / Eval / Observability / Audit 证据链。
-2. Batch 5：DTO / support / config / store 支撑代码。
+1. Batch 5：DTO / support / config / store 支撑代码。
 
 注释标准：
 
@@ -202,5 +217,6 @@ Evidence side:
 
 1. 读 `README.md` 和 `开发路线图.md`，确认当前项目边界。
 2. 读 Batch 1/2/3 已注释代码，理解身份、执行边界和 Agent 编排状态机。
-3. 开始 Batch 4，围绕 Memory/RAG/Eval/Observability/Audit 学习证据链。
-4. 每完成一个小切片，都把“代码、测试、文档、恢复记忆、Git 提交”作为一个完整闭环。
+3. 读 Batch 4 已注释代码，理解 Memory/RAG/Audit/Replay/Eval 如何形成只读、脱敏、不可反向授权的证据链。
+4. 开始 Batch 5，围绕 DTO/support/config/store 学习支撑代码如何承载安全契约。
+5. 每完成一个小切片，都把“代码、测试、文档、恢复记忆、Git 提交”作为一个完整闭环。
