@@ -10,7 +10,7 @@
 |---|---|---|
 | Phase 1 顶级 Agent Core | 进行中 | 不降低目标，优先完成安全、编排、Tool 治理、Memory/RAG、Eval、可观测、多 Agent 审查和教学注释。 |
 | NIM / HPC / Slurm / BCM | 二期暂停 | 历史 Tool/测试/证据代码仍可存在，但一期不导出 MCP、不新增 runtime authority，高风险写默认被 durable audit fail-closed 阻断。 |
-| 中文代码注释 | 分批推进 | 已完成安全入口、Tool/MCP/kube-manager 执行边界、Orchestrator / Graph / ReAct / Plan 编排链路、Memory / RAG / Eval / Observability / Audit 证据链，以及 Batch 5 的 DTO / store / config、support contract、query/path/body helper、分析目录 query helper；当前正在推进 Orchestrator hardening。 |
+| 中文代码注释 | 分批推进 | 已完成安全入口、Tool/MCP/kube-manager 执行边界、Orchestrator / Graph / ReAct / Plan 编排链路、Memory / RAG / Eval / Observability / Audit 证据链，以及 Batch 5 的 DTO / store / config、support contract、query/path/body helper、分析目录 query helper；当前正在推进 Orchestrator hardening 与 SSE 展示契约收敛。 |
 | 文档治理 | 当前刷新 | 主线文档精简到入口、架构学习、使命记忆、ADR、技术栈和恢复记忆；历史波次报告从当前 docs 树移除。 |
 
 ## 核心架构
@@ -38,6 +38,7 @@
 - Graph `execute_node` 现在会在单步 READ Plan 候选创建 `SafeToolExecutionRequest` 前确认可信 orgId；PlanStep 参数不能补租户上下文，缺失可信 orgId 会 fail-closed。
 - 旧 `atlasGraph` 的 `merge_result` 会优先保留已有 `final_answer`、ReAct 结果和 fail-closed `answer`，确保用户能看到最终回答或安全停止原因；这只是展示合并，不代表 Tool 成功。
 - 主 `supervisorGraph` 的 delegate 节点会把专业 Agent 输出或 delegate fail-closed 原因推成 SSE `content`；这只是展示投影，真实 Tool 调用仍必须通过 ToolCallback / SafeToolExecutor。
+- 主 `supervisorGraph` 的 direct_answer、tool_call、delegate、ReAct state fallback 和 ReAct content 事件现在共享最终展示内容去重契约：同一段答案只推一次，空文本和 `{}` 占位不生成前端气泡；这仍只是 SSE 展示层，不代表 Tool/HITL/audit/release/write 成功。
 - MCP 当前只导出 admin-only 只读 Manifest / governance，不开放 `tools/call` 运行时执行权；NIM/HPC/Slurm/BCM 这类二期域不会进入一期 MCP 导出清单。
 - kube-manager 是真实外部网络出口，默认连接 `http://localhost:8100`；业务 Tool 请求必须使用当前用户 Token，不能透明降级为 sysadmin。
 - 高风险写操作默认要求 ready durable audit prewrite；HITL 确认本身不等于可执行。

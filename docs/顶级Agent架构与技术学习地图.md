@@ -138,6 +138,7 @@ Evidence side:
 - Graph `execute_node` 入口现在会在单步 READ Plan 候选进入 `SafeToolExecutionRequest` 前确认可信 orgId：先读 Graph State，再读服务端 ThreadLocal，仍缺失则写入 `EXECUTE_TRUSTED_ORG_MISSING` 未执行状态。
 - 旧 `atlasGraph` 的 `merge_result` 现在按展示优先级合并：已有 `final_answer`、`react_node_result`、专业 Agent 结果、通用 `answer`、`supervisor_result`、兜底错误。这样 direct_answer、ReAct 总结和 fail-closed 原因不会在最后一跳丢失。
 - 主 `supervisorGraph` 的 delegate 节点现在会把专业 Agent 输出或 delegate fail-closed `answer` 投影为 SSE `content`，避免子图执行完成但前端只看到 thinking 事件。
+- 主 `supervisorGraph` 的 direct_answer、Tool 展示、Tool fail-closed、delegate、ReAct content 事件和 ReAct state fallback 现在共享最终内容去重入口：同一段最终答案只产生一次前端气泡，空文本和 `{}` 占位不会展示。
 - Graph State 不应保存 `SseEmitter`、Lambda 等运行期对象；ReAct 过程事件通过 registry 用 sessionId 间接发布。
 - `execute_node` 是安全教学样例：先按计划形状 fail-closed，再委托 `SafeToolExecutor` 做最终执行边界。
 
@@ -159,6 +160,7 @@ Plan/execute 学习补充：
 - `final_answer` 是 SSE 展示文本，不代表 Tool 成功、HITL 已确认、audit 已落盘、release gate 已通过或写操作完成。
 - 安全停止原因必须能展示给用户，否则顶级 Agent 的“可解释 fail-closed”会在 UI 最后一跳消失。
 - delegate SSE 内容同样只是展示文本；真实 Tool 调用仍由 Spring AI ToolCallback 桥接回 `SafeToolExecutor`，不能因子图自然语言输出而反向证明权限或写入成功。
+- SSE 最终内容去重属于“用户体验和协议稳定性”层：它让 direct_answer、ReAct 和 delegate 等路径不会重复冒泡，但不能作为执行成功、审计落盘、HITL 确认、release 放行或写操作完成的证据。
 
 支撑层补充学习线：
 

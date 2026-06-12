@@ -596,9 +596,16 @@ public class AtlasOrchestrator {
             // ReAct 事件流会在执行过程中主动发送 content；这里记录是否已发送最终内容，
             // 防止 react_node 完成后再从 state 里重复推送同一份最终答案。
             java.util.concurrent.atomic.AtomicBoolean reactContentEmitted = new java.util.concurrent.atomic.AtomicBoolean(false);
+            // 中文说明：Supervisor Graph 的最终展示文本可能来自 direct_answer、tool_call fail-closed、
+            // delegate 子图或 ReAct 事件。统一登记已发送内容，避免同一份 answer 在多个节点状态里被重复推送。
+            // 安全边界：这个集合只做 SSE 文本去重，不参与 Tool 权限、HITL、audit、release 或写入判定。
+            Set<String> emittedSupervisorContents = ConcurrentHashMap.newKeySet();
             Set<String> emittedStructuredClarifications = ConcurrentHashMap.newKeySet();
             ReActEventSink reactEventSink = event -> {
                 if ("content".equals(event.type())) {
+                    if (!registerSupervisorDisplayContent(event.content(), emittedSupervisorContents)) {
+                        return;
+                    }
                     reactContentEmitted.set(true);
                 }
                 emit(emitter, event.type(), Map.of(
@@ -694,7 +701,12 @@ public class AtlasOrchestrator {
                                     Map<String, Object> trMap = (Map<String, Object>) tr;
                                     try {
                                         String polished = polishingService.polishSync(trMap, request.userQuery());
-                                        emit(emitter, "content", Map.of("content", polished));
+                                        emitSupervisorDisplayContent(
+                                            emitter,
+                                            "tool_call",
+                                            polished,
+                                            emittedSupervisorContents
+                                        );
                                     } catch (Exception polishEx) {
                                         log.warn("[Supervisor] 润色失败，fallback到安全格式: {}", polishEx.getMessage());
                                         Object success = trMap.get("success");
@@ -720,7 +732,12 @@ public class AtlasOrchestrator {
                                         } else {
                                             sb.append("❌ ").append(msg != null ? msg : "执行失败");
                                         }
-                                        emit(emitter, "content", Map.of("content", sb.toString()));
+                                        emitSupervisorDisplayContent(
+                                            emitter,
+                                            "tool_call",
+                                            sb.toString(),
+                                            emittedSupervisorContents
+                                        );
                                     }
                                 });
                             if (!hasToolResult) {
@@ -730,7 +747,12 @@ public class AtlasOrchestrator {
                                 state.value("answer")
                                     .map(Object::toString)
                                     .filter(answer -> !answer.isBlank())
-                                    .ifPresent(answer -> emit(emitter, "content", Map.of("content", answer)));
+                                    .ifPresent(answer -> emitSupervisorDisplayContent(
+                                        emitter,
+                                        "tool_call",
+                                        answer,
+                                        emittedSupervisorContents
+                                    ));
                             }
                             emitStructuredClarificationIfPresent(
                                 emitter,
@@ -756,7 +778,26 @@ public class AtlasOrchestrator {
                             // 安全边界：这里仅把已有 State 投影成 SSE content，不执行 Tool、不调用 LLM、
                             // 不访问 kube-manager，也不把自然语言结果解释为 HITL/audit/release/write 成功证据。
                             delegateDisplayContent(state::value)
-                                .ifPresent(content -> emit(emitter, "content", Map.of("content", content)));
+                                .ifPresent(content -> emitSupervisorDisplayContent(
+                                    emitter,
+                                    "delegate",
+                                    content,
+                                    emittedSupervisorContents
+                                ));
+                        }
+
+                        if ("direct_answer".equals(node)) {
+                            // 中文说明：direct_answer 是 AtlasBrain 已决定“不需要调用 Tool”的普通回答路径。
+                            // 这里必须把 answer 明确推成 SSE content，否则前端只能看到 thinking 而看不到最终回复。
+                            // 安全边界：direct_answer 只是自然语言展示，不代表 Tool 执行、HITL 确认、审计回执或写入成功。
+                            state.value("answer")
+                                .map(Object::toString)
+                                .ifPresent(answer -> emitSupervisorDisplayContent(
+                                    emitter,
+                                    "direct_answer",
+                                    answer,
+                                    emittedSupervisorContents
+                                ));
                         }
 
                         // ── M3.2: ReAct 节点结果推送（手写 ReAct 引擎执行结果）──
@@ -766,7 +807,12 @@ public class AtlasOrchestrator {
                                 .orElseGet(() -> state.value("answer")
                                     .map(Object::toString)
                                     .orElse("[ReAct] 执行完成，无输出"));
-                            emit(emitter, "content", Map.of("content", reactAnswer));
+                            emitSupervisorDisplayContent(
+                                emitter,
+                                "react_node",
+                                reactAnswer,
+                                emittedSupervisorContents
+                            );
                         }
                     },
                     err -> {
@@ -909,6 +955,54 @@ public class AtlasOrchestrator {
         payload.put("requiredContext", suggestions != null ? suggestions : List.of());
         payload.put("content", buildClarificationContent(errorCode, suggestions));
         emit(emitter, "clarify", payload);
+    }
+
+    /**
+     * 发送 Supervisor Graph 的最终展示内容，并在一次 run 内做内容级去重。
+     *
+     * <p>中文说明：Graph State 会把同一份用户可见答案保存在多个 key 中，例如 {@code answer}、
+     * {@code react_node_result} 或 {@code query_result}。如果每个节点都直接 emit，前端会看到重复气泡。
+     * 本方法把“是否值得展示”和“是否已经展示过”收敛到一处，方便 direct_answer、tool_call、
+     * delegate、react_node 共用同一条 SSE 契约。</p>
+     *
+     * <p>安全边界：这里不执行 Tool、不调用 LLM、不访问 kube-manager、不创建 HITL marker，
+     * 也不写 audit / memory / release 证据。它只是把已有 State 中的自然语言文本投影为 SSE
+     * {@code content} 事件；去重结果不能被解释为业务成功或权限事实。</p>
+     */
+    private boolean emitSupervisorDisplayContent(SseEmitter emitter,
+                                                 String sourceNode,
+                                                 String content,
+                                                 Set<String> emittedContents) {
+        if (!registerSupervisorDisplayContent(content, emittedContents)) {
+            return false;
+        }
+        emit(emitter, "content", Map.of("content", content));
+        log.debug("[Supervisor] 节点 {} 推送最终展示内容", sourceNode);
+        return true;
+    }
+
+    /**
+     * 登记一次 Supervisor Graph 展示文本。
+     *
+     * <p>中文说明：这个方法刻意只按“规范化后的展示文本”去重，不按节点名去重。原因是同一答案可能先由
+     * ReAct 事件流发出，随后又出现在 {@code react_node_result} / {@code answer} 中；用户只需要看一次。
+     * 但如果后续节点产生了不同文本，仍允许继续发送，保留澄清、错误说明或后续摘要的可见性。</p>
+     *
+     * <p>安全边界：返回值只告诉 SSE 层“这段文字是否该展示”，不能作为 Tool 成功、HITL 确认、
+     * audit 回执、release gate 或写操作完成的证据。</p>
+     */
+    private boolean registerSupervisorDisplayContent(String content, Set<String> emittedContents) {
+        if (content == null) {
+            return false;
+        }
+        String normalized = content.trim();
+        if (normalized.isBlank() || "{}".equals(normalized)) {
+            return false;
+        }
+        if (emittedContents == null) {
+            return true;
+        }
+        return emittedContents.add(normalized);
     }
 
     /**

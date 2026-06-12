@@ -1,0 +1,94 @@
+﻿{
+    "project":  "kube-agent",
+    "wave":  "M5.85-19",
+    "title":  "Supervisor Graph SSE final content dedupe",
+    "generatedAt":  "2026-06-12T16:10:38.2414202+08:00",
+    "branch":  "codex/m521-29-top-agent-mission",
+    "verification":  [
+                         "mvn -q \"-Dtest=AtlasOrchestratorJsonTest,Batch3ChineseCommentContractTest,ToolResultMergeNodeTest,GraphToolCallSafetyGuardTest,GraphReActNodeSafetyGuardTest,GraphExecuteNodeSafetyGuardTest,SupervisorGraphReactRoutingTest\" test",
+                         "mvn -q \"-DskipTests\" validate",
+                         "git diff --check"
+                     ],
+    "safetyInvariants":  [
+                             "Supervisor Graph final content dedupe is SSE display projection only, not Tool success, HITL, audit, release, or write authority.",
+                             "direct_answer display is natural-language answer visibility only; it does not execute Tool, call LLM, call kube-manager, or write evidence.",
+                             "No MCP tools/call, kube-manager write, retrieval/vector runtime, A2A handoff, CI blocking, audit/memory write, dependency upgrade, or Phase 2 NIM/HPC/Slurm/BCM authority was opened."
+                         ],
+    "files":  [
+                  {
+                      "path":  "README.md",
+                      "sha256":  "030754F0216B7B2C5B027758FC2AC7EE9DD329930994A303B279DD3765441A57",
+                      "bytes":  8589
+                  },
+                  {
+                      "path":  "开发路线图.md",
+                      "sha256":  "F124FE024274FC78CF381444EE8A5CF83D3FE7BCF8278E5749D434B7109E5E37",
+                      "bytes":  6072
+                  },
+                  {
+                      "path":  "变更日志.md",
+                      "sha256":  "39741758D3DC32E9CB1A463F85ACC3A3D729C773D2EECC5BC2CEC0497F25F15A",
+                      "bytes":  428358
+                  },
+                  {
+                      "path":  "docs/项目使命与当前记忆.md",
+                      "sha256":  "9FFD29E93A65AA6551D269715A02810A78F13CB2FC2D3950B979ED59A6351784",
+                      "bytes":  36776
+                  },
+                  {
+                      "path":  "docs/顶级Agent架构与技术学习地图.md",
+                      "sha256":  "E7FB8EAC272420EDA33C5A0B3F740CB41FE0B2C7898077CFBE9DC0018EE34075",
+                      "bytes":  20777
+                  },
+                  {
+                      "path":  "src/main/java/com/atlas/orchestrator/AtlasOrchestrator.java",
+                      "sha256":  "7AB270E0C864CF73134B65DA7E5638B4C37D7B4EF253FAE187DF21DA79F6C354",
+                      "bytes":  65690
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/orchestrator/AtlasOrchestratorJsonTest.java",
+                      "sha256":  "868348189E2D12C9081C9ED02436666A1324F3512DE4E20D7DD667F4AB095DCC",
+                      "bytes":  10420
+                  },
+                  {
+                      "path":  "src/test/java/com/atlas/graph/Batch3ChineseCommentContractTest.java",
+                      "sha256":  "C70749401C95C489B65ABADBC11F979A0DD251493E69DDA9DE3C122530279DC1",
+                      "bytes":  3823
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/README.md",
+                      "sha256":  "030754F0216B7B2C5B027758FC2AC7EE9DD329930994A303B279DD3765441A57",
+                      "bytes":  8589
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/开发路线图.md",
+                      "sha256":  "F124FE024274FC78CF381444EE8A5CF83D3FE7BCF8278E5749D434B7109E5E37",
+                      "bytes":  6072
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/变更日志.md",
+                      "sha256":  "39741758D3DC32E9CB1A463F85ACC3A3D729C773D2EECC5BC2CEC0497F25F15A",
+                      "bytes":  428358
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/项目使命与当前记忆.md",
+                      "sha256":  "9FFD29E93A65AA6551D269715A02810A78F13CB2FC2D3950B979ED59A6351784",
+                      "bytes":  36776
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/顶级Agent架构与技术学习地图.md",
+                      "sha256":  "E7FB8EAC272420EDA33C5A0B3F740CB41FE0B2C7898077CFBE9DC0018EE34075",
+                      "bytes":  20777
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/当前恢复状态.md",
+                      "sha256":  "F18E862A3E1A3F1D30273FAB25B26EE288193F9AD61FEF28FC1DEF44E146B97C",
+                      "bytes":  127049
+                  },
+                  {
+                      "path":  "codex-memory/kube-agent/current/docs_M5_85_19_SUPERVISOR_SSE_FINAL_CONTENT_DEDUPE_20260612.md",
+                      "sha256":  "2B5297D71A25C0D8C2BF90F3B48A7187E263CBBA7D97EF717EF8ED0F12CB8585",
+                      "bytes":  2323
+                  }
+              ]
+}

@@ -16,9 +16,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -82,6 +85,60 @@ class AtlasOrchestratorJsonTest {
     }
 
     @Test
+    void registerSupervisorDisplayContent_shouldDedupeFinalAnswersAndRejectPlaceholders() throws Exception {
+        AtlasOrchestrator orchestrator = newOrchestrator();
+        Method method = AtlasOrchestrator.class.getDeclaredMethod(
+            "registerSupervisorDisplayContent",
+            String.class,
+            Set.class
+        );
+        method.setAccessible(true);
+
+        // 中文说明：Supervisor Graph 的同一份最终答案可能同时存在于 ReAct event、answer、result key 中。
+        // 本测试保护“前端只收到一次最终内容”的 SSE 契约；这里不启动 Graph、不执行 Tool、也不访问 kube-manager。
+        Set<String> emittedContents = new HashSet<>();
+
+        assertTrue((Boolean) method.invoke(orchestrator, "最终回答", emittedContents),
+            "第一次出现的最终回答应该允许推送");
+        assertFalse((Boolean) method.invoke(orchestrator, " 最终回答 ", emittedContents),
+            "仅空白差异不应导致重复 SSE content");
+        assertTrue((Boolean) method.invoke(orchestrator, "后续不同错误说明", emittedContents),
+            "不同内容仍应允许推送，避免吞掉新的澄清或错误原因");
+        assertFalse((Boolean) method.invoke(orchestrator, "", emittedContents),
+            "空内容不应生成前端气泡");
+        assertFalse((Boolean) method.invoke(orchestrator, "{}", emittedContents),
+            "Graph 占位空 Map 字符串不应被当成用户可读回答");
+    }
+
+    @Test
+    void emitSupervisorDisplayContent_shouldOnlySendFirstUniqueContent() throws Exception {
+        CapturingStreamingEmitter streamingEmitter = new CapturingStreamingEmitter();
+        AtlasOrchestrator orchestrator = newOrchestrator(streamingEmitter);
+        Method method = AtlasOrchestrator.class.getDeclaredMethod(
+            "emitSupervisorDisplayContent",
+            org.springframework.web.servlet.mvc.method.annotation.SseEmitter.class,
+            String.class,
+            String.class,
+            Set.class
+        );
+        method.setAccessible(true);
+
+        // 中文说明：这个测试比纯集合测试更贴近 SSE 运行时，直接确认重复最终内容不会再次调用 StreamingEmitter。
+        // 安全边界：仍然只是展示层测试，不创建 Graph run、不执行 Tool、不调用 LLM、不访问 kube-manager。
+        Set<String> emittedContents = new HashSet<>();
+        var emitter = new org.springframework.web.servlet.mvc.method.annotation.SseEmitter(0L);
+
+        assertTrue((Boolean) method.invoke(orchestrator, emitter, "direct_answer", "最终回答", emittedContents));
+        assertFalse((Boolean) method.invoke(orchestrator, emitter, "react_node", "最终回答", emittedContents));
+        assertTrue((Boolean) method.invoke(orchestrator, emitter, "delegate", "不同 delegate 回答", emittedContents));
+
+        assertEquals(2, streamingEmitter.events.size(), "同一份最终内容只应发送一次，不同内容仍应发送");
+        assertEquals("content", streamingEmitter.events.get(0).type());
+        assertTrue(streamingEmitter.events.get(0).content().contains("最终回答"));
+        assertTrue(streamingEmitter.events.get(1).content().contains("不同 delegate 回答"));
+    }
+
+    @Test
     void testToJson_escapesControlCharactersForSseSingleLinePayload() throws Exception {
         AtlasOrchestrator orchestrator = newOrchestrator();
 
@@ -127,9 +184,13 @@ class AtlasOrchestratorJsonTest {
     }
 
     private AtlasOrchestrator newOrchestrator() {
+        return newOrchestrator(mock(StreamingEmitter.class));
+    }
+
+    private AtlasOrchestrator newOrchestrator(StreamingEmitter streamingEmitter) {
         return new AtlasOrchestrator(
             mock(IntentRouter.class),
-            mock(StreamingEmitter.class),
+            streamingEmitter,
             mock(ToolRegistry.class),
             mock(UserPermissionContext.class),
             mock(AgentPrincipalResolver.class),
@@ -145,5 +206,14 @@ class AtlasOrchestratorJsonTest {
             null,
             null
         );
+    }
+
+    private static final class CapturingStreamingEmitter extends StreamingEmitter {
+        private final List<SseEvent> events = new ArrayList<>();
+
+        @Override
+        public void send(org.springframework.web.servlet.mvc.method.annotation.SseEmitter emitter, SseEvent event) {
+            events.add(event);
+        }
     }
 }

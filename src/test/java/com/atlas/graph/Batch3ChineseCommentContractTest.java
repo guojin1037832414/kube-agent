@@ -26,7 +26,8 @@ class Batch3ChineseCommentContractTest {
         Map.entry(
             Path.of("src/main/java/com/atlas/orchestrator/AtlasOrchestrator.java"),
             List.of("中文说明", "安全边界", "Supervisor Graph", "SSE", "RuntimeIdentity",
-                "HITL marker", "Graph State", "SafeToolExecutor", "delegate", "fail-closed")
+                "HITL marker", "Graph State", "SafeToolExecutor", "delegate", "direct_answer",
+                "去重", "fail-closed")
         ),
         Map.entry(
             Path.of("src/main/java/com/atlas/graph/config/AtlasGraphConfig.java"),
