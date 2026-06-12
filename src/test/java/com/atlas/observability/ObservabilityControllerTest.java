@@ -55,6 +55,8 @@ class ObservabilityControllerTest {
         new AgentEvalWorkbenchOverviewService(evalWorkbenchCapabilitiesService, evalTraceSetCatalogService);
     private final AgentReviewedEvalTraceEvidenceService reviewedEvalTraceEvidenceService =
         new AgentReviewedEvalTraceEvidenceService(evalTraceSetCatalogService);
+    private final AgentReviewedTraceFixtureIntakeContractService reviewedTraceFixtureIntakeContractService =
+        new AgentReviewedTraceFixtureIntakeContractService(evalTraceSetCatalogService);
     private final AgentEvalWorkbenchTraceSetDetailService evalWorkbenchTraceSetDetailService =
         new AgentEvalWorkbenchTraceSetDetailService(evalTraceSetCatalogService);
     private final AgentEvalWorkbenchPromotionWorkflowService evalWorkbenchPromotionWorkflowService =
@@ -236,6 +238,7 @@ class ObservabilityControllerTest {
         evalWorkbenchCapabilitiesService,
         evalWorkbenchOverviewService,
         reviewedEvalTraceEvidenceService,
+        reviewedTraceFixtureIntakeContractService,
         releaseBlockingEvalGateContractService,
         evalWorkbenchTraceSetDetailService,
         evalWorkbenchPromotionWorkflowService,
@@ -3587,6 +3590,72 @@ class ObservabilityControllerTest {
             .containsEntry("externalCalls", false);
         assertThat(evidence.toString())
             .contains("reviewed-trace-evidence", "phase1-core-golden")
+            .doesNotContain("secret-token-value", "conv-sensitive", "user-sensitive", "org-sensitive", "/api/org-sensitive");
+    }
+
+    @Test
+    void reviewedTraceFixtureIntakeContract_shouldRequireAdminUser() {
+        ResponseEntity<ApiResponse<AgentReviewedTraceFixtureIntakeContractResponse>> anonymous =
+            controller.reviewedTraceFixtureIntakeContract();
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentReviewedTraceFixtureIntakeContractResponse>> user =
+            controller.reviewedTraceFixtureIntakeContract();
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void reviewedTraceFixtureIntakeContract_shouldReturnReadOnlyContractForAdminUser() {
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentReviewedTraceFixtureIntakeContractResponse>> response =
+            controller.reviewedTraceFixtureIntakeContract();
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        AgentReviewedTraceFixtureIntakeContractResponse contract = response.getBody().getData();
+        assertThat(contract.schemaVersion()).isEqualTo("agent-reviewed-trace-fixture-intake-contract.v1");
+        assertThat(contract.contractStatus()).isEqualTo("FIXTURE_INTAKE_CONTRACT_DEFINED_NOT_RUNTIME_BOUND");
+        assertThat(contract.traceSetCount()).isEqualTo(7);
+        assertThat(contract.reviewedTraceSetCount()).isZero();
+        assertThat(contract.missingFixtureTraceSetCount()).isEqualTo(7);
+        assertThat(contract.requiredFixtureFields()).extracting(field -> field.get("name"))
+            .contains("traceId", "redactionProof", "deterministicEvalProof", "sourceCommitSha", "evidenceDigest");
+        assertThat(contract.reviewWorkflow()).extracting(stage -> stage.get("id"))
+            .contains("candidate-discovery", "fixture-intake-contract", "catalog-patch-proposal", "human-git-review");
+        assertThat(contract.forbiddenShortcuts())
+            .contains("caller-submitted-trace-ids", "runtime-catalog-mutation", "mcp-tools-call",
+                "kube-manager-read-or-write", "nim-hpc-slurm-bcm-phase2-authority");
+        assertThat(contract.endpointMap())
+            .containsEntry("fixtureIntakeContract",
+                "/api/agent/observability/eval/reviewed-trace-fixture-intake-contract")
+            .containsEntry("catalogPatchProposal",
+                "/api/agent/observability/eval/trace-sets/{traceSetId}/catalog-patch-proposal");
+        assertThat(contract.safety())
+            .containsEntry("adminOnly", true)
+            .containsEntry("readOnly", true)
+            .containsEntry("contractOnly", true)
+            .containsEntry("fixtureUploadAccepted", false)
+            .containsEntry("callerTraceIdsAccepted", false)
+            .containsEntry("runtimeCatalogWrite", false)
+            .containsEntry("ciBlockingEnabled", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("mcpToolCall", false)
+            .containsEntry("kubeManagerCalls", false);
+        assertThat(contract.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("rawAuditExportAllowed", false)
+            .containsEntry("containsRawPrompt", false)
+            .containsEntry("containsToken", false)
+            .containsEntry("containsPassword", false);
+        assertThat(contract.toString())
+            .contains("reviewed-trace-fixture-intake-contract", "phase1-core-golden")
             .doesNotContain("secret-token-value", "conv-sensitive", "user-sensitive", "org-sensitive", "/api/org-sensitive");
     }
 

@@ -85,6 +85,7 @@ public class ObservabilityController {
     private final AgentEvalWorkbenchCapabilitiesService evalWorkbenchCapabilitiesService;
     private final AgentEvalWorkbenchOverviewService evalWorkbenchOverviewService;
     private final AgentReviewedEvalTraceEvidenceService reviewedEvalTraceEvidenceService;
+    private final AgentReviewedTraceFixtureIntakeContractService reviewedTraceFixtureIntakeContractService;
     private final AgentReleaseBlockingEvalGateContractService releaseBlockingEvalGateContractService;
     private final AgentEvalWorkbenchTraceSetDetailService evalWorkbenchTraceSetDetailService;
     private final AgentEvalWorkbenchPromotionWorkflowService evalWorkbenchPromotionWorkflowService;
@@ -136,6 +137,7 @@ public class ObservabilityController {
                                    AgentEvalWorkbenchCapabilitiesService evalWorkbenchCapabilitiesService,
                                    AgentEvalWorkbenchOverviewService evalWorkbenchOverviewService,
                                    AgentReviewedEvalTraceEvidenceService reviewedEvalTraceEvidenceService,
+                                   AgentReviewedTraceFixtureIntakeContractService reviewedTraceFixtureIntakeContractService,
                                    AgentReleaseBlockingEvalGateContractService releaseBlockingEvalGateContractService,
                                    AgentEvalWorkbenchTraceSetDetailService evalWorkbenchTraceSetDetailService,
                                    AgentEvalWorkbenchPromotionWorkflowService evalWorkbenchPromotionWorkflowService,
@@ -186,6 +188,7 @@ public class ObservabilityController {
         this.evalWorkbenchCapabilitiesService = evalWorkbenchCapabilitiesService;
         this.evalWorkbenchOverviewService = evalWorkbenchOverviewService;
         this.reviewedEvalTraceEvidenceService = reviewedEvalTraceEvidenceService;
+        this.reviewedTraceFixtureIntakeContractService = reviewedTraceFixtureIntakeContractService;
         this.releaseBlockingEvalGateContractService = releaseBlockingEvalGateContractService;
         this.evalWorkbenchTraceSetDetailService = evalWorkbenchTraceSetDetailService;
         this.evalWorkbenchPromotionWorkflowService = evalWorkbenchPromotionWorkflowService;
@@ -839,6 +842,25 @@ public class ObservabilityController {
             return guard;
         }
         return ResponseEntity.ok(ApiResponse.ok(reviewedEvalTraceEvidenceService.evidence()));
+    }
+
+    /**
+     * 发布 reviewed redacted trace fixture 接入合同。
+     *
+     * <p>中文说明：该入口只告诉前端和学习者 fixture 在进入人审/Git review/目录晋升前
+     * 必须携带哪些字段和证明；它不接收上传、不接收调用方 traceId，也不写 `eval-trace-sets.json`。</p>
+     *
+     * <p>安全边界：只读合同，不运行 eval/replay，不调用 Tool/MCP/LLM/RAG/kube-manager，
+     * 不创建 HITL/audit/memory，也不打开 CI blocking 或 release authority。</p>
+     */
+    @GetMapping("/eval/reviewed-trace-fixture-intake-contract")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentReviewedTraceFixtureIntakeContractResponse>> reviewedTraceFixtureIntakeContract() {
+        ResponseEntity<ApiResponse<AgentReviewedTraceFixtureIntakeContractResponse>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return ResponseEntity.ok(ApiResponse.ok(reviewedTraceFixtureIntakeContractService.contract()));
     }
 
     /**
