@@ -6,7 +6,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.atlas.http.KubeManagerHttpClient;
 import com.atlas.observability.AgentTraceContext;
 import com.atlas.tool.annotation.AtlasToolMapping;
+import com.atlas.tool.annotation.ToolPermission;
 import com.atlas.tool.core.AtlasToolResult;
+import com.atlas.tool.impl.DashboardDeploymentCountTool;
 import com.atlas.tool.impl.NodeQueryTool;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -41,8 +43,9 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * 一是直接传入当前用户 token/orgId；二是传入 username/password，由测试在进程内登录 kube-manager、
  * 调用生产同款 {@link KubeManagerHttpClient#resolveOrgId(String, String)} 解析可信 orgId 后再执行只读 Tool。</p>
  *
- * <p>安全边界：本测试只绑定 {@link NodeQueryTool}，该 Tool 的注解必须保持 GET + READ +
- * no-confirmation。测试会传入伪造的 {@code organizationId/token} 参数来证明 Tool 仍应使用
+ * <p>安全边界：本测试只绑定低风险的 Phase 1 READ Tool，目前覆盖 {@link NodeQueryTool}
+ * 和 {@link DashboardDeploymentCountTool}，这些 Tool 的注解必须保持 GET + READ + no-confirmation。
+ * 测试会传入伪造的 {@code organizationId/token} 参数来证明 Tool 仍应使用
  * {@link UserPermissionContext} 中的服务端可信 orgId/token；禁止在这里接入 POST/PUT/DELETE、
  * kube-manager 写入、MCP runtime、HITL 触发、audit 写入、Memory/RAG 写入或二期
  * NIM/HPC/Slurm/BCM 专项能力。唯一允许的 POST 是认证 bootstrap 的 {@code /api/login}，
@@ -94,16 +97,13 @@ class KubeManagerReadOnlySmokeTest {
     }
 
     @Test
-    void smokeTarget_shouldRemainPhase1ReadOnlyNodeQueryTool() {
-        AtlasToolMapping mapping = NodeQueryTool.class.getAnnotation(AtlasToolMapping.class);
-
-        // 中文说明：这个测试始终运行，用元数据锁住 smoke 的目标 Tool，防止未来误把写 Tool 或二期域 Tool 接进现场 smoke。
-        assertNotNull(mapping, "NodeQueryTool 必须声明 AtlasToolMapping，smoke 才能审计 HTTP/风险元数据");
-        assertEquals("GET", mapping.httpMethod(), "8100 smoke 只能调用 GET 只读接口");
-        assertEquals(AtlasToolMapping.OperationType.READ, mapping.operationType(), "8100 smoke 只能绑定 READ Tool");
-        assertFalse(mapping.requiresConfirmation(), "READ smoke 不应创建 HITL 确认流程");
-        assertArrayEquals(new String[]{"/api/{orgId}/node"}, mapping.apiEndpoints(),
-            "READ smoke 必须固定在节点查询接口，不能被扩展成写入或二期域联调");
+    void smokeTargets_shouldRemainPhase1ReadOnlyGetTools() {
+        // 中文说明：这个测试始终运行，用元数据锁住真实 8100 smoke 的目标 Tool。
+        // 只有低风险 GET/READ/no-HITL 工具可以加入这里；用户列表、日志、配额等敏感读即使是 GET 也要另走评审。
+        assertPhase1ReadOnlySmokeTool(NodeQueryTool.class, "/api/{orgId}/node", ToolPermission.Policy.PUBLIC);
+        assertPhase1ReadOnlySmokeTool(DashboardDeploymentCountTool.class,
+            "/api/{orgId}/dashboard/deployment/count",
+            ToolPermission.Policy.PUBLIC);
     }
 
     @Test
@@ -113,7 +113,7 @@ class KubeManagerReadOnlySmokeTest {
         // 中文说明：这是源码级安全护栏，防止未来把“真实 8100 smoke”顺手改成写接口联调。
         // 安全边界：8100 smoke 的存在价值是验证 READ Tool 的 token/orgId/query/path 传播，
         // 不是发布写能力、触发 HITL、联调 MCP runtime，或提前恢复 NIM/HPC/Slurm/BCM 二期域。
-        // 唯一允许的 POST 是 /api/login 认证 bootstrap；业务链路仍只能走 NodeQueryTool 的 GET。
+        // 唯一允许的 POST 是 /api/login 认证 bootstrap；业务链路仍只能走已白名单 READ Tool 的 GET。
         assertEquals(1, countOccurrences(source, "." + "post("),
             "8100 smoke 只允许一个认证 POST，用于 /api/login 获取临时 token，不能新增业务 POST");
         assertTrue(source.contains(".uri(\"/api/login\")"),
@@ -138,7 +138,7 @@ class KubeManagerReadOnlySmokeTest {
     }
 
     @Test
-    void nodeQuery_shouldReachKubeManager8100WhenSmokeExplicitlyEnabled() {
+    void readTools_shouldReachKubeManager8100WhenSmokeExplicitlyEnabled() {
         assumeTrue(smokeEnabled(),
             () -> "跳过真实 8100 smoke：设置 " + ENABLED_PROPERTY + "=true 或 " + ENABLED_ENV + "=true 后才访问 kube-manager");
 
@@ -153,9 +153,8 @@ class KubeManagerReadOnlySmokeTest {
         context.bind(identity.token(), identity.orgId());
 
         try (AgentTraceContext.Scope ignored = AgentTraceContext.bind("trc_8100readsmoke000000000000000000")) {
-            NodeQueryTool tool = new NodeQueryTool(client);
-
-            Map<String, Object> result = tool.execute(Map.of(
+            NodeQueryTool nodeQueryTool = new NodeQueryTool(client);
+            Map<String, Object> nodeResult = nodeQueryTool.execute(Map.of(
                 "page", "1",
                 "limit", "1",
                 // 中文说明：伪造字段用于证明 Tool 不能信任参数里的控制面身份，只能使用 ThreadLocal 可信上下文。
@@ -163,13 +162,46 @@ class KubeManagerReadOnlySmokeTest {
                 "orgId", "forged-org",
                 "token", "forged-token"
             ));
+            assertReadSmokeSuccess("node_query", nodeResult, baseUrl);
 
-            assertEquals(Boolean.TRUE, result.get(AtlasToolResult.KEY_SUCCESS),
-                () -> "node_query READ smoke 失败，baseUrl=" + baseUrl + ", message=" + result.get(AtlasToolResult.KEY_MESSAGE));
-            assertEquals("node_query", result.get(AtlasToolResult.KEY_TOOL_NAME));
-            assertTrue(result.containsKey(AtlasToolResult.KEY_DATA),
-                "成功结果必须保留 data 字段，供前端/LLM 后续展示或总结");
+            DashboardDeploymentCountTool deploymentCountTool = new DashboardDeploymentCountTool(client);
+            Map<String, Object> deploymentCountResult = deploymentCountTool.execute(Map.of(
+                // 中文说明：第二条真实 GET 链路证明 8100 smoke 不是只为节点列表定制；这些伪造控制字段仍必须被忽略。
+                "organizationId", "forged-org",
+                "orgId", "forged-org",
+                "token", "forged-token",
+                "page", "999",
+                "limit", "999",
+                "keyword", "probe"
+            ));
+            assertReadSmokeSuccess("dashboard_deployment_count", deploymentCountResult, baseUrl);
         }
+    }
+
+    private static void assertPhase1ReadOnlySmokeTool(Class<?> toolType,
+                                                      String expectedEndpoint,
+                                                      ToolPermission.Policy expectedPolicy) {
+        AtlasToolMapping mapping = toolType.getAnnotation(AtlasToolMapping.class);
+        assertNotNull(mapping, toolType.getSimpleName() + " 必须声明 AtlasToolMapping，smoke 才能审计 HTTP/风险元数据");
+        assertEquals("GET", mapping.httpMethod(), "8100 smoke 只能调用 GET 只读接口: " + toolType.getSimpleName());
+        assertEquals(AtlasToolMapping.OperationType.READ, mapping.operationType(),
+            "8100 smoke 只能绑定低风险 READ Tool: " + toolType.getSimpleName());
+        assertFalse(mapping.requiresConfirmation(), "READ smoke 不应创建 HITL 确认流程: " + toolType.getSimpleName());
+        assertArrayEquals(new String[]{expectedEndpoint}, mapping.apiEndpoints(),
+            "READ smoke 必须固定在已审阅的 kube-manager endpoint，不能被扩展成写入或二期域联调: " + toolType.getSimpleName());
+
+        ToolPermission permission = toolType.getAnnotation(ToolPermission.class);
+        assertNotNull(permission, toolType.getSimpleName() + " 必须声明 ToolPermission，smoke 不能绑定权限语义不明的 Tool");
+        assertEquals(expectedPolicy, permission.value(),
+            "READ smoke 当前只接受明确审阅过的权限策略，避免把敏感读或 admin-only Tool 混入现场联调");
+    }
+
+    private static void assertReadSmokeSuccess(String toolName, Map<String, Object> result, String baseUrl) {
+        assertEquals(Boolean.TRUE, result.get(AtlasToolResult.KEY_SUCCESS),
+            () -> toolName + " READ smoke 失败，baseUrl=" + baseUrl + ", message=" + result.get(AtlasToolResult.KEY_MESSAGE));
+        assertEquals(toolName, result.get(AtlasToolResult.KEY_TOOL_NAME));
+        assertTrue(result.containsKey(AtlasToolResult.KEY_DATA),
+            "成功结果必须保留 data 字段，供前端/LLM 后续展示或总结: " + toolName);
     }
 
     private static SmokeIdentity resolveSmokeIdentity(String baseUrl, KubeManagerHttpClient client) {
