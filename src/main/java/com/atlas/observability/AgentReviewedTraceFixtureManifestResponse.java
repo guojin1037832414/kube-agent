@@ -241,6 +241,7 @@ public record AgentReviewedTraceFixtureManifestResponse(
     private static Map<String, Object> buildEndpointMap() {
         Map<String, Object> endpoints = new LinkedHashMap<>();
         endpoints.put("fixtureManifest", ENDPOINT);
+        endpoints.put("fixtureTemplate", AgentReviewedTraceFixtureTemplateResponse.ENDPOINT);
         endpoints.put("fixtureIntakeContract", AgentReviewedTraceFixtureIntakeContractResponse.ENDPOINT);
         endpoints.put("reviewedEvalTraceEvidence", "/api/agent/observability/eval/reviewed-trace-evidence");
         endpoints.put("catalogPatchReview", "/api/agent/observability/eval/workbench/trace-sets/{traceSetId}/catalog-patch-review");

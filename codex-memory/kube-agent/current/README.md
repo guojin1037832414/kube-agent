@@ -10,7 +10,7 @@
 |---|---|---|
 | Phase 1 顶级 Agent Core | 进行中 | 不降低目标，优先完成安全、编排、Tool 治理、Memory/RAG、Eval、可观测、多 Agent 审查和教学注释。 |
 | NIM / HPC / Slurm / BCM | 二期暂停 | 历史 Tool/测试/证据代码仍可存在，但一期不导出 MCP、不新增 runtime authority，高风险写默认被 durable audit fail-closed 阻断。 |
-| 中文代码注释 | 分批推进 | 已完成安全入口、Tool/MCP/kube-manager 执行边界、Orchestrator / Graph / ReAct / Plan 编排链路、Memory / RAG / Eval / Observability / Audit 证据链，以及 Batch 5 的 DTO / store / config、support contract、query/path/body helper、分析目录 query helper；当前正在推进 Orchestrator hardening 与 SSE 展示契约收敛。 |
+| 中文代码注释 | 分批推进 | 已完成安全入口、Tool/MCP/kube-manager 执行边界、Orchestrator / Graph / ReAct / Plan 编排链路、Memory / RAG / Eval / Observability / Audit 证据链，以及 Batch 5 的 DTO / store / config、support contract、query/path/body helper、分析目录 query helper；Eval reviewed trace fixture 已补 intake 合同、repo/classpath manifest 和 template/schema 只读视图。 |
 | 文档治理 | 当前刷新 | 主线文档精简到入口、架构学习、使命记忆、ADR、技术栈和恢复记忆；历史波次报告从当前 docs 树移除。 |
 
 ## 核心架构
@@ -49,7 +49,7 @@
 - 支撑契约层不是授权层：`ToolParameterSpec`、`SafeToolExecutionResult`、`SafeToolExecutionSource`、`AgentTraceContext`、`IntentDefinition`、`IntentResult`、默认值补参和 Tool 异常只描述 schema、结果、来源、trace、路由、草稿补参或错误信号，不能替代 Tool 权限、HITL、audit、release、MCP runtime、kube-manager 写入或部署授权。
 - query/path/body helper 是 kube-manager HTTP 前最后一层轻量收敛：下载任务、课件、模板、TensorBoard、文件/存储和用户高风险变更参数必须拒绝路径/query/body 注入；资源 ID 只是定位符，充值 body 只能保留白名单字段，不能透传 token/orgId/HITL/audit/release/writeAllowed。
 - 分析/目录类 query helper 只做 GET 筛选白名单：虚拟机、repository catalog、sale 产品/报价、行业应用和成本账单查询不能把 LLM/前端字段整体透传给 kube-manager；目录筛选不等于 NIM 部署，金额预估不等于下单/支付，API 历史不等于重放请求。
-- Eval / Replay 已有 admin-only 确定性读模型和部分运行入口；CI blocking、LLM eval、Memory/RAG retrieval eval runtime 仍必须经过 reviewed trace evidence 和单独 release 审查。
+- Eval / Replay 已有 admin-only 确定性读模型和部分运行入口；reviewed trace fixture 目前只开放 intake 合同、repo/classpath manifest 覆盖视图和作者 template/schema，不接收上传、不写 catalog、不授予 CI/release 权力；CI blocking、LLM eval、Memory/RAG retrieval eval runtime 仍必须经过 reviewed trace evidence 和单独 release 审查。
 - 写重试、RAG prompt 注入、A2A runtime handoff、MCP runtime、NIM/HPC/Slurm/BCM 都必须经过证据门和单独 release 审查。
 
 ## 技术栈

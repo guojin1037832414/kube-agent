@@ -59,6 +59,8 @@ class ObservabilityControllerTest {
         new AgentReviewedTraceFixtureIntakeContractService(evalTraceSetCatalogService);
     private final AgentReviewedTraceFixtureManifestService reviewedTraceFixtureManifestService =
         new AgentReviewedTraceFixtureManifestService(evalTraceSetCatalogService, new com.fasterxml.jackson.databind.ObjectMapper());
+    private final AgentReviewedTraceFixtureTemplateService reviewedTraceFixtureTemplateService =
+        new AgentReviewedTraceFixtureTemplateService(evalTraceSetCatalogService);
     private final AgentEvalWorkbenchTraceSetDetailService evalWorkbenchTraceSetDetailService =
         new AgentEvalWorkbenchTraceSetDetailService(evalTraceSetCatalogService);
     private final AgentEvalWorkbenchPromotionWorkflowService evalWorkbenchPromotionWorkflowService =
@@ -242,6 +244,7 @@ class ObservabilityControllerTest {
         reviewedEvalTraceEvidenceService,
         reviewedTraceFixtureIntakeContractService,
         reviewedTraceFixtureManifestService,
+        reviewedTraceFixtureTemplateService,
         releaseBlockingEvalGateContractService,
         evalWorkbenchTraceSetDetailService,
         evalWorkbenchPromotionWorkflowService,
@@ -3730,6 +3733,90 @@ class ObservabilityControllerTest {
         assertThat(manifest.toString())
             .contains("reviewed-trace-fixture-manifest", "phase1-core-golden")
             .doesNotContain("secret-token-value", "conv-sensitive", "user-sensitive", "org-sensitive", "/api/org-sensitive");
+    }
+
+    @Test
+    void reviewedTraceFixtureTemplate_shouldRequireAdminUser() {
+        ResponseEntity<ApiResponse<AgentReviewedTraceFixtureTemplateResponse>> anonymous =
+            controller.reviewedTraceFixtureTemplate();
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentReviewedTraceFixtureTemplateResponse>> user =
+            controller.reviewedTraceFixtureTemplate();
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void reviewedTraceFixtureTemplate_shouldReturnAuthoringTemplateForAdminUser() {
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentReviewedTraceFixtureTemplateResponse>> response =
+            controller.reviewedTraceFixtureTemplate();
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        AgentReviewedTraceFixtureTemplateResponse template = response.getBody().getData();
+        assertThat(template.schemaVersion()).isEqualTo("agent-reviewed-trace-fixture-template.v1");
+        assertThat(template.templateStatus()).isEqualTo("TEMPLATE_READY_FOR_HUMAN_AUTHORED_FIXTURES");
+        assertThat(template.templateOnly()).isTrue();
+        assertThat(template.createsFixtureFile()).isFalse();
+        assertThat(template.placeholderTraceIdsAllowed()).isFalse();
+        assertThat(template.traceSetCount()).isEqualTo(7);
+        assertThat(template.requiredFields()).extracting(field -> field.get("name"))
+            .contains("traceId", "traceSetId", "redactionProof", "privacyProof", "evidenceDigest");
+        assertThat(template.fixtureJsonSchema())
+            .containsEntry("additionalProperties", false)
+            .containsEntry("placeholderTraceIdsAllowed", false)
+            .containsEntry("runtimeCatalogWrite", false);
+        assertThat(template.exampleFixtureSkeleton())
+            .containsEntry("traceId", "<reviewed-w3c-trace-id>")
+            .containsEntry("traceSetId", "<catalog-trace-set-id>");
+        assertThat(template.traceSetTemplates())
+            .filteredOn(row -> "phase1-core-golden".equals(row.get("traceSetId")))
+            .singleElement()
+            .satisfies(row -> assertThat(row)
+                .containsEntry("suggestedFilename", "phase1-core-golden.reviewed-trace-fixture.json")
+                .containsEntry("templateOnly", true)
+                .containsEntry("placeholderTraceIdsAllowed", false)
+                .containsEntry("catalogMutationAllowed", false)
+                .containsEntry("requiresHumanGitReview", true));
+        assertThat(template.fileNamingRules())
+            .contains("do-not-commit-placeholder-template-json-to-the-scanned-fixture-directory");
+        assertThat(template.forbiddenShortcuts())
+            .contains("placeholder-trace-id-commit", "fake-reviewed-fixture-file", "runtime-catalog-write",
+                "kube-manager-call", "nim-hpc-slurm-bcm-phase2-authority");
+        assertThat(template.endpointMap())
+            .containsEntry("fixtureTemplate",
+                "/api/agent/observability/eval/reviewed-trace-fixture-template")
+            .containsEntry("fixtureManifest",
+                "/api/agent/observability/eval/reviewed-trace-fixture-manifest");
+        assertThat(template.safety())
+            .containsEntry("adminOnly", true)
+            .containsEntry("readOnly", true)
+            .containsEntry("templateOnly", true)
+            .containsEntry("schemaOnly", true)
+            .containsEntry("createsFixtureFile", false)
+            .containsEntry("placeholderTraceIdsAllowed", false)
+            .containsEntry("runtimeCatalogWrite", false)
+            .containsEntry("runtimeEvalAllowed", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("mcpToolCall", false)
+            .containsEntry("kubeManagerCalls", false);
+        assertThat(template.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("rawAuditExportAllowed", false)
+            .containsEntry("containsToken", false)
+            .containsEntry("containsPassword", false);
+        assertThat(template.toString())
+            .contains("reviewed-trace-fixture-template", "phase1-core-golden")
+            .doesNotContain("trc_11111111111111111111111111111111",
+                "secret-token-value", "conv-sensitive", "user-sensitive", "org-sensitive", "/api/org-sensitive");
     }
 
     @Test

@@ -264,6 +264,10 @@ class AgentSecurityConfigWebMvcTest {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
             .andExpect(status().isForbidden());
 
+        mockMvc.perform(get("/api/agent/observability/eval/reviewed-trace-fixture-template")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
+            .andExpect(status().isForbidden());
+
         mockMvc.perform(get("/api/agent/observability/eval/release-blocking-gate-contract")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
             .andExpect(status().isForbidden());
@@ -511,6 +515,10 @@ class AgentSecurityConfigWebMvcTest {
             .andExpect(status().isOk());
 
         mockMvc.perform(get("/api/agent/observability/eval/reviewed-trace-fixture-manifest")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token"))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/agent/observability/eval/reviewed-trace-fixture-template")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token"))
             .andExpect(status().isOk());
 
@@ -956,6 +964,11 @@ class AgentSecurityConfigWebMvcTest {
         @GetMapping("/api/agent/observability/eval/reviewed-trace-fixture-manifest")
         String observabilityEvalReviewedTraceFixtureManifest() {
             return "eval-reviewed-trace-fixture-manifest";
+        }
+
+        @GetMapping("/api/agent/observability/eval/reviewed-trace-fixture-template")
+        String observabilityEvalReviewedTraceFixtureTemplate() {
+            return "eval-reviewed-trace-fixture-template";
         }
 
         @GetMapping("/api/agent/observability/eval/release-blocking-gate-contract")
