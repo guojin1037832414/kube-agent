@@ -214,7 +214,7 @@ kube-manager 背后管理的是 Kubernetes/云平台资源。Agent 只要开始�
 - audit log 要回答谁、何时、对什么资源做了什么。
 - ServiceAccount、用户 token、orgId/namespace/project 不能混为一谈。
 
-这也是为什么 kube-agent 的 `KubeManagerReadOnlySmokeTest` 只从 GET/READ `/api/{orgId}/node` 开始，而不是直接做创建、删除、扩缩容。
+这也是为什么 kube-agent 的 `KubeManagerReadOnlySmokeTest` 只从 GET/READ `/api/{orgId}/node` 开始，而不是直接做创建、删除、扩缩容。M5.85-38 后，这个 smoke 还会把稳定 READ Tool 放进 `SafeToolExecutor` 和代表性 `AtlasToolCallback -> SafeToolExecutor` 真实链路里验证：模型或 ReAct 只能提出候选参数，真正触达 `8100` 前必须重新绑定服务端 token/orgId、过滤受保护字段并写入审计。
 
 ### 2.2.12 质量工具服务于 release gate
 

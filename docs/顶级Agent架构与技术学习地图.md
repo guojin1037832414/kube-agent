@@ -1,6 +1,6 @@
 ﻿# kube-agent 顶级 Agent 架构与技术点学习地图
 
-> 最后更新：2026-06-13
+> 最后更新：2026-06-24
 > 这个文件是长期学习地图，不是历史流水账。旧波次细节保留在 Git 历史和 `codex-memory` 中。
 
 ## 一句话架构
@@ -120,6 +120,7 @@ Evidence side:
 - 业务请求缺用户 Token 时禁止透明降级到 sysadmin。
 - `KubeManagerReadOnlySmokeTest` 是当前真实 8100 联调入口：默认跳过，可显式提供当前用户 token/orgId，也可通过 username/password 登录型 smoke 在测试进程内获取临时 token，再复用 `KubeManagerHttpClient.resolveOrgId` 通过 `/api/{orgId}/user` 反查可信 orgId。
 - 这个 smoke 的业务链路目前覆盖 6 条 GET/READ/no-HITL 链路：`NodeQueryTool`、`NodeRemainingResourceTool`、`DashboardDeploymentCountTool`、`DashboardImageCountTool`、`DashboardEasyFlowCountTool` 和 `DashboardEasyFlowTool`，用于验证 token/orgId/query/path 传播；唯一允许的 POST 是认证 bootstrap `/api/login`，不是业务写接口。
+- M5.85-38 后，真实 smoke 不只验证直接 `BaseTool.execute`，还会把同一批 READ Tool 放进 `SafeToolExecutor.executeIntent(...)`，断言 `SafeToolExecutionResult`、traceId、`REACT_ENGINE` 审计事件、可信 orgId 和受保护参数摘要；代表性 `DashboardImageCountTool` 还会通过 `AtlasToolCallback -> SafeToolExecutor` 跑出 `TOOL_CALLBACK` 审计事件。
 - 这个 smoke 不是生产开关，不执行业务写方法，不绑定 MCP runtime，不创建 HITL/audit/memory/release 证据，也不恢复 NIM/HPC/Slurm/BCM 二期能力。
 
 ### 5. Graph / ReAct / Plan 编排

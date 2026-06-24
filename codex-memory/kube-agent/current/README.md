@@ -41,7 +41,7 @@
 - 主 `supervisorGraph` 的 direct_answer、tool_call、delegate、ReAct state fallback 和 ReAct content 事件现在共享最终展示内容去重契约：同一段答案只推一次，空文本和 `{}` 占位不生成前端气泡；这仍只是 SSE 展示层，不代表 Tool/HITL/audit/release/write 成功。
 - MCP 当前只导出 admin-only 只读 Manifest / governance，不开放 `tools/call` 运行时执行权；NIM/HPC/Slurm/BCM 这类二期域不会进入一期 MCP 导出清单。
 - kube-manager 是真实外部网络出口，默认连接 `http://localhost:8100`；业务 Tool 请求必须使用当前用户 Token，不能透明降级为 sysadmin。
-- kube-manager `8100` 真实只读联调已有 opt-in smoke：默认单测不会访问外部服务；可显式提供当前用户 token/orgId，或通过 username/password 登录型 smoke 在进程内获取临时 token 并反查可信 orgId 后，依次验证节点列表、节点剩余资源、Dashboard 部署/镜像/EasyFlow 统计和 EasyFlow 列表这 6 条 GET/READ/no-HITL 链路。
+- kube-manager `8100` 真实只读联调已有 opt-in smoke：默认单测不会访问外部服务；可显式提供当前用户 token/orgId，或通过 username/password 登录型 smoke 在进程内获取临时 token 并反查可信 orgId 后，依次验证节点列表、节点剩余资源、Dashboard 部署/镜像/EasyFlow 统计和 EasyFlow 列表这 6 条 GET/READ/no-HITL 链路；M5.85-38 已把同一批只读链路升级验证到 `SafeToolExecutor` 真实 Agent 执行边界，并用代表性 `AtlasToolCallback -> SafeToolExecutor` 调用证明模型 ToolCallback 入口不会绕过受保护参数过滤、权限预检和审计。
 - 高风险写操作默认要求 ready durable audit prewrite；HITL 确认本身不等于可执行。
 - Memory 当前是按用户保存的 caller-submitted bounded summary，会做基础脱敏和截断，但不是可信 RAG prompt authority。
 - Replay / Eval / Audit / Memory-RAG 证据链已补中文教学边界：它们是 admin-only 或用户隔离的只读/脱敏证据，不重新执行 Tool，不调用 MCP/LLM/kube-manager，不授予 release authority。
@@ -81,7 +81,8 @@ Invoke-RestMethod http://localhost:8300/api/agent/health
 
 # 可选：真实 kube-manager 8100 只读 smoke
 # 默认测试会跳过；需要先启动 kube-manager，并提供当前用户 token/orgId。
-# 当前 smoke 会验证节点列表、节点剩余资源、Dashboard 部署/镜像/EasyFlow 统计和 EasyFlow 列表 6 条 GET/READ/no-HITL 链路。
+# 当前 smoke 会验证节点列表、节点剩余资源、Dashboard 部署/镜像/EasyFlow 统计和 EasyFlow 列表 6 条 GET/READ/no-HITL 链路；
+# 开启后还会跑 SafeToolExecutor 真实 Agent 执行链和代表性 ToolCallback -> SafeToolExecutor 链路。
 mvn -q "-Dtest=KubeManagerReadOnlySmokeTest" `
   "-Datlas.kube-manager.smoke.enabled=true" `
   "-Datlas.kube-manager.smoke.base-url=http://localhost:8100" `
