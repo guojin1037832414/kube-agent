@@ -119,7 +119,7 @@ Evidence side:
 - POST/PATCH/PUT/DELETE 不允许自动重试，除非未来有幂等、durable audit、post-write readback、HITL 和 release evidence。
 - 业务请求缺用户 Token 时禁止透明降级到 sysadmin。
 - `KubeManagerReadOnlySmokeTest` 是当前真实 8100 联调入口：默认跳过，可显式提供当前用户 token/orgId，也可通过 username/password 登录型 smoke 在测试进程内获取临时 token，再复用 `KubeManagerHttpClient.resolveOrgId` 通过 `/api/{orgId}/user` 反查可信 orgId。
-- 这个 smoke 的业务链路目前只覆盖 `NodeQueryTool` 的 GET/READ `/api/{orgId}/node` 和 `DashboardDeploymentCountTool` 的 GET/READ `/api/{orgId}/dashboard/deployment/count`，用于验证 token/orgId/query/path 传播；唯一允许的 POST 是认证 bootstrap `/api/login`，不是业务写接口。
+- 这个 smoke 的业务链路目前覆盖 6 条 GET/READ/no-HITL 链路：`NodeQueryTool`、`NodeRemainingResourceTool`、`DashboardDeploymentCountTool`、`DashboardImageCountTool`、`DashboardEasyFlowCountTool` 和 `DashboardEasyFlowTool`，用于验证 token/orgId/query/path 传播；唯一允许的 POST 是认证 bootstrap `/api/login`，不是业务写接口。
 - 这个 smoke 不是生产开关，不执行业务写方法，不绑定 MCP runtime，不创建 HITL/audit/memory/release 证据，也不恢复 NIM/HPC/Slurm/BCM 二期能力。
 
 ### 5. Graph / ReAct / Plan 编排

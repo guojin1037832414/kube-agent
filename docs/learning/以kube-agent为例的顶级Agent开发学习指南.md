@@ -1060,7 +1060,7 @@ kube-agent 的对应防线：
 | Tool Registry | Tool 元数据目录，描述 name、description、风险级别、operationType、权限和 schema。它决定可见性和候选能力，不是最终执行许可。 | `ToolRegistry`。 | [Spring AI Tool Calling](https://docs.spring.io/spring-ai/reference/api/tools.html) |
 | Protected Params | 过滤调用方伪造的控制字段。token、orgId、userId、confirmed、auditReceipt、releaseDecision、writeAllowed 都不能来自 LLM/前端。 | `ProtectedToolParameterFilter`。 | [OWASP LLM01 Prompt Injection](https://genai.owasp.org/llmrisk/llm01-prompt-injection/) |
 | SafeToolExecutor | 真实 Tool 执行唯一边界。它重绑服务端身份、校验权限、应用 HITL/audit/release gate，再调用具体 Tool。 | `tool/execution`。 | 结合项目源码学习；外部可先读 Spring AI Tool Calling 和 OWASP LLM Top 10。 |
-| kube-manager HTTP Outlet | 触达 `8100` 的外部系统边界。读请求和写请求必须分级治理，尤其写请求需要幂等、审计、HITL、readback 和 release evidence。 | `KubeManagerHttpClient`、`NodeQueryTool`、8100 READ smoke。 | [Kubernetes API Concepts](https://kubernetes.io/docs/reference/using-api/api-concepts/)、[Kubernetes RBAC](https://kubernetes.io/docs/reference/access-authn-authz/rbac/) |
+| kube-manager HTTP Outlet | 触达 `8100` 的外部系统边界。读请求和写请求必须分级治理，尤其写请求需要幂等、审计、HITL、readback 和 release evidence。 | `KubeManagerHttpClient`、`NodeQueryTool`、`NodeRemainingResourceTool`、Dashboard READ Tools、8100 READ smoke。 | [Kubernetes API Concepts](https://kubernetes.io/docs/reference/using-api/api-concepts/)、[Kubernetes RBAC](https://kubernetes.io/docs/reference/access-authn-authz/rbac/) |
 | Resilience4j | 提供 retry、circuit breaker、bulkhead 等韧性能力。读请求可谨慎重试；写请求不能因为“提高成功率”就自动重试。 | `KubeManagerHttpResiliencePolicy`。 | [Resilience4j Guide](https://resilience4j.readme.io/docs/getting-started) |
 
 学习 Tool 时可以拿一个 GET Tool 做练习：先找它的 schema，再找 operationType，再看参数白名单和 path/query 编码，最后确认执行一定经过 `SafeToolExecutor`，而不是从 Graph/ReAct/Controller 直接调用 `BaseTool.execute(...)`。

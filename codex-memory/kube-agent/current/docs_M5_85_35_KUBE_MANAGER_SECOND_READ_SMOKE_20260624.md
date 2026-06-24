@@ -28,5 +28,5 @@
 
 ## 下一步
 
-- 若继续推进 kube-manager READ E2E，可再挑一个低风险 GET/READ/no-HITL Tool，逐个加入元数据 guard 和真实 smoke；推荐先评估 `NodeRemainingResourceTool` 或 `ClusterOverviewTool`，避免用户、日志、权限、订单、配额等敏感读。
+- 若继续推进 kube-manager READ E2E，可再挑一个低风险 GET/READ/no-HITL Tool，逐个加入元数据 guard 和真实 smoke；M5.85-36 已纳入 `NodeRemainingResourceTool` 和多条 Dashboard 只读 Tool。`ClusterOverviewTool` 后续必须先解决真实 smoke 超时稳定性，再考虑纳入。
 - 若回到 Eval trace evidence，则继续准备真实 reviewed redacted fixture 或 catalog patch review readiness；不要创建 fake fixture，不要写 `eval-trace-sets.json`，不要启用 CI blocking。

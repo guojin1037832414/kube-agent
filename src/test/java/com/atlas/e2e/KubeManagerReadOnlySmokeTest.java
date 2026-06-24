@@ -8,8 +8,13 @@ import com.atlas.observability.AgentTraceContext;
 import com.atlas.tool.annotation.AtlasToolMapping;
 import com.atlas.tool.annotation.ToolPermission;
 import com.atlas.tool.core.AtlasToolResult;
+import com.atlas.tool.core.BaseTool;
+import com.atlas.tool.impl.DashboardEasyFlowCountTool;
+import com.atlas.tool.impl.DashboardEasyFlowTool;
 import com.atlas.tool.impl.DashboardDeploymentCountTool;
+import com.atlas.tool.impl.DashboardImageCountTool;
 import com.atlas.tool.impl.NodeQueryTool;
+import com.atlas.tool.impl.NodeRemainingResourceTool;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
@@ -43,9 +48,9 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * 一是直接传入当前用户 token/orgId；二是传入 username/password，由测试在进程内登录 kube-manager、
  * 调用生产同款 {@link KubeManagerHttpClient#resolveOrgId(String, String)} 解析可信 orgId 后再执行只读 Tool。</p>
  *
- * <p>安全边界：本测试只绑定低风险的 Phase 1 READ Tool，目前覆盖 {@link NodeQueryTool}
- * 和 {@link DashboardDeploymentCountTool}，这些 Tool 的注解必须保持 GET + READ + no-confirmation。
- * 测试会传入伪造的 {@code organizationId/token} 参数来证明 Tool 仍应使用
+ * <p>安全边界：本测试只绑定低风险的 Phase 1 READ Tool，目前覆盖节点列表、节点剩余资源、
+ * Dashboard 固定统计和流程列表这些 GET-only 链路，这些 Tool 的注解必须保持 GET + READ +
+ * no-confirmation。测试会传入伪造的 {@code organizationId/token} 参数来证明 Tool 仍应使用
  * {@link UserPermissionContext} 中的服务端可信 orgId/token；禁止在这里接入 POST/PUT/DELETE、
  * kube-manager 写入、MCP runtime、HITL 触发、audit 写入、Memory/RAG 写入或二期
  * NIM/HPC/Slurm/BCM 专项能力。唯一允许的 POST 是认证 bootstrap 的 {@code /api/login}，
@@ -101,8 +106,20 @@ class KubeManagerReadOnlySmokeTest {
         // 中文说明：这个测试始终运行，用元数据锁住真实 8100 smoke 的目标 Tool。
         // 只有低风险 GET/READ/no-HITL 工具可以加入这里；用户列表、日志、配额等敏感读即使是 GET 也要另走评审。
         assertPhase1ReadOnlySmokeTool(NodeQueryTool.class, "/api/{orgId}/node", ToolPermission.Policy.PUBLIC);
+        assertPhase1ReadOnlySmokeTool(NodeRemainingResourceTool.class,
+            "/api/{orgId}/node/remaining",
+            ToolPermission.Policy.AUTHENTICATED);
         assertPhase1ReadOnlySmokeTool(DashboardDeploymentCountTool.class,
             "/api/{orgId}/dashboard/deployment/count",
+            ToolPermission.Policy.PUBLIC);
+        assertPhase1ReadOnlySmokeTool(DashboardImageCountTool.class,
+            "/api/{orgId}/dashboard/image/count",
+            ToolPermission.Policy.PUBLIC);
+        assertPhase1ReadOnlySmokeTool(DashboardEasyFlowCountTool.class,
+            "/api/{orgId}/dashboard/easy-flow/count",
+            ToolPermission.Policy.PUBLIC);
+        assertPhase1ReadOnlySmokeTool(DashboardEasyFlowTool.class,
+            "/api/{orgId}/dashboard/easy-flow",
             ToolPermission.Policy.PUBLIC);
     }
 
@@ -153,28 +170,45 @@ class KubeManagerReadOnlySmokeTest {
         context.bind(identity.token(), identity.orgId());
 
         try (AgentTraceContext.Scope ignored = AgentTraceContext.bind("trc_8100readsmoke000000000000000000")) {
-            NodeQueryTool nodeQueryTool = new NodeQueryTool(client);
-            Map<String, Object> nodeResult = nodeQueryTool.execute(Map.of(
+            Map<String, Object> pagedParams = Map.of(
                 "page", "1",
                 "limit", "1",
                 // 中文说明：伪造字段用于证明 Tool 不能信任参数里的控制面身份，只能使用 ThreadLocal 可信上下文。
                 "organizationId", "forged-org",
                 "orgId", "forged-org",
                 "token", "forged-token"
-            ));
-            assertReadSmokeSuccess("node_query", nodeResult, baseUrl);
+            );
+            assertReadSmokeSuccess(new NodeQueryTool(client), "node_query", pagedParams, baseUrl);
 
-            DashboardDeploymentCountTool deploymentCountTool = new DashboardDeploymentCountTool(client);
-            Map<String, Object> deploymentCountResult = deploymentCountTool.execute(Map.of(
-                // 中文说明：第二条真实 GET 链路证明 8100 smoke 不是只为节点列表定制；这些伪造控制字段仍必须被忽略。
+            Map<String, Object> forgedReadParams = Map.of(
+                // 中文说明：后续 READ Tool 批量共用同一组伪造控制字段，证明本 smoke 不是只为某个 Tool 定制。
                 "organizationId", "forged-org",
                 "orgId", "forged-org",
                 "token", "forged-token",
                 "page", "999",
                 "limit", "999",
                 "keyword", "probe"
-            ));
-            assertReadSmokeSuccess("dashboard_deployment_count", deploymentCountResult, baseUrl);
+            );
+            assertReadSmokeSuccess(new NodeRemainingResourceTool(client),
+                "node_remaining_resource",
+                forgedReadParams,
+                baseUrl);
+            assertReadSmokeSuccess(new DashboardDeploymentCountTool(client),
+                "dashboard_deployment_count",
+                forgedReadParams,
+                baseUrl);
+            assertReadSmokeSuccess(new DashboardImageCountTool(client),
+                "dashboard_image_count",
+                forgedReadParams,
+                baseUrl);
+            assertReadSmokeSuccess(new DashboardEasyFlowCountTool(client),
+                "dashboard_easy_flow_count",
+                forgedReadParams,
+                baseUrl);
+            assertReadSmokeSuccess(new DashboardEasyFlowTool(client),
+                "dashboard_easy_flow",
+                forgedReadParams,
+                baseUrl);
         }
     }
 
@@ -196,7 +230,11 @@ class KubeManagerReadOnlySmokeTest {
             "READ smoke 当前只接受明确审阅过的权限策略，避免把敏感读或 admin-only Tool 混入现场联调");
     }
 
-    private static void assertReadSmokeSuccess(String toolName, Map<String, Object> result, String baseUrl) {
+    private static void assertReadSmokeSuccess(BaseTool tool,
+                                               String toolName,
+                                               Map<String, Object> params,
+                                               String baseUrl) {
+        Map<String, Object> result = tool.execute(params);
         assertEquals(Boolean.TRUE, result.get(AtlasToolResult.KEY_SUCCESS),
             () -> toolName + " READ smoke 失败，baseUrl=" + baseUrl + ", message=" + result.get(AtlasToolResult.KEY_MESSAGE));
         assertEquals(toolName, result.get(AtlasToolResult.KEY_TOOL_NAME));
