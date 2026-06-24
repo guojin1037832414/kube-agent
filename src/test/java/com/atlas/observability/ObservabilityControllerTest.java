@@ -57,6 +57,8 @@ class ObservabilityControllerTest {
         new AgentReviewedEvalTraceEvidenceService(evalTraceSetCatalogService);
     private final AgentReviewedTraceFixtureIntakeContractService reviewedTraceFixtureIntakeContractService =
         new AgentReviewedTraceFixtureIntakeContractService(evalTraceSetCatalogService);
+    private final AgentReviewedTraceFixtureManifestService reviewedTraceFixtureManifestService =
+        new AgentReviewedTraceFixtureManifestService(evalTraceSetCatalogService, new com.fasterxml.jackson.databind.ObjectMapper());
     private final AgentEvalWorkbenchTraceSetDetailService evalWorkbenchTraceSetDetailService =
         new AgentEvalWorkbenchTraceSetDetailService(evalTraceSetCatalogService);
     private final AgentEvalWorkbenchPromotionWorkflowService evalWorkbenchPromotionWorkflowService =
@@ -239,6 +241,7 @@ class ObservabilityControllerTest {
         evalWorkbenchOverviewService,
         reviewedEvalTraceEvidenceService,
         reviewedTraceFixtureIntakeContractService,
+        reviewedTraceFixtureManifestService,
         releaseBlockingEvalGateContractService,
         evalWorkbenchTraceSetDetailService,
         evalWorkbenchPromotionWorkflowService,
@@ -3656,6 +3659,76 @@ class ObservabilityControllerTest {
             .containsEntry("containsPassword", false);
         assertThat(contract.toString())
             .contains("reviewed-trace-fixture-intake-contract", "phase1-core-golden")
+            .doesNotContain("secret-token-value", "conv-sensitive", "user-sensitive", "org-sensitive", "/api/org-sensitive");
+    }
+
+    @Test
+    void reviewedTraceFixtureManifest_shouldRequireAdminUser() {
+        ResponseEntity<ApiResponse<AgentReviewedTraceFixtureManifestResponse>> anonymous =
+            controller.reviewedTraceFixtureManifest();
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentReviewedTraceFixtureManifestResponse>> user =
+            controller.reviewedTraceFixtureManifest();
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void reviewedTraceFixtureManifest_shouldReturnRepoManifestForAdminUser() {
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentReviewedTraceFixtureManifestResponse>> response =
+            controller.reviewedTraceFixtureManifest();
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        AgentReviewedTraceFixtureManifestResponse manifest = response.getBody().getData();
+        assertThat(manifest.schemaVersion()).isEqualTo("agent-reviewed-trace-fixture-manifest.v1");
+        assertThat(manifest.manifestStatus()).isEqualTo("NO_REVIEWED_FIXTURE_FILES_FOUND");
+        assertThat(manifest.traceSetCount()).isEqualTo(7);
+        assertThat(manifest.fixtureFileCount()).isZero();
+        assertThat(manifest.matchedFixtureTraceSetCount()).isZero();
+        assertThat(manifest.missingFixtureTraceSetCount()).isEqualTo(7);
+        assertThat(manifest.traceSetCoverage()).allSatisfy(row -> assertThat(row)
+            .containsEntry("status", "MISSING_REVIEWED_FIXTURE_FILE")
+            .containsEntry("reviewedFixtureFilePresent", false)
+            .containsEntry("catalogMutationAllowed", false)
+            .containsEntry("requiresHumanGitReview", true));
+        assertThat(manifest.requiredFixtureFields()).extracting(field -> field.get("name"))
+            .contains("traceId", "traceSetId", "redactionProof", "privacyProof", "evidenceDigest");
+        assertThat(manifest.forbiddenShortcuts())
+            .contains("runtime-fixture-upload", "caller-trace-id-intake", "runtime-catalog-write",
+                "mcp-tools-call", "kube-manager-call", "nim-hpc-slurm-bcm-phase2-authority");
+        assertThat(manifest.endpointMap())
+            .containsEntry("fixtureManifest",
+                "/api/agent/observability/eval/reviewed-trace-fixture-manifest")
+            .containsEntry("fixtureIntakeContract",
+                "/api/agent/observability/eval/reviewed-trace-fixture-intake-contract");
+        assertThat(manifest.safety())
+            .containsEntry("adminOnly", true)
+            .containsEntry("readOnly", true)
+            .containsEntry("manifestOnly", true)
+            .containsEntry("classpathScanOnly", true)
+            .containsEntry("fixtureUploadAccepted", false)
+            .containsEntry("callerTraceIdsAccepted", false)
+            .containsEntry("runtimeCatalogWrite", false)
+            .containsEntry("runtimeEvalAllowed", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("mcpToolCall", false)
+            .containsEntry("kubeManagerCalls", false);
+        assertThat(manifest.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("rawAuditExportAllowed", false)
+            .containsEntry("containsToken", false)
+            .containsEntry("containsPassword", false);
+        assertThat(manifest.toString())
+            .contains("reviewed-trace-fixture-manifest", "phase1-core-golden")
             .doesNotContain("secret-token-value", "conv-sensitive", "user-sensitive", "org-sensitive", "/api/org-sensitive");
     }
 

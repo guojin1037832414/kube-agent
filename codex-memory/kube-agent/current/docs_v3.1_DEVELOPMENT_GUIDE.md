@@ -77,8 +77,9 @@ M5: 长期 Memory + MCP + 可观测性 — Redis/Chroma、Micrometer、Guardrail
 
 ## 测试账号
 
-- sysadmin / SuperAdmin@2035
-- zhaotiandi / ninePwd!
+- 账号只保留角色说明，不在恢复记忆中保存真实密码；需要真实凭证时由当前 shell 环境变量或用户临时提供。
+- sysadmin / <redacted-password>
+- zhaotiandi / <redacted-password>
 
 ---
 
