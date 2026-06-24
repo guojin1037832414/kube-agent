@@ -2,6 +2,7 @@ package com.atlas.observability;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.io.support.ResourcePatternResolver;
@@ -38,6 +39,7 @@ public class AgentReviewedTraceFixtureManifestService {
     private final ResourcePatternResolver resourcePatternResolver;
     private final Clock clock;
 
+    @Autowired
     public AgentReviewedTraceFixtureManifestService(AgentEvalTraceSetCatalogService traceSetCatalogService,
                                                     ObjectMapper objectMapper) {
         this(
