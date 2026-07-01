@@ -35,6 +35,7 @@ public record AgentEvalWorkbenchCatalogPatchReviewResponse(
     List<Map<String, Object>> patchOperations,
     Map<String, Object> traceDelta,
     Map<String, Object> candidateGateSummary,
+    Map<String, Object> reviewedFixtureReadiness,
     List<String> reviewChecklist,
     List<String> nextActions,
     Map<String, Object> endpointTemplates,
@@ -48,10 +49,23 @@ public record AgentEvalWorkbenchCatalogPatchReviewResponse(
         AgentEvalTraceSetDefinition definition,
         AgentEvalTraceSetGateArtifact traceSetGate,
         AgentEvalTraceSetCatalogPatchProposalArtifact proposal) {
+        return from(definition, traceSetGate, proposal, null);
+    }
+
+    public static AgentEvalWorkbenchCatalogPatchReviewResponse from(
+        AgentEvalTraceSetDefinition definition,
+        AgentEvalTraceSetGateArtifact traceSetGate,
+        AgentEvalTraceSetCatalogPatchProposalArtifact proposal,
+        AgentReviewedTraceFixtureManifestResponse reviewedFixtureManifest) {
         AgentEvalWorkbenchTraceSetView view = AgentEvalWorkbenchTraceSetView.from(definition, traceSetGate);
         List<String> candidateTraceIds = proposal != null ? List.copyOf(proposal.candidateTraceIds()) : List.of();
         List<String> addedTraceIds = proposal != null ? List.copyOf(proposal.addedTraceIds()) : List.of();
         List<String> proposedTraceIds = proposal != null ? List.copyOf(proposal.proposedTraceIds()) : List.of();
+        Map<String, Object> reviewedFixtureReadiness = buildReviewedFixtureReadiness(
+            proposal,
+            view,
+            reviewedFixtureManifest
+        );
         return new AgentEvalWorkbenchCatalogPatchReviewResponse(
             SCHEMA_VERSION,
             Instant.now(Clock.systemUTC()),
@@ -73,12 +87,91 @@ public record AgentEvalWorkbenchCatalogPatchReviewResponse(
             buildPatchOperations(proposal),
             buildTraceDelta(proposal),
             buildCandidateGateSummary(proposal),
-            buildReviewChecklist(proposal),
-            buildNextActions(proposal),
+            reviewedFixtureReadiness,
+            buildReviewChecklist(proposal, reviewedFixtureReadiness),
+            buildNextActions(proposal, reviewedFixtureReadiness),
             buildEndpointTemplates(view.id()),
             buildWorkbenchPolicy(proposal, view),
             privacyProof(proposal, view)
         );
+    }
+
+    /**
+     * 汇总 reviewed fixture 的准备度。
+     *
+     * <p>中文说明：这里故意只嵌入 manifest 的摘要和当前 trace set 覆盖状态，不把 fixtureRows 原样塞进
+     * catalog patch review。前端需要知道“是否具备 merge 前证据”，但不能获得运行时上传、写 catalog、
+     * 执行 eval/replay 或调用外部系统的权力。</p>
+     */
+    private static Map<String, Object> buildReviewedFixtureReadiness(
+        AgentEvalTraceSetCatalogPatchProposalArtifact proposal,
+        AgentEvalWorkbenchTraceSetView view,
+        AgentReviewedTraceFixtureManifestResponse manifest) {
+        String traceSetId = proposal != null ? proposal.traceSetId() : safeText(view != null ? view.id() : "");
+        Map<String, Object> coverage = currentTraceSetCoverage(traceSetId, manifest);
+        boolean manifestAvailable = manifest != null;
+        boolean fixturePresent = Boolean.TRUE.equals(coverage.get("reviewedFixtureFilePresent"));
+        boolean catalogTraceIdsPresent = Boolean.TRUE.equals(coverage.get("catalogTraceIdsPresent"));
+        boolean patchAddsTraceIds = proposal != null && proposal.addedTraceCount() > 0;
+        Map<String, Object> readiness = new LinkedHashMap<>();
+        readiness.put("schemaVersion", manifestAvailable ? manifest.schemaVersion() : "");
+        readiness.put("manifestStatus", manifestAvailable ? manifest.manifestStatus() : "MANIFEST_UNAVAILABLE");
+        readiness.put("traceSetCount", manifestAvailable ? manifest.traceSetCount() : 0);
+        readiness.put("fixtureFileCount", manifestAvailable ? manifest.fixtureFileCount() : 0);
+        readiness.put("matchedFixtureTraceSetCount", manifestAvailable ? manifest.matchedFixtureTraceSetCount() : 0);
+        readiness.put("missingFixtureTraceSetCount", manifestAvailable ? manifest.missingFixtureTraceSetCount() : 0);
+        readiness.put("currentTraceSetId", traceSetId);
+        readiness.put("currentTraceSetFixtureStatus", coverageStatus(coverage, manifestAvailable));
+        readiness.put("currentTraceSetFixturePresent", fixturePresent);
+        readiness.put("catalogTraceIdsPresent", catalogTraceIdsPresent);
+        readiness.put("requiredBeforeCatalogPatchMerge", manifestAvailable && patchAddsTraceIds && !fixturePresent);
+        readiness.put("runtimeCatalogWrite", false);
+        readiness.put("catalogMutationAllowed", false);
+        readiness.put("fixtureUploadAccepted", false);
+        readiness.put("callerTraceIdsAccepted", false);
+        readiness.put("runtimeEvalAllowed", false);
+        readiness.put("releaseBlockingAllowedNow", false);
+        readiness.put("endpointMap", reviewedFixtureEndpointMap(manifest));
+        return Map.copyOf(readiness);
+    }
+
+    private static Map<String, Object> currentTraceSetCoverage(
+        String traceSetId,
+        AgentReviewedTraceFixtureManifestResponse manifest) {
+        if (manifest == null || traceSetId.isBlank()) {
+            return Map.of();
+        }
+        return manifest.traceSetCoverage().stream()
+            .filter(row -> traceSetId.equals(safeText(row.get("traceSetId"))))
+            .findFirst()
+            .map(Map::copyOf)
+            .orElseGet(Map::of);
+    }
+
+    private static String coverageStatus(Map<String, Object> coverage, boolean manifestAvailable) {
+        if (!manifestAvailable) {
+            return "MANIFEST_UNAVAILABLE";
+        }
+        String status = safeText(coverage.get("status"));
+        return status.isBlank() ? "TRACE_SET_NOT_LISTED_IN_MANIFEST" : status;
+    }
+
+    private static Map<String, Object> reviewedFixtureEndpointMap(
+        AgentReviewedTraceFixtureManifestResponse manifest) {
+        Map<String, Object> endpoints = new LinkedHashMap<>();
+        Map<String, Object> source = manifest != null ? manifest.endpointMap() : Map.of();
+        copyEndpoint(source, endpoints, "fixtureManifest");
+        copyEndpoint(source, endpoints, "fixtureTemplate");
+        copyEndpoint(source, endpoints, "fixtureIntakeContract");
+        copyEndpoint(source, endpoints, "reviewedEvalTraceEvidence");
+        return Map.copyOf(endpoints);
+    }
+
+    private static void copyEndpoint(Map<String, Object> source, Map<String, Object> target, String key) {
+        Object value = source != null ? source.get(key) : null;
+        if (value != null) {
+            target.put(key, safeText(value));
+        }
     }
 
     private static List<Map<String, Object>> buildPatchOperations(
@@ -140,12 +233,20 @@ public record AgentEvalWorkbenchCatalogPatchReviewResponse(
         return Map.copyOf(summary);
     }
 
-    private static List<String> buildReviewChecklist(AgentEvalTraceSetCatalogPatchProposalArtifact proposal) {
+    private static List<String> buildReviewChecklist(AgentEvalTraceSetCatalogPatchProposalArtifact proposal,
+                                                     Map<String, Object> reviewedFixtureReadiness) {
         List<String> checklist = new ArrayList<>();
         checklist.add("confirm-redacted-trace-anchors-only");
         checklist.add("confirm-candidate-suite-gate-passed");
         checklist.add("confirm-json-patch-target-resource");
         checklist.add("confirm-added-trace-ids-are-new");
+        checklist.add("confirm-reviewed-fixture-manifest-read-only");
+        if (fixtureMergeEvidenceMissing(reviewedFixtureReadiness)) {
+            checklist.add("prepare-reviewed-redacted-fixture-file-before-catalog-merge");
+        } else if (fixtureManifestAvailable(reviewedFixtureReadiness)
+            && Boolean.TRUE.equals(reviewedFixtureReadiness.get("currentTraceSetFixturePresent"))) {
+            checklist.add("confirm-reviewed-fixture-manifest-row");
+        }
         checklist.add("confirm-no-runtime-catalog-write");
         checklist.add("submit-human-git-review");
         if (proposal != null && proposal.readyForGitReview()) {
@@ -154,25 +255,40 @@ public record AgentEvalWorkbenchCatalogPatchReviewResponse(
         return List.copyOf(checklist);
     }
 
-    private static List<String> buildNextActions(AgentEvalTraceSetCatalogPatchProposalArtifact proposal) {
+    private static List<String> buildNextActions(AgentEvalTraceSetCatalogPatchProposalArtifact proposal,
+                                                 Map<String, Object> reviewedFixtureReadiness) {
+        List<String> actions;
         if (proposal == null) {
-            return List.of("rerun-promotion-workflow");
-        }
-        if (proposal.readyForGitReview()) {
-            return List.of(
+            actions = new ArrayList<>(List.of("rerun-promotion-workflow"));
+        } else if (proposal.readyForGitReview()) {
+            actions = new ArrayList<>(List.of(
                 "copy-json-patch-into-git-review",
                 "merge-reviewed-catalog-change",
                 "regenerate-trace-set-gate-bundle"
-            );
-        }
-        if (proposal.addedTraceCount() == 0) {
-            return List.of(
+            ));
+        } else if (proposal.addedTraceCount() == 0) {
+            actions = new ArrayList<>(List.of(
                 "inspect-candidate-discovery",
                 "collect-more-redacted-traces",
                 "rerun-catalog-patch-review"
-            );
+            ));
+        } else {
+            actions = new ArrayList<>(List.of("inspect-candidate-gate", "open-replay-drill-down", "open-trace-eval-report"));
         }
-        return List.of("inspect-candidate-gate", "open-replay-drill-down", "open-trace-eval-report");
+        if (fixtureMergeEvidenceMissing(reviewedFixtureReadiness)) {
+            actions.add(0, "prepare-reviewed-redacted-fixture-file-before-catalog-merge");
+        }
+        return List.copyOf(actions);
+    }
+
+    private static boolean fixtureMergeEvidenceMissing(Map<String, Object> reviewedFixtureReadiness) {
+        return fixtureManifestAvailable(reviewedFixtureReadiness)
+            && Boolean.TRUE.equals(reviewedFixtureReadiness.get("requiredBeforeCatalogPatchMerge"));
+    }
+
+    private static boolean fixtureManifestAvailable(Map<String, Object> reviewedFixtureReadiness) {
+        return reviewedFixtureReadiness != null
+            && !"MANIFEST_UNAVAILABLE".equals(reviewedFixtureReadiness.get("manifestStatus"));
     }
 
     private static Map<String, Object> buildEndpointTemplates(String traceSetId) {

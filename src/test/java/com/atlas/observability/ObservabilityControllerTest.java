@@ -66,7 +66,7 @@ class ObservabilityControllerTest {
     private final AgentEvalWorkbenchPromotionWorkflowService evalWorkbenchPromotionWorkflowService =
         new AgentEvalWorkbenchPromotionWorkflowService(evalTraceSetCatalogService, traceSetPromotionWorkflowService);
     private final AgentEvalWorkbenchCatalogPatchReviewService evalWorkbenchCatalogPatchReviewService =
-        new AgentEvalWorkbenchCatalogPatchReviewService(evalTraceSetCatalogService);
+        new AgentEvalWorkbenchCatalogPatchReviewService(evalTraceSetCatalogService, reviewedTraceFixtureManifestService);
     private final AgentEvalWorkbenchGateBundleSummaryService evalWorkbenchGateBundleSummaryService =
         new AgentEvalWorkbenchGateBundleSummaryService(evalTraceSetCatalogService);
     private final AgentReleaseBlockingEvalGateContractService releaseBlockingEvalGateContractService =
@@ -4192,6 +4192,22 @@ class ObservabilityControllerTest {
             .containsEntry("addedTraceCount", 1)
             .containsEntry("catalogMutated", false)
             .containsEntry("runtimeCatalogWrite", false);
+        assertThat(review.reviewedFixtureReadiness())
+            .containsEntry("manifestStatus", "NO_REVIEWED_FIXTURE_FILES_FOUND")
+            .containsEntry("currentTraceSetId", "phase1-core-golden")
+            .containsEntry("currentTraceSetFixtureStatus", "MISSING_REVIEWED_FIXTURE_FILE")
+            .containsEntry("currentTraceSetFixturePresent", false)
+            .containsEntry("requiredBeforeCatalogPatchMerge", true)
+            .containsEntry("runtimeCatalogWrite", false)
+            .containsEntry("fixtureUploadAccepted", false)
+            .containsEntry("callerTraceIdsAccepted", false);
+        assertThat(review.reviewChecklist())
+            .contains(
+                "confirm-reviewed-fixture-manifest-read-only",
+                "prepare-reviewed-redacted-fixture-file-before-catalog-merge"
+            );
+        assertThat(review.nextActions().get(0))
+            .isEqualTo("prepare-reviewed-redacted-fixture-file-before-catalog-merge");
         assertThat(review.workbenchPolicy())
             .containsEntry("catalogPatchReviewOnly", true)
             .containsEntry("catalogMutationAllowed", false)

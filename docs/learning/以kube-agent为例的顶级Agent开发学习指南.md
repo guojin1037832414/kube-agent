@@ -1,6 +1,6 @@
 # 以 kube-agent 为例的顶级 Agent 开发学习指南
 
-> 最后更新：2026-06-13
+> 最后更新：2026-07-01
 > 适用范围：Phase 1 顶级 Agent Core。NIM / HPC / Slurm / BCM 是 Phase 2 暂停域。
 
 ## 1. 学习目标
@@ -502,6 +502,7 @@ RAG 上线前的最小设计题：
 - Observability 和 Top-tier 读模型基本是 admin-only。
 - Replay / Eval 有确定性、脱敏、admin-only 读模型和部分 suite run/gate 入口。
 - Eval 的目的不是给运行时“自动授权”，而是为 release gate、回归测试和学习复盘提供证据。
+- M5.85-39 后，catalog patch review 会把 reviewed fixture readiness 一起返回，帮助前端和人审者区分“patch 可以进入 Git review”和“merge 前 fixture 证据是否齐备”。
 
 仍关闭的能力：
 
