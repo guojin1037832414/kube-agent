@@ -98,6 +98,17 @@ public class AgentEvalWorkbenchCapabilitiesService {
                 List.of("manualReviewFields", "reviewChecklist", "manifestQualityGatePreview", "nextActions")
             ),
             capability(
+                "workbench-reviewed-fixture-human-review-gate",
+                "Reviewed fixture human review gate",
+                "review",
+                "POST",
+                "/api/agent/observability/eval/workbench/trace-sets/{traceSetId}/reviewed-fixture-human-review-gate",
+                "AgentReviewedTraceFixtureHumanReviewGateRequest",
+                AgentReviewedTraceFixtureHumanReviewGateResponse.SCHEMA_VERSION,
+                List.of("traceSetId", "humanReviewFields", "candidateEvidenceDigest", "evidenceDigest"),
+                List.of("fieldResults", "expectedEvidenceDigest", "manifestQualityGatePreview", "nextActions")
+            ),
+            capability(
                 "workbench-reviewed-fixture-candidate",
                 "Reviewed fixture candidate preview",
                 "review",
@@ -240,6 +251,7 @@ public class AgentEvalWorkbenchCapabilitiesService {
                 "workbench-catalog-patch-review",
                 "workbench-reviewed-fixture-candidate-autopreview",
                 "workbench-reviewed-fixture-human-review-package",
+                "workbench-reviewed-fixture-human-review-gate",
                 "workbench-reviewed-fixture-candidate",
                 "workbench-gate-bundle-summary",
                 "reviewed-trace-evidence",
@@ -273,9 +285,11 @@ public class AgentEvalWorkbenchCapabilitiesService {
         policy.put("requiresGitReviewForPromotion", id.contains("patch")
             || id.contains("workflow")
             || id.contains("fixture-candidate")
-            || id.contains("human-review-package"));
+            || id.contains("human-review-package")
+            || id.contains("human-review-gate"));
         policy.put("requiresHumanFixtureReviewBeforeCommit", id.contains("fixture-candidate")
-            || id.contains("human-review-package"));
+            || id.contains("human-review-package")
+            || id.contains("human-review-gate"));
         policy.put("createsFixtureFile", false);
         policy.put("fixtureUploadAccepted", false);
         policy.put("embeddedReports", false);

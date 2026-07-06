@@ -31,7 +31,7 @@ class AgentEvalWorkbenchOverviewServiceTest {
 
         assertThat(overview.schemaVersion()).isEqualTo("agent-eval-workbench-overview.v1");
         assertThat(overview.evaluationVersion()).isEqualTo("deterministic-replay-eval.v1");
-        assertThat(overview.capabilityCount()).isEqualTo(19);
+        assertThat(overview.capabilityCount()).isEqualTo(20);
         assertThat(overview.traceSetCount()).isEqualTo(7);
         assertThat(overview.traceSetNeedsEvidenceCount()).isEqualTo(7);
         assertThat(overview.traceSetReadyCount()).isZero();
@@ -48,6 +48,7 @@ class AgentEvalWorkbenchOverviewServiceTest {
                 "discover-redacted-candidates",
                 "open-reviewed-fixture-candidate-workbench",
                 "open-reviewed-fixture-human-review-package",
+                "validate-reviewed-fixture-human-review-gate",
                 "preview-reviewed-fixture-candidate-before-git-review",
                 "promote-candidates-through-git-review",
                 "regenerate-gate-bundle-after-curation"
@@ -71,10 +72,12 @@ class AgentEvalWorkbenchOverviewServiceTest {
             assertThat(traceSet.reviewedFixtureCandidateWorkbenchPath()).contains("/reviewed-fixture-candidate-workbench");
             assertThat(traceSet.reviewedFixtureHumanReviewPackagePath()).contains("/workbench/trace-sets/");
             assertThat(traceSet.reviewedFixtureHumanReviewPackagePath()).contains("/reviewed-fixture-human-review-package");
+            assertThat(traceSet.reviewedFixtureHumanReviewGatePath()).contains("/workbench/trace-sets/");
+            assertThat(traceSet.reviewedFixtureHumanReviewGatePath()).contains("/reviewed-fixture-human-review-gate");
             assertThat(traceSet.promotionWorkflowPath()).contains("/promotion-workflow");
             assertThat(traceSet.workflowStages())
                 .contains("reviewed-fixture-candidate-preview", "reviewed-fixture-human-review-package",
-                    "human-git-review", "gate-bundle");
+                    "reviewed-fixture-human-review-gate", "human-git-review", "gate-bundle");
             assertThat(traceSet.policy())
                 .containsEntry("runtimeCatalogWrite", false)
                 .containsEntry("toolExecution", false)
@@ -125,6 +128,7 @@ class AgentEvalWorkbenchOverviewServiceTest {
             .contains(
                 "workbench-reviewed-fixture-candidate-autopreview",
                 "workbench-reviewed-fixture-human-review-package",
+                "workbench-reviewed-fixture-human-review-gate",
                 "workbench-reviewed-fixture-candidate",
                 "memory-rag-eval-suite-binding-contract"
             );

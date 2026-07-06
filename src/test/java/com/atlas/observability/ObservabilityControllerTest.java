@@ -67,6 +67,8 @@ class ObservabilityControllerTest {
         new AgentReviewedTraceFixtureCandidateWorkbenchService(traceSetCandidateDiscoveryService, reviewedTraceFixtureCandidateService);
     private final AgentReviewedTraceFixtureHumanReviewPackageService reviewedTraceFixtureHumanReviewPackageService =
         new AgentReviewedTraceFixtureHumanReviewPackageService(reviewedTraceFixtureCandidateWorkbenchService);
+    private final AgentReviewedTraceFixtureHumanReviewGateService reviewedTraceFixtureHumanReviewGateService =
+        new AgentReviewedTraceFixtureHumanReviewGateService(reviewedTraceFixtureHumanReviewPackageService);
     private final AgentEvalWorkbenchTraceSetDetailService evalWorkbenchTraceSetDetailService =
         new AgentEvalWorkbenchTraceSetDetailService(evalTraceSetCatalogService);
     private final AgentEvalWorkbenchPromotionWorkflowService evalWorkbenchPromotionWorkflowService =
@@ -254,6 +256,7 @@ class ObservabilityControllerTest {
         reviewedTraceFixtureCandidateService,
         reviewedTraceFixtureCandidateWorkbenchService,
         reviewedTraceFixtureHumanReviewPackageService,
+        reviewedTraceFixtureHumanReviewGateService,
         releaseBlockingEvalGateContractService,
         evalWorkbenchTraceSetDetailService,
         evalWorkbenchPromotionWorkflowService,
@@ -3457,6 +3460,7 @@ class ObservabilityControllerTest {
                 "workbench-promotion-workflow",
                 "workbench-reviewed-fixture-candidate-autopreview",
                 "workbench-reviewed-fixture-human-review-package",
+                "workbench-reviewed-fixture-human-review-gate",
                 "workbench-reviewed-fixture-candidate",
                 "trace-set-promotion-workflow",
                 "trace-set-gate-bundle",
@@ -3469,6 +3473,7 @@ class ObservabilityControllerTest {
                 "workbench-promotion-workflow",
                 "workbench-reviewed-fixture-candidate-autopreview",
                 "workbench-reviewed-fixture-human-review-package",
+                "workbench-reviewed-fixture-human-review-gate",
                 "workbench-reviewed-fixture-candidate",
                 "trace-set-gate-bundle"
             );
@@ -3489,6 +3494,7 @@ class ObservabilityControllerTest {
                 "agent-eval-workbench-promotion-workflow.v1",
                 "agent-reviewed-trace-fixture-candidate-workbench.v1",
                 "agent-reviewed-trace-fixture-human-review-package.v1",
+                "agent-reviewed-trace-fixture-human-review-gate.v1",
                 "agent-reviewed-trace-fixture-candidate.v1",
                 "agent-eval-workbench-gate-bundle-summary.v1"
             )
@@ -3552,6 +3558,7 @@ class ObservabilityControllerTest {
             .contains(
                 "open-reviewed-fixture-candidate-workbench",
                 "open-reviewed-fixture-human-review-package",
+                "validate-reviewed-fixture-human-review-gate",
                 "preview-reviewed-fixture-candidate-before-git-review"
             );
         assertThat(overview.traceSets()).allSatisfy(traceSet -> {
@@ -3561,8 +3568,11 @@ class ObservabilityControllerTest {
             assertThat(traceSet.reviewedFixtureCandidateWorkbenchPath()).contains("/reviewed-fixture-candidate-workbench");
             assertThat(traceSet.reviewedFixtureHumanReviewPackagePath()).contains("/workbench/trace-sets/");
             assertThat(traceSet.reviewedFixtureHumanReviewPackagePath()).contains("/reviewed-fixture-human-review-package");
+            assertThat(traceSet.reviewedFixtureHumanReviewGatePath()).contains("/workbench/trace-sets/");
+            assertThat(traceSet.reviewedFixtureHumanReviewGatePath()).contains("/reviewed-fixture-human-review-gate");
             assertThat(traceSet.workflowStages())
-                .contains("reviewed-fixture-candidate-preview", "reviewed-fixture-human-review-package");
+                .contains("reviewed-fixture-candidate-preview", "reviewed-fixture-human-review-package",
+                    "reviewed-fixture-human-review-gate");
         });
         assertThat(overview.workbenchPolicy())
             .containsEntry("frontendTarget", "vue-kube-manager eval workbench")
@@ -4561,6 +4571,9 @@ class ObservabilityControllerTest {
             .containsEntry("humanReviewPackageOnly", true)
             .containsEntry("createsFixtureFile", false)
             .containsEntry("releaseAuthority", false);
+        assertThat(reviewPackage.endpointMap())
+            .containsEntry("humanReviewGate",
+                "/api/agent/observability/eval/workbench/trace-sets/phase1-core-golden/reviewed-fixture-human-review-gate");
         assertThat(reviewPackage.safety())
             .containsEntry("callerTraceIdsAccepted", false)
             .containsEntry("toolExecution", false)
@@ -4572,6 +4585,125 @@ class ObservabilityControllerTest {
             .containsEntry("containsPassword", false);
         assertThat(new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules().writeValueAsString(reviewPackage))
             .contains("manualReviewFields", "manifestQualityGatePreview", "READY_FOR_HUMAN_GIT_REVIEW_PACKAGE")
+            .doesNotContain("secret-token-value", "conv-sensitive", "user-sensitive", "org-sensitive", "/api/org-sensitive")
+            .doesNotContain("\"reports\"", "\"steps\"", "\"fixtureRows\"");
+    }
+
+    @Test
+    void reviewedTraceFixtureHumanReviewGate_shouldRequireAdminUserAndRejectUnknownTraceSet() {
+        ResponseEntity<ApiResponse<AgentReviewedTraceFixtureHumanReviewGateResponse>> anonymous =
+            controller.reviewedTraceFixtureHumanReviewGate("phase1-core-golden", 50, null);
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentReviewedTraceFixtureHumanReviewGateResponse>> user =
+            controller.reviewedTraceFixtureHumanReviewGate("phase1-core-golden", 50, null);
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        SecurityContextHolder.clearContext();
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentReviewedTraceFixtureHumanReviewGateResponse>> missing =
+            controller.reviewedTraceFixtureHumanReviewGate("missing-trace-set", 50, null);
+
+        assertThat(missing.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void reviewedTraceFixtureHumanReviewGate_shouldValidateHumanFieldsWithoutRuntimeWrites() throws Exception {
+        String traceId = "trc_d3333333333333333333333333333333";
+        auditRecorder.record(new com.atlas.audit.AgentAuditEvent(
+            "aud_eval_workbench_fixture_human_review_gate",
+            java.time.Instant.parse("2026-06-09T00:00:00Z"),
+            traceId,
+            "conv-sensitive",
+            "user-sensitive",
+            "org-sensitive",
+            "intent",
+            "tool",
+            com.atlas.tool.execution.SafeToolExecutionSource.REACT_ENGINE,
+            "GET",
+            java.util.List.of("/api/org-sensitive/pod?token=secret-token-value"),
+            com.atlas.tool.annotation.AtlasToolMapping.OperationType.READ,
+            false,
+            com.atlas.audit.AgentAuditOutcome.SUCCESS,
+            true,
+            true,
+            "ok token=secret-token-value",
+            java.util.Map.of("count", 1, "keys", java.util.List.of(java.util.Map.of(
+                "name", "namespace",
+                "protected", false,
+                "type", "string",
+                "present", true
+            )))
+        ));
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+        AgentReviewedTraceFixtureHumanReviewGateRequest bootstrapRequest =
+            new AgentReviewedTraceFixtureHumanReviewGateRequest(
+                traceId,
+                "0123456789abcdef0123456789abcdef01234567",
+                "zhaotiandi",
+                "2026-07-07T00:00:00Z",
+                "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+                "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+            );
+        ResponseEntity<ApiResponse<AgentReviewedTraceFixtureHumanReviewGateResponse>> bootstrap =
+            controller.reviewedTraceFixtureHumanReviewGate("phase1-core-golden", 50, bootstrapRequest);
+        AgentReviewedTraceFixtureHumanReviewGateResponse bootstrapGate = bootstrap.getBody().getData();
+        String candidateDigest = bootstrapGate.humanReviewPackage().candidateFixtureDraft()
+            .get("candidateEvidenceDigest")
+            .toString();
+
+        ResponseEntity<ApiResponse<AgentReviewedTraceFixtureHumanReviewGateResponse>> response =
+            controller.reviewedTraceFixtureHumanReviewGate(
+                "phase1-core-golden",
+                50,
+                new AgentReviewedTraceFixtureHumanReviewGateRequest(
+                    traceId,
+                    "0123456789abcdef0123456789abcdef01234567",
+                    "zhaotiandi",
+                    "2026-07-07T00:00:00Z",
+                    candidateDigest,
+                    bootstrapGate.expectedEvidenceDigest()
+                )
+            );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        AgentReviewedTraceFixtureHumanReviewGateResponse gate = response.getBody().getData();
+        assertThat(gate.schemaVersion()).isEqualTo("agent-reviewed-trace-fixture-human-review-gate.v1");
+        assertThat(gate.gateStatus()).isEqualTo("READY_FOR_MANUAL_GIT_FIXTURE_COMMIT");
+        assertThat(gate.selectedCandidateTraceId()).isEqualTo(traceId);
+        assertThat(gate.readyForFixtureCommit()).isTrue();
+        assertThat(gate.runtimeFixtureCommitAllowed()).isFalse();
+        assertThat(gate.fieldResults()).allSatisfy(field -> assertThat(field)
+            .containsEntry("valid", true)
+            .containsEntry("runtimeCallable", false));
+        assertThat(gate.manifestQualityGatePreview())
+            .containsEntry("manualGitCommitOnly", true)
+            .containsEntry("runtimeFixtureCommitAllowed", false)
+            .containsEntry("qualityGateStatusGrantedNow", false);
+        assertThat(gate.gatePolicy())
+            .containsEntry("validateOnly", true)
+            .containsEntry("createsFixtureFile", false)
+            .containsEntry("runtimeCatalogWrite", false)
+            .containsEntry("releaseAuthority", false);
+        assertThat(gate.safety())
+            .containsEntry("toolExecution", false)
+            .containsEntry("kubeManagerCalls", false)
+            .containsEntry("auditWrite", false);
+        assertThat(gate.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("containsToken", false)
+            .containsEntry("containsPassword", false);
+        assertThat(new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules().writeValueAsString(gate))
+            .contains("READY_FOR_MANUAL_GIT_FIXTURE_COMMIT", "expectedEvidenceDigest")
             .doesNotContain("secret-token-value", "conv-sensitive", "user-sensitive", "org-sensitive", "/api/org-sensitive")
             .doesNotContain("\"reports\"", "\"steps\"", "\"fixtureRows\"");
     }

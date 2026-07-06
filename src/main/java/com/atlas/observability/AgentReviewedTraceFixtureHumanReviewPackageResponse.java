@@ -131,6 +131,7 @@ public record AgentReviewedTraceFixtureHumanReviewPackageResponse(
             "copy-candidate-fixture-draft-outside-runtime",
             "fill-sourceCommitSha-reviewer-reviewTimestamp-evidenceDigest-in-git-review",
             "verify-redaction-determinism-privacy-and-forbidden-runtime-claims",
+            "run-reviewed-fixture-human-review-gate-before-commit",
             "commit-reviewed-fixture-json-through-human-git-review-only",
             "rerun-reviewed-fixture-manifest-and-catalog-patch-review-after-commit"
         );
@@ -163,6 +164,7 @@ public record AgentReviewedTraceFixtureHumanReviewPackageResponse(
                 "copy-candidate-fixture-draft-outside-runtime",
                 "fill-human-review-fields",
                 "compute-final-sha256-evidence-digest",
+                "run-reviewed-fixture-human-review-gate",
                 "commit-reviewed-fixture-json-through-human-review",
                 "rerun-reviewed-fixture-manifest"
             );
@@ -179,6 +181,7 @@ public record AgentReviewedTraceFixtureHumanReviewPackageResponse(
         String id = safeText(traceSetId);
         Map<String, Object> endpoints = new LinkedHashMap<>();
         endpoints.put("humanReviewPackage", ENDPOINT_TEMPLATE.replace("{traceSetId}", id));
+        endpoints.put("humanReviewGate", AgentReviewedTraceFixtureHumanReviewGateResponse.ENDPOINT_TEMPLATE.replace("{traceSetId}", id));
         endpoints.put("candidateWorkbench",
             AgentReviewedTraceFixtureCandidateWorkbenchResponse.ENDPOINT_TEMPLATE.replace("{traceSetId}", id));
         endpoints.put("candidatePreview",

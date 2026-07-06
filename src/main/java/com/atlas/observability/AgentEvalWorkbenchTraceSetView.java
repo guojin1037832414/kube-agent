@@ -30,6 +30,7 @@ public record AgentEvalWorkbenchTraceSetView(
     String reviewedFixtureCandidatePath,
     String reviewedFixtureCandidateWorkbenchPath,
     String reviewedFixtureHumanReviewPackagePath,
+    String reviewedFixtureHumanReviewGatePath,
     String curationReviewPath,
     String catalogPatchProposalPath,
     String promotionWorkflowPath,
@@ -55,6 +56,7 @@ public record AgentEvalWorkbenchTraceSetView(
         reviewedFixtureCandidatePath = safeText(reviewedFixtureCandidatePath);
         reviewedFixtureCandidateWorkbenchPath = safeText(reviewedFixtureCandidateWorkbenchPath);
         reviewedFixtureHumanReviewPackagePath = safeText(reviewedFixtureHumanReviewPackagePath);
+        reviewedFixtureHumanReviewGatePath = safeText(reviewedFixtureHumanReviewGatePath);
         curationReviewPath = safeText(curationReviewPath);
         catalogPatchProposalPath = safeText(catalogPatchProposalPath);
         promotionWorkflowPath = safeText(promotionWorkflowPath);
@@ -92,6 +94,7 @@ public record AgentEvalWorkbenchTraceSetView(
             workbenchEndpoint(traceSetId, "reviewed-fixture-candidate"),
             workbenchEndpoint(traceSetId, "reviewed-fixture-candidate-workbench"),
             workbenchEndpoint(traceSetId, "reviewed-fixture-human-review-package"),
+            workbenchEndpoint(traceSetId, "reviewed-fixture-human-review-gate"),
             endpoint(traceSetId, "curation-review"),
             endpoint(traceSetId, "catalog-patch-proposal"),
             endpoint(traceSetId, "promotion-workflow"),
@@ -131,6 +134,7 @@ public record AgentEvalWorkbenchTraceSetView(
             "candidate-discovery",
             "reviewed-fixture-candidate-preview",
             "reviewed-fixture-human-review-package",
+            "reviewed-fixture-human-review-gate",
             "curation-review",
             "catalog-patch-proposal",
             "human-git-review",

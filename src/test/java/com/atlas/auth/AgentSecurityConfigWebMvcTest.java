@@ -292,6 +292,12 @@ class AgentSecurityConfigWebMvcTest {
                 .content("{\"traceIds\":[\"trc_11111111111111111111111111111111\"]}"))
             .andExpect(status().isForbidden());
 
+        mockMvc.perform(post("/api/agent/observability/eval/workbench/trace-sets/phase1-core-golden/reviewed-fixture-human-review-gate")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer user-token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"selectedCandidateTraceId\":\"trc_11111111111111111111111111111111\"}"))
+            .andExpect(status().isForbidden());
+
         mockMvc.perform(get("/api/agent/observability/eval/trace-sets")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer user-token"))
             .andExpect(status().isForbidden());
@@ -554,6 +560,12 @@ class AgentSecurityConfigWebMvcTest {
         mockMvc.perform(post("/api/agent/observability/eval/workbench/trace-sets/phase1-core-golden/catalog-patch-review")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token")
                 .contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/agent/observability/eval/workbench/trace-sets/phase1-core-golden/reviewed-fixture-human-review-gate")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer admin-token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"selectedCandidateTraceId\":\"trc_11111111111111111111111111111111\"}"))
             .andExpect(status().isOk());
 
         mockMvc.perform(get("/api/agent/observability/eval/trace-sets")
@@ -993,6 +1005,12 @@ class AgentSecurityConfigWebMvcTest {
 
         @PostMapping("/api/agent/observability/eval/workbench/trace-sets/{id}/catalog-patch-review")
         String observabilityEvalWorkbenchCatalogPatchReview(@PathVariable String id, @RequestBody(required = false) String body) {
+            return id + body;
+        }
+
+        @PostMapping("/api/agent/observability/eval/workbench/trace-sets/{id}/reviewed-fixture-human-review-gate")
+        String observabilityEvalWorkbenchReviewedFixtureHumanReviewGate(@PathVariable String id,
+                                                                        @RequestBody(required = false) String body) {
             return id + body;
         }
 

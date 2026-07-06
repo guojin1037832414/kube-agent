@@ -91,6 +91,7 @@ public class ObservabilityController {
     private final AgentReviewedTraceFixtureCandidateService reviewedTraceFixtureCandidateService;
     private final AgentReviewedTraceFixtureCandidateWorkbenchService reviewedTraceFixtureCandidateWorkbenchService;
     private final AgentReviewedTraceFixtureHumanReviewPackageService reviewedTraceFixtureHumanReviewPackageService;
+    private final AgentReviewedTraceFixtureHumanReviewGateService reviewedTraceFixtureHumanReviewGateService;
     private final AgentReleaseBlockingEvalGateContractService releaseBlockingEvalGateContractService;
     private final AgentEvalWorkbenchTraceSetDetailService evalWorkbenchTraceSetDetailService;
     private final AgentEvalWorkbenchPromotionWorkflowService evalWorkbenchPromotionWorkflowService;
@@ -148,6 +149,7 @@ public class ObservabilityController {
                                    AgentReviewedTraceFixtureCandidateService reviewedTraceFixtureCandidateService,
                                    AgentReviewedTraceFixtureCandidateWorkbenchService reviewedTraceFixtureCandidateWorkbenchService,
                                    AgentReviewedTraceFixtureHumanReviewPackageService reviewedTraceFixtureHumanReviewPackageService,
+                                   AgentReviewedTraceFixtureHumanReviewGateService reviewedTraceFixtureHumanReviewGateService,
                                    AgentReleaseBlockingEvalGateContractService releaseBlockingEvalGateContractService,
                                    AgentEvalWorkbenchTraceSetDetailService evalWorkbenchTraceSetDetailService,
                                    AgentEvalWorkbenchPromotionWorkflowService evalWorkbenchPromotionWorkflowService,
@@ -204,6 +206,7 @@ public class ObservabilityController {
         this.reviewedTraceFixtureCandidateService = reviewedTraceFixtureCandidateService;
         this.reviewedTraceFixtureCandidateWorkbenchService = reviewedTraceFixtureCandidateWorkbenchService;
         this.reviewedTraceFixtureHumanReviewPackageService = reviewedTraceFixtureHumanReviewPackageService;
+        this.reviewedTraceFixtureHumanReviewGateService = reviewedTraceFixtureHumanReviewGateService;
         this.releaseBlockingEvalGateContractService = releaseBlockingEvalGateContractService;
         this.evalWorkbenchTraceSetDetailService = evalWorkbenchTraceSetDetailService;
         this.evalWorkbenchPromotionWorkflowService = evalWorkbenchPromotionWorkflowService;
@@ -988,6 +991,34 @@ public class ObservabilityController {
             return guard;
         }
         return reviewedTraceFixtureHumanReviewPackageService.packageForTraceSet(traceSetId, limit)
+            .map(response -> ResponseEntity.ok(ApiResponse.ok(response)))
+            .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.fail("Unknown Agent eval trace set: " + traceSetId)));
+    }
+
+    /**
+     * 校验 reviewed fixture 人工 Git review 字段是否足以进入人工提交。
+     *
+     * <p>中文说明：该入口接收人审字段和最终 sha256 摘要，只做 validate-only 校验。它会重新读取当前
+     * human review package，确认请求里的候选 trace 与自动候选一致，再校验 sourceCommitSha、reviewer、
+     * reviewTimestamp、candidateEvidenceDigest 和 evidenceDigest。通过也只是允许“人工 Git 提交继续”，
+     * 不会由运行时创建 fixture 或写 catalog。</p>
+     *
+     * <p>安全边界：admin-only / validate-only / read-only；请求体不会成为新的 trace evidence，
+     * 不接受上传 fixture，不写 {@code eval-trace-sets.json}，不调用 Tool/MCP/LLM/RAG/kube-manager，
+     * 不写 HITL/audit/memory，也不打开 CI blocking、release authority 或 Phase 2 运行时能力。</p>
+     */
+    @PostMapping("/eval/workbench/trace-sets/{traceSetId}/reviewed-fixture-human-review-gate")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentReviewedTraceFixtureHumanReviewGateResponse>> reviewedTraceFixtureHumanReviewGate(
+        @PathVariable String traceSetId,
+        @RequestParam(defaultValue = "50") int limit,
+        @RequestBody(required = false) AgentReviewedTraceFixtureHumanReviewGateRequest request) {
+        ResponseEntity<ApiResponse<AgentReviewedTraceFixtureHumanReviewGateResponse>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return reviewedTraceFixtureHumanReviewGateService.gate(traceSetId, limit, request)
             .map(response -> ResponseEntity.ok(ApiResponse.ok(response)))
             .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(ApiResponse.fail("Unknown Agent eval trace set: " + traceSetId)));

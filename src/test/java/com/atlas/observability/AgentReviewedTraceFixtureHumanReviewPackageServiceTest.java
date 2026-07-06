@@ -65,6 +65,7 @@ class AgentReviewedTraceFixtureHumanReviewPackageServiceTest {
         assertThat(response.reviewChecklist())
             .contains(
                 "copy-candidate-fixture-draft-outside-runtime",
+                "run-reviewed-fixture-human-review-gate-before-commit",
                 "commit-reviewed-fixture-json-through-human-git-review-only"
             );
         assertThat(response.manifestQualityGatePreview())
@@ -80,6 +81,9 @@ class AgentReviewedTraceFixtureHumanReviewPackageServiceTest {
             .containsEntry("createsFixtureFile", false)
             .containsEntry("runtimeCatalogWrite", false)
             .containsEntry("releaseAuthority", false);
+        assertThat(response.endpointMap())
+            .containsEntry("humanReviewGate",
+                "/api/agent/observability/eval/workbench/trace-sets/phase1-core-golden/reviewed-fixture-human-review-gate");
         assertThat(response.safety())
             .containsEntry("callerTraceIdsAccepted", false)
             .containsEntry("createsFixtureFile", false)

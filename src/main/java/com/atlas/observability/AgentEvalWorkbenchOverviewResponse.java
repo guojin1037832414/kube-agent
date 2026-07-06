@@ -76,6 +76,7 @@ public record AgentEvalWorkbenchOverviewResponse(
             actions.add("discover-redacted-candidates");
             actions.add("open-reviewed-fixture-candidate-workbench");
             actions.add("open-reviewed-fixture-human-review-package");
+            actions.add("validate-reviewed-fixture-human-review-gate");
             actions.add("preview-reviewed-fixture-candidate-before-git-review");
             actions.add("promote-candidates-through-git-review");
         }
