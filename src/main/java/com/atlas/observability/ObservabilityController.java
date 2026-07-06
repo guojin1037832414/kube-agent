@@ -90,6 +90,7 @@ public class ObservabilityController {
     private final AgentReviewedTraceFixtureTemplateService reviewedTraceFixtureTemplateService;
     private final AgentReviewedTraceFixtureCandidateService reviewedTraceFixtureCandidateService;
     private final AgentReviewedTraceFixtureCandidateWorkbenchService reviewedTraceFixtureCandidateWorkbenchService;
+    private final AgentReviewedTraceFixtureHumanReviewPackageService reviewedTraceFixtureHumanReviewPackageService;
     private final AgentReleaseBlockingEvalGateContractService releaseBlockingEvalGateContractService;
     private final AgentEvalWorkbenchTraceSetDetailService evalWorkbenchTraceSetDetailService;
     private final AgentEvalWorkbenchPromotionWorkflowService evalWorkbenchPromotionWorkflowService;
@@ -146,6 +147,7 @@ public class ObservabilityController {
                                    AgentReviewedTraceFixtureTemplateService reviewedTraceFixtureTemplateService,
                                    AgentReviewedTraceFixtureCandidateService reviewedTraceFixtureCandidateService,
                                    AgentReviewedTraceFixtureCandidateWorkbenchService reviewedTraceFixtureCandidateWorkbenchService,
+                                   AgentReviewedTraceFixtureHumanReviewPackageService reviewedTraceFixtureHumanReviewPackageService,
                                    AgentReleaseBlockingEvalGateContractService releaseBlockingEvalGateContractService,
                                    AgentEvalWorkbenchTraceSetDetailService evalWorkbenchTraceSetDetailService,
                                    AgentEvalWorkbenchPromotionWorkflowService evalWorkbenchPromotionWorkflowService,
@@ -201,6 +203,7 @@ public class ObservabilityController {
         this.reviewedTraceFixtureTemplateService = reviewedTraceFixtureTemplateService;
         this.reviewedTraceFixtureCandidateService = reviewedTraceFixtureCandidateService;
         this.reviewedTraceFixtureCandidateWorkbenchService = reviewedTraceFixtureCandidateWorkbenchService;
+        this.reviewedTraceFixtureHumanReviewPackageService = reviewedTraceFixtureHumanReviewPackageService;
         this.releaseBlockingEvalGateContractService = releaseBlockingEvalGateContractService;
         this.evalWorkbenchTraceSetDetailService = evalWorkbenchTraceSetDetailService;
         this.evalWorkbenchPromotionWorkflowService = evalWorkbenchPromotionWorkflowService;
@@ -959,6 +962,32 @@ public class ObservabilityController {
             return guard;
         }
         return reviewedTraceFixtureCandidateWorkbenchService.workbench(traceSetId, limit)
+            .map(response -> ResponseEntity.ok(ApiResponse.ok(response)))
+            .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.fail("Unknown Agent eval trace set: " + traceSetId)));
+    }
+
+    /**
+     * 发布 reviewed fixture 的人工 Git review 准备包。
+     *
+     * <p>中文说明：该入口复用自动 candidate workbench 的 redacted discovery 和 candidate preview，
+     * 再补充建议 fixture 文件名、人工必填字段、复核清单和质量门预期，帮助人审者准备首个真实
+     * reviewed fixture。它不会自动写 fixture，也不会把 candidate 直接变成 qualityGate PASS。</p>
+     *
+     * <p>安全边界：只读 human-review-package，不接受 caller traceId、不创建/上传 fixture、不写
+     * {@code eval-trace-sets.json}，不调用 Tool/MCP/LLM/RAG/kube-manager，不写 HITL/audit/memory，
+     * 也不启用 CI blocking、release authority 或 Phase 2 运行时能力。</p>
+     */
+    @GetMapping("/eval/workbench/trace-sets/{traceSetId}/reviewed-fixture-human-review-package")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentReviewedTraceFixtureHumanReviewPackageResponse>> reviewedTraceFixtureHumanReviewPackage(
+        @PathVariable String traceSetId,
+        @RequestParam(defaultValue = "50") int limit) {
+        ResponseEntity<ApiResponse<AgentReviewedTraceFixtureHumanReviewPackageResponse>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return reviewedTraceFixtureHumanReviewPackageService.packageForTraceSet(traceSetId, limit)
             .map(response -> ResponseEntity.ok(ApiResponse.ok(response)))
             .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(ApiResponse.fail("Unknown Agent eval trace set: " + traceSetId)));

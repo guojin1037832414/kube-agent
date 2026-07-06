@@ -29,6 +29,7 @@ public record AgentEvalWorkbenchTraceSetView(
     String candidateDiscoveryPath,
     String reviewedFixtureCandidatePath,
     String reviewedFixtureCandidateWorkbenchPath,
+    String reviewedFixtureHumanReviewPackagePath,
     String curationReviewPath,
     String catalogPatchProposalPath,
     String promotionWorkflowPath,
@@ -53,6 +54,7 @@ public record AgentEvalWorkbenchTraceSetView(
         candidateDiscoveryPath = safeText(candidateDiscoveryPath);
         reviewedFixtureCandidatePath = safeText(reviewedFixtureCandidatePath);
         reviewedFixtureCandidateWorkbenchPath = safeText(reviewedFixtureCandidateWorkbenchPath);
+        reviewedFixtureHumanReviewPackagePath = safeText(reviewedFixtureHumanReviewPackagePath);
         curationReviewPath = safeText(curationReviewPath);
         catalogPatchProposalPath = safeText(catalogPatchProposalPath);
         promotionWorkflowPath = safeText(promotionWorkflowPath);
@@ -89,6 +91,7 @@ public record AgentEvalWorkbenchTraceSetView(
             endpoint(traceSetId, "candidates"),
             workbenchEndpoint(traceSetId, "reviewed-fixture-candidate"),
             workbenchEndpoint(traceSetId, "reviewed-fixture-candidate-workbench"),
+            workbenchEndpoint(traceSetId, "reviewed-fixture-human-review-package"),
             endpoint(traceSetId, "curation-review"),
             endpoint(traceSetId, "catalog-patch-proposal"),
             endpoint(traceSetId, "promotion-workflow"),
@@ -127,6 +130,7 @@ public record AgentEvalWorkbenchTraceSetView(
         return List.of(
             "candidate-discovery",
             "reviewed-fixture-candidate-preview",
+            "reviewed-fixture-human-review-package",
             "curation-review",
             "catalog-patch-proposal",
             "human-git-review",

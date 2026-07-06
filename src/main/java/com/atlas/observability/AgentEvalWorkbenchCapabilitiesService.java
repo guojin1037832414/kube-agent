@@ -87,6 +87,17 @@ public class AgentEvalWorkbenchCapabilitiesService {
                 List.of("candidateDiscoverySummary", "selectedCandidateTraceId", "candidatePreview", "nextActions")
             ),
             capability(
+                "workbench-reviewed-fixture-human-review-package",
+                "Reviewed fixture human review package",
+                "review",
+                "GET",
+                "/api/agent/observability/eval/workbench/trace-sets/{traceSetId}/reviewed-fixture-human-review-package?limit={limit}",
+                "",
+                AgentReviewedTraceFixtureHumanReviewPackageResponse.SCHEMA_VERSION,
+                List.of("traceSetId", "candidateWorkbench", "candidateFixtureDraft"),
+                List.of("manualReviewFields", "reviewChecklist", "manifestQualityGatePreview", "nextActions")
+            ),
+            capability(
                 "workbench-reviewed-fixture-candidate",
                 "Reviewed fixture candidate preview",
                 "review",
@@ -228,6 +239,7 @@ public class AgentEvalWorkbenchCapabilitiesService {
                 "workbench-promotion-workflow",
                 "workbench-catalog-patch-review",
                 "workbench-reviewed-fixture-candidate-autopreview",
+                "workbench-reviewed-fixture-human-review-package",
                 "workbench-reviewed-fixture-candidate",
                 "workbench-gate-bundle-summary",
                 "reviewed-trace-evidence",
@@ -258,8 +270,12 @@ public class AgentEvalWorkbenchCapabilitiesService {
         policy.put("metadataOnly", "trace-set-catalog".equals(id));
         policy.put("mutatesCatalog", false);
         policy.put("runtimeCatalogWrite", false);
-        policy.put("requiresGitReviewForPromotion", id.contains("patch") || id.contains("workflow") || id.contains("fixture-candidate"));
-        policy.put("requiresHumanFixtureReviewBeforeCommit", id.contains("fixture-candidate"));
+        policy.put("requiresGitReviewForPromotion", id.contains("patch")
+            || id.contains("workflow")
+            || id.contains("fixture-candidate")
+            || id.contains("human-review-package"));
+        policy.put("requiresHumanFixtureReviewBeforeCommit", id.contains("fixture-candidate")
+            || id.contains("human-review-package"));
         policy.put("createsFixtureFile", false);
         policy.put("fixtureUploadAccepted", false);
         policy.put("embeddedReports", false);
