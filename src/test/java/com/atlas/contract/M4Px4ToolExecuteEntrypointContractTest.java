@@ -38,6 +38,14 @@ class M4Px4ToolExecuteEntrypointContractTest {
     private static final Path SAFE_TOOL_EXECUTOR = Path.of(
         "src/main/java/com/atlas/tool/execution/SafeToolExecutor.java");
 
+    /** Graph / ReAct / ToolCallback 等入口源码路径，用于锁定终极 Agent 的统一执行入口矩阵。 */
+    private static final Path GRAPH_CONFIG = Path.of("src/main/java/com/atlas/graph/config/AtlasGraphConfig.java");
+    private static final Path REACT_ENGINE = Path.of("src/main/java/com/atlas/react/ReActEngine.java");
+    private static final Path GRAPH_BRIDGE_CALLBACK = Path.of("src/main/java/com/atlas/graph/bridge/AtlasToolCallback.java");
+    private static final Path CORE_CALLBACK = Path.of("src/main/java/com/atlas/tool/core/AtlasToolCallback.java");
+    private static final Path ORCHESTRATOR = Path.of("src/main/java/com/atlas/orchestrator/AtlasOrchestrator.java");
+    private static final Path EXECUTION_SOURCE = Path.of("src/main/java/com/atlas/tool/execution/SafeToolExecutionSource.java");
+
     /**
      * 行级调用表达式扫描规则。
      *
@@ -174,6 +182,60 @@ class M4Px4ToolExecuteEntrypointContractTest {
     }
 
     /**
+     * 终极 Agent 多入口执行矩阵必须全部回到 SafeToolExecutor。
+     *
+     * <p>中文说明：Graph tool_call、Plan execute_node、ReAct Action、Spring AI ToolCallback
+     * 和旧 orchestrator fallback 是最容易发生安全漂移的入口。本测试只读源码，不启动 Spring、
+     * 不调用 LLM、不访问 kube-manager；它把“所有入口只构造 SafeToolExecutionRequest，真实执行
+     * 只能在 SafeToolExecutor 内部发生”固定成一张交接矩阵。</p>
+     *
+     * <p>安全边界：来源枚举只用于审计、回放和治理，不能被任何入口当成放宽 HITL、ToolPermission、
+     * durable audit、租户上下文或 kube-manager 权限的依据。</p>
+     */
+    @Test
+    void primaryAgentExecutionEntrypoints_shouldDelegateThroughSafeToolExecutorWithSourceMarkers() throws IOException {
+        String graph = read(GRAPH_CONFIG);
+        String react = read(REACT_ENGINE);
+        String bridgeCallback = read(GRAPH_BRIDGE_CALLBACK);
+        String coreCallback = read(CORE_CALLBACK);
+        String orchestrator = read(ORCHESTRATOR);
+        String sources = read(EXECUTION_SOURCE);
+
+        assertEntrypointDelegates(graph,
+            "Graph tool_call",
+            "SafeToolExecutionSource.GRAPH_TOOL_CALL",
+            "return safeToolExecutor.executeIntent(request).toGraphUpdates()");
+        assertEntrypointDelegates(graph,
+            "Plan execute_node",
+            "SafeToolExecutionSource.PLAN_EXECUTE_NODE",
+            "SafeToolExecutionResult result = safeToolExecutor.executeIntent(request)");
+        assertEntrypointDelegates(react,
+            "ReAct Action",
+            "SafeToolExecutionSource.REACT_ENGINE",
+            "SafeToolExecutionResult executionResult = safeToolExecutor.executeIntent(request)");
+        assertEntrypointDelegates(bridgeCallback,
+            "Graph Bridge ToolCallback",
+            "SafeToolExecutionSource.TOOL_CALLBACK",
+            "SafeToolExecutionResult result = safeToolExecutor.executeIntent(request)");
+        assertEntrypointDelegates(coreCallback,
+            "legacy core ToolCallback",
+            "SafeToolExecutionSource.TOOL_CALLBACK",
+            "SafeToolExecutionResult result = safeToolExecutor.executeIntent(new SafeToolExecutionRequest");
+        assertEntrypointDelegates(orchestrator,
+            "Orchestrator fallback",
+            "SafeToolExecutionSource.ORCHESTRATOR_FALLBACK",
+            "safeToolExecutor.executeIntent(executionRequest)");
+
+        assertThat(sources)
+            .as("SafeToolExecutionSource 必须显式列出所有主入口，供审计、回放和后续 Vue workbench 区分来源")
+            .contains("GRAPH_TOOL_CALL")
+            .contains("PLAN_EXECUTE_NODE")
+            .contains("REACT_ENGINE")
+            .contains("TOOL_CALLBACK")
+            .contains("ORCHESTRATOR_FALLBACK")
+            .contains("绝不能作为绕过 SafeToolExecutor");
+    }
+    /**
      * 临时白名单必须带完整治理信息，避免被误用成“允许绕过 SafeToolExecutor”的永久配置。
      */
     @Test
@@ -195,6 +257,16 @@ class M4Px4ToolExecuteEntrypointContractTest {
         }
     }
 
+    private void assertEntrypointDelegates(String source,
+                                          String entrypointName,
+                                          String expectedSourceMarker,
+                                          String expectedDelegateCall) {
+        assertThat(source)
+            .as(entrypointName + " 必须构造统一安全执行请求并标注来源")
+            .contains("new SafeToolExecutionRequest(")
+            .contains(expectedSourceMarker)
+            .contains(expectedDelegateCall);
+    }
     private List<SourceExecuteCall> scanProductionBaseToolExecuteCalls() throws IOException {
         return scanExecuteCalls(BASE_TOOL_EXECUTE_PATTERN);
     }

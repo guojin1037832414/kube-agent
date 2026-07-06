@@ -92,6 +92,7 @@ class KubeManagerReadOnlySmokeTest {
 
     private static final String ENABLED_PROPERTY = "atlas.kube-manager.smoke.enabled";
     private static final String BASE_URL_PROPERTY = "atlas.kube-manager.smoke.base-url";
+    private static final String READ_TIMEOUT_SECONDS_PROPERTY = "atlas.kube-manager.smoke.read-timeout-seconds";
     private static final String TOKEN_PROPERTY = "atlas.kube-manager.smoke.token";
     private static final String ORG_ID_PROPERTY = "atlas.kube-manager.smoke.org-id";
     private static final String USERNAME_PROPERTY = "atlas.kube-manager.smoke.username";
@@ -101,6 +102,7 @@ class KubeManagerReadOnlySmokeTest {
 
     private static final String ENABLED_ENV = "ATLAS_KUBE_MANAGER_SMOKE_ENABLED";
     private static final String BASE_URL_ENV = "ATLAS_KUBE_MANAGER_SMOKE_BASE_URL";
+    private static final String READ_TIMEOUT_SECONDS_ENV = "ATLAS_KUBE_MANAGER_SMOKE_READ_TIMEOUT_SECONDS";
     private static final String TOKEN_ENV = "ATLAS_KUBE_MANAGER_SMOKE_TOKEN";
     private static final String ORG_ID_ENV = "ATLAS_KUBE_MANAGER_SMOKE_ORG_ID";
     private static final String USERNAME_ENV = "ATLAS_KUBE_MANAGER_SMOKE_USERNAME";
@@ -477,7 +479,10 @@ class KubeManagerReadOnlySmokeTest {
         KubeManagerHttpClient client = new KubeManagerHttpClient(context);
         ReflectionTestUtils.setField(client, "backendBaseUrl", baseUrl);
         ReflectionTestUtils.setField(client, "connectTimeoutSeconds", 2);
-        ReflectionTestUtils.setField(client, "readTimeoutSeconds", 8);
+        // 中文说明：真实 8100 smoke 是人工 opt-in 联调，不应被过短测试预算误杀。
+        // 安全边界：这里仅放宽只读 GET 的等待时间，不新增写接口、不改变 Tool 权限，也不影响默认离线单测。
+        ReflectionTestUtils.setField(client, "readTimeoutSeconds",
+            intConfig(READ_TIMEOUT_SECONDS_PROPERTY, READ_TIMEOUT_SECONDS_ENV, 30, 5, 120));
         client.init();
         return client;
     }
@@ -576,6 +581,17 @@ class KubeManagerReadOnlySmokeTest {
         assertFalse(value.isBlank(),
             "启用登录型 8100 smoke 时必须提供 " + property + " 或环境变量 " + env + "；测试不会回显该值");
         return value;
+    }
+
+    private static int intConfig(String property, String env, int defaultValue, int min, int max) {
+        String raw = config(property, env, String.valueOf(defaultValue));
+        try {
+            int value = Integer.parseInt(raw.trim());
+            return Math.max(min, Math.min(max, value));
+        } catch (NumberFormatException e) {
+            fail("真实 8100 smoke 数字配置无效: " + property + " / " + env);
+            return defaultValue;
+        }
     }
 
     private static String config(String property, String env, String defaultValue) {

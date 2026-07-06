@@ -1,12 +1,20 @@
 package com.atlas.react;
 
+import com.atlas.audit.AgentAuditEvent;
+import com.atlas.audit.AgentAuditOutcome;
+import com.atlas.audit.InMemoryAgentAuditRecorder;
 import com.atlas.auth.UserPermissionContext;
+import com.atlas.hitl.HitlGuard;
 import com.atlas.tool.annotation.AtlasToolMapping;
 import com.atlas.tool.annotation.ToolPermission;
 import com.atlas.tool.core.AtlasToolResult;
 import com.atlas.tool.core.BaseTool;
+import com.atlas.tool.core.ToolParameterNormalizer;
 import com.atlas.tool.core.ToolRegistry;
+import com.atlas.tool.execution.SafeToolExecutionSource;
+import com.atlas.tool.execution.SafeToolExecutor;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.model.ChatModel;
@@ -41,6 +49,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class ReActEngineMultiStepE2ETest {
 
+    @AfterEach
+    void tearDown() {
+        UserPermissionContext.CURRENT_TOKEN.remove();
+        UserPermissionContext.CURRENT_ORG_ID.remove();
+    }
+
     @Test
     void runWithEvents_shouldCompleteTwoToolActionsThenFinalAnswer() {
         ScriptedChatModel chatModel = new ScriptedChatModel(List.of(
@@ -65,13 +79,24 @@ class ReActEngineMultiStepE2ETest {
                 "message", "Back-off restarting failed container"
             )))
         );
-        ToolRegistry registry = new ToolRegistry(List.of(podTool, eventTool), new UserPermissionContext());
+        UserPermissionContext permissionContext = new UserPermissionContext();
+        ToolRegistry registry = new ToolRegistry(List.of(podTool, eventTool), permissionContext);
         registry.init();
+        InMemoryAgentAuditRecorder auditRecorder = new InMemoryAgentAuditRecorder();
+        SafeToolExecutor safeToolExecutor = new SafeToolExecutor(
+            registry,
+            new HitlGuard(),
+            auditRecorder
+        );
         ReActEngine engine = new ReActEngine(
             chatModel,
             new ObjectMapper(),
             registry,
-            new ReActPromptBuilder(registry)
+            new ReActPromptBuilder(registry),
+            new ToolParameterNormalizer(registry),
+            new HitlGuard(),
+            safeToolExecutor,
+            null
         );
         List<ReActEvent> events = new ArrayList<>();
         String traceId = "trc_react_e2e_trace_001";
@@ -124,6 +149,33 @@ class ReActEngineMultiStepE2ETest {
                 && traceId.equals(e.metadata().get("traceId"))),
             "final content 事件必须带同一 traceId");
         assertFalse(events.stream().anyMatch(e -> "error".equals(e.type())), "成功路径不应产生 error 事件");
+
+        // 中文说明：这里把 ReAct 成功路径从“内存 Tool 被调用”提升为“真实统一执行边界被调用并留下审计”。
+        // 安全边界：审计事件只证明本次 READ 候选经过 SafeToolExecutor，不代表 release、HITL 或写操作权限已经打开。
+        assertEquals(2, auditRecorder.recentEvents().size(),
+            "两轮 ReAct Action 都必须经过 SafeToolExecutor 并留下可回放审计事件");
+        assertReactAuditEvent(auditRecorder.recentEvents().get(1), "pod_status", traceId, "100002", "conv-1");
+        assertReactAuditEvent(auditRecorder.recentEvents().get(0), "event_query", traceId, "100002", "conv-1");
+    }
+
+    private void assertReactAuditEvent(AgentAuditEvent event,
+                                       String expectedIntentId,
+                                       String expectedTraceId,
+                                       String expectedOrgId,
+                                       String expectedConversationId) {
+        assertEquals(expectedIntentId, event.intentId(), "审计必须记录 ReAct 实际委托的 intentId");
+        assertEquals(SafeToolExecutionSource.REACT_ENGINE, event.source(), "ReAct 入口必须以 REACT_ENGINE 来源进入审计");
+        assertEquals(AgentAuditOutcome.SUCCESS, event.outcome(), "本用例只覆盖低风险 READ 成功链路");
+        assertEquals(expectedTraceId, event.traceId(), "审计 traceId 必须与 ReAct 事件时间线一致");
+        assertEquals(expectedOrgId, event.organizationId(), "审计租户必须来自服务端可信上下文");
+        assertEquals(expectedConversationId, event.conversationId(), "审计会话必须来自服务端初始上下文");
+        assertEquals("GET", event.httpMethod(), "ReAct 多步成功样例只允许 GET/READ Tool");
+        assertEquals(AtlasToolMapping.OperationType.READ, event.operationType(), "本测试不能悄悄混入写操作");
+        assertFalse(event.requiresConfirmation(), "低风险 READ 样例不应触发 HITL");
+        assertTrue(event.executed(), "成功审计必须标记已进入 Tool 执行");
+        assertTrue(event.success(), "成功审计必须标记业务成功");
+        assertFalse(event.parameterSummary().toString().contains("test-token"),
+            "审计参数摘要不得泄露 token 原文");
     }
 
     /**
