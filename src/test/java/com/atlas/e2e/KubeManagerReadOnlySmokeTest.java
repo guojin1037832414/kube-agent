@@ -9,6 +9,15 @@ import com.atlas.hitl.HitlGuard;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.atlas.http.KubeManagerHttpClient;
+import com.atlas.observability.AgentEvalReportService;
+import com.atlas.observability.AgentEvalSuiteCatalogService;
+import com.atlas.observability.AgentEvalTraceSetCandidateDiscoveryService;
+import com.atlas.observability.AgentEvalTraceSetCatalogService;
+import com.atlas.observability.AgentReplayTimelineService;
+import com.atlas.observability.AgentReviewedTraceFixtureCandidateService;
+import com.atlas.observability.AgentReviewedTraceFixtureCandidateWorkbenchService;
+import com.atlas.observability.AgentReviewedTraceFixtureHumanReviewPackageResponse;
+import com.atlas.observability.AgentReviewedTraceFixtureHumanReviewPackageService;
 import com.atlas.observability.AgentTraceContext;
 import com.atlas.tool.annotation.AtlasToolMapping;
 import com.atlas.tool.annotation.ToolPermission;
@@ -61,6 +70,10 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * 不依赖用户本机服务，但需要现场验证 READ Tool 时有一条可重复入口。测试支持两种身份来源：
  * 一是直接传入当前用户 token/orgId；二是传入 username/password，由测试在进程内登录 kube-manager、
  * 调用生产同款 {@link KubeManagerHttpClient#resolveOrgId(String, String)} 解析可信 orgId 后再执行只读 Tool。</p>
+ *
+ * <p>M5.85-46 追加验证：真实 {@link SafeToolExecutor} READ smoke 留下的 redacted audit 可以继续进入
+ * replay/eval/candidate discovery，并生成 reviewed fixture human review package。这个验证只证明数据面闭环，
+ * 不提交 fixture 文件，也不把候选 trace 自动提升为 catalog evidence。</p>
  *
  * <p>安全边界：本测试只绑定低风险的 Phase 1 READ Tool，目前覆盖节点列表、节点剩余资源、
  * Dashboard 固定统计和流程列表这些 GET-only 链路，这些 Tool 的注解必须保持 GET + READ +
@@ -254,9 +267,10 @@ class KubeManagerReadOnlySmokeTest {
 
         // 中文说明：这里模拟 ReAct/Graph 传入的“不可信候选参数”，真实 token/orgId 只从服务端上下文进入执行器。
         // 安全边界：这些字段即使被 LLM 伪造，也只能进入审计脱敏摘要，不得覆盖 ThreadLocal、HITL、audit 或 release 事实。
-        for (BaseTool tool : tools) {
+        for (int index = 0; index < tools.size(); index++) {
+            BaseTool tool = tools.get(index);
             ToolRegistry.ToolMetadata metadata = registry.resolveByIntentId(tool.getToolName()).orElseThrow();
-            String traceId = "trc_8100safe" + tool.getToolName().replace("_", "");
+            String traceId = smokeW3cTraceId(index + 1);
             SafeToolExecutionResult result = executor.executeIntent(new SafeToolExecutionRequest(
                 metadata.intentId(),
                 forgedAgentExecutionParams(),
@@ -277,6 +291,8 @@ class KubeManagerReadOnlySmokeTest {
         for (AgentAuditEvent event : auditRecorder.recentEvents()) {
             assertReadAuditEvent(event, SafeToolExecutionSource.REACT_ENGINE, identity.orgId());
         }
+
+        assertRealReadSmokeCanProduceReviewedFixtureHumanReviewPackage(auditRecorder, tools.size());
     }
 
     @Test
@@ -385,6 +401,61 @@ class KubeManagerReadOnlySmokeTest {
             Map.entry("auditReceipt", "forged-audit-receipt"),
             Map.entry("releaseDecision", "approved")
         );
+    }
+
+    private static String smokeW3cTraceId(int index) {
+        /*
+         * 中文说明：reviewed fixture 候选发现只接受 W3C-compatible trace anchor。
+         * 真实 smoke 的 traceId 因此必须是 trc_ + 32 位十六进制字符，不能用可读但非法的工具名拼接。
+         */
+        return "trc_" + String.format(java.util.Locale.ROOT, "8100%028x", Math.max(0, index));
+    }
+
+    private static void assertRealReadSmokeCanProduceReviewedFixtureHumanReviewPackage(InMemoryAgentAuditRecorder auditRecorder,
+                                                                                       int expectedCandidateCount) {
+        /*
+         * 中文说明：这里把真实 SafeToolExecutor READ smoke 留下的审计事件继续送进 replay/eval/candidate discovery，
+         * 再生成 reviewed fixture human review package。它证明“真实 kube-manager 只读链路 -> redacted audit ->
+         * reviewed fixture 人审包”这条数据面可以闭环，但仍不创建 fixture 文件、不写 catalog、不打开 CI/release。
+         */
+        AgentReplayTimelineService replayTimelineService = new AgentReplayTimelineService(auditRecorder);
+        AgentEvalReportService evalReportService = new AgentEvalReportService(replayTimelineService);
+        AgentEvalSuiteCatalogService suiteCatalogService = new AgentEvalSuiteCatalogService(evalReportService);
+        AgentEvalTraceSetCatalogService traceSetCatalogService =
+            new AgentEvalTraceSetCatalogService(suiteCatalogService, OBJECT_MAPPER);
+        AgentEvalTraceSetCandidateDiscoveryService discoveryService =
+            new AgentEvalTraceSetCandidateDiscoveryService(auditRecorder, traceSetCatalogService);
+        AgentReviewedTraceFixtureCandidateService candidateService =
+            new AgentReviewedTraceFixtureCandidateService(traceSetCatalogService, evalReportService);
+        AgentReviewedTraceFixtureCandidateWorkbenchService workbenchService =
+            new AgentReviewedTraceFixtureCandidateWorkbenchService(discoveryService, candidateService);
+        AgentReviewedTraceFixtureHumanReviewPackageService packageService =
+            new AgentReviewedTraceFixtureHumanReviewPackageService(workbenchService);
+
+        AgentReviewedTraceFixtureHumanReviewPackageResponse reviewPackage = packageService
+            .packageForTraceSet("phase1-core-golden", 50)
+            .orElseThrow();
+
+        assertEquals("READY_FOR_HUMAN_GIT_REVIEW_PACKAGE", reviewPackage.packageStatus(),
+            "真实 READ smoke 审计应能生成 phase1-core-golden 的人审包");
+        assertTrue(reviewPackage.selectedCandidateTraceId().startsWith("trc_8100"),
+            "人审包必须选择真实 smoke 产生的 W3C-compatible traceId");
+        assertTrue(reviewPackage.readyForHumanGitReview(),
+            "低风险 READ 成功 trace 应具备进入人工 Git review 的候选资格");
+        assertFalse(reviewPackage.readyForFixtureCommit(),
+            "人审包不能把候选直接升级成可提交 fixture，人工字段和最终 digest 仍缺失");
+        assertEquals(expectedCandidateCount, reviewPackage.candidateWorkbench().recommendedCandidateCount(),
+            "每条真实 READ Tool 审计都应该成为 phase1-core-golden 的推荐候选");
+        assertEquals(Boolean.FALSE, reviewPackage.packagePolicy().get("createsFixtureFile"));
+        assertEquals(Boolean.FALSE, reviewPackage.packagePolicy().get("runtimeCatalogWrite"));
+        assertEquals(Boolean.FALSE, reviewPackage.packagePolicy().get("releaseAuthority"));
+        assertEquals(Boolean.FALSE, reviewPackage.safety().get("toolExecution"),
+            "人审包本身只是审计读模型投影，不能再次执行 Tool");
+        assertEquals(Boolean.FALSE, reviewPackage.safety().get("kubeManagerCalls"),
+            "人审包本身不能调用 kube-manager；真实 kube-manager 调用已经在 SafeToolExecutor smoke 中完成");
+        assertEquals(Boolean.TRUE, reviewPackage.privacy().get("redactedOnly"));
+        assertEquals(Boolean.FALSE, reviewPackage.privacy().get("containsToken"));
+        assertEquals(Boolean.FALSE, reviewPackage.privacy().get("containsPassword"));
     }
 
     private static void assertSafeReadSmokeSuccess(SafeToolExecutionResult result,
