@@ -189,6 +189,8 @@ class AgentReviewedTraceFixtureManifestServiceTest {
         assertThat(manifest.fixtureFileCount()).isEqualTo(1);
         assertThat(manifest.matchedFixtureTraceSetCount()).isZero();
         assertThat(manifest.missingFixtureTraceSetCount()).isEqualTo(7);
+        assertThat(manifest.nextActions().get(0))
+            .isEqualTo("rework-reviewed-fixture-files-until-quality-gates-pass");
         assertThat(manifest.fixtureRows()).singleElement().satisfies(row -> {
             assertThat(row)
                 .containsEntry("status", "FIXTURE_NEEDS_REVIEW_REWORK")

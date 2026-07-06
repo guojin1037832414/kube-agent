@@ -69,12 +69,15 @@ public record AgentReviewedTraceFixtureManifestResponse(
             .map(row -> safeText(row.get("traceSetId")))
             .filter(value -> !value.isBlank())
             .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+        long reworkFixtureFileCount = fixtureRows.stream()
+            .filter(row -> "FIXTURE_NEEDS_REVIEW_REWORK".equals(row.get("status")))
+            .count();
         List<Map<String, Object>> coverage = traceSets.stream()
             .map(traceSet -> traceSetCoverage(traceSet, readyTraceSetIds))
             .toList();
         int matched = readyTraceSetIds.size();
         int missing = Math.max(0, traceSets.size() - matched);
-        String status = manifestStatus(fixtureRows, matched, missing);
+        String status = manifestStatus(fixtureRows, matched, missing, reworkFixtureFileCount);
         return new AgentReviewedTraceFixtureManifestResponse(
             SCHEMA_VERSION,
             generatedAt,
@@ -98,7 +101,7 @@ public record AgentReviewedTraceFixtureManifestResponse(
             coverage,
             buildRequiredFixtureFields(),
             buildForbiddenShortcuts(),
-            nextActions(missing),
+            nextActions(missing, reworkFixtureFileCount),
             buildEndpointMap(),
             buildSafety(),
             buildPrivacy(fixtureRows, catalog)
@@ -168,9 +171,19 @@ public record AgentReviewedTraceFixtureManifestResponse(
         return Map.copyOf(row);
     }
 
-    private static String manifestStatus(List<Map<String, Object>> fixtureRows, int matched, int missing) {
+    private static String manifestStatus(List<Map<String, Object>> fixtureRows,
+                                         int matched,
+                                         int missing,
+                                         long reworkFixtureFileCount) {
         if (fixtureRows.isEmpty()) {
             return "NO_REVIEWED_FIXTURE_FILES_FOUND";
+        }
+        /*
+         * 中文说明：manifest 顶层状态必须 fail-closed。即使每个 trace set 都已经有一行 ready fixture，
+         * 只要同一批 classpath fixture 中仍存在待返工行，就不能把 manifest 标成可进入 catalog patch review。
+         */
+        if (reworkFixtureFileCount > 0) {
+            return "REVIEWED_FIXTURES_PRESENT_BUT_NOT_READY";
         }
         if (matched == 0 && missing > 0) {
             return "REVIEWED_FIXTURES_PRESENT_BUT_NOT_READY";
@@ -340,7 +353,22 @@ public record AgentReviewedTraceFixtureManifestResponse(
         );
     }
 
-    private static List<String> nextActions(int missingFixtureTraceSetCount) {
+    /**
+     * 生成 manifest 的下一步人工动作。
+     *
+     * <p>中文说明：这里返回的是前端/人审者可读的 checklist，不是运行时指令。即使提示 rework 或 catalog patch，
+     * 也不上传 fixture、不修改 catalog、不启动 eval/replay、不打开 CI blocking 或 release 权力。</p>
+     */
+    private static List<String> nextActions(int missingFixtureTraceSetCount, long reworkFixtureFileCount) {
+        if (reworkFixtureFileCount > 0) {
+            return List.of(
+                "rework-reviewed-fixture-files-until-quality-gates-pass",
+                "attach-redaction-privacy-determinism-and-digest-proofs",
+                "review-fixture-files-through-human-git-review",
+                "then-prepare-catalog-patch-proposal",
+                "keep-runtime-upload-catalog-write-and-ci-blocking-disabled"
+            );
+        }
         if (missingFixtureTraceSetCount == 0) {
             return List.of(
                 "open-human-git-review-for-catalog-patch",

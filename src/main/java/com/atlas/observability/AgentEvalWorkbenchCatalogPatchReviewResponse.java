@@ -109,9 +109,12 @@ public record AgentEvalWorkbenchCatalogPatchReviewResponse(
         AgentReviewedTraceFixtureManifestResponse manifest) {
         String traceSetId = proposal != null ? proposal.traceSetId() : safeText(view != null ? view.id() : "");
         Map<String, Object> coverage = currentTraceSetCoverage(traceSetId, manifest);
+        Map<String, Object> qualitySummary = currentTraceSetFixtureQualitySummary(traceSetId, manifest);
         boolean manifestAvailable = manifest != null;
         boolean fixturePresent = Boolean.TRUE.equals(coverage.get("reviewedFixtureFilePresent"));
         boolean catalogTraceIdsPresent = Boolean.TRUE.equals(coverage.get("catalogTraceIdsPresent"));
+        String qualityGateStatus = safeText(qualitySummary.get("qualityGateStatus"));
+        boolean qualityGateFailed = "FAIL".equals(qualityGateStatus);
         boolean patchAddsTraceIds = proposal != null && proposal.addedTraceCount() > 0;
         Map<String, Object> readiness = new LinkedHashMap<>();
         readiness.put("schemaVersion", manifestAvailable ? manifest.schemaVersion() : "");
@@ -124,7 +127,15 @@ public record AgentEvalWorkbenchCatalogPatchReviewResponse(
         readiness.put("currentTraceSetFixtureStatus", coverageStatus(coverage, manifestAvailable));
         readiness.put("currentTraceSetFixturePresent", fixturePresent);
         readiness.put("catalogTraceIdsPresent", catalogTraceIdsPresent);
-        readiness.put("requiredBeforeCatalogPatchMerge", manifestAvailable && patchAddsTraceIds && !fixturePresent);
+        readiness.put("currentTraceSetQualityGateStatus", qualityGateStatus);
+        readiness.put("currentTraceSetMatchingFixtureFileCount", qualitySummary.get("matchingFixtureFileCount"));
+        readiness.put("currentTraceSetReadyFixtureFileCount", qualitySummary.get("readyFixtureFileCount"));
+        readiness.put("currentTraceSetReworkFixtureFileCount", qualitySummary.get("reworkFixtureFileCount"));
+        readiness.put("currentTraceSetFailedQualityGates", qualitySummary.get("failedQualityGates"));
+        readiness.put("fixtureRowsEmbedded", false);
+        readiness.put("rawFixtureFieldsEmbedded", false);
+        readiness.put("requiredBeforeCatalogPatchMerge", manifestAvailable && patchAddsTraceIds
+            && (!fixturePresent || qualityGateFailed));
         readiness.put("runtimeCatalogWrite", false);
         readiness.put("catalogMutationAllowed", false);
         readiness.put("fixtureUploadAccepted", false);
@@ -146,6 +157,54 @@ public record AgentEvalWorkbenchCatalogPatchReviewResponse(
             .findFirst()
             .map(Map::copyOf)
             .orElseGet(Map::of);
+    }
+
+    /**
+     * 生成当前 trace set 的 fixture 质量门摘要。
+     *
+     * <p>中文说明：M5.85-41 已让 manifest 行级输出 `failedQualityGates`，但 catalog patch review
+     * 仍不能嵌入完整 fixtureRows。这里仅提取当前 trace set 的状态、计数和失败门名，供未来
+     * Vue workbench 渲染“为什么还不能 merge catalog patch”；它不暴露 fixture traceId、suiteId、
+     * replay 内容、proof 原文，也不把这些信息变成运行时上传、写 catalog、eval/replay 或 release 权力。</p>
+     */
+    private static Map<String, Object> currentTraceSetFixtureQualitySummary(
+        String traceSetId,
+        AgentReviewedTraceFixtureManifestResponse manifest) {
+        Map<String, Object> summary = new LinkedHashMap<>();
+        if (manifest == null || traceSetId.isBlank()) {
+            summary.put("qualityGateStatus", "MANIFEST_UNAVAILABLE");
+            summary.put("matchingFixtureFileCount", 0);
+            summary.put("readyFixtureFileCount", 0);
+            summary.put("reworkFixtureFileCount", 0);
+            summary.put("failedQualityGates", List.of());
+            summary.put("fixtureRowsEmbedded", false);
+            summary.put("rawFixtureFieldsEmbedded", false);
+            return Map.copyOf(summary);
+        }
+        List<Map<String, Object>> matchingRows = manifest.fixtureRows().stream()
+            .filter(row -> traceSetId.equals(safeText(row.get("traceSetId"))))
+            .toList();
+        long readyRows = matchingRows.stream()
+            .filter(row -> "READY_FOR_HUMAN_GIT_REVIEW".equals(safeText(row.get("status"))))
+            .count();
+        long reworkRows = matchingRows.stream()
+            .filter(row -> "FIXTURE_NEEDS_REVIEW_REWORK".equals(safeText(row.get("status"))))
+            .count();
+        List<String> failedQualityGates = matchingRows.stream()
+            .flatMap(row -> stringList(row.get("failedQualityGates")).stream())
+            .distinct()
+            .toList();
+        boolean hasFailedQualityGate = !failedQualityGates.isEmpty() || reworkRows > 0;
+        summary.put("qualityGateStatus", matchingRows.isEmpty()
+            ? "MISSING_REVIEWED_FIXTURE_FILE"
+            : (!hasFailedQualityGate && readyRows == matchingRows.size() ? "PASS" : "FAIL"));
+        summary.put("matchingFixtureFileCount", matchingRows.size());
+        summary.put("readyFixtureFileCount", readyRows);
+        summary.put("reworkFixtureFileCount", reworkRows);
+        summary.put("failedQualityGates", failedQualityGates);
+        summary.put("fixtureRowsEmbedded", false);
+        summary.put("rawFixtureFieldsEmbedded", false);
+        return Map.copyOf(summary);
     }
 
     private static String coverageStatus(Map<String, Object> coverage, boolean manifestAvailable) {
@@ -172,6 +231,16 @@ public record AgentEvalWorkbenchCatalogPatchReviewResponse(
         if (value != null) {
             target.put(key, safeText(value));
         }
+    }
+
+    private static List<String> stringList(Object value) {
+        if (!(value instanceof List<?> list)) {
+            return List.of();
+        }
+        return list.stream()
+            .map(AgentEvalWorkbenchCatalogPatchReviewResponse::safeText)
+            .filter(item -> !item.isBlank())
+            .toList();
     }
 
     private static List<Map<String, Object>> buildPatchOperations(

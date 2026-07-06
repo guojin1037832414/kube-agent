@@ -250,6 +250,13 @@ class AgentEvalWorkbenchCatalogPatchReviewServiceTest {
             .containsEntry("currentTraceSetId", "phase1-core-golden")
             .containsEntry("currentTraceSetFixtureStatus", "MISSING_REVIEWED_FIXTURE_FILE")
             .containsEntry("currentTraceSetFixturePresent", false)
+            .containsEntry("currentTraceSetQualityGateStatus", "MISSING_REVIEWED_FIXTURE_FILE")
+            .containsEntry("currentTraceSetMatchingFixtureFileCount", 0)
+            .containsEntry("currentTraceSetReadyFixtureFileCount", 0L)
+            .containsEntry("currentTraceSetReworkFixtureFileCount", 0L)
+            .containsEntry("currentTraceSetFailedQualityGates", List.of())
+            .containsEntry("fixtureRowsEmbedded", false)
+            .containsEntry("rawFixtureFieldsEmbedded", false)
             .containsEntry("requiredBeforeCatalogPatchMerge", true)
             .containsEntry("runtimeCatalogWrite", false)
             .containsEntry("catalogMutationAllowed", false)
@@ -276,6 +283,286 @@ class AgentEvalWorkbenchCatalogPatchReviewServiceTest {
             .contains("reviewedFixtureReadiness", "MISSING_REVIEWED_FIXTURE_FILE")
             .doesNotContain("secret-token-value", "conv-sensitive", "user-sensitive", "org-sensitive", "/api/org-sensitive")
             .doesNotContain("\"fixtureRows\"", "\"reports\"", "\"replay\"");
+    }
+
+    @Test
+    void review_shouldExposeCurrentTraceSetFixtureQualityFailuresWithoutRawRows() throws Exception {
+        InMemoryAgentAuditRecorder auditRecorder = new InMemoryAgentAuditRecorder();
+        String traceId = "trc_dddddddddddddddddddddddddddddddd";
+        auditRecorder.record(new AgentAuditEvent(
+            "aud_workbench_patch_review_bad_fixture",
+            Instant.parse("2026-06-09T00:00:00Z"),
+            traceId,
+            "conv-sensitive",
+            "user-sensitive",
+            "org-sensitive",
+            "intent",
+            "tool",
+            SafeToolExecutionSource.REACT_ENGINE,
+            "GET",
+            List.of("/api/org-sensitive/pod?token=secret-token-value"),
+            AtlasToolMapping.OperationType.READ,
+            false,
+            AgentAuditOutcome.SUCCESS,
+            true,
+            true,
+            "ok token=secret-token-value",
+            Map.of("count", 1, "keys", List.of(Map.of(
+                "name", "token",
+                "protected", true,
+                "type", "string",
+                "present", true
+            )))
+        ));
+        ObjectMapper objectMapper = new ObjectMapper();
+        AgentReplayTimelineService replayTimelineService = new AgentReplayTimelineService(auditRecorder);
+        AgentEvalReportService evalReportService = new AgentEvalReportService(replayTimelineService);
+        AgentEvalSuiteCatalogService suiteCatalogService = new AgentEvalSuiteCatalogService(evalReportService);
+        AgentEvalTraceSetCatalogService traceSetCatalogService =
+            new AgentEvalTraceSetCatalogService(suiteCatalogService, objectMapper);
+        AgentReviewedTraceFixtureManifestService manifestService = new AgentReviewedTraceFixtureManifestService(
+            traceSetCatalogService,
+            objectMapper
+        ) {
+            /**
+             * 中文说明：这里模拟当前 trace set 已有 fixture 文件，但文件质量门失败。
+             * workbench 只能看到失败门名和计数，不能拿到 fixtureRows 原文或把失败文件当成 ready。
+             */
+            @Override
+            public AgentReviewedTraceFixtureManifestResponse manifest() {
+                return AgentReviewedTraceFixtureManifestResponse.of(
+                    Instant.parse("2026-06-24T13:00:00Z"),
+                    traceSetCatalogService.catalog(),
+                    List.of(Map.ofEntries(
+                        Map.entry("traceId", "trc_11111111111111111111111111111111"),
+                        Map.entry("traceSetId", "phase1-core-golden"),
+                        Map.entry("suiteId", "release-gate-strict"),
+                        Map.entry("replaySource", Map.of("type", "redacted-replay-timeline")),
+                        Map.entry("redactionProof", Map.of("containsRawPrincipal", false)),
+                        Map.entry("deterministicEvalProof", Map.of("llmUsed", false)),
+                        Map.entry("privacyProof", Map.of("containsToken", true, "containsPassword", false)),
+                        Map.entry("sourceCommitSha", "84732f0c"),
+                        Map.entry("reviewer", "human-git-review"),
+                        Map.entry("reviewTimestamp", "2026-06-24T13:00:00Z"),
+                        Map.entry("evidenceDigest", "fixture-evidence-without-sha-prefix"),
+                        Map.entry("candidateGateSummary", Map.of("pass", true)),
+                        Map.entry("forbiddenRuntimeClaims", List.of("runtimeCatalogWrite:false"))
+                    )),
+                    "classpath*:observability/reviewed-trace-fixtures/*.json"
+                );
+            }
+        };
+        AgentEvalWorkbenchCatalogPatchReviewService service =
+            new AgentEvalWorkbenchCatalogPatchReviewService(traceSetCatalogService, manifestService);
+
+        Optional<AgentEvalWorkbenchCatalogPatchReviewResponse> response = service.review(
+            "phase1-core-golden",
+            new AgentEvalSuiteRequest(List.of(traceId, "secret-token-value"), null, null, null)
+        );
+
+        assertThat(response).isPresent();
+        AgentEvalWorkbenchCatalogPatchReviewResponse review = response.get();
+        assertThat(review.reviewedFixtureReadiness())
+            .containsEntry("manifestStatus", "REVIEWED_FIXTURES_PRESENT_BUT_NOT_READY")
+            .containsEntry("currentTraceSetFixtureStatus", "MISSING_REVIEWED_FIXTURE_FILE")
+            .containsEntry("currentTraceSetFixturePresent", false)
+            .containsEntry("currentTraceSetQualityGateStatus", "FAIL")
+            .containsEntry("currentTraceSetMatchingFixtureFileCount", 1)
+            .containsEntry("currentTraceSetReadyFixtureFileCount", 0L)
+            .containsEntry("currentTraceSetReworkFixtureFileCount", 1L)
+            .containsEntry("fixtureRowsEmbedded", false)
+            .containsEntry("rawFixtureFieldsEmbedded", false)
+            .containsEntry("requiredBeforeCatalogPatchMerge", true)
+            .containsEntry("runtimeCatalogWrite", false)
+            .containsEntry("runtimeEvalAllowed", false);
+        List<String> failedQualityGates = ((List<?>) review.reviewedFixtureReadiness()
+            .get("currentTraceSetFailedQualityGates")).stream()
+            .map(String::valueOf)
+            .toList();
+        assertThat(failedQualityGates)
+            .contains(
+                "replay-source-digest-missing",
+                "privacy-proof-token-not-closed",
+                "evidence-digest-sha256-missing",
+                "forbidden-runtime-claims-missing-kubeManagerCalls-false"
+            );
+        assertThat(review.reviewChecklist())
+            .contains("prepare-reviewed-redacted-fixture-file-before-catalog-merge", "confirm-no-runtime-catalog-write");
+        assertThat(review.toString())
+            .contains("currentTraceSetFailedQualityGates", "REVIEWED_FIXTURES_PRESENT_BUT_NOT_READY")
+            .doesNotContain("fixtureRows=", "reports=", "replay=")
+            .doesNotContain("secret-token-value", "conv-sensitive", "user-sensitive", "org-sensitive", "/api/org-sensitive");
+        assertThat(new ObjectMapper().findAndRegisterModules().writeValueAsString(review))
+            .contains("currentTraceSetFailedQualityGates", "REVIEWED_FIXTURES_PRESENT_BUT_NOT_READY")
+            .doesNotContain("\"fixtureRows\"", "\"reports\"", "\"replay\"")
+            .doesNotContain("secret-token-value", "conv-sensitive", "user-sensitive", "org-sensitive", "/api/org-sensitive");
+    }
+
+    @Test
+    void review_shouldFailClosedWhenReadyAndReworkFixturesCoexistForCurrentTraceSet() throws Exception {
+        InMemoryAgentAuditRecorder auditRecorder = new InMemoryAgentAuditRecorder();
+        String candidateTraceId = "trc_eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
+        auditRecorder.record(new AgentAuditEvent(
+            "aud_workbench_patch_review_mixed_fixture",
+            Instant.parse("2026-06-09T00:00:00Z"),
+            candidateTraceId,
+            "conv-sensitive",
+            "user-sensitive",
+            "org-sensitive",
+            "intent",
+            "tool",
+            SafeToolExecutionSource.REACT_ENGINE,
+            "GET",
+            List.of("/api/org-sensitive/pod?token=secret-token-value"),
+            AtlasToolMapping.OperationType.READ,
+            false,
+            AgentAuditOutcome.SUCCESS,
+            true,
+            true,
+            "ok token=secret-token-value",
+            Map.of("count", 1, "keys", List.of(Map.of(
+                "name", "token",
+                "protected", true,
+                "type", "string",
+                "present", true
+            )))
+        ));
+        ObjectMapper objectMapper = new ObjectMapper();
+        AgentReplayTimelineService replayTimelineService = new AgentReplayTimelineService(auditRecorder);
+        AgentEvalReportService evalReportService = new AgentEvalReportService(replayTimelineService);
+        AgentEvalSuiteCatalogService suiteCatalogService = new AgentEvalSuiteCatalogService(evalReportService);
+        AgentEvalTraceSetCatalogService traceSetCatalogService =
+            new AgentEvalTraceSetCatalogService(suiteCatalogService, objectMapper);
+        AgentReviewedTraceFixtureManifestService manifestService = new AgentReviewedTraceFixtureManifestService(
+            traceSetCatalogService,
+            objectMapper
+        ) {
+            /**
+             * 中文说明：同一个 trace set 同时出现合格和待返工 fixture 时，workbench 只能展示聚合质量门；
+             * 不能因为有一行 ready 就忽略另一行失败，也不能把 fixtureRows、traceId 或 proof 原文嵌入响应。
+             */
+            @Override
+            public AgentReviewedTraceFixtureManifestResponse manifest() {
+                return AgentReviewedTraceFixtureManifestResponse.of(
+                    Instant.parse("2026-06-24T13:00:00Z"),
+                    traceSetCatalogService.catalog(),
+                    List.of(
+                        Map.ofEntries(
+                            Map.entry("traceId", "trc_22222222222222222222222222222222"),
+                            Map.entry("traceSetId", "phase1-core-golden"),
+                            Map.entry("suiteId", "release-gate-strict"),
+                            Map.entry("replaySource", Map.of(
+                                "type", "redacted-replay-timeline",
+                                "digest", "sha256:redacted-replay",
+                                "timelineStepCount", 3,
+                                "redactedOnly", true
+                            )),
+                            Map.entry("redactionProof", Map.of(
+                                "containsRawPrincipal", false,
+                                "containsRawOrganization", false,
+                                "containsRawConversation", false,
+                                "containsRawEndpoints", false,
+                                "containsRawReason", false,
+                                "containsRawParameterValues", false
+                            )),
+                            Map.entry("deterministicEvalProof", Map.of(
+                                "deterministic", true,
+                                "llmUsed", false,
+                                "externalCalls", false,
+                                "toolExecution", false,
+                                "mcpToolCall", false,
+                                "kubeManagerCalls", false
+                            )),
+                            Map.entry("privacyProof", Map.of(
+                                "containsAuthorizationHeader", false,
+                                "containsToken", false,
+                                "containsPassword", false,
+                                "containsRawPrompt", false,
+                                "containsRawDocument", false
+                            )),
+                            Map.entry("sourceCommitSha", "84732f0c"),
+                            Map.entry("reviewer", "human-git-review"),
+                            Map.entry("reviewTimestamp", "2026-06-24T13:00:00Z"),
+                            Map.entry("evidenceDigest", "sha256:fixture-evidence"),
+                            Map.entry("candidateGateSummary", Map.of("pass", true)),
+                            Map.entry("forbiddenRuntimeClaims", List.of(
+                                "runtimeCatalogWrite:false",
+                                "catalogMutationAllowed:false",
+                                "runtimeEvalAllowed:false",
+                                "ciBlockingEnabled:false",
+                                "releaseAuthority:false",
+                                "toolExecution:false",
+                                "mcpToolCall:false",
+                                "kubeManagerCalls:false",
+                                "auditWrite:false",
+                                "memoryWrite:false",
+                                "phase2Authority:false"
+                            ))
+                        ),
+                        Map.ofEntries(
+                            Map.entry("traceId", "trc_33333333333333333333333333333333"),
+                            Map.entry("traceSetId", "phase1-core-golden"),
+                            Map.entry("suiteId", "release-gate-strict"),
+                            Map.entry("replaySource", Map.of("type", "redacted-replay-timeline")),
+                            Map.entry("redactionProof", Map.of("containsRawPrincipal", false)),
+                            Map.entry("deterministicEvalProof", Map.of("llmUsed", false)),
+                            Map.entry("privacyProof", Map.of("containsToken", true, "containsPassword", false)),
+                            Map.entry("sourceCommitSha", "84732f0c"),
+                            Map.entry("reviewer", "human-git-review"),
+                            Map.entry("reviewTimestamp", "2026-06-24T13:00:00Z"),
+                            Map.entry("evidenceDigest", "fixture-evidence-without-sha-prefix"),
+                            Map.entry("candidateGateSummary", Map.of("pass", true)),
+                            Map.entry("forbiddenRuntimeClaims", List.of("runtimeCatalogWrite:false"))
+                        )
+                    ),
+                    "classpath*:observability/reviewed-trace-fixtures/*.json"
+                );
+            }
+        };
+        AgentEvalWorkbenchCatalogPatchReviewService service =
+            new AgentEvalWorkbenchCatalogPatchReviewService(traceSetCatalogService, manifestService);
+
+        Optional<AgentEvalWorkbenchCatalogPatchReviewResponse> response = service.review(
+            "phase1-core-golden",
+            new AgentEvalSuiteRequest(List.of(candidateTraceId, "secret-token-value"), null, null, null)
+        );
+
+        assertThat(response).isPresent();
+        AgentEvalWorkbenchCatalogPatchReviewResponse review = response.get();
+        assertThat(review.reviewedFixtureReadiness())
+            .containsEntry("manifestStatus", "REVIEWED_FIXTURES_PRESENT_BUT_NOT_READY")
+            .containsEntry("currentTraceSetFixturePresent", true)
+            .containsEntry("currentTraceSetQualityGateStatus", "FAIL")
+            .containsEntry("currentTraceSetMatchingFixtureFileCount", 2)
+            .containsEntry("currentTraceSetReadyFixtureFileCount", 1L)
+            .containsEntry("currentTraceSetReworkFixtureFileCount", 1L)
+            .containsEntry("fixtureRowsEmbedded", false)
+            .containsEntry("rawFixtureFieldsEmbedded", false)
+            .containsEntry("requiredBeforeCatalogPatchMerge", true)
+            .containsEntry("runtimeCatalogWrite", false);
+        List<String> failedQualityGates = ((List<?>) review.reviewedFixtureReadiness()
+            .get("currentTraceSetFailedQualityGates")).stream()
+            .map(String::valueOf)
+            .toList();
+        assertThat(failedQualityGates)
+            .contains("privacy-proof-token-not-closed", "evidence-digest-sha256-missing");
+        assertThat(review.reviewChecklist())
+            .contains("prepare-reviewed-redacted-fixture-file-before-catalog-merge")
+            .doesNotContain("confirm-reviewed-fixture-manifest-row");
+        assertThat(review.nextActions().get(0))
+            .isEqualTo("prepare-reviewed-redacted-fixture-file-before-catalog-merge");
+        assertThat(new ObjectMapper().findAndRegisterModules().writeValueAsString(review))
+            .contains("currentTraceSetFailedQualityGates")
+            .doesNotContain("\"fixtureRows\"", "\"reports\"", "\"replay\"")
+            .doesNotContain(
+                "trc_22222222222222222222222222222222",
+                "trc_33333333333333333333333333333333",
+                "secret-token-value",
+                "conv-sensitive",
+                "user-sensitive",
+                "org-sensitive",
+                "/api/org-sensitive"
+            );
     }
 
     @Test
