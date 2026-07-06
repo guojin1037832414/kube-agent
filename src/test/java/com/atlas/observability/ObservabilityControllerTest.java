@@ -63,6 +63,8 @@ class ObservabilityControllerTest {
         new AgentReviewedTraceFixtureTemplateService(evalTraceSetCatalogService);
     private final AgentReviewedTraceFixtureCandidateService reviewedTraceFixtureCandidateService =
         new AgentReviewedTraceFixtureCandidateService(evalTraceSetCatalogService, evalReportService);
+    private final AgentReviewedTraceFixtureCandidateWorkbenchService reviewedTraceFixtureCandidateWorkbenchService =
+        new AgentReviewedTraceFixtureCandidateWorkbenchService(traceSetCandidateDiscoveryService, reviewedTraceFixtureCandidateService);
     private final AgentEvalWorkbenchTraceSetDetailService evalWorkbenchTraceSetDetailService =
         new AgentEvalWorkbenchTraceSetDetailService(evalTraceSetCatalogService);
     private final AgentEvalWorkbenchPromotionWorkflowService evalWorkbenchPromotionWorkflowService =
@@ -248,6 +250,7 @@ class ObservabilityControllerTest {
         reviewedTraceFixtureManifestService,
         reviewedTraceFixtureTemplateService,
         reviewedTraceFixtureCandidateService,
+        reviewedTraceFixtureCandidateWorkbenchService,
         releaseBlockingEvalGateContractService,
         evalWorkbenchTraceSetDetailService,
         evalWorkbenchPromotionWorkflowService,
@@ -3449,6 +3452,7 @@ class ObservabilityControllerTest {
                 "workbench-overview",
                 "workbench-trace-set-detail",
                 "workbench-promotion-workflow",
+                "workbench-reviewed-fixture-candidate-autopreview",
                 "workbench-reviewed-fixture-candidate",
                 "trace-set-promotion-workflow",
                 "trace-set-gate-bundle",
@@ -3459,6 +3463,7 @@ class ObservabilityControllerTest {
                 "workbench-overview",
                 "workbench-trace-set-detail",
                 "workbench-promotion-workflow",
+                "workbench-reviewed-fixture-candidate-autopreview",
                 "workbench-reviewed-fixture-candidate",
                 "trace-set-gate-bundle"
             );
@@ -3477,6 +3482,7 @@ class ObservabilityControllerTest {
             .contains(
                 "workbench-trace-set-detail",
                 "agent-eval-workbench-promotion-workflow.v1",
+                "agent-reviewed-trace-fixture-candidate-workbench.v1",
                 "agent-reviewed-trace-fixture-candidate.v1",
                 "agent-eval-workbench-gate-bundle-summary.v1"
             )
@@ -3537,10 +3543,15 @@ class ObservabilityControllerTest {
             "workbench-trace-set-detail"
         );
         assertThat(overview.nextActions())
-            .contains("preview-reviewed-fixture-candidate-before-git-review");
+            .contains(
+                "open-reviewed-fixture-candidate-workbench",
+                "preview-reviewed-fixture-candidate-before-git-review"
+            );
         assertThat(overview.traceSets()).allSatisfy(traceSet -> {
             assertThat(traceSet.reviewedFixtureCandidatePath()).contains("/workbench/trace-sets/");
             assertThat(traceSet.reviewedFixtureCandidatePath()).contains("/reviewed-fixture-candidate");
+            assertThat(traceSet.reviewedFixtureCandidateWorkbenchPath()).contains("/workbench/trace-sets/");
+            assertThat(traceSet.reviewedFixtureCandidateWorkbenchPath()).contains("/reviewed-fixture-candidate-workbench");
             assertThat(traceSet.workflowStages()).contains("reviewed-fixture-candidate-preview");
         });
         assertThat(overview.workbenchPolicy())
@@ -4363,6 +4374,102 @@ class ObservabilityControllerTest {
             .contains("candidateFixtureDraft", "READY_FOR_HUMAN_FIXTURE_REVIEW")
             .doesNotContain("\"replay\"", "\"reports\"", "\"steps\"", "\"fixtureRows\"")
             .doesNotContain("secret-token-value", "conv-sensitive", "user-sensitive", "org-sensitive", "/api/org-sensitive");
+    }
+
+    @Test
+    void reviewedTraceFixtureCandidateWorkbench_shouldRequireAdminUserAndRejectUnknownTraceSet() {
+        ResponseEntity<ApiResponse<AgentReviewedTraceFixtureCandidateWorkbenchResponse>> anonymous =
+            controller.reviewedTraceFixtureCandidateWorkbench("phase1-core-golden", 50);
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentReviewedTraceFixtureCandidateWorkbenchResponse>> user =
+            controller.reviewedTraceFixtureCandidateWorkbench("phase1-core-golden", 50);
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        SecurityContextHolder.clearContext();
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentReviewedTraceFixtureCandidateWorkbenchResponse>> missing =
+            controller.reviewedTraceFixtureCandidateWorkbench("missing-trace-set", 50);
+
+        assertThat(missing.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void reviewedTraceFixtureCandidateWorkbench_shouldAutoSelectDiscoveryCandidateForAdminUser() throws Exception {
+        String traceId = "trc_d1111111111111111111111111111111";
+        auditRecorder.record(new com.atlas.audit.AgentAuditEvent(
+            "aud_eval_workbench_fixture_candidate_auto",
+            java.time.Instant.parse("2026-06-09T00:00:00Z"),
+            traceId,
+            "conv-sensitive",
+            "user-sensitive",
+            "org-sensitive",
+            "intent",
+            "tool",
+            com.atlas.tool.execution.SafeToolExecutionSource.REACT_ENGINE,
+            "GET",
+            java.util.List.of("/api/org-sensitive/pod?token=secret-token-value"),
+            com.atlas.tool.annotation.AtlasToolMapping.OperationType.READ,
+            false,
+            com.atlas.audit.AgentAuditOutcome.SUCCESS,
+            true,
+            true,
+            "ok token=secret-token-value",
+            java.util.Map.of("count", 1, "keys", java.util.List.of(java.util.Map.of(
+                "name", "namespace",
+                "protected", false,
+                "type", "string",
+                "present", true
+            )))
+        ));
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentReviewedTraceFixtureCandidateWorkbenchResponse>> response =
+            controller.reviewedTraceFixtureCandidateWorkbench("phase1-core-golden", 50);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        AgentReviewedTraceFixtureCandidateWorkbenchResponse workbench = response.getBody().getData();
+        assertThat(workbench.schemaVersion()).isEqualTo("agent-reviewed-trace-fixture-candidate-workbench.v1");
+        assertThat(workbench.workbenchStatus()).isEqualTo("READY_FOR_HUMAN_FIXTURE_REVIEW");
+        assertThat(workbench.selectedCandidateTraceId()).isEqualTo(traceId);
+        assertThat(workbench.candidateSelected()).isTrue();
+        assertThat(workbench.readyForHumanGitReview()).isTrue();
+        assertThat(workbench.readyForFixtureCommit()).isFalse();
+        assertThat(workbench.candidateDiscovery().candidateTraceIds()).containsExactly(traceId);
+        assertThat(workbench.candidatePreview().candidateFixtureDraft())
+            .containsEntry("traceId", traceId)
+            .containsEntry("requiresHumanGitReviewBeforeCommit", true)
+            .containsEntry("readyForManifestQualityGateNow", false);
+        assertThat(workbench.candidateDiscoverySummary())
+            .containsEntry("rawAuditEmbedded", false)
+            .containsEntry("autoSelectedFirstRecommendedCandidate", true);
+        assertThat(workbench.workbenchPolicy())
+            .containsEntry("requestTraceIdsAccepted", false)
+            .containsEntry("createsFixtureFile", false)
+            .containsEntry("fixtureUploadAccepted", false)
+            .containsEntry("runtimeCatalogWrite", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("kubeManagerCalls", false);
+        assertThat(workbench.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("containsToken", false)
+            .containsEntry("containsPassword", false)
+            .containsEntry("containsRawEndpoints", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("kubeManagerCalls", false);
+        assertThat(new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules().writeValueAsString(workbench))
+            .contains("candidatePreview", "candidateDiscoverySummary", "READY_FOR_HUMAN_FIXTURE_REVIEW")
+            .doesNotContain("secret-token-value", "conv-sensitive", "user-sensitive", "org-sensitive", "/api/org-sensitive")
+            .doesNotContain("\"reports\"", "\"steps\"", "\"fixtureRows\"");
     }
 
     @Test

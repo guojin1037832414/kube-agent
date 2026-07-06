@@ -28,6 +28,7 @@ public record AgentEvalWorkbenchTraceSetView(
     List<String> workflowStages,
     String candidateDiscoveryPath,
     String reviewedFixtureCandidatePath,
+    String reviewedFixtureCandidateWorkbenchPath,
     String curationReviewPath,
     String catalogPatchProposalPath,
     String promotionWorkflowPath,
@@ -51,6 +52,7 @@ public record AgentEvalWorkbenchTraceSetView(
         workflowStages = workflowStages != null ? List.copyOf(workflowStages) : List.of();
         candidateDiscoveryPath = safeText(candidateDiscoveryPath);
         reviewedFixtureCandidatePath = safeText(reviewedFixtureCandidatePath);
+        reviewedFixtureCandidateWorkbenchPath = safeText(reviewedFixtureCandidateWorkbenchPath);
         curationReviewPath = safeText(curationReviewPath);
         catalogPatchProposalPath = safeText(catalogPatchProposalPath);
         promotionWorkflowPath = safeText(promotionWorkflowPath);
@@ -86,6 +88,7 @@ public record AgentEvalWorkbenchTraceSetView(
             defaultWorkflowStages(),
             endpoint(traceSetId, "candidates"),
             workbenchEndpoint(traceSetId, "reviewed-fixture-candidate"),
+            workbenchEndpoint(traceSetId, "reviewed-fixture-candidate-workbench"),
             endpoint(traceSetId, "curation-review"),
             endpoint(traceSetId, "catalog-patch-proposal"),
             endpoint(traceSetId, "promotion-workflow"),

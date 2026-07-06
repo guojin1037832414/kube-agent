@@ -31,7 +31,7 @@ class AgentEvalWorkbenchOverviewServiceTest {
 
         assertThat(overview.schemaVersion()).isEqualTo("agent-eval-workbench-overview.v1");
         assertThat(overview.evaluationVersion()).isEqualTo("deterministic-replay-eval.v1");
-        assertThat(overview.capabilityCount()).isEqualTo(17);
+        assertThat(overview.capabilityCount()).isEqualTo(18);
         assertThat(overview.traceSetCount()).isEqualTo(7);
         assertThat(overview.traceSetNeedsEvidenceCount()).isEqualTo(7);
         assertThat(overview.traceSetReadyCount()).isZero();
@@ -46,6 +46,7 @@ class AgentEvalWorkbenchOverviewServiceTest {
             .contains(
                 "inspect-reviewed-trace-evidence-readiness",
                 "discover-redacted-candidates",
+                "open-reviewed-fixture-candidate-workbench",
                 "preview-reviewed-fixture-candidate-before-git-review",
                 "promote-candidates-through-git-review",
                 "regenerate-gate-bundle-after-curation"
@@ -65,6 +66,8 @@ class AgentEvalWorkbenchOverviewServiceTest {
             assertThat(traceSet.candidateDiscoveryPath()).contains("/candidates");
             assertThat(traceSet.reviewedFixtureCandidatePath()).contains("/workbench/trace-sets/");
             assertThat(traceSet.reviewedFixtureCandidatePath()).contains("/reviewed-fixture-candidate");
+            assertThat(traceSet.reviewedFixtureCandidateWorkbenchPath()).contains("/workbench/trace-sets/");
+            assertThat(traceSet.reviewedFixtureCandidateWorkbenchPath()).contains("/reviewed-fixture-candidate-workbench");
             assertThat(traceSet.promotionWorkflowPath()).contains("/promotion-workflow");
             assertThat(traceSet.workflowStages())
                 .contains("reviewed-fixture-candidate-preview", "human-git-review", "gate-bundle");
@@ -115,7 +118,11 @@ class AgentEvalWorkbenchOverviewServiceTest {
             .containsEntry("toolExecution", false)
             .containsEntry("kubeManagerCalls", false);
         assertThat(overview.capabilities().capabilities()).extracting(AgentEvalWorkbenchCapability::id)
-            .contains("workbench-reviewed-fixture-candidate", "memory-rag-eval-suite-binding-contract");
+            .contains(
+                "workbench-reviewed-fixture-candidate-autopreview",
+                "workbench-reviewed-fixture-candidate",
+                "memory-rag-eval-suite-binding-contract"
+            );
         assertThat(overview.toString())
             .contains("workbench-overview", "agent-eval-trace-set-gate-bundle.v1")
             .doesNotContain("reports=", "replay=")

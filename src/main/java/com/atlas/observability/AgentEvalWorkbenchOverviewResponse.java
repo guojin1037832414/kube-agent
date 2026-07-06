@@ -74,6 +74,7 @@ public record AgentEvalWorkbenchOverviewResponse(
         if (needsEvidenceCount > 0) {
             actions.add("inspect-reviewed-trace-evidence-readiness");
             actions.add("discover-redacted-candidates");
+            actions.add("open-reviewed-fixture-candidate-workbench");
             actions.add("preview-reviewed-fixture-candidate-before-git-review");
             actions.add("promote-candidates-through-git-review");
         }

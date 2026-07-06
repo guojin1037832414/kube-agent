@@ -89,6 +89,7 @@ public class ObservabilityController {
     private final AgentReviewedTraceFixtureManifestService reviewedTraceFixtureManifestService;
     private final AgentReviewedTraceFixtureTemplateService reviewedTraceFixtureTemplateService;
     private final AgentReviewedTraceFixtureCandidateService reviewedTraceFixtureCandidateService;
+    private final AgentReviewedTraceFixtureCandidateWorkbenchService reviewedTraceFixtureCandidateWorkbenchService;
     private final AgentReleaseBlockingEvalGateContractService releaseBlockingEvalGateContractService;
     private final AgentEvalWorkbenchTraceSetDetailService evalWorkbenchTraceSetDetailService;
     private final AgentEvalWorkbenchPromotionWorkflowService evalWorkbenchPromotionWorkflowService;
@@ -144,6 +145,7 @@ public class ObservabilityController {
                                    AgentReviewedTraceFixtureManifestService reviewedTraceFixtureManifestService,
                                    AgentReviewedTraceFixtureTemplateService reviewedTraceFixtureTemplateService,
                                    AgentReviewedTraceFixtureCandidateService reviewedTraceFixtureCandidateService,
+                                   AgentReviewedTraceFixtureCandidateWorkbenchService reviewedTraceFixtureCandidateWorkbenchService,
                                    AgentReleaseBlockingEvalGateContractService releaseBlockingEvalGateContractService,
                                    AgentEvalWorkbenchTraceSetDetailService evalWorkbenchTraceSetDetailService,
                                    AgentEvalWorkbenchPromotionWorkflowService evalWorkbenchPromotionWorkflowService,
@@ -198,6 +200,7 @@ public class ObservabilityController {
         this.reviewedTraceFixtureManifestService = reviewedTraceFixtureManifestService;
         this.reviewedTraceFixtureTemplateService = reviewedTraceFixtureTemplateService;
         this.reviewedTraceFixtureCandidateService = reviewedTraceFixtureCandidateService;
+        this.reviewedTraceFixtureCandidateWorkbenchService = reviewedTraceFixtureCandidateWorkbenchService;
         this.releaseBlockingEvalGateContractService = releaseBlockingEvalGateContractService;
         this.evalWorkbenchTraceSetDetailService = evalWorkbenchTraceSetDetailService;
         this.evalWorkbenchPromotionWorkflowService = evalWorkbenchPromotionWorkflowService;
@@ -932,6 +935,30 @@ public class ObservabilityController {
             return guard;
         }
         return reviewedTraceFixtureCandidateService.candidate(traceSetId, request)
+            .map(response -> ResponseEntity.ok(ApiResponse.ok(response)))
+            .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.fail("Unknown Agent eval trace set: " + traceSetId)));
+    }
+
+    /**
+     * 发布 reviewed fixture candidate 的自动发现与预检工作台。
+     *
+     * <p>中文说明：该入口先从 redacted recent audit 里发现推荐候选，再自动选择第一个候选生成 fixture
+     * candidate 预检包，方便前端展示“是否已经有可人审 trace”。它不接收 caller traceId，因此不能把任意输入伪装成证据。</p>
+     *
+     * <p>安全边界：只读 workbench，不创建 fixture、不上传 fixture、不写 `eval-trace-sets.json`，不调用
+     * Tool/MCP/LLM/RAG/kube-manager，不写 HITL/audit/memory，也不启用 CI blocking 或 release authority。</p>
+     */
+    @GetMapping("/eval/workbench/trace-sets/{traceSetId}/reviewed-fixture-candidate-workbench")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentReviewedTraceFixtureCandidateWorkbenchResponse>> reviewedTraceFixtureCandidateWorkbench(
+        @PathVariable String traceSetId,
+        @RequestParam(defaultValue = "50") int limit) {
+        ResponseEntity<ApiResponse<AgentReviewedTraceFixtureCandidateWorkbenchResponse>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return reviewedTraceFixtureCandidateWorkbenchService.workbench(traceSetId, limit)
             .map(response -> ResponseEntity.ok(ApiResponse.ok(response)))
             .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(ApiResponse.fail("Unknown Agent eval trace set: " + traceSetId)));

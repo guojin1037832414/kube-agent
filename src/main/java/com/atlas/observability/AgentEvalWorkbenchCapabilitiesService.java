@@ -76,6 +76,17 @@ public class AgentEvalWorkbenchCapabilitiesService {
                 List.of("patchOperations", "traceDelta", "reviewChecklist", "nextActions")
             ),
             capability(
+                "workbench-reviewed-fixture-candidate-autopreview",
+                "Reviewed fixture candidate auto-preview workbench",
+                "review",
+                "GET",
+                "/api/agent/observability/eval/workbench/trace-sets/{traceSetId}/reviewed-fixture-candidate-workbench?limit={limit}",
+                "",
+                AgentReviewedTraceFixtureCandidateWorkbenchResponse.SCHEMA_VERSION,
+                List.of("traceSetId", "redactedRecentAudit", "candidateDiscovery"),
+                List.of("candidateDiscoverySummary", "selectedCandidateTraceId", "candidatePreview", "nextActions")
+            ),
+            capability(
                 "workbench-reviewed-fixture-candidate",
                 "Reviewed fixture candidate preview",
                 "review",
@@ -216,6 +227,7 @@ public class AgentEvalWorkbenchCapabilitiesService {
                 "workbench-trace-set-detail",
                 "workbench-promotion-workflow",
                 "workbench-catalog-patch-review",
+                "workbench-reviewed-fixture-candidate-autopreview",
                 "workbench-reviewed-fixture-candidate",
                 "workbench-gate-bundle-summary",
                 "reviewed-trace-evidence",

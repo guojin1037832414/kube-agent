@@ -28,6 +28,7 @@ class AgentEvalWorkbenchCapabilitiesServiceTest {
                 "workbench-trace-set-detail",
                 "workbench-promotion-workflow",
                 "workbench-catalog-patch-review",
+                "workbench-reviewed-fixture-candidate-autopreview",
                 "workbench-reviewed-fixture-candidate",
                 "workbench-gate-bundle-summary",
                 "reviewed-trace-evidence",
@@ -67,6 +68,20 @@ class AgentEvalWorkbenchCapabilitiesServiceTest {
                     .containsEntry("createsFixtureFile", false)
                     .containsEntry("fixtureUploadAccepted", false);
             });
+        assertThat(response.capabilities())
+            .filteredOn(capability -> "workbench-reviewed-fixture-candidate-autopreview".equals(capability.id()))
+            .singleElement()
+            .satisfies(capability -> {
+                assertThat(capability.httpMethod()).isEqualTo("GET");
+                assertThat(capability.pathTemplate())
+                    .isEqualTo("/api/agent/observability/eval/workbench/trace-sets/{traceSetId}/reviewed-fixture-candidate-workbench?limit={limit}");
+                assertThat(capability.responseSchema()).isEqualTo("agent-reviewed-trace-fixture-candidate-workbench.v1");
+                assertThat(capability.policy())
+                    .containsEntry("requiresHumanFixtureReviewBeforeCommit", true)
+                    .containsEntry("requiresGitReviewForPromotion", true)
+                    .containsEntry("createsFixtureFile", false)
+                    .containsEntry("fixtureUploadAccepted", false);
+            });
         assertThat(response.recommendedWorkflow())
             .containsExactly(
                 "workbench-overview",
@@ -74,6 +89,7 @@ class AgentEvalWorkbenchCapabilitiesServiceTest {
                 "workbench-trace-set-detail",
                 "workbench-promotion-workflow",
                 "workbench-catalog-patch-review",
+                "workbench-reviewed-fixture-candidate-autopreview",
                 "workbench-reviewed-fixture-candidate",
                 "workbench-gate-bundle-summary",
                 "reviewed-trace-evidence",
@@ -105,6 +121,7 @@ class AgentEvalWorkbenchCapabilitiesServiceTest {
                 "workbench-overview",
                 "workbench-trace-set-detail",
                 "agent-eval-workbench-catalog-patch-review.v1",
+                "agent-reviewed-trace-fixture-candidate-workbench.v1",
                 "agent-reviewed-trace-fixture-candidate.v1",
                 "agent-eval-workbench-gate-bundle-summary.v1",
                 "agent-reviewed-eval-trace-evidence.v1",
