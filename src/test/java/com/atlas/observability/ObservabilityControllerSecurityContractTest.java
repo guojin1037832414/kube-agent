@@ -79,6 +79,7 @@ class ObservabilityControllerSecurityContractTest {
         assertThat(source).contains("@GetMapping(\"/eval/reviewed-trace-fixture-intake-contract\")");
         assertThat(source).contains("@GetMapping(\"/eval/reviewed-trace-fixture-manifest\")");
         assertThat(source).contains("@GetMapping(\"/eval/reviewed-trace-fixture-template\")");
+        assertThat(source).contains("@PostMapping(\"/eval/workbench/trace-sets/{traceSetId}/reviewed-fixture-candidate\")");
         assertThat(source).contains("@GetMapping(\"/eval/release-blocking-gate-contract\")");
         assertThat(source).contains("@GetMapping(\"/eval/workbench/gate-bundle-summary\")");
         assertThat(source).contains("@GetMapping(\"/eval/workbench/trace-sets/{traceSetId}\")");
@@ -138,6 +139,7 @@ class ObservabilityControllerSecurityContractTest {
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentReviewedTraceFixtureIntakeContractResponse>> reviewedTraceFixtureIntakeContract()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentReviewedTraceFixtureManifestResponse>> reviewedTraceFixtureManifest()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentReviewedTraceFixtureTemplateResponse>> reviewedTraceFixtureTemplate()");
+        assertThat(source).contains("public ResponseEntity<ApiResponse<AgentReviewedTraceFixtureCandidateResponse>> reviewedTraceFixtureCandidate(");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentReleaseBlockingEvalGateContractResponse>> releaseBlockingEvalGateContract()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentEvalWorkbenchGateBundleSummaryResponse>> evalWorkbenchGateBundleSummary()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentEvalWorkbenchTraceSetDetailResponse>> evalWorkbenchTraceSetDetail(");

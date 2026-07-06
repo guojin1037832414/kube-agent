@@ -7,6 +7,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Eval workbench overview contract tests.
+ *
+ * <p>中文说明：这些测试确认工作台首屏只组合安全读模型，并把“候选 discovery -> reviewed fixture candidate
+ * 预检 -> 人审/Git review -> gate bundle”的顺序暴露给前端；测试同时保护它不能嵌入 raw replay/report、
+ * 不能写 catalog，也不能调用 Tool/MCP/kube-manager。</p>
  */
 class AgentEvalWorkbenchOverviewServiceTest {
 
@@ -27,7 +31,7 @@ class AgentEvalWorkbenchOverviewServiceTest {
 
         assertThat(overview.schemaVersion()).isEqualTo("agent-eval-workbench-overview.v1");
         assertThat(overview.evaluationVersion()).isEqualTo("deterministic-replay-eval.v1");
-        assertThat(overview.capabilityCount()).isEqualTo(16);
+        assertThat(overview.capabilityCount()).isEqualTo(17);
         assertThat(overview.traceSetCount()).isEqualTo(7);
         assertThat(overview.traceSetNeedsEvidenceCount()).isEqualTo(7);
         assertThat(overview.traceSetReadyCount()).isZero();
@@ -42,6 +46,7 @@ class AgentEvalWorkbenchOverviewServiceTest {
             .contains(
                 "inspect-reviewed-trace-evidence-readiness",
                 "discover-redacted-candidates",
+                "preview-reviewed-fixture-candidate-before-git-review",
                 "promote-candidates-through-git-review",
                 "regenerate-gate-bundle-after-curation"
             );
@@ -58,8 +63,11 @@ class AgentEvalWorkbenchOverviewServiceTest {
         assertThat(overview.traceSets()).allSatisfy(traceSet -> {
             assertThat(traceSet.readyForCiBlocking()).isFalse();
             assertThat(traceSet.candidateDiscoveryPath()).contains("/candidates");
+            assertThat(traceSet.reviewedFixtureCandidatePath()).contains("/workbench/trace-sets/");
+            assertThat(traceSet.reviewedFixtureCandidatePath()).contains("/reviewed-fixture-candidate");
             assertThat(traceSet.promotionWorkflowPath()).contains("/promotion-workflow");
-            assertThat(traceSet.workflowStages()).contains("human-git-review", "gate-bundle");
+            assertThat(traceSet.workflowStages())
+                .contains("reviewed-fixture-candidate-preview", "human-git-review", "gate-bundle");
             assertThat(traceSet.policy())
                 .containsEntry("runtimeCatalogWrite", false)
                 .containsEntry("toolExecution", false)
@@ -106,9 +114,8 @@ class AgentEvalWorkbenchOverviewServiceTest {
             .containsEntry("externalCalls", false)
             .containsEntry("toolExecution", false)
             .containsEntry("kubeManagerCalls", false);
-        assertThat(overview.capabilities().capabilities())
-            .anySatisfy(capability -> assertThat(capability.id())
-                .isEqualTo("memory-rag-eval-suite-binding-contract"));
+        assertThat(overview.capabilities().capabilities()).extracting(AgentEvalWorkbenchCapability::id)
+            .contains("workbench-reviewed-fixture-candidate", "memory-rag-eval-suite-binding-contract");
         assertThat(overview.toString())
             .contains("workbench-overview", "agent-eval-trace-set-gate-bundle.v1")
             .doesNotContain("reports=", "replay=")

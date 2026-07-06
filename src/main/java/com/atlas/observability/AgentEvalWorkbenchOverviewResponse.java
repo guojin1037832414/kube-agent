@@ -9,6 +9,10 @@ import java.util.Map;
 
 /**
  * Admin-only read model that lets Vue render the eval workbench landing view.
+ *
+ * <p>中文说明：overview 把 capability manifest、trace-set catalog 和 gate bundle 合并成前端首屏。
+ * 它只告诉管理员“下一步应该看什么/补什么”，不嵌入 raw replay/report，不触发 Tool/MCP/LLM/RAG/kube-manager，
+ * 也不授予 catalog 写入、CI blocking 或 release 权力。</p>
  */
 public record AgentEvalWorkbenchOverviewResponse(
     String schemaVersion,
@@ -70,6 +74,7 @@ public record AgentEvalWorkbenchOverviewResponse(
         if (needsEvidenceCount > 0) {
             actions.add("inspect-reviewed-trace-evidence-readiness");
             actions.add("discover-redacted-candidates");
+            actions.add("preview-reviewed-fixture-candidate-before-git-review");
             actions.add("promote-candidates-through-git-review");
         }
         if (gateBundle == null || !gateBundle.releaseEligible()) {

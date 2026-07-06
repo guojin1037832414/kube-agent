@@ -6,6 +6,10 @@ import java.util.Map;
 
 /**
  * Frontend-ready trace-set row for the eval workbench overview.
+ *
+ * <p>中文说明：每一行都是前端围绕一个 trace set 展开的只读治理导航，不代表运行时已经收集到真实
+ * reviewed fixture。这里暴露的 candidate/review/gate 路径只帮助管理员进入下一步，不写 catalog、
+ * 不创建 fixture 文件，也不调用 Tool/MCP/kube-manager。</p>
  */
 public record AgentEvalWorkbenchTraceSetView(
     String id,
@@ -23,6 +27,7 @@ public record AgentEvalWorkbenchTraceSetView(
     String nextAction,
     List<String> workflowStages,
     String candidateDiscoveryPath,
+    String reviewedFixtureCandidatePath,
     String curationReviewPath,
     String catalogPatchProposalPath,
     String promotionWorkflowPath,
@@ -45,6 +50,7 @@ public record AgentEvalWorkbenchTraceSetView(
         nextAction = safeText(nextAction);
         workflowStages = workflowStages != null ? List.copyOf(workflowStages) : List.of();
         candidateDiscoveryPath = safeText(candidateDiscoveryPath);
+        reviewedFixtureCandidatePath = safeText(reviewedFixtureCandidatePath);
         curationReviewPath = safeText(curationReviewPath);
         catalogPatchProposalPath = safeText(catalogPatchProposalPath);
         promotionWorkflowPath = safeText(promotionWorkflowPath);
@@ -79,6 +85,7 @@ public record AgentEvalWorkbenchTraceSetView(
             resolveNextAction(status),
             defaultWorkflowStages(),
             endpoint(traceSetId, "candidates"),
+            workbenchEndpoint(traceSetId, "reviewed-fixture-candidate"),
             endpoint(traceSetId, "curation-review"),
             endpoint(traceSetId, "catalog-patch-proposal"),
             endpoint(traceSetId, "promotion-workflow"),
@@ -116,6 +123,7 @@ public record AgentEvalWorkbenchTraceSetView(
     private static List<String> defaultWorkflowStages() {
         return List.of(
             "candidate-discovery",
+            "reviewed-fixture-candidate-preview",
             "curation-review",
             "catalog-patch-proposal",
             "human-git-review",
@@ -131,6 +139,14 @@ public record AgentEvalWorkbenchTraceSetView(
             return "";
         }
         return "/api/agent/observability/eval/trace-sets/" + id + "/" + suffix;
+    }
+
+    private static String workbenchEndpoint(String traceSetId, String suffix) {
+        String id = safeText(traceSetId);
+        if (id.isBlank()) {
+            return "";
+        }
+        return "/api/agent/observability/eval/workbench/trace-sets/" + id + "/" + suffix;
     }
 
     private static Map<String, Object> policyProof(AgentEvalTraceSetDefinition definition,

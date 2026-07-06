@@ -9,8 +9,11 @@ import java.util.Map;
 /**
  * Publishes a stable capability manifest for eval/replay frontend workbenches.
  *
- * <p>This service is metadata-only. It does not query audit storage, run evals,
- * call kube-manager, execute Tools, or mutate trace-set catalogs.</p>
+ * <p>中文说明：这个服务只发布“前端可以调用哪些治理读模型”的目录，帮助 Vue 工作台按顺序拼装
+ * candidate discovery、fixture candidate preview、人审/Git review 和 gate bundle 页面。</p>
+ *
+ * <p>安全边界：本服务是 metadata-only，不查询 raw audit，不运行 eval/replay，不调用 kube-manager，
+ * 不执行 Tool/MCP/LLM/RAG，也不修改 trace-set catalog 或 reviewed fixture 文件。</p>
  */
 @Service
 public class AgentEvalWorkbenchCapabilitiesService {
@@ -71,6 +74,17 @@ public class AgentEvalWorkbenchCapabilitiesService {
                 AgentEvalWorkbenchCatalogPatchReviewResponse.SCHEMA_VERSION,
                 List.of("traceSetId", "candidateTraceIds"),
                 List.of("patchOperations", "traceDelta", "reviewChecklist", "nextActions")
+            ),
+            capability(
+                "workbench-reviewed-fixture-candidate",
+                "Reviewed fixture candidate preview",
+                "review",
+                "POST",
+                "/api/agent/observability/eval/workbench/trace-sets/{traceSetId}/reviewed-fixture-candidate",
+                "AgentEvalSuiteRequest",
+                AgentReviewedTraceFixtureCandidateResponse.SCHEMA_VERSION,
+                List.of("traceSetId", "candidateTraceIds", "redactedReplay", "deterministicEvalReport"),
+                List.of("candidateFixtureDraft", "candidateGateSummary", "remainingHumanReviewFields", "nextActions")
             ),
             capability(
                 "workbench-gate-bundle-summary",
@@ -202,6 +216,7 @@ public class AgentEvalWorkbenchCapabilitiesService {
                 "workbench-trace-set-detail",
                 "workbench-promotion-workflow",
                 "workbench-catalog-patch-review",
+                "workbench-reviewed-fixture-candidate",
                 "workbench-gate-bundle-summary",
                 "reviewed-trace-evidence",
                 "release-blocking-gate-contract",
@@ -231,7 +246,10 @@ public class AgentEvalWorkbenchCapabilitiesService {
         policy.put("metadataOnly", "trace-set-catalog".equals(id));
         policy.put("mutatesCatalog", false);
         policy.put("runtimeCatalogWrite", false);
-        policy.put("requiresGitReviewForPromotion", id.contains("patch") || id.contains("workflow"));
+        policy.put("requiresGitReviewForPromotion", id.contains("patch") || id.contains("workflow") || id.contains("fixture-candidate"));
+        policy.put("requiresHumanFixtureReviewBeforeCommit", id.contains("fixture-candidate"));
+        policy.put("createsFixtureFile", false);
+        policy.put("fixtureUploadAccepted", false);
         policy.put("embeddedReports", false);
         policy.put("embeddedReplay", false);
         policy.put("toolExecution", false);
