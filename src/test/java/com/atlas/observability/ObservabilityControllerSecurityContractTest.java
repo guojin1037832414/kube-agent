@@ -75,6 +75,7 @@ class ObservabilityControllerSecurityContractTest {
         assertThat(source).contains("@PostMapping(\"/eval/suites/{suiteId}/gate\")");
         assertThat(source).contains("@GetMapping(\"/eval/workbench/capabilities\")");
         assertThat(source).contains("@GetMapping(\"/eval/workbench/overview\")");
+        assertThat(source).contains("@GetMapping(\"/eval/workbench/reviewed-fixture-vue-binding-spec\")");
         assertThat(source).contains("@GetMapping(\"/eval/reviewed-trace-evidence\")");
         assertThat(source).contains("@GetMapping(\"/eval/reviewed-trace-fixture-intake-contract\")");
         assertThat(source).contains("@GetMapping(\"/eval/reviewed-trace-fixture-manifest\")");
@@ -138,6 +139,7 @@ class ObservabilityControllerSecurityContractTest {
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentEvalSuiteGateArtifact>> evalSuiteGate(@PathVariable String suiteId,");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentEvalWorkbenchCapabilitiesResponse>> evalWorkbenchCapabilities()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentEvalWorkbenchOverviewResponse>> evalWorkbenchOverview()");
+        assertThat(source).contains("public ResponseEntity<ApiResponse<AgentReviewedTraceFixtureVueBindingSpecResponse>> reviewedTraceFixtureVueBindingSpec()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentReviewedEvalTraceEvidenceResponse>> reviewedEvalTraceEvidence()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentReviewedTraceFixtureIntakeContractResponse>> reviewedTraceFixtureIntakeContract()");
         assertThat(source).contains("public ResponseEntity<ApiResponse<AgentReviewedTraceFixtureManifestResponse>> reviewedTraceFixtureManifest()");

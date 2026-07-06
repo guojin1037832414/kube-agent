@@ -53,6 +53,8 @@ class ObservabilityControllerTest {
         new AgentEvalWorkbenchCapabilitiesService();
     private final AgentEvalWorkbenchOverviewService evalWorkbenchOverviewService =
         new AgentEvalWorkbenchOverviewService(evalWorkbenchCapabilitiesService, evalTraceSetCatalogService);
+    private final AgentReviewedTraceFixtureVueBindingSpecService reviewedTraceFixtureVueBindingSpecService =
+        new AgentReviewedTraceFixtureVueBindingSpecService(evalWorkbenchCapabilitiesService, evalWorkbenchOverviewService);
     private final AgentReviewedEvalTraceEvidenceService reviewedEvalTraceEvidenceService =
         new AgentReviewedEvalTraceEvidenceService(evalTraceSetCatalogService);
     private final AgentReviewedTraceFixtureIntakeContractService reviewedTraceFixtureIntakeContractService =
@@ -257,6 +259,7 @@ class ObservabilityControllerTest {
         reviewedTraceFixtureCandidateWorkbenchService,
         reviewedTraceFixtureHumanReviewPackageService,
         reviewedTraceFixtureHumanReviewGateService,
+        reviewedTraceFixtureVueBindingSpecService,
         releaseBlockingEvalGateContractService,
         evalWorkbenchTraceSetDetailService,
         evalWorkbenchPromotionWorkflowService,
@@ -3456,6 +3459,7 @@ class ObservabilityControllerTest {
         assertThat(capabilities.capabilities()).extracting(AgentEvalWorkbenchCapability::id)
             .contains(
                 "workbench-overview",
+                "workbench-reviewed-fixture-vue-binding-spec",
                 "workbench-trace-set-detail",
                 "workbench-promotion-workflow",
                 "workbench-reviewed-fixture-candidate-autopreview",
@@ -3469,6 +3473,7 @@ class ObservabilityControllerTest {
         assertThat(capabilities.recommendedWorkflow())
             .contains(
                 "workbench-overview",
+                "workbench-reviewed-fixture-vue-binding-spec",
                 "workbench-trace-set-detail",
                 "workbench-promotion-workflow",
                 "workbench-reviewed-fixture-candidate-autopreview",
@@ -3491,6 +3496,7 @@ class ObservabilityControllerTest {
         assertThat(capabilities.toString())
             .contains(
                 "workbench-trace-set-detail",
+                "agent-reviewed-trace-fixture-vue-binding-spec.v1",
                 "agent-eval-workbench-promotion-workflow.v1",
                 "agent-reviewed-trace-fixture-candidate-workbench.v1",
                 "agent-reviewed-trace-fixture-human-review-package.v1",
@@ -3551,11 +3557,13 @@ class ObservabilityControllerTest {
             });
         assertThat(overview.recommendedWorkflow()).startsWith(
             "workbench-overview",
+            "workbench-reviewed-fixture-vue-binding-spec",
             "trace-set-catalog",
             "workbench-trace-set-detail"
         );
         assertThat(overview.nextActions())
             .contains(
+                "open-reviewed-fixture-vue-binding-spec",
                 "open-reviewed-fixture-candidate-workbench",
                 "open-reviewed-fixture-human-review-package",
                 "validate-reviewed-fixture-human-review-gate",
@@ -3591,6 +3599,75 @@ class ObservabilityControllerTest {
             .contains("workbench-overview", "phase1-core-golden")
             .doesNotContain("reports=", "replay=")
             .doesNotContain("secret-token-value", "conv-sensitive", "user-sensitive", "org-sensitive", "/api/org-sensitive");
+    }
+
+    @Test
+    void reviewedTraceFixtureVueBindingSpec_shouldRequireAdminUser() {
+        ResponseEntity<ApiResponse<AgentReviewedTraceFixtureVueBindingSpecResponse>> anonymous =
+            controller.reviewedTraceFixtureVueBindingSpec();
+
+        assertThat(anonymous.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        userPermissionContext.onLogin("user-token", "alice", "user", Set.of());
+        userPermissionContext.bind("user-token", "100002");
+
+        ResponseEntity<ApiResponse<AgentReviewedTraceFixtureVueBindingSpecResponse>> user =
+            controller.reviewedTraceFixtureVueBindingSpec();
+
+        assertThat(user.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void reviewedTraceFixtureVueBindingSpec_shouldReturnFrontendBindingForAdminUser() throws Exception {
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+            "boss", null, "ROLE_SYS_ADMIN", "agent:observe"));
+
+        ResponseEntity<ApiResponse<AgentReviewedTraceFixtureVueBindingSpecResponse>> response =
+            controller.reviewedTraceFixtureVueBindingSpec();
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        AgentReviewedTraceFixtureVueBindingSpecResponse spec = response.getBody().getData();
+        assertThat(spec.schemaVersion()).isEqualTo("agent-reviewed-trace-fixture-vue-binding-spec.v1");
+        assertThat(spec.bindingStatus()).isEqualTo("VUE_BINDING_SPEC_READY");
+        assertThat(spec.sourceCapabilitiesEmbedded()).isTrue();
+        assertThat(spec.sourceOverviewEmbedded()).isTrue();
+        assertThat(spec.runtimeControlAllowed()).isFalse();
+        assertThat(spec.componentSpecs()).extracting(component -> component.get("name"))
+            .contains("ReviewedFixtureWorkflowSummary", "HumanReviewGatePanel", "DisabledRuntimeActionPanel");
+        assertThat(spec.disabledActionBindings()).extracting(action -> action.get("actionId"))
+            .contains("upload-reviewed-fixture", "write-eval-trace-sets-json", "enable-ci-blocking",
+                "call-mcp-tools-call", "call-kube-manager-write");
+        assertThat(spec.endpointMap())
+            .containsEntry("reviewedFixtureVueBindingSpec",
+                "/api/agent/observability/eval/workbench/reviewed-fixture-vue-binding-spec")
+            .containsEntry("humanReviewGate",
+                "/api/agent/observability/eval/workbench/trace-sets/{traceSetId}/reviewed-fixture-human-review-gate");
+        assertThat(spec.bindingPolicy())
+            .containsEntry("bindingSpecOnly", true)
+            .containsEntry("runtimeControlAllowed", false)
+            .containsEntry("fixtureUploadAccepted", false)
+            .containsEntry("runtimeCatalogWrite", false)
+            .containsEntry("releaseAuthority", false);
+        assertThat(spec.safety())
+            .containsEntry("createsFixtureFile", false)
+            .containsEntry("toolExecution", false)
+            .containsEntry("kubeManagerCalls", false)
+            .containsEntry("hitlInvocation", false);
+        assertThat(spec.privacy())
+            .containsEntry("redactedOnly", true)
+            .containsEntry("containsToken", false)
+            .containsEntry("containsPassword", false);
+        assertThat(spec.sourceCapabilities().capabilities()).extracting(AgentEvalWorkbenchCapability::id)
+            .contains("workbench-reviewed-fixture-vue-binding-spec",
+                "workbench-reviewed-fixture-human-review-gate");
+        assertThat(spec.sourceOverview().nextActions())
+            .contains("open-reviewed-fixture-vue-binding-spec",
+                "validate-reviewed-fixture-human-review-gate");
+        assertThat(new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules().writeValueAsString(spec))
+            .contains("HumanReviewGatePanel", "gate-success-does-not-enable-runtime-write")
+            .doesNotContain("secret-token-value", "conv-sensitive", "user-sensitive", "org-sensitive",
+                "/api/org-sensitive", "\"fixtureRows\"", "\"reports\"", "\"steps\"");
     }
 
     @Test

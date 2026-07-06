@@ -24,6 +24,7 @@ class AgentEvalWorkbenchCapabilitiesServiceTest {
         assertThat(response.capabilities()).extracting(AgentEvalWorkbenchCapability::id)
             .containsExactly(
                 "workbench-overview",
+                "workbench-reviewed-fixture-vue-binding-spec",
                 "trace-set-catalog",
                 "workbench-trace-set-detail",
                 "workbench-promotion-workflow",
@@ -57,6 +58,21 @@ class AgentEvalWorkbenchCapabilitiesServiceTest {
                 .containsEntry("toolExecution", false)
                 .containsEntry("kubeManagerCalls", false);
         });
+        assertThat(response.capabilities())
+            .filteredOn(capability -> "workbench-reviewed-fixture-vue-binding-spec".equals(capability.id()))
+            .singleElement()
+            .satisfies(capability -> {
+                assertThat(capability.httpMethod()).isEqualTo("GET");
+                assertThat(capability.pathTemplate())
+                    .isEqualTo("/api/agent/observability/eval/workbench/reviewed-fixture-vue-binding-spec");
+                assertThat(capability.responseSchema()).isEqualTo("agent-reviewed-trace-fixture-vue-binding-spec.v1");
+                assertThat(capability.policy())
+                    .containsEntry("runtimeCatalogWrite", false)
+                    .containsEntry("createsFixtureFile", false)
+                    .containsEntry("fixtureUploadAccepted", false)
+                    .containsEntry("toolExecution", false)
+                    .containsEntry("kubeManagerCalls", false);
+            });
         assertThat(response.capabilities())
             .filteredOn(capability -> "workbench-reviewed-fixture-candidate".equals(capability.id()))
             .singleElement()
@@ -116,6 +132,7 @@ class AgentEvalWorkbenchCapabilitiesServiceTest {
         assertThat(response.recommendedWorkflow())
             .containsExactly(
                 "workbench-overview",
+                "workbench-reviewed-fixture-vue-binding-spec",
                 "trace-set-catalog",
                 "workbench-trace-set-detail",
                 "workbench-promotion-workflow",
@@ -152,8 +169,10 @@ class AgentEvalWorkbenchCapabilitiesServiceTest {
         assertThat(response.toString())
             .contains(
                 "workbench-overview",
+                "workbench-reviewed-fixture-vue-binding-spec",
                 "workbench-trace-set-detail",
                 "agent-eval-workbench-catalog-patch-review.v1",
+                "agent-reviewed-trace-fixture-vue-binding-spec.v1",
                 "agent-reviewed-trace-fixture-candidate-workbench.v1",
                 "agent-reviewed-trace-fixture-human-review-package.v1",
                 "agent-reviewed-trace-fixture-human-review-gate.v1",

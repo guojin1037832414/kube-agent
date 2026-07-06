@@ -31,7 +31,7 @@ class AgentEvalWorkbenchOverviewServiceTest {
 
         assertThat(overview.schemaVersion()).isEqualTo("agent-eval-workbench-overview.v1");
         assertThat(overview.evaluationVersion()).isEqualTo("deterministic-replay-eval.v1");
-        assertThat(overview.capabilityCount()).isEqualTo(20);
+        assertThat(overview.capabilityCount()).isEqualTo(21);
         assertThat(overview.traceSetCount()).isEqualTo(7);
         assertThat(overview.traceSetNeedsEvidenceCount()).isEqualTo(7);
         assertThat(overview.traceSetReadyCount()).isZero();
@@ -39,11 +39,13 @@ class AgentEvalWorkbenchOverviewServiceTest {
         assertThat(overview.releaseEligible()).isFalse();
         assertThat(overview.recommendedWorkflow()).startsWith(
             "workbench-overview",
+            "workbench-reviewed-fixture-vue-binding-spec",
             "trace-set-catalog",
             "workbench-trace-set-detail"
         );
         assertThat(overview.nextActions())
             .contains(
+                "open-reviewed-fixture-vue-binding-spec",
                 "inspect-reviewed-trace-evidence-readiness",
                 "discover-redacted-candidates",
                 "open-reviewed-fixture-candidate-workbench",
@@ -126,6 +128,7 @@ class AgentEvalWorkbenchOverviewServiceTest {
             .containsEntry("kubeManagerCalls", false);
         assertThat(overview.capabilities().capabilities()).extracting(AgentEvalWorkbenchCapability::id)
             .contains(
+                "workbench-reviewed-fixture-vue-binding-spec",
                 "workbench-reviewed-fixture-candidate-autopreview",
                 "workbench-reviewed-fixture-human-review-package",
                 "workbench-reviewed-fixture-human-review-gate",

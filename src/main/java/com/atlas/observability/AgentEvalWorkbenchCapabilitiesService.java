@@ -32,6 +32,17 @@ public class AgentEvalWorkbenchCapabilitiesService {
                 List.of("traceSetWorkbenchRows", "nextActions", "workbenchPolicy")
             ),
             capability(
+                "workbench-reviewed-fixture-vue-binding-spec",
+                "Reviewed fixture Vue binding spec",
+                "orient",
+                "GET",
+                AgentReviewedTraceFixtureVueBindingSpecResponse.ENDPOINT,
+                "",
+                AgentReviewedTraceFixtureVueBindingSpecResponse.SCHEMA_VERSION,
+                List.of("capabilityManifest", "workbenchOverview"),
+                List.of("componentSpecs", "fieldBindings", "workflowStages", "disabledActionBindings")
+            ),
+            capability(
                 "trace-set-catalog",
                 "Trace-set catalog",
                 "discover",
@@ -245,6 +256,7 @@ public class AgentEvalWorkbenchCapabilitiesService {
             capabilities,
             List.of(
                 "workbench-overview",
+                "workbench-reviewed-fixture-vue-binding-spec",
                 "trace-set-catalog",
                 "workbench-trace-set-detail",
                 "workbench-promotion-workflow",

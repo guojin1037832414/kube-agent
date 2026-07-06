@@ -92,6 +92,7 @@ public class ObservabilityController {
     private final AgentReviewedTraceFixtureCandidateWorkbenchService reviewedTraceFixtureCandidateWorkbenchService;
     private final AgentReviewedTraceFixtureHumanReviewPackageService reviewedTraceFixtureHumanReviewPackageService;
     private final AgentReviewedTraceFixtureHumanReviewGateService reviewedTraceFixtureHumanReviewGateService;
+    private final AgentReviewedTraceFixtureVueBindingSpecService reviewedTraceFixtureVueBindingSpecService;
     private final AgentReleaseBlockingEvalGateContractService releaseBlockingEvalGateContractService;
     private final AgentEvalWorkbenchTraceSetDetailService evalWorkbenchTraceSetDetailService;
     private final AgentEvalWorkbenchPromotionWorkflowService evalWorkbenchPromotionWorkflowService;
@@ -150,6 +151,7 @@ public class ObservabilityController {
                                    AgentReviewedTraceFixtureCandidateWorkbenchService reviewedTraceFixtureCandidateWorkbenchService,
                                    AgentReviewedTraceFixtureHumanReviewPackageService reviewedTraceFixtureHumanReviewPackageService,
                                    AgentReviewedTraceFixtureHumanReviewGateService reviewedTraceFixtureHumanReviewGateService,
+                                   AgentReviewedTraceFixtureVueBindingSpecService reviewedTraceFixtureVueBindingSpecService,
                                    AgentReleaseBlockingEvalGateContractService releaseBlockingEvalGateContractService,
                                    AgentEvalWorkbenchTraceSetDetailService evalWorkbenchTraceSetDetailService,
                                    AgentEvalWorkbenchPromotionWorkflowService evalWorkbenchPromotionWorkflowService,
@@ -207,6 +209,7 @@ public class ObservabilityController {
         this.reviewedTraceFixtureCandidateWorkbenchService = reviewedTraceFixtureCandidateWorkbenchService;
         this.reviewedTraceFixtureHumanReviewPackageService = reviewedTraceFixtureHumanReviewPackageService;
         this.reviewedTraceFixtureHumanReviewGateService = reviewedTraceFixtureHumanReviewGateService;
+        this.reviewedTraceFixtureVueBindingSpecService = reviewedTraceFixtureVueBindingSpecService;
         this.releaseBlockingEvalGateContractService = releaseBlockingEvalGateContractService;
         this.evalWorkbenchTraceSetDetailService = evalWorkbenchTraceSetDetailService;
         this.evalWorkbenchPromotionWorkflowService = evalWorkbenchPromotionWorkflowService;
@@ -844,6 +847,27 @@ public class ObservabilityController {
             return guard;
         }
         return ResponseEntity.ok(ApiResponse.ok(evalWorkbenchOverviewService.overview()));
+    }
+
+    /**
+     * 发布 reviewed fixture 工作流的 Vue 绑定规格。
+     *
+     * <p>中文说明：该入口给 `vue-kube-manager` 提供只读实现契约，说明如何渲染自动候选、人审包、人审门禁、
+     * manifest readiness、failedQualityGates 和禁用动作。它只组合 capability manifest 与 overview 读模型，
+     * 不触发候选发现、不提交人审字段、不写前端仓库，也不写后端 fixture/catalog。</p>
+     *
+     * <p>安全边界：admin-only / binding-spec-only / read-only；不接收 caller traceId、不上传 fixture、
+     * 不写 {@code eval-trace-sets.json}，不调用 Tool/MCP/LLM/RAG/kube-manager，不写 HITL/audit/memory，
+     * 不启用 CI blocking、release authority 或 Phase 2 运行时能力。</p>
+     */
+    @GetMapping("/eval/workbench/reviewed-fixture-vue-binding-spec")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SYS_ADMIN')")
+    public ResponseEntity<ApiResponse<AgentReviewedTraceFixtureVueBindingSpecResponse>> reviewedTraceFixtureVueBindingSpec() {
+        ResponseEntity<ApiResponse<AgentReviewedTraceFixtureVueBindingSpecResponse>> guard = requireAdmin();
+        if (guard != null) {
+            return guard;
+        }
+        return ResponseEntity.ok(ApiResponse.ok(reviewedTraceFixtureVueBindingSpecService.spec()));
     }
 
     /**

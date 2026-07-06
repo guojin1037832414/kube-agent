@@ -72,6 +72,7 @@ public record AgentEvalWorkbenchOverviewResponse(
                                                  AgentEvalTraceSetGateBundleArtifact gateBundle) {
         List<String> actions = new ArrayList<>();
         if (needsEvidenceCount > 0) {
+            actions.add("open-reviewed-fixture-vue-binding-spec");
             actions.add("inspect-reviewed-trace-evidence-readiness");
             actions.add("discover-redacted-candidates");
             actions.add("open-reviewed-fixture-candidate-workbench");
