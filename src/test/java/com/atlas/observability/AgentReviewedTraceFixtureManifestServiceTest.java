@@ -14,6 +14,7 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -47,16 +48,41 @@ class AgentReviewedTraceFixtureManifestServiceTest {
                   "traceId": "trc_11111111111111111111111111111111",
                   "traceSetId": "phase1-core-golden",
                   "suiteId": "release-gate-strict",
-                  "replaySource": {"type": "redacted-replay-timeline", "digest": "sha256:redacted-replay"},
-                  "redactionProof": {"redactedOnly": true},
-                  "deterministicEvalProof": {"llmUsed": false, "externalCalls": false},
-                  "privacyProof": {"containsToken": false, "containsPassword": false},
+                  "replaySource": {
+                    "type": "redacted-replay-timeline",
+                    "digest": "sha256:redacted-replay",
+                    "timelineStepCount": 3,
+                    "redactedOnly": true
+                  },
+                  "redactionProof": {
+                    "containsRawPrincipal": false,
+                    "containsRawOrganization": false,
+                    "containsRawConversation": false,
+                    "containsRawEndpoints": false,
+                    "containsRawReason": false,
+                    "containsRawParameterValues": false
+                  },
+                  "deterministicEvalProof": {
+                    "deterministic": true,
+                    "llmUsed": false,
+                    "externalCalls": false,
+                    "toolExecution": false,
+                    "mcpToolCall": false,
+                    "kubeManagerCalls": false
+                  },
+                  "privacyProof": {
+                    "containsAuthorizationHeader": false,
+                    "containsToken": false,
+                    "containsPassword": false,
+                    "containsRawPrompt": false,
+                    "containsRawDocument": false
+                  },
                   "sourceCommitSha": "84732f0c",
                   "reviewer": "human-git-review",
                   "reviewTimestamp": "2026-06-24T13:00:00Z",
                   "evidenceDigest": "sha256:fixture-evidence",
                   "candidateGateSummary": {"pass": true},
-                  "forbiddenRuntimeClaims": ["runtime-catalog-write:false", "ci-blocking:false"]
+                  "forbiddenRuntimeClaims": ["runtimeCatalogWrite:false", "catalogMutationAllowed:false", "runtimeEvalAllowed:false", "ciBlockingEnabled:false", "releaseAuthority:false", "toolExecution:false", "mcpToolCall:false", "kubeManagerCalls:false", "auditWrite:false", "memoryWrite:false", "phase2Authority:false"]
                 }
                 """)),
             Clock.fixed(Instant.parse("2026-06-24T13:00:00Z"), ZoneOffset.UTC)
@@ -86,6 +112,13 @@ class AgentReviewedTraceFixtureManifestServiceTest {
             .containsEntry("status", "READY_FOR_HUMAN_GIT_REVIEW")
             .containsEntry("knownTraceSet", true)
             .containsEntry("traceIdValid", true)
+            .containsEntry("qualityGateStatus", "PASS")
+            .containsEntry("failedQualityGates", List.of())
+            .containsEntry("replaySourceRedacted", true)
+            .containsEntry("redactionProofComplete", true)
+            .containsEntry("deterministicEvalProofComplete", true)
+            .containsEntry("privacyProofComplete", true)
+            .containsEntry("forbiddenRuntimeClaimsClosed", true)
             .containsEntry("redactedOnly", true)
             .containsEntry("runtimeCatalogWrite", false)
             .containsEntry("catalogMutated", false)
@@ -125,6 +158,71 @@ class AgentReviewedTraceFixtureManifestServiceTest {
     }
 
     @Test
+    void manifest_shouldRejectFixtureWhenStructuredProofsAreIncomplete() {
+        ObjectMapper objectMapper = new ObjectMapper();
+        AgentReviewedTraceFixtureManifestService service = new AgentReviewedTraceFixtureManifestService(
+            traceSetCatalogService(objectMapper),
+            objectMapper,
+            new StubResourcePatternResolver(resource("phase1-core-golden.json", """
+                {
+                  "traceId": "trc_11111111111111111111111111111111",
+                  "traceSetId": "phase1-core-golden",
+                  "suiteId": "release-gate-strict",
+                  "replaySource": {"type": "redacted-replay-timeline"},
+                  "redactionProof": {"containsRawPrincipal": false},
+                  "deterministicEvalProof": {"llmUsed": false},
+                  "privacyProof": {"containsToken": true, "containsPassword": false},
+                  "sourceCommitSha": "84732f0c",
+                  "reviewer": "human-git-review",
+                  "reviewTimestamp": "2026-06-24T13:00:00Z",
+                  "evidenceDigest": "fixture-evidence-without-sha-prefix",
+                  "candidateGateSummary": {"pass": true},
+                  "forbiddenRuntimeClaims": ["runtimeCatalogWrite:false"]
+                }
+                """)),
+            Clock.fixed(Instant.parse("2026-06-24T13:00:00Z"), ZoneOffset.UTC)
+        );
+
+        AgentReviewedTraceFixtureManifestResponse manifest = service.manifest();
+
+        assertThat(manifest.manifestStatus()).isEqualTo("REVIEWED_FIXTURES_PRESENT_BUT_NOT_READY");
+        assertThat(manifest.fixtureFileCount()).isEqualTo(1);
+        assertThat(manifest.matchedFixtureTraceSetCount()).isZero();
+        assertThat(manifest.missingFixtureTraceSetCount()).isEqualTo(7);
+        assertThat(manifest.fixtureRows()).singleElement().satisfies(row -> {
+            assertThat(row)
+                .containsEntry("status", "FIXTURE_NEEDS_REVIEW_REWORK")
+                .containsEntry("qualityGateStatus", "FAIL")
+                .containsEntry("redactedOnly", false)
+                .containsEntry("runtimeCatalogWrite", false)
+                .containsEntry("catalogMutated", false)
+                .containsEntry("runtimeEvalAllowed", false);
+            List<String> failedQualityGates = ((List<?>) row.get("failedQualityGates")).stream()
+                .map(String::valueOf)
+                .toList();
+            assertThat(failedQualityGates)
+                .contains(
+                    "replay-source-digest-missing",
+                    "replay-source-redacted-proof-missing",
+                    "deterministic-eval-proof-deterministic-not-true",
+                    "privacy-proof-token-not-closed",
+                    "evidence-digest-sha256-missing",
+                    "forbidden-runtime-claims-missing-ciBlockingEnabled-false",
+                    "forbidden-runtime-claims-missing-kubeManagerCalls-false"
+                );
+        });
+        assertThat(manifest.traceSetCoverage())
+            .filteredOn(row -> "phase1-core-golden".equals(row.get("traceSetId")))
+            .singleElement()
+            .satisfies(row -> assertThat(row)
+                .containsEntry("status", "MISSING_REVIEWED_FIXTURE_FILE")
+                .containsEntry("reviewedFixtureFilePresent", false)
+                .containsEntry("catalogMutationAllowed", false));
+        assertThat(manifest.toString())
+            .contains("FIXTURE_NEEDS_REVIEW_REWORK", "failedQualityGates")
+            .doesNotContain("Bearer abc", "password:abc", "/api/login");
+    }
+    @Test
     void source_shouldKeepManifestReadOnlyAndRuntimeClosedMarkers() throws Exception {
         String serviceSource = Files.readString(SERVICE_SOURCE);
         String responseSource = Files.readString(RESPONSE_SOURCE);
@@ -150,6 +248,9 @@ class AgentReviewedTraceFixtureManifestServiceTest {
             .contains("callerTraceIdsAccepted")
             .contains("runtimeCatalogWrite")
             .contains("nim-hpc-slurm-bcm-phase2-authority")
+            .contains("failedQualityGates")
+            .contains("qualityGateStatus")
+            .contains("校验 reviewed fixture 的结构化证明块")
             .doesNotContain("KubeManagerHttpClient")
             .doesNotContain("SafeToolExecutor")
             .doesNotContain("RestClient")

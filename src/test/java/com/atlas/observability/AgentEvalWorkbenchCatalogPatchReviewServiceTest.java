@@ -193,16 +193,41 @@ class AgentEvalWorkbenchCatalogPatchReviewServiceTest {
                         Map.entry("traceId", "trc_11111111111111111111111111111111"),
                         Map.entry("traceSetId", "phase1-redaction-regression"),
                         Map.entry("suiteId", "release-gate-strict"),
-                        Map.entry("replaySource", Map.of("type", "redacted-replay-timeline")),
-                        Map.entry("redactionProof", Map.of("redactedOnly", true)),
-                        Map.entry("deterministicEvalProof", Map.of("llmUsed", false)),
-                        Map.entry("privacyProof", Map.of("containsToken", false, "containsPassword", false)),
+                        Map.entry("replaySource", Map.of(
+                            "type", "redacted-replay-timeline",
+                            "digest", "sha256:redacted-replay",
+                            "timelineStepCount", 3,
+                            "redactedOnly", true
+                        )),
+                        Map.entry("redactionProof", Map.of(
+                            "containsRawPrincipal", false,
+                            "containsRawOrganization", false,
+                            "containsRawConversation", false,
+                            "containsRawEndpoints", false,
+                            "containsRawReason", false,
+                            "containsRawParameterValues", false
+                        )),
+                        Map.entry("deterministicEvalProof", Map.of(
+                            "deterministic", true,
+                            "llmUsed", false,
+                            "externalCalls", false,
+                            "toolExecution", false,
+                            "mcpToolCall", false,
+                            "kubeManagerCalls", false
+                        )),
+                        Map.entry("privacyProof", Map.of(
+                            "containsAuthorizationHeader", false,
+                            "containsToken", false,
+                            "containsPassword", false,
+                            "containsRawPrompt", false,
+                            "containsRawDocument", false
+                        )),
                         Map.entry("sourceCommitSha", "84732f0c"),
                         Map.entry("reviewer", "human-git-review"),
                         Map.entry("reviewTimestamp", "2026-06-24T13:00:00Z"),
                         Map.entry("evidenceDigest", "sha256:fixture-evidence"),
                         Map.entry("candidateGateSummary", Map.of("pass", true)),
-                        Map.entry("forbiddenRuntimeClaims", List.of("runtime-catalog-write:false", "ci-blocking:false"))
+                        Map.entry("forbiddenRuntimeClaims", List.of("runtimeCatalogWrite:false", "catalogMutationAllowed:false", "runtimeEvalAllowed:false", "ciBlockingEnabled:false", "releaseAuthority:false", "toolExecution:false", "mcpToolCall:false", "kubeManagerCalls:false", "auditWrite:false", "memoryWrite:false", "phase2Authority:false"))
                     )),
                     "classpath*:observability/reviewed-trace-fixtures/*.json"
                 );

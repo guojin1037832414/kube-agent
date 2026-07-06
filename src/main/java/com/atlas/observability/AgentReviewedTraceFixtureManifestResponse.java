@@ -74,9 +74,7 @@ public record AgentReviewedTraceFixtureManifestResponse(
             .toList();
         int matched = readyTraceSetIds.size();
         int missing = Math.max(0, traceSets.size() - matched);
-        String status = fixtureRows.isEmpty()
-            ? "NO_REVIEWED_FIXTURE_FILES_FOUND"
-            : (missing == 0 ? "REVIEWED_FIXTURES_READY_FOR_CATALOG_PATCH_REVIEW" : "REVIEWED_FIXTURES_PARTIAL");
+        String status = manifestStatus(fixtureRows, matched, missing);
         return new AgentReviewedTraceFixtureManifestResponse(
             SCHEMA_VERSION,
             generatedAt,
@@ -118,16 +116,33 @@ public record AgentReviewedTraceFixtureManifestResponse(
         List<String> missingFields = requiredFieldNames().stream()
             .filter(field -> safeText(payload.get(field)).isBlank() && !presentStructured(payload.get(field)))
             .toList();
-        boolean privacySafe = !truthy(payload, "containsRawPrincipal")
-            && !truthy(payload, "containsRawOrganization")
-            && !truthy(payload, "containsRawConversation")
-            && !truthy(payload, "containsRawEndpoints")
-            && !truthy(payload, "containsRawReason")
-            && !truthy(payload, "containsRawParameterValues")
-            && !truthy(payload, "containsAuthorizationHeader")
-            && !truthy(payload, "containsToken")
-            && !truthy(payload, "containsPassword");
-        boolean ready = parseError.isBlank() && knownTraceSet && traceIdValid && missingFields.isEmpty() && privacySafe;
+        Map<String, Object> replaySource = objectMap(payload.get("replaySource"));
+        Map<String, Object> redactionProof = objectMap(payload.get("redactionProof"));
+        Map<String, Object> deterministicEvalProof = objectMap(payload.get("deterministicEvalProof"));
+        Map<String, Object> privacyProof = objectMap(payload.get("privacyProof"));
+        List<String> failedQualityGates = failedQualityGates(
+            payload,
+            replaySource,
+            redactionProof,
+            deterministicEvalProof,
+            privacyProof
+        );
+        boolean replaySourceRedacted = failedQualityGates.stream()
+            .noneMatch(gate -> gate.startsWith("replay-source-"));
+        boolean redactionProofComplete = failedQualityGates.stream()
+            .noneMatch(gate -> gate.startsWith("redaction-proof-"));
+        boolean deterministicEvalProofComplete = failedQualityGates.stream()
+            .noneMatch(gate -> gate.startsWith("deterministic-eval-proof-"));
+        boolean privacyProofComplete = failedQualityGates.stream()
+            .noneMatch(gate -> gate.startsWith("privacy-proof-"));
+        boolean forbiddenRuntimeClaimsClosed = failedQualityGates.stream()
+            .noneMatch(gate -> gate.startsWith("forbidden-runtime-claims-"));
+        boolean privacySafe = redactionProofComplete && privacyProofComplete;
+        boolean ready = parseError.isBlank()
+            && knownTraceSet
+            && traceIdValid
+            && missingFields.isEmpty()
+            && failedQualityGates.isEmpty();
 
         row.put("fixtureResource", safeText(payload.get("fixtureResource")));
         row.put("traceSetId", traceSetId);
@@ -138,12 +153,116 @@ public record AgentReviewedTraceFixtureManifestResponse(
         row.put("traceIdValid", traceIdValid);
         row.put("missingRequiredFields", missingFields);
         row.put("parseErrorPresent", !parseError.isBlank());
+        row.put("qualityGateStatus", failedQualityGates.isEmpty() ? "PASS" : "FAIL");
+        row.put("failedQualityGates", failedQualityGates);
+        row.put("replaySourceRedacted", replaySourceRedacted);
+        row.put("redactionProofComplete", redactionProofComplete);
+        row.put("deterministicEvalProofComplete", deterministicEvalProofComplete);
+        row.put("privacyProofComplete", privacyProofComplete);
+        row.put("forbiddenRuntimeClaimsClosed", forbiddenRuntimeClaimsClosed);
         row.put("redactedOnly", privacySafe);
         row.put("runtimeCatalogWrite", false);
         row.put("catalogMutated", false);
         row.put("runtimeEvalAllowed", false);
         row.put("releaseBlockingAllowedNow", false);
         return Map.copyOf(row);
+    }
+
+    private static String manifestStatus(List<Map<String, Object>> fixtureRows, int matched, int missing) {
+        if (fixtureRows.isEmpty()) {
+            return "NO_REVIEWED_FIXTURE_FILES_FOUND";
+        }
+        if (matched == 0 && missing > 0) {
+            return "REVIEWED_FIXTURES_PRESENT_BUT_NOT_READY";
+        }
+        return missing == 0 ? "REVIEWED_FIXTURES_READY_FOR_CATALOG_PATCH_REVIEW" : "REVIEWED_FIXTURES_PARTIAL";
+    }
+
+    /**
+     * 校验 reviewed fixture 的结构化证明块。
+     *
+     * <p>中文说明：fixture 文件来自 repo/classpath，不来自运行时请求；但只要它将来能进入
+     * catalog patch review，就必须先显式证明自己是 redacted replay、确定性 eval 证据，并且没有
+     * 打开 Tool/MCP/kube-manager/CI/release 等运行时权力。本方法只返回失败原因，不修正 payload、
+     * 不读取 raw audit、不执行 replay/eval，也不把 traceId 写回 catalog。</p>
+     */
+    private static List<String> failedQualityGates(Map<String, Object> payload,
+                                                   Map<String, Object> replaySource,
+                                                   Map<String, Object> redactionProof,
+                                                   Map<String, Object> deterministicEvalProof,
+                                                   Map<String, Object> privacyProof) {
+        java.util.ArrayList<String> failures = new java.util.ArrayList<>();
+        requireText(replaySource, "type", "replay-source-type-missing", failures);
+        requireText(replaySource, "digest", "replay-source-digest-missing", failures);
+        if (!truthy(replaySource, "redactedOnly")) {
+            failures.add("replay-source-redacted-proof-missing");
+        }
+        if (!replaySource.containsKey("timelineStepCount")) {
+            failures.add("replay-source-timeline-step-count-missing");
+        }
+        requireFalse(redactionProof, "containsRawPrincipal", "redaction-proof-raw-principal-not-closed", failures);
+        requireFalse(redactionProof, "containsRawOrganization", "redaction-proof-raw-organization-not-closed", failures);
+        requireFalse(redactionProof, "containsRawConversation", "redaction-proof-raw-conversation-not-closed", failures);
+        requireFalse(redactionProof, "containsRawEndpoints", "redaction-proof-raw-endpoints-not-closed", failures);
+        requireFalse(redactionProof, "containsRawReason", "redaction-proof-raw-reason-not-closed", failures);
+        requireFalse(redactionProof, "containsRawParameterValues", "redaction-proof-raw-parameter-values-not-closed", failures);
+        if (!truthy(deterministicEvalProof, "deterministic")) {
+            failures.add("deterministic-eval-proof-deterministic-not-true");
+        }
+        requireFalse(deterministicEvalProof, "llmUsed", "deterministic-eval-proof-llm-not-closed", failures);
+        requireFalse(deterministicEvalProof, "externalCalls", "deterministic-eval-proof-external-calls-not-closed", failures);
+        requireFalse(deterministicEvalProof, "toolExecution", "deterministic-eval-proof-tool-execution-not-closed", failures);
+        requireFalse(deterministicEvalProof, "mcpToolCall", "deterministic-eval-proof-mcp-tool-call-not-closed", failures);
+        requireFalse(deterministicEvalProof, "kubeManagerCalls", "deterministic-eval-proof-kube-manager-not-closed", failures);
+        requireFalse(privacyProof, "containsAuthorizationHeader", "privacy-proof-authorization-header-not-closed", failures);
+        requireFalse(privacyProof, "containsToken", "privacy-proof-token-not-closed", failures);
+        requireFalse(privacyProof, "containsPassword", "privacy-proof-password-not-closed", failures);
+        requireFalse(privacyProof, "containsRawPrompt", "privacy-proof-raw-prompt-not-closed", failures);
+        requireFalse(privacyProof, "containsRawDocument", "privacy-proof-raw-document-not-closed", failures);
+        requireText(payload, "evidenceDigest", "evidence-digest-missing", failures);
+        if (!safeText(payload.get("evidenceDigest")).startsWith("sha256:")) {
+            failures.add("evidence-digest-sha256-missing");
+        }
+        requireForbiddenRuntimeClaimsClosed(payload.get("forbiddenRuntimeClaims"), failures);
+        return List.copyOf(failures);
+    }
+
+    private static void requireText(Map<String, Object> map, String key, String failure, List<String> failures) {
+        if (safeText(map.get(key)).isBlank()) {
+            failures.add(failure);
+        }
+    }
+
+    private static void requireFalse(Map<String, Object> map, String key, String failure, List<String> failures) {
+        if (!Boolean.FALSE.equals(map.get(key))) {
+            failures.add(failure);
+        }
+    }
+
+    private static void requireForbiddenRuntimeClaimsClosed(Object value, List<String> failures) {
+        Set<String> claims = value instanceof List<?> list
+            ? list.stream()
+            .map(AgentReviewedTraceFixtureManifestResponse::safeText)
+            .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new))
+            : Set.of();
+        List<String> requiredClaims = List.of(
+            "runtimeCatalogWrite:false",
+            "catalogMutationAllowed:false",
+            "runtimeEvalAllowed:false",
+            "ciBlockingEnabled:false",
+            "releaseAuthority:false",
+            "toolExecution:false",
+            "mcpToolCall:false",
+            "kubeManagerCalls:false",
+            "auditWrite:false",
+            "memoryWrite:false",
+            "phase2Authority:false"
+        );
+        for (String required : requiredClaims) {
+            if (!claims.contains(required)) {
+                failures.add("forbidden-runtime-claims-missing-" + required.replace(':', '-'));
+            }
+        }
     }
 
     private static Map<String, Object> traceSetCoverage(AgentEvalTraceSetDefinition traceSet, Set<String> readyTraceSetIds) {
@@ -315,6 +434,19 @@ public record AgentReviewedTraceFixtureManifestResponse(
     private static boolean presentStructured(Object value) {
         return value instanceof Map<?, ?> map && !map.isEmpty()
             || value instanceof List<?> list && !list.isEmpty();
+    }
+
+    private static Map<String, Object> objectMap(Object value) {
+        if (!(value instanceof Map<?, ?> raw)) {
+            return Map.of();
+        }
+        Map<String, Object> safe = new LinkedHashMap<>();
+        for (Map.Entry<?, ?> entry : raw.entrySet()) {
+            if (entry.getKey() != null && entry.getValue() != null) {
+                safe.put(String.valueOf(entry.getKey()), entry.getValue());
+            }
+        }
+        return Map.copyOf(safe);
     }
 
     private static boolean truthy(Map<String, Object> map, String key) {
